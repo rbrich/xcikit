@@ -13,8 +13,8 @@ namespace xci::script {
 using ranges::views::zip;
 
 
-static void set_type_arg(SymbolPointer var, const TypeInfo& deduced, TypeArgs& type_args,
-                         const std::function<void(const TypeInfo& exp, const TypeInfo& got)>& exc_cb)
+void set_type_arg(SymbolPointer var, const TypeInfo& deduced, TypeArgs& type_args,
+                  const std::function<void(const TypeInfo& exp, const TypeInfo& got)>& exc_cb)
 {
     auto [it, inserted] = type_args.set(var, deduced);
     if (!inserted) {

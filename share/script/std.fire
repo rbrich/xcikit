@@ -277,7 +277,7 @@ class Cast T R {
     cast : T -> R
 }
 
-// Note: Cast to Void is handled by the compiler, instances with R=Void are ignored.
+instance<T> Cast T Void { cast = {} }
 
 instance Cast Bool Byte { cast = { __noop } }
 instance Cast Bool UInt32 { cast = { __cast 0x13 } }
@@ -397,7 +397,12 @@ to_string = fun<T> x:T -> String { format x () }
 from_string = fun<T> x:String -> T { parse x () }
 
 // -----------------------------------------------------------------------------
+// Type introspection
 
+type_name = fun<T> Void -> String { __type_name __type_id<T> }
+
+
+// -----------------------------------------------------------------------------
 
 succ = fun<T> x:T -> T { x + 1:T }
 pred = fun<T> x:T -> T { x - 1:T }

@@ -31,6 +31,7 @@ Checks: >
   -modernize-avoid-c-arrays,
   -modernize-deprecated-headers,
   -modernize-use-auto,
+  -modernize-use-emplace,
   -modernize-use-nodiscard,
   -modernize-use-nullptr,
   -modernize-use-trailing-return-type,
@@ -55,7 +56,8 @@ Checks: >
   -readability-else-after-return,
   -readability-qualified-auto,
   -readability-isolate-declaration,
-  -readability-identifier-length
+  -readability-identifier-length,
+  -readability-use-anyofallof
 CheckOptions:
   - key: bugprone-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
     value: 'false'

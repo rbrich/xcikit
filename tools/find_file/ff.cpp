@@ -34,11 +34,12 @@ using namespace xci::core;
 using namespace xci::core::argparser;
 
 
-static constexpr auto c_version = "0.8";
+static constexpr auto c_version = "0.9";
 
 
 enum PatternId: unsigned {
     IdMatch = 0,            // default ID, user pattern matched
+    IdExclusion,            // exclusion pattern
     IdNewline = 10,         // newline pattern, for counting lines
     IdBinary,               // pattern for detecting binary files
     IdFinishBuffer,         // finish buffer (going to swap buffers)
@@ -237,8 +238,8 @@ static bool parse_size_filter(const char* arg, size_t& size_from, size_t& size_t
 }
 
 
-static void highlight_path(std::string& out, FileTree::Type t, const FileTree::PathNode& path, const Theme& theme,
-                           const int so=0, const int eo=0)
+static void highlight_path(std::string& out,
+                           FileTree::Type t, const FileTree::PathNode& path, const Theme& theme)
 {
     out.reserve(path.size() + 30);  // reserve some space also for escape sequences
     if (t == FileTree::Directory) {
@@ -249,18 +250,45 @@ static void highlight_path(std::string& out, FileTree::Type t, const FileTree::P
         out += path.parent_dir_path();
         out += theme.file_name;
     }
-    if (so != eo) {
-        std::string_view name = path.name();
-        out += name.substr(0, so);
+    out += path.name();
+    out += theme.normal;
+}
+
+
+static void highlight_path(std::string& out,
+                           FileTree::Type t, const FileTree::PathNode& path, const Theme& theme,
+                           const unsigned so, const unsigned eo)
+{
+    out.reserve(path.size() + 30);  // reserve some space also for escape sequences
+    const std::string_view fp = path.file_path();
+    if (t == FileTree::Directory) {
+        out += theme.dir;
+        out += fp.substr(0, so);
         out += theme.highlight;
-        out += name.substr(so, eo - so);
-        if (t == FileTree::Directory)
-            out += theme.dir;
-        else
-            out += theme.file_name;
-        out += name.substr(eo);
+        out += fp.substr(so, eo - so);
+        out += theme.dir;
+        out += fp.substr(eo);
     } else {
-        out += path.name();
+        const unsigned dlen = path.dir_len();
+        out += theme.file_dir;
+        if (so < dlen) {
+            out += fp.substr(0, so);
+        } else {
+            out += fp.substr(0, dlen);
+            out += theme.file_name;
+            out += fp.substr(dlen, so - dlen);
+        }
+        out += theme.highlight;
+        out += fp.substr(so, eo - so);
+        if (eo < dlen) {
+            out += theme.file_dir;
+            out += fp.substr(eo, dlen - eo);
+            out += theme.file_name;
+            out += fp.substr(dlen);
+        } else {
+            out += theme.file_name;
+            out += fp.substr(eo);
+        }
     }
     out += theme.normal;
 }
@@ -648,13 +676,13 @@ public:
     explicit operator bool() const { return m_db != nullptr; }
     operator const hs_database_t *() const { return m_db; }
 
-    void add(const char* pattern, unsigned int flags, unsigned int id=0) {
+    void add(const char* pattern, unsigned int flags, PatternId id=IdMatch) {
         m_patterns.emplace_back(pattern);
         m_flags.push_back(flags);
         m_ids.push_back(id);
     }
 
-    void add_literal(const char* literal, unsigned int flags, unsigned int id=0) {
+    void add_literal(const char* literal, unsigned int flags, PatternId id=IdMatch) {
         // Escape non-alphanumeric characters in literal to hex
         // See: https://github.com/intel/hyperscan/issues/191
         std::string pattern;
@@ -671,7 +699,7 @@ public:
         m_ids.push_back(id);
     }
 
-    void add_extension(const char* ext, unsigned int flags, unsigned int id=0) {
+    void add_file_extension(const char* ext, unsigned int flags, PatternId id=IdMatch) {
         // Match file extension, i.e. '.' + ext at end of filename
         auto pattern = std::string("\\.") + ext + '$';
         m_patterns.push_back(pattern);
@@ -792,6 +820,22 @@ private:
 };
 
 
+static auto analyze_pattern(const char* pattern, int flags)
+        -> std::unique_ptr<hs_expr_info_t, decltype(&free)>
+{
+    hs_expr_info_t* re_info = nullptr;
+    hs_compile_error_t *re_compile_err;
+    hs_error_t rc = hs_expression_info(pattern, flags, &re_info, &re_compile_err);
+    if (rc != HS_SUCCESS) {
+        fmt::print(stderr,"ff: hs_expression_info({}): ({}) {}\n", pattern, rc, re_compile_err->message);
+        hs_free_compile_error(re_compile_err);
+        return {nullptr, [](void*){}};
+    }
+    hs_free_compile_error(re_compile_err);
+    return {re_info, free};
+}
+
+
 class XMagicDatabase {
     static constexpr unsigned MagicSize = 4;
 
@@ -887,6 +931,7 @@ int main(int argc, const char* argv[])
     const char* grep_pattern = nullptr;
     std::vector<fs::path> paths;
     std::vector<const char*> extensions;
+    std::vector<const char*> exclusions;
 
     TermCtl& term = TermCtl::stdout_instance();
 
@@ -897,6 +942,7 @@ int main(int argc, const char* argv[])
             Option("-F, --fixed", "Match literal string instead of (default) regex", fixed),
             Option("-i, --ignore-case", "Enable case insensitive matching", ignore_case),
             Option("-e, --ext EXT ...", "Match only files with extension EXT (shortcut for pattern '\\.EXT$')", extensions),
+            Option("-E, --exclude PATTERN ...", "Exclude files matching PATTERN", exclusions),
             Option("-H, --search-hidden", "Don't skip hidden files", show_hidden),
             Option("-D, --search-dirnames", "Don't skip directory entries", show_dirs),
             Option("-S, --search-in-special-dirs", "Allow descending into special directories: " + default_ignore_list(", "), search_in_special_dirs),
@@ -948,11 +994,28 @@ int main(int argc, const char* argv[])
         pattern = nullptr;
 
     HyperscanDatabase re_db;
+
+    bool re_exclusion_only = true;
+    for (const char* exclusion : exclusions) {
+        const int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP | HS_FLAG_SINGLEMATCH;
+        {
+            auto re_info = analyze_pattern(exclusion, flags);
+            if (!re_info)
+                return 1;
+            if (re_info->min_width == 0) {
+                // Pattern matches empty buffer
+                fmt::print(stderr,"ff: exclude pattern matches empty buffer: {}\n", grep_pattern);
+                return 1;
+            }
+        }
+        // add exclusion pattern
+        re_db.add(exclusion, flags, IdExclusion);
+    }
+
     if (pattern) {
         int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
         if (ignore_case)
             flags |= HS_FLAG_CASELESS;
-        hs_compile_error_t *re_compile_err;
         if (fixed) {
             if (highlight_match)
                 flags |= HS_FLAG_SOM_LEFTMOST;
@@ -960,20 +1023,16 @@ int main(int argc, const char* argv[])
                 flags |= HS_FLAG_SINGLEMATCH;
             re_db.add_literal(pattern, flags);
         } else {
-            // analyze pattern
-            hs_expr_info_t* re_info = nullptr;
-            hs_error_t rc = hs_expression_info(pattern, flags, &re_info, &re_compile_err);
-            if (rc != HS_SUCCESS) {
-                fmt::print(stderr,"ff: hs_expression_info({}): ({}) {}\n", pattern, rc, re_compile_err->message);
-                hs_free_compile_error(re_compile_err);
-                return 1;
+            {
+                auto re_info = analyze_pattern(pattern, flags);
+                if (!re_info)
+                    return 1;
+                if (re_info->min_width == 0) {
+                    // Pattern matches empty buffer
+                    highlight_match = false;
+                    flags |= HS_FLAG_ALLOWEMPTY;
+                }
             }
-            if (re_info->min_width == 0) {
-                // Pattern matches empty buffer
-                highlight_match = false;
-                flags |= HS_FLAG_ALLOWEMPTY;
-            }
-            free(re_info);
 
             // add pattern
             if (highlight_match)
@@ -982,6 +1041,7 @@ int main(int argc, const char* argv[])
                 flags |= HS_FLAG_SINGLEMATCH;
             re_db.add(pattern, flags);
         }
+        re_exclusion_only = false;
     }
 
     if (!extensions.empty()) {
@@ -993,8 +1053,9 @@ int main(int argc, const char* argv[])
         else
             flags |= HS_FLAG_SINGLEMATCH;
         for (const char* ext : extensions) {
-            re_db.add_extension(ext, flags);
+            re_db.add_file_extension(ext, flags);
         }
+        re_exclusion_only = false;
     }
 
     if (!re_db.compile(HS_MODE_BLOCK))
@@ -1009,7 +1070,6 @@ int main(int argc, const char* argv[])
             flags |= HS_FLAG_SOM_LEFTMOST;
         else
             flags |= HS_FLAG_SINGLEMATCH;
-        hs_compile_error_t *re_compile_err;
 
         // Count newlines
         grep_db.add_literal("\n", flags, IdNewline);
@@ -1030,22 +1090,16 @@ int main(int argc, const char* argv[])
         if (fixed) {
             grep_db.add_literal(grep_pattern, flags);
         } else {
-            // analyze pattern
-            hs_expr_info_t* re_info = nullptr;
-            hs_error_t rc = hs_expression_info(grep_pattern, flags, &re_info, &re_compile_err);
-            if (rc != HS_SUCCESS) {
-                fmt::print(stderr,"ff: hs_expression_info({}): ({}) {}\n", grep_pattern, rc, re_compile_err->message);
-                hs_free_compile_error(re_compile_err);
-                return 1;
+            {
+                auto re_info = analyze_pattern(grep_pattern, flags);
+                if (!re_info)
+                    return 1;
+                if (re_info->min_width == 0) {
+                    // Pattern matches empty buffer
+                    fmt::print(stderr,"ff: grep pattern matches empty buffer: {}\n", grep_pattern);
+                    return 1;
+                }
             }
-            if (re_info->min_width == 0) {
-                // Pattern matches empty buffer
-                fmt::print(stderr,"ff: grep pattern matches empty buffer: {}\n", grep_pattern);
-                hs_free_compile_error(re_compile_err);
-                free(re_info);
-                return 1;
-            }
-            free(re_info);
 
             // add pattern
             grep_db.add(grep_pattern, flags);
@@ -1072,7 +1126,7 @@ int main(int argc, const char* argv[])
     Theme theme {
         .normal = term.normal().seq(),
         .dir = term.bold().cyan().seq(),
-        .file_dir = term.cyan().seq(),
+        .file_dir = term.normal().cyan().seq(),
         .file_name = term.normal().seq(),
         .highlight = term.bold().bright_yellow().seq(),
         .grep_highlight = term.bold().bright_yellow().underline().seq(),
@@ -1086,7 +1140,7 @@ int main(int argc, const char* argv[])
     Counters counters;
 
     FileTree ft(jobs-1,
-                [show_hidden, show_dirs, single_device, long_form, highlight_match,
+                [show_hidden, show_dirs, single_device, long_form, highlight_match, re_exclusion_only,
                  type_mask, size_from, size_to, max_depth, search_in_special_dirs,
                  quiet, quiet_grep, binary_grep, filter_xmagic,
                  &re_db, &grep_db, &re_scratch, &theme, &dev_ids, &counters]
@@ -1114,8 +1168,8 @@ int main(int argc, const char* argv[])
                     if (!search_in_special_dirs && is_default_ignored(path.file_path())) {
                         descend = false;
                     }
-                    if (!show_dirs || path.name_empty()) {
-                        // path.component is empty when this is root report from walk_cwd()
+                    if (!show_dirs || !path.has_name()) {
+                        // path.name is empty when this is root report from walk_cwd()
                         counters.seen_dirs.fetch_sub(1, std::memory_order_relaxed);  // small correction - don't count implicitly searched CWD
                         return descend;
                     }
@@ -1138,38 +1192,61 @@ int main(int argc, const char* argv[])
 
                 std::string out;
                 if (re_db) {
-                    if (highlight_match) {
+                    auto file_path = path.file_path();
+                    if (highlight_match && !re_exclusion_only) {
                         // match, with highlight
-                        std::vector<std::pair<int, int>> matches;
-                        auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch[tn],
+                        struct {
+                            std::vector<std::pair<unsigned, unsigned>> matches;
+                            unsigned dir_len;
+                        } ctx { .dir_len = path.dir_len() };
+                        auto r = hs_scan(re_db, file_path.data(), file_path.size(), 0, re_scratch[tn],
                                 [] (unsigned int id, unsigned long long from,
-                                    unsigned long long to, unsigned int flags, void *ctx)
+                                    unsigned long long to, unsigned int flags, void *ctx_data)
                                 {
-                                    auto* m = static_cast<std::vector<std::pair<int, int>>*>(ctx);
-                                    m->emplace_back(from, to);
+                                    if (id == IdExclusion)
+                                        return 1;  // terminate scan
+                                    auto& x = *static_cast<decltype(ctx)*>(ctx_data);
+                                    // skip if the match is only in dir part
+                                    if (to > x.dir_len)
+                                        x.matches.emplace_back(from, to);
                                     return 0;
-                                }, &matches);
+                                }, &ctx);
+                        if (r == HS_SCAN_TERMINATED)
+                            return false;  // skip (exclusion)
                         if (r != HS_SUCCESS) {
                             fmt::print(stderr,"ff: hs_scan({}): Unable to scan ({})\n", path.name(), r);
                             return descend;
                         }
-                        if (matches.empty())
+                        if (ctx.matches.empty())
                             return descend;  // not matched
-                        highlight_path(out, t, path, theme, matches[0].first, matches[0].second);
+                        highlight_path(out, t, path, theme, ctx.matches[0].first, ctx.matches[0].second);
                     } else {
                         // match, no highlight
-                        auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch[tn],
+                        struct {
+                            bool excluded = false;
+                            unsigned dir_len;
+                        } ctx { .dir_len = path.dir_len() };
+                        auto r = hs_scan(re_db, file_path.data(), file_path.size(), 0, re_scratch[tn],
                                 [] (unsigned int id, unsigned long long from,
-                                    unsigned long long to, unsigned int flags, void *ctx)
+                                    unsigned long long to, unsigned int flags, void *ctx_data)
                                 {
+                                    auto& x = *static_cast<decltype(&ctx)>(ctx_data);
+                                    if (id == IdExclusion) {
+                                        x.excluded = true;
+                                    } else if (to <= x.dir_len) {
+                                        // skip if the match is only in dir part
+                                        return 0;
+                                    }
                                     // stop scanning on first match
                                     return 1;
-                                }, nullptr);
+                                }, &ctx);
                         // returns HS_SCAN_TERMINATED on match (because callback returns 1)
-                        if (r == HS_SUCCESS)
+                        if (r == HS_SCAN_TERMINATED && ctx.excluded)
+                            return false;  // skip (exclusion)
+                        if (!re_exclusion_only && r == HS_SUCCESS)
                             return descend;  // not matched
-                        if (r != HS_SCAN_TERMINATED) {
-                            fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", path.name(), r);
+                        if (r != HS_SUCCESS && r != HS_SCAN_TERMINATED) {
+                            fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", file_path, r);
                             return descend;
                         }
                         highlight_path(out, t, path, theme);
