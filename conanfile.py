@@ -2,6 +2,8 @@ from conan import ConanFile
 from conan.tools.files import load
 from conan.tools.build import check_min_cppstd
 from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake, cmake_layout
+from conan.tools.files import copy, rmdir
+from conan.tools.microsoft import is_msvc_static_runtime, is_msvc
 from pathlib import Path
 
 required_conan_version = ">=1.53.0"
@@ -12,11 +14,14 @@ class XcikitConan(ConanFile):
     license = "Apache-2.0"
     author = "Radek Brich"
     url = "https://github.com/rbrich/xcikit"
+    homepage = url
     description = "Collection of C++ libraries for drawing 2D graphics, rendering text and more."
     topics = ("text-rendering", "ui", "scripting-language", "vulkan", "glsl", "freetype")
+    package_type = "library"
     settings = "os", "arch", "compiler", "build_type"
     options = {
         "shared": [True, False],
+        "fPIC": [True, False],
 
         # Optional components:
         "data": [True, False],
@@ -60,6 +65,7 @@ class XcikitConan(ConanFile):
     }
     default_options = {
         "shared": False,
+        "fPIC": True,
 
         # Optional components:
         "data": True,
@@ -113,16 +119,23 @@ class XcikitConan(ConanFile):
                        "share/**", "third_party/**",
                        "!build/**", "!cmake-build-*/**")
 
-    _cmake = None
-
     def set_version(self):
         self.version = load(self, Path(self.recipe_folder) / "VERSION").strip()
+
+    def config_options(self):
+        if self.settings.os == "Windows":
+            del self.options.fPIC
+
+    def layout(self):
+        # src_folder must use the same source folder name the project
+        cmake_layout(self)
 
     def _requirements(self):
         for name, info in self.conan_data["requirements"].items():
             info['name'] = name
             info['option'] = f"system_{name}" if 'conan' in info else f"with_{name}"
             info.setdefault('prereq', [])
+            info.setdefault('public', False)
             yield info
 
     def validate(self):
@@ -138,6 +151,8 @@ class XcikitConan(ConanFile):
         return False
 
     def configure(self):
+        if self.options.shared:
+            self.options.rm_safe("fPIC")
         # evaluated options for _check_prereq
         options = {k: v[0] == 'T' for k, v in self.options.items()}
         # Dependent options
@@ -193,10 +208,12 @@ class XcikitConan(ConanFile):
             # Install requirement via Conan if `system_<lib>` option exists and is set to False
             opt = self.options.get_safe('system_' + info['name'])
             if opt is not None and not opt:
-                # if 'tests' in info['prereq'] or 'benchmarks' in info['prereq']:
-                #     self.test_requires(info['conan'])
-                # else:
-                self.requires(info['conan'])
+                if 'tests' in info['prereq'] or 'benchmarks' in info['prereq']:
+                    self.test_requires(info['conan'])
+                elif info['public']:
+                    self.requires(info['conan'], transitive_headers=True, transitive_libs=True)
+                else:
+                    self.requires(info['conan'], headers=True, libs=True)
 
     def _set_cmake_defs(self, defs):
         if self.package_folder:
@@ -209,6 +226,7 @@ class XcikitConan(ConanFile):
         defs["BUILD_TOOLS"] = self.options.tools
         defs["BUILD_EXAMPLES"] = self.options.examples
         defs["BUILD_TESTS"] = self.options.tests
+        defs["BUILD_BENCHMARKS"] = self.options.benchmarks
         defs["BUILD_DATI_TOOL"] = self.options.get_safe('dati_tool', True)
         defs["BUILD_FF_TOOL"] = self.options.get_safe('ff_tool', True)
         defs["BUILD_FIRE_TOOL"] = self.options.get_safe('fire_tool', True)
@@ -219,10 +237,11 @@ class XcikitConan(ConanFile):
     def generate(self):
         tc = CMakeToolchain(self, generator="Ninja")
         self._set_cmake_defs(tc.variables)
+        if is_msvc(self):
+            tc.variables["USE_MSVC_RUNTIME_LIBRARY_DLL"] = not is_msvc_static_runtime(self)
         tc.generate()
 
         deps = CMakeDeps(self)
-        deps.build_context_activated = ['catch2', 'benchmark']
         deps.generate()
 
     def build(self):
@@ -231,6 +250,8 @@ class XcikitConan(ConanFile):
         cmake.build()
 
     def package(self):
+        copy(self, pattern="LICENSE", dst=Path(self.package_folder, "licenses"),
+             src=self.source_folder)
         cmake = CMake(self)
         cmake.install()
 
