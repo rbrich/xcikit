@@ -126,7 +126,7 @@ def main():
     cmake_args = [f'-DXCI_{o.upper()}=ON' for o in deps if o.startswith('with_')] + \
                  [f"-DCMAKE_PREFIX_PATH={';'.join(precached_deps)}"]
     print(' '.join(cmake_args))
-    print(' '.join(f'-o xcikit:{o}=True' for o in deps))
+    print(' '.join(f'-o xcikit/*:{o}=True' for o in deps))
 
 
 if __name__ == '__main__':

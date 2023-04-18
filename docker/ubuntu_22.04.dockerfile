@@ -1,11 +1,11 @@
 # Ubuntu 22.04 with Clang-Tidy 14
 #
 # CI builder (DockerHub public image), local build check:
-#   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-ubuntu . -f docker/ubuntu/Dockerfile
+#   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-ubuntu . -f docker/ubuntu_22.04.dockerfile
 #   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-ubuntu
 # CMake arguments (for Clion IDE):
-#   -DFORCE_COLORS=1 -DCONAN_INSTALL=1
-#   -DCONAN_OPTIONS="xcikit:system_glfw=True;xcikit:system_vulkan=True;xcikit:system_freetype=True;xcikit:system_harfbuzz=True;xcikit:system_benchmark=True;xcikit:system_zlib=True;xcikit:system_range_v3=True;xcikit:with_hyperscan=True"
+#   -DFORCE_COLORS=1
+#   -DCONAN_OPTIONS="-o;xcikit/*:system_glfw=True;-o;xcikit/*:system_vulkan=True;-o;xcikit/*:system_freetype=True;-o;xcikit/*:system_harfbuzz=True;-o;xcikit/*:system_benchmark=True;-o;xcikit/*:system_zlib=True;-o;xcikit/*:system_range_v3=True;-o;xcikit/*:with_hyperscan=True"
 
 FROM ubuntu:jammy AS builder
 
@@ -23,17 +23,15 @@ RUN echo "xcikit deps"; apt-get update && apt-get install --no-install-recommend
     librange-v3-dev libglfw3-dev glslang-tools libvulkan-dev libfreetype6-dev libharfbuzz-dev \
     libhyperscan-dev libbenchmark-dev && rm -rf /var/lib/apt/lists/*
 
-RUN echo "conan"; pip3 --no-cache-dir install 'conan<2.0'
+RUN echo "conan"; pip3 --no-cache-dir install conan
 
 ARG UID=10002
 RUN useradd -m -p np -u ${UID} -s /bin/bash builder
 USER builder
 
-ENV CONAN_USER_HOME=/home/builder
-RUN conan profile new default --detect && \
-    conan profile update "settings.compiler.libcxx=libstdc++11" default && \
-    conan profile update "settings.compiler.cppstd=20" default && \
-    conan config set general.revisions_enabled=1
+COPY --chown=builder docker/conan /home/builder/conan
+RUN conan config install /home/builder/conan
+ENV CONAN_DEFAULT_PROFILE=linux_gcc12
 
 # Preinstall Conan deps
 ENV XCIKIT=/home/builder/xcikit

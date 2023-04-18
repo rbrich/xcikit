@@ -76,7 +76,6 @@ endif()
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
 
 include(XciBuildOptions)
-include(ConanInit)
 
 
 # ------------ #

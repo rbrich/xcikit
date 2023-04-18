@@ -218,7 +218,7 @@ Obtaining dependencies:
 * Install them into *_system_* or otherwise make them visible to CMake's `find_*` functions.
   - This works for almost all deps, except *fmt*, *pfr*, *magic_enum*.
   - Deps that must be installed this way: *libzip*, *hyperscan*.
-* Install them via *_Conan_*. Pass `-D CONAN_INSTALL=ON` to `cmake` or build with `build.sh`
+* Install them via *_Conan_*. See <<ide-conan,How to build from IDE>> or build with `build.sh`
   which runs conan automatically.
 
 [#system-package-manager]
@@ -228,14 +228,14 @@ Installing the dependencies with *_system package managers_*:
 +
 ----
 apt install libzip-dev cmake ninja-build
-pip3 install 'conan<2.0'
+pip3 install conan
 ----
 - macOS (Homebrew):
 +
 ----
 # Tools
 brew install cmake ninja ccache
-pip3 install 'conan<2.0'
+pip3 install conan
 # Libs
 brew install pegtl libzip freetype glfw doxygen catch2 google-benchmark hyperscan
 ----
@@ -244,7 +244,7 @@ brew install pegtl libzip freetype glfw doxygen catch2 google-benchmark hypersca
 ----
 # Tools
 port install cmake ninja ccache
-pip3 install 'conan<2.0'
+pip3 install conan
 # Libs
 port install vulkan-* MoltenVK glfw-devel harfbuzz-devel hyperscan libfmt catch2
 ----
@@ -354,25 +354,31 @@ What doesn't work:
     * Now we should have `cl`, `cmake` and `ninja` working.
     * (For convenience, add https://stackoverflow.com/a/69027383/6013024[Git Bash + VS] configuration to https://docs.microsoft.com/en-us/windows/terminal/[Windows Terminal].)
 
-5. Install conan: `pip install 'conan<2.0'` (Python should also work via VS developer tools)
+5. Install conan: `pip install conan` (Python should also work via VS developer tools)
 
 6. Run `./build.sh`
 
 Note that the build script detects "MINGW64_NT" as target platform, but this is not true. It builds native Windows binaries.
 The string is just the output of `uname` in Git Bash. I don't know any better way how to detect host platform on Windows (please tell me if you know).
 
+[#ide-conan]
 ==== How to build from IDE with CMake support
 
-Works with Clion, and may work with Visual Studio (I did not try).
+Works with Clion, and may work with Visual Studio (I did not test).
 
-Open the project, let the IDE load the top-level `CMakeLists.txt`.
-Add the following cmake parameter, so it also installs Conan dependencies:
+Separately, clone this fork of `cmake-conan` which adds `CONAN_OPTIONS`: https://github.com/rbrich/cmake-conan
 
+Then open the xcikit project, let the IDE load the top-level `CMakeLists.txt`.
+
+Add these CMake options in the IDE settings:
 ----
--DCONAN_INSTALL=ON
+-DCMAKE_PROJECT_TOP_LEVEL_INCLUDES=/path/to/cmake-conan/conan_provider.cmake
+-DCONAN_OPTIONS="-o;xcikit/*:system_glfw=True;-o;xcikit/*:system_vulkan=True;-o;xcikit/*:system_freetype=True;-o;xcikit/*:system_harfbuzz=True;-o;xcikit/*:system_zlib=True"
 ----
 
-You still need `conan` command working.
+The `CONAN_OPTIONS` are just an example, in this case Conan will skip installing graphical libs,
+so they can be searched in the system instead. Those libs must be preinstalled.
+
 
 [#emscripten]
 === Porting to Emscripten
@@ -405,7 +411,7 @@ CXXFLAGS=-flto=thin
 LDFLAGS=-flto=thin
 ----
 
-See a working example of such profile in the link:docker/emscripten/conan/profile[docker/emscripten] directory.
+See a working example of such profile in the link:docker/conan/profiles/emscripten[docker/emscripten] directory.
 
 Run the build (only 'core' and 'script' components work at this time):
 

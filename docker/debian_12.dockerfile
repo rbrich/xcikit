@@ -1,18 +1,13 @@
-# Debian 11 with GCC 10
 # Debian 12 with GCC 12
 #
 # CI builder (DockerHub public image), local build check:
-#   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-debian:11 . -f docker/debian/Dockerfile
-#   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-debian:11
-# Or with Debian 12:
-#   docker build --pull --build-arg UID=$(id -u) --build-arg BASE=bookworm -t rbrich/xcikit-debian:12 . -f docker/debian/Dockerfile
+#   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-debian:12 . -f docker/debian_12.dockerfile
 #   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-debian:12
 # CMake arguments (for Clion IDE):
-#   -DFORCE_COLORS=1 -DCONAN_INSTALL=1
-#   -DCONAN_OPTIONS="xcikit:system_glfw=True;xcikit:system_vulkan=True;xcikit:system_freetype=True;xcikit:system_harfbuzz=True;xcikit:system_benchmark=True;xcikit:system_zlib=True;xcikit:system_range_v3=True;xcikit:with_hyperscan=True"
+#   -DFORCE_COLORS=1
+#   -DCONAN_OPTIONS="-o;xcikit/*:system_glfw=True;-o;xcikit/*:system_vulkan=True;-o;xcikit/*:system_freetype=True;-o;xcikit/*:system_harfbuzz=True;-o;xcikit/*:system_benchmark=True;-o;xcikit/*:system_zlib=True;-o;xcikit/*:system_range_v3=True;-o;xcikit/*:with_hyperscan=True"
 
-ARG BASE=bullseye
-FROM debian:${BASE}-slim AS builder
+FROM debian:bookworm-slim AS builder
 
 RUN echo "gcc"; apt-get update && apt-get install --no-install-recommends -y \
     g++ && rm -rf /var/lib/apt/lists/*
@@ -27,17 +22,15 @@ RUN echo "xcikit deps"; apt-get update && apt-get install --no-install-recommend
     librange-v3-dev libglfw3-dev glslang-tools libvulkan-dev libfreetype6-dev libharfbuzz-dev \
     libhyperscan-dev libbenchmark-dev && rm -rf /var/lib/apt/lists/*
 
-RUN echo "conan"; pip3 --no-cache-dir install 'conan<2.0'
+RUN echo "conan"; pip3 install --no-cache-dir --break-system-packages conan
 
 ARG UID=10002
 RUN useradd -m -p np -u ${UID} -s /bin/bash builder
 USER builder
 
-ENV CONAN_USER_HOME=/home/builder
-RUN conan profile new default --detect && \
-    conan profile update "settings.compiler.libcxx=libstdc++11" default && \
-    conan profile update "settings.compiler.cppstd=20" default && \
-    conan config set general.revisions_enabled=1
+COPY --chown=builder docker/conan /home/builder/conan
+RUN conan config install /home/builder/conan
+ENV CONAN_DEFAULT_PROFILE=linux_gcc12
 
 # Preinstall Conan deps
 ENV XCIKIT=/home/builder/xcikit

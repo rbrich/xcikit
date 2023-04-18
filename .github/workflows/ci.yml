@@ -17,67 +17,96 @@ jobs:
         include:
         - os: ubuntu-20.04
           name: "GCC 10 / Release"
-          cc: gcc-10
-          cxx: g++-10
+          cc: gcc
+          cc_ver: 10
+          cxx: g++
+          libcxx: libstdc++11
           build_args: ""
         - os: ubuntu-22.04
           name: "GCC 11 / Release"
-          cc: gcc-11
-          cxx: g++-11
+          cc: gcc
+          cc_ver: 11
+          cxx: g++
+          libcxx: libstdc++11
           build_args: ""
         - os: ubuntu-22.04
           name: "GCC 12 / Release"
-          cc: gcc-12
-          cxx: g++-12
+          cc: gcc
+          cc_ver: 12
+          cxx: g++
+          libcxx: libstdc++11
           build_args: ""
         - os: ubuntu-20.04
           name: "Clang 12 / Release"
-          cc: clang-12
-          cxx: clang++-12
+          cc: clang
+          cc_ver: 12
+          cxx: clang++
+          libcxx: libc++
           apt: libc++-12-dev libc++abi-12-dev
           build_args: ""
         - os: ubuntu-22.04
           name: "Clang 13 / Release"
-          cc: clang-13
-          cxx: clang++-13
+          cc: clang
+          cc_ver: 13
+          cxx: clang++
+          libcxx: libc++
           apt: libc++-13-dev libc++abi-13-dev
           build_args: ""
 #        - os: ubuntu-22.04
 #          name: "Clang 14 / Release"
-#          cc: clang-14
-#          cxx: clang++-14
+#          cc: clang
+#          cc_ver: 14
+#          cxx: clang++
+#          libcxx: libc++
 #          apt: libc++-14-dev libc++abi-14-dev
 #          build_args: ""
         - os: ubuntu-22.04
           name: "GCC 12 / Debug ASAN"
-          cc: gcc-12
-          cxx: g++-12
+          cc: gcc
+          cc_ver: 12
+          cxx: g++
+          libcxx: libstdc++11
           build_args: "--debug --asan --ubsan"
         - os: ubuntu-20.04
           name: "GCC 10 / MinSizeRel Unity"
-          cc: gcc-10
-          cxx: g++-10
+          cc: gcc
+          cc_ver: 10
+          cxx: g++
+          libcxx: libstdc++11
           build_args: "--minsize --unity"
         - os: macos-11
           name: "Clang 15 / Release"
+          cc: clang
+          cc_ver: 15
+          libcxx: libc++
           clang: llvm@15
           os_target: "11.0"
           build_args: ""
         - os: macos-11
           name: "Xcode 13.2 / Release"
+          cc: apple-clang
+          cc_ver: 13
+          libcxx: libc++
           clang: Xcode_13.2.1
           os_target: "11.0"
           build_args: ""
         - os: macos-12
           name: "Xcode 14.2 / Release"
+          cc: apple-clang
+          cc_ver: 14
+          libcxx: libc++
           clang: Xcode_14.2
           os_target: "12.0"
           build_args: ""
-        - os: windows-2019
-          name: "VS 16 / Release"
-          build_args: "-DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
+#        - os: windows-2019
+#          name: "VS 16 / Release"
+#          cc: msvc
+#          cc_ver: 192
+#          build_args: "-DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
         - os: windows-2022
           name: "VS 17 / Release"
+          cc: msvc
+          cc_ver: 193
           build_args: "-DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
 
     name: ${{ matrix.os }} / ${{ matrix.name }}
@@ -105,8 +134,8 @@ jobs:
             sudo apt-get install --no-install-recommends -y ninja-build \
                 libglfw3-dev libfreetype6-dev libharfbuzz-dev libhyperscan-dev libbenchmark-dev \
                 ${{ matrix.apt }}
-            export CC=${{ matrix.cc }}
-            export CXX=${{ matrix.cxx }}
+            export CC=${{ matrix.cc }}-${{ matrix.cc_ver }}
+            export CXX=${{ matrix.cxx }}-${{ matrix.cc_ver }}
             echo "CC='$CC'" >> $GITHUB_ENV
             echo "CXX='$CXX'" >> $GITHUB_ENV
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
@@ -130,28 +159,28 @@ jobs:
             which ninja; ninja --version
         fi
         # Install conan
-        pip3 --no-cache-dir install 'conan<2.0'
-        conan profile new default --detect --force
-        conan profile update "settings.xcikit:compiler.cppstd=20" default
-        conan profile update "settings.catch2:compiler.cppstd=20" default
-        conan profile update "settings.fmt:compiler.cppstd=20" default
-        conan profile update "settings.range-v3:compiler.cppstd=20" default
-        conan profile update "settings.taocpp-pegtl:compiler.cppstd=20" default
-        conan profile update "settings.magic_enum:compiler.cppstd=20" default
-        conan profile update "settings.pfr:compiler.cppstd=20" default
-        conan profile update "options.harfbuzz:with_glib=True" default
-        conan profile update "options.freetype:with_bzip2=True" default
-        conan profile update "options.freetype:with_brotli=True" default
-        if [[ "$RUNNER_OS" == "Linux" ]]; then
-            if [[ "$CXX" = clang* ]]; then
-                conan profile update "settings.compiler.libcxx=libc++" default
-                echo "CXXFLAGS=-stdlib=libc++" >> $GITHUB_ENV
-            else
-                conan profile update "settings.compiler.libcxx=libstdc++11" default
-            fi
-        elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            conan profile update "settings.compiler.libcxx=libc++" default
-            conan profile update "settings.os.version=$MACOSX_DEPLOYMENT_TARGET" default
+        pip3 --no-cache-dir install conan
+        conan --version
+        mkdir -p ~/.conan2/profiles
+        cat <<EOF > ~/.conan2/profiles/default
+        [settings]
+        os={{ {"Darwin": "Macos"}.get(platform.system(), platform.system()) }}
+        arch=x86_64
+        build_type=Release
+        compiler=${{ matrix.cc }}
+        compiler.version=${{ matrix.cc_ver }}
+        compiler.cppstd=20
+        {% if platform.system() == "Windows" %}
+        compiler.runtime=dynamic
+        {% else %}
+        compiler.libcxx=${{ matrix.libcxx }}
+        {% endif %}
+        {% if platform.system() == "Darwin" %}
+        os.version=$MACOSX_DEPLOYMENT_TARGET
+        {% endif %}
+        EOF
+        if [[ "$RUNNER_OS" == "Linux" && "$CXX" = clang* ]]; then
+            echo "CXXFLAGS=-stdlib=libc++" >> $GITHUB_ENV
         fi
         echo "CONAN_HOME=$(conan config home)" >> $GITHUB_OUTPUT
 
@@ -163,7 +192,7 @@ jobs:
     - name: conan cache
       uses: actions/cache@v3
       with:
-        path: ${{ steps.tools.outputs.CONAN_HOME }}/data
+        path: ${{ steps.tools.outputs.CONAN_HOME }}/p
         key: ${{ matrix.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}-${{github.sha}}
         restore-keys: |
           ${{ matrix.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}-

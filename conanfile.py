@@ -1,19 +1,27 @@
-from conans import ConanFile, CMake, tools
-import conans.model.build_info
-# from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake
+from conan import ConanFile
+from conan.tools.files import load
+from conan.tools.build import check_min_cppstd
+from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake, cmake_layout
+from conan.tools.files import copy, rmdir
+from conan.tools.microsoft import is_msvc_static_runtime, is_msvc
+from pathlib import Path
+
+required_conan_version = ">=1.53.0"
 
 
 class XcikitConan(ConanFile):
     name = "xcikit"
-    version = tools.load("VERSION").strip()
     license = "Apache-2.0"
     author = "Radek Brich"
     url = "https://github.com/rbrich/xcikit"
+    homepage = url
     description = "Collection of C++ libraries for drawing 2D graphics, rendering text and more."
     topics = ("text-rendering", "ui", "scripting-language", "vulkan", "glsl", "freetype")
+    package_type = "library"
     settings = "os", "arch", "compiler", "build_type"
     options = {
         "shared": [True, False],
+        "fPIC": [True, False],
 
         # Optional components:
         "data": [True, False],
@@ -57,6 +65,7 @@ class XcikitConan(ConanFile):
     }
     default_options = {
         "shared": False,
+        "fPIC": True,
 
         # Optional components:
         "data": True,
@@ -96,90 +105,97 @@ class XcikitConan(ConanFile):
         "with_hyperscan": False,
 
         # Disable unnecessary transient deps by default.
-        "freetype:with_bzip2": False,
-        "freetype:with_brotli": False,
-        "harfbuzz:with_glib": False,
-        "vulkan-loader:with_wsi_xcb": False,
-        "vulkan-loader:with_wsi_xlib": False,
-        "vulkan-loader:with_wsi_wayland": False,
-        "vulkan-loader:with_wsi_directfb": False,
+        "freetype/*:with_bzip2": False,
+        "freetype/*:with_brotli": False,
+        "harfbuzz/*:with_glib": False,
+        "vulkan-loader/*:with_wsi_xcb": False,
+        "vulkan-loader/*:with_wsi_xlib": False,
+        "vulkan-loader/*:with_wsi_wayland": False,
+        "vulkan-loader/*:with_wsi_directfb": False,
     }
 
-    generators = ("cmake_find_package_multi", "cmake_paths")
-    exports = ("VERSION",)
-    exports_sources = ("CMakeLists.txt", "config.h.in", "xcikit-config.cmake.in",
+    exports_sources = ("VERSION", "CMakeLists.txt", "config.h.in", "xcikit-config.cmake.in",
                        "cmake/**", "src/**", "examples/**", "tests/**", "benchmarks/**", "tools/**",
                        "share/**", "third_party/**",
                        "!build/**", "!cmake-build-*/**")
 
-    _cmake = None
+    def set_version(self):
+        self.version = load(self, Path(self.recipe_folder) / "VERSION").strip()
 
     def config_options(self):
-        if self.settings.os != "Linux":
-            del self.options["vulkan-loader"].with_wsi_xcb
-            del self.options["vulkan-loader"].with_wsi_xlib
-            del self.options["vulkan-loader"].with_wsi_wayland
-            del self.options["vulkan-loader"].with_wsi_directfb
+        if self.settings.os == "Windows":
+            del self.options.fPIC
+
+    def layout(self):
+        # src_folder must use the same source folder name the project
+        cmake_layout(self)
 
     def _requirements(self):
         for name, info in self.conan_data["requirements"].items():
             info['name'] = name
             info['option'] = f"system_{name}" if 'conan' in info else f"with_{name}"
             info.setdefault('prereq', [])
+            info.setdefault('public', False)
             yield info
 
-    def _check_prereq(self, prereq):
+    def validate(self):
+        check_min_cppstd(self, "20")
+
+    @staticmethod
+    def _check_prereq(prereq, options):
         if not prereq:
             return True
         for p in prereq:
-            if getattr(self.options, p):
+            if options[p]:
                 return True
         return False
 
     def configure(self):
-        tools.check_min_cppstd(self, "20")
-        remove_options = []
+        if self.options.shared:
+            self.options.rm_safe("fPIC")
+        # evaluated options for _check_prereq
+        options = {k: v[0] == 'T' for k, v in self.options.items()}
         # Dependent options
-        if self.options.widgets:
-            remove_options += ["text", "graphics"]
-            self.options.text = True
-            self.options.graphics = True
-        elif self.options.text:
-            remove_options += ["graphics"]
-            self.options.graphics = True
-        elif self.options.script:
-            remove_options += ["data"]
-            self.options.data = True
-
-        if not self.options.tools:
-            remove_options += ["dati_tool", "ff_tool", "fire_tool", "shed_tool", "tc_tool"]
-            self.options.dati_tool = False
-            self.options.ff_tool = False
-            self.options.fire_tool = False
-            self.options.shed_tool = False
-            self.options.tc_tool = False
+        if options['widgets']:
+            del self.options.text
+            options['text'] = True
+        if options['text']:
+            del self.options.graphics
+            options['graphics'] = True
+        if options['script']:
+            del self.options.data
+            options['data'] = True
+        if not options['tools']:
+            del self.options.dati_tool
+            del self.options.ff_tool
+            del self.options.fire_tool
+            del self.options.shed_tool
+            del self.options.tc_tool
+            options['dati_tool'] = False
+            options['ff_tool'] = False
+            options['fire_tool'] = False
+            options['shed_tool'] = False
+            options['tc_tool'] = False
         else:
-            if not self.options.widgets:
-                remove_options += ["shed_tool"]
-                self.options.shed_tool = False
-            if not self.options.script:
-                remove_options += ["fire_tool"]
-                self.options.fire_tool = False
-            if not self.options.data:
-                remove_options += ["dati_tool"]
-                self.options.dati_tool = False
-            if not self.options.with_hyperscan:
-                remove_options += ["ff_tool"]
-                self.options.ff_tool = False
+            if not options['widgets']:
+                del self.options.shed_tool
+                options['shed_tool'] = False
+            if not options['script']:
+                del self.options.fire_tool
+                options['fire_tool'] = False
+            if not options['data']:
+                del self.options.dati_tool
+                options['dati_tool'] = False
+            if not options['with_hyperscan']:
+                del self.options.ff_tool
+                options['ff_tool'] = False
 
         # Remove system_ options for disabled components
         for info in self._requirements():
-            if not self._check_prereq(info['prereq']):
-                self.options.remove(info['option'])
+            if not self._check_prereq(info['prereq'], options):
+                delattr(self.options, info['option'])
 
         # Remove dependent / implicit options
-        for opt in remove_options:
-            self.options.remove(opt)
         if self.settings.os == "Emscripten":
             # These are imported from Emscripten Ports
             del self.options.system_zlib
@@ -192,7 +208,12 @@ class XcikitConan(ConanFile):
             # Install requirement via Conan if `system_<lib>` option exists and is set to False
             opt = self.options.get_safe('system_' + info['name'])
             if opt is not None and not opt:
-                self.requires(info['conan'])
+                if 'tests' in info['prereq'] or 'benchmarks' in info['prereq']:
+                    self.test_requires(info['conan'])
+                elif info['public']:
+                    self.requires(info['conan'], transitive_headers=True, transitive_libs=True)
+                else:
+                    self.requires(info['conan'], headers=True, libs=True)
 
     def _set_cmake_defs(self, defs):
         if self.package_folder:
@@ -205,6 +226,7 @@ class XcikitConan(ConanFile):
         defs["BUILD_TOOLS"] = self.options.tools
         defs["BUILD_EXAMPLES"] = self.options.examples
         defs["BUILD_TESTS"] = self.options.tests
+        defs["BUILD_BENCHMARKS"] = self.options.benchmarks
         defs["BUILD_DATI_TOOL"] = self.options.get_safe('dati_tool', True)
         defs["BUILD_FF_TOOL"] = self.options.get_safe('ff_tool', True)
         defs["BUILD_FIRE_TOOL"] = self.options.get_safe('fire_tool', True)
@@ -212,34 +234,32 @@ class XcikitConan(ConanFile):
         defs["BUILD_TC_TOOL"] = self.options.get_safe('tc_tool', True)
         defs["XCI_WITH_HYPERSCAN"] = self.options.get_safe('with_hyperscan', False)
 
-    def _configure_cmake(self):
-        cmake = CMake(self)
-        self._set_cmake_defs(cmake.definitions)
-        cmake.configure()
-        return cmake
+    def generate(self):
+        tc = CMakeToolchain(self, generator="Ninja")
+        self._set_cmake_defs(tc.variables)
+        if is_msvc(self):
+            tc.variables["USE_MSVC_RUNTIME_LIBRARY_DLL"] = not is_msvc_static_runtime(self)
+        tc.generate()
 
-    # def generate(self):
-    #     tc = CMakeToolchain(self, generator="Ninja")
-    #     self._set_cmake_defs(tc.variables)
-    #     tc.generate()
-    #
-    #     deps = CMakeDeps(self)
-    #     deps.build_context_activated = ['catch2', 'benchmark']
-    #     deps.generate()
+        deps = CMakeDeps(self)
+        deps.generate()
 
     def build(self):
-        cmake = self._configure_cmake()
+        cmake = CMake(self)
+        cmake.configure()
         cmake.build()
 
     def package(self):
-        cmake = self._configure_cmake()
+        copy(self, pattern="LICENSE", dst=Path(self.package_folder, "licenses"),
+             src=self.source_folder)
+        cmake = CMake(self)
         cmake.install()
 
     def test(self):
-        cmake = self._configure_cmake()
+        cmake = CMake(self)
         cmake.test()
 
-    def _add_dep(self, opt: str, component: conans.model.build_info.Component,
+    def _add_dep(self, opt: str, component,
                  cmake_dep: str, conan_dep=None):
         opt_val = self.options.get_safe(opt)
         if opt_val is None:  # system option deleted

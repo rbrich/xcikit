@@ -10,7 +10,7 @@ add_executable(shed shed.cpp
 target_link_libraries(shed
     xci-graphics
     xci-widgets
-    spirv-cross::spirv-cross-glsl
+    spirv-cross::spirv-cross
     range-v3::range-v3
 )
 

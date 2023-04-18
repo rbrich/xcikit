@@ -1,5 +1,5 @@
 *
-!docker/emscripten/conan
+!docker/conan
 !build.sh
 !detect_system_deps.py
 !precache_upstream_deps.py
