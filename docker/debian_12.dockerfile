@@ -4,8 +4,8 @@
 #   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-debian:12 . -f docker/debian_12.dockerfile
 #   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-debian:12
 # CMake arguments (for Clion IDE):
-#   -DFORCE_COLORS=1 -DCONAN_INSTALL=1
-#   -DCONAN_OPTIONS="xcikit:system_glfw=True;xcikit:system_vulkan=True;xcikit:system_freetype=True;xcikit:system_harfbuzz=True;xcikit:system_benchmark=True;xcikit:system_zlib=True;xcikit:system_range_v3=True;xcikit:with_hyperscan=True"
+#   -DFORCE_COLORS=1
+#   -DCONAN_OPTIONS="-o;xcikit/*:system_glfw=True;-o;xcikit/*:system_vulkan=True;-o;xcikit/*:system_freetype=True;-o;xcikit/*:system_harfbuzz=True;-o;xcikit/*:system_benchmark=True;-o;xcikit/*:system_zlib=True;-o;xcikit/*:system_range_v3=True;-o;xcikit/*:with_hyperscan=True"
 
 FROM debian:bookworm-slim AS builder
 

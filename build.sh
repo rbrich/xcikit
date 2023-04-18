@@ -338,7 +338,6 @@ if phase deps; then
 
         run conan install "${ROOT_DIR}" \
             --build missing \
-            --output-folder="${ROOT_DIR}" \
             -s "build_type=${BUILD_TYPE}" \
             -c tools.cmake.cmake_layout:build_folder_vars="['settings.os', 'settings.os.version', 'settings.build_type']" \
             "${CONAN_ARGS[@]}"
