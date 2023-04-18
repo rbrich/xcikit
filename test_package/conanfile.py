@@ -1,21 +1,25 @@
+from conan import ConanFile
+from conan.tools.build import can_run
+from conan.tools.cmake import cmake_layout, CMake
 import os
-
-from conans import ConanFile, CMake, tools
 
 
 class XcikitTestConan(ConanFile):
-    settings = "os", "compiler", "build_type", "arch"
-    generators = ("cmake_find_package_multi", "cmake_paths")
+    settings = "os", "arch", "compiler", "build_type"
+    generators = "CMakeDeps", "CMakeToolchain", "VirtualRunEnv"
+    test_type = "explicit"
+
+    def requirements(self):
+        self.requires(self.tested_reference_str)
+
+    def layout(self):
+        cmake_layout(self)
 
     def build(self):
         cmake = CMake(self)
         cmake.configure()
-        cmake.install()
-
-    def imports(self):
-        self.copy("*.dylib*", dst="lib", src="lib")
-        self.copy('*.so*', dst='lib', src='lib')
+        cmake.build()
 
     def test(self):
-        if not tools.cross_building(self.settings):
-            self.run("./example")
+        if can_run(self):
+            self.run(os.path.join(self.cpp.build.bindir, "example"), env="conanrun")
