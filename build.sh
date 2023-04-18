@@ -189,7 +189,7 @@ while [[ $# -gt 0 ]] ; do
             CONAN_PROFILE="$2"
             shift 2 ;;
         --toolchain )
-            CMAKE_ARGS+=(-D"CMAKE_TOOLCHAIN_FILE=$2")
+            CONAN_ARGS+=(-c "tools.cmake.cmaketoolchain:user_toolchain=[\"$2\"]")
             PRECACHE_ARGS+=("--toolchain" "$2")
             shift 2 ;;
         -h | --help )
@@ -209,15 +209,16 @@ if [[ "${EMSCRIPTEN}" -eq 1 ]] ; then
     ARCH="wasm"
     SYSTEM_DEPS=0
 elif [[ ${PLATFORM} = "Darwin" ]] ; then
-    PLATFORM="macos${MACOSX_DEPLOYMENT_TARGET}"
+    PLATFORM="macos"
+    [[ -n "$MACOSX_DEPLOYMENT_TARGET" ]] && PLATFORM="${PLATFORM}-${MACOSX_DEPLOYMENT_TARGET}"
 elif [[ ${PLATFORM} = "Linux" ]] ; then
     PLATFORM="linux"
 elif [[ ${PLATFORM} = MINGW* ]] ; then
-    PLATFORM="windows$(uname | cut -d- -f2)"
+    PLATFORM="windows"
 fi
 
 VERSION=$(cat "${ROOT_DIR}/VERSION")$(git rev-parse --short HEAD 2>/dev/null | sed 's/^/+/' ; :)
-BUILD_CONFIG="${PLATFORM}-${ARCH}-${BUILD_TYPE}"
+BUILD_CONFIG="${PLATFORM}-$(echo ${BUILD_TYPE} | tr '[:upper:]' '[:lower:]')"
 [[ -z "${GENERATOR}" ]] && setup_ninja && GENERATOR="Ninja"
 [[ -n "${GENERATOR}" ]] && CMAKE_ARGS+=(-G "${GENERATOR}")
 BUILD_DIR=${BUILD_DIR:-"${ROOT_DIR}/build/${BUILD_CONFIG}"}
@@ -233,12 +234,9 @@ if [[ -z "$component_default" ]]; then
     # Disable components that were not selected
     for name in "${COMPONENTS[@]}" ; do
         component_var="component_$name"
-        name_upper="$(echo "$name" | tr '[:lower:]' '[:upper:]')"
         if [[ -z "${!component_var}" ]] ; then
-            CMAKE_ARGS+=(-D "XCI_${name_upper}=OFF")
             CONAN_ARGS+=(-o "xcikit/*:${name}=False")
         else
-            CMAKE_ARGS+=(-D "XCI_${name_upper}=ON")
             CONAN_ARGS+=(-o "xcikit/*:${name}=True")
             DETECT_ARGS+=("${name}")
         fi
@@ -252,12 +250,9 @@ if [[ -z "$part_default" ]]; then
     # Disable parts that were not selected
     for name in "${PARTS[@]}" ; do
         part_var="part_$name"
-        name_upper="$(echo "$name" | tr '[:lower:]' '[:upper:]')"
         if [[ -z "${!part_var}" ]] ; then
-            CMAKE_ARGS+=(-D "BUILD_${name_upper}=OFF")
             CONAN_ARGS+=(-o "xcikit/*:${name}=False")
         else
-            CMAKE_ARGS+=(-D "BUILD_${name_upper}=ON")
             CONAN_ARGS+=(-o "xcikit/*:${name}=True")
             DETECT_ARGS+=("${name}")
         fi
@@ -274,12 +269,9 @@ if [[ -z "$tool_default" ]]; then
     # Disable tools that were not selected
     for name in "${TOOLS[@]}" ; do
         tool_var="tool_$name"
-        name_upper="$(echo "$name" | tr '[:lower:]' '[:upper:]')"
         if [[ -z "${!tool_var}" ]] ; then
-            CMAKE_ARGS+=(-D "BUILD_${name_upper}_TOOL=OFF")
             CONAN_ARGS+=(-o "xcikit/*:${name}_tool=False")
         else
-            CMAKE_ARGS+=(-D "BUILD_${name_upper}_TOOL=ON")
             CONAN_ARGS+=(-o "xcikit/*:${name}_tool=True")
             DETECT_ARGS+=("${name}_tool")
         fi
@@ -346,8 +338,9 @@ if phase deps; then
 
         run conan install "${ROOT_DIR}" \
             --build missing \
-            --output-folder="${BUILD_DIR}" \
+            --output-folder="${ROOT_DIR}" \
             -s "build_type=${BUILD_TYPE}" \
+            -c tools.cmake.cmake_layout:build_folder_vars="['settings.os', 'settings.os.version', 'settings.build_type']" \
             "${CONAN_ARGS[@]}"
     )
     echo
@@ -363,6 +356,7 @@ if phase config; then
         [[ "${SYSTEM_DEPS}" -eq 1 ]] && CMAKE_ARGS+=($(tail -n2 'system_deps.txt' | head -n1))
         run ${WRAPPER} cmake "${ROOT_DIR}" \
             "${CMAKE_ARGS[@]}" \
+            -DCMAKE_TOOLCHAIN_FILE="${BUILD_DIR}/generators/conan_toolchain.cmake" \
             -D"CMAKE_BUILD_TYPE=${BUILD_TYPE}" \
             -D"CMAKE_INSTALL_PREFIX=${INSTALL_DIR}" \
             -D'CMAKE_EXPORT_COMPILE_COMMANDS=ON'
