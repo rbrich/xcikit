@@ -210,7 +210,13 @@ if [[ "${EMSCRIPTEN}" -eq 1 ]] ; then
     SYSTEM_DEPS=0
 elif [[ ${PLATFORM} = "Darwin" ]] ; then
     PLATFORM="macos"
-    [[ -n "$MACOSX_DEPLOYMENT_TARGET" ]] && PLATFORM="${PLATFORM}-${MACOSX_DEPLOYMENT_TARGET}"
+    if [[ -z "$MACOSX_DEPLOYMENT_TARGET" ]]; then
+        MACOSX_DEPLOYMENT_TARGET=$(conan profile show -pr "${CONAN_PROFILE}" | grep os.version | head -n1 | cut -d= -f2)
+    fi
+    if [[ -n "$MACOSX_DEPLOYMENT_TARGET" ]]; then
+        PLATFORM="${PLATFORM}-${MACOSX_DEPLOYMENT_TARGET}"
+        CONAN_ARGS+=(-s "os.version=${MACOSX_DEPLOYMENT_TARGET}")
+    fi
 elif [[ ${PLATFORM} = "Linux" ]] ; then
     PLATFORM="linux"
 elif [[ ${PLATFORM} = MINGW* ]] ; then
@@ -318,9 +324,6 @@ mkdir -p "${BUILD_DIR}"
 
 if phase deps; then
     header "Install Dependencies"
-    if [[ "${PLATFORM}" == macos* && -n "${MACOSX_DEPLOYMENT_TARGET}" ]]; then
-        CONAN_ARGS+=(-s "os.version=${MACOSX_DEPLOYMENT_TARGET}")
-    fi
     if [[ "${PRECACHE_DEPS}" -eq 1 ]]; then
         "${PYTHON}" "${ROOT_DIR}/precache_upstream_deps.py" "${PRECACHE_ARGS[@]}"
     fi
