@@ -1052,7 +1052,9 @@ The functions are usually generic, instantiated with type arguments, and taking 
 type_name = fun<T> Void -> String { /* compiler intrinsics */ }
 // Used as:
 type_name<String>   // -> "String"
-String.type_name    // equivalent
+type_name<[Int]>   // -> "[Int32]]"
+String.type_name    // equivalent to type_name<String>
+[Int].type_name     // ParseError - this notation works only on named types
 ----
 
 The last line is a syntax sugar.
