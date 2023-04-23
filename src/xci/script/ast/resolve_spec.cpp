@@ -168,7 +168,8 @@ public:
                     // try to resolve via known type args
                     auto var = v.ti.generic_var();
                     const auto& type_args = m_scope.type_args();
-                    auto resolved = type_args.get(var);
+                    TypeInfo resolved;
+                    get_type_arg(var, resolved, type_args);
                     if (resolved) {
                         v.ti = resolved;
                     } else {

@@ -197,6 +197,7 @@ void Reference::copy_to(Reference& r) const
     r.module = module;
     r.index = index;
     r.ti = ti;
+    r.type_args_ti = type_args_ti;
 }
 
 

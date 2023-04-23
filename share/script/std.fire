@@ -115,6 +115,9 @@ instance Exp Int64 { exp = { __exp 0x99 } }
 instance Exp Float32 { exp = { __exp 0xCC } }
 instance Exp Float64 { exp = { __exp 0xDD } }
 
+// Add strings => concatenate
+instance Add String { add = fun a b { string_concat a b } }
+
 
 // Comparison operators
 
