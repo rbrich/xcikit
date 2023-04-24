@@ -1017,10 +1017,15 @@ TEST_CASE( "Explicit type params", "[script][interpreter]")
 TEST_CASE( "Type introspection", "[script][interpreter]")
 {
     CHECK(interpret_std("type_name<Void>; type_name<String>; type_name<Int>") == R"=("()";"String";"Int32")=");
+    CHECK(interpret_std("Void.type_name; String.type_name; Int.type_name") == R"=("()";"String";"Int32")=");
     CHECK(interpret_std("type_name<(Float,String)>; type_name<[Int64]>") == R"=("(Float32, String)";"[Int64]")=");
+    CHECK_THROWS_AS(parse("[Int].type_name"), ParseError);  // works only on names, not type expressions
     CHECK(interpret_std("type_name<(name:String, age:Int)>") == R"=("(name: String, age: Int32)")=");
+    CHECK(interpret_std("X=(name:String, age:Int); X.type_name") == R"=("(name: String, age: Int32)")=");
     CHECK(interpret_std("X=Int; type_name<X>") == R"=("Int32")=");
     CHECK(interpret_std("type MyInt=Int; type_name<MyInt>") == R"=("MyInt")=");
+    // type_name works on type vars, dot-call on type can take normal args
+    CHECK(interpret_std(R"(f=fun<T> a:String { a + T.type_name }; Int.f "The type is ")") == R"=("The type is Int32")=");
 }
 
 

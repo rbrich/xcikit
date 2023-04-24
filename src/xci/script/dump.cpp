@@ -28,7 +28,7 @@ struct StreamOptions {
     bool module_verbose : 1;  // Module: dump function bodies etc.
     bool parenthesize_fun_types : 1;
     bool multiline : 1;
-    bool qualify_type_args : 1;
+    bool qualify_type_vars : 1;
     unsigned level : 6;
     std::bitset<32> rules;
 };
@@ -1002,11 +1002,14 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
 
 std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
 {
+    const bool qualify = stream_options(os).qualify_type_vars;
     switch (v.type()) {
         case Type::Unknown: {
             auto var = v.generic_var();
             if (!var)
                 return os << '?';
+            if (qualify)
+                os << var.symtab()->qualified_name() << "::";
             return os << var->name();
         }
         case Type::Bool:        return os << "Bool";
@@ -1195,6 +1198,7 @@ std::ostream& operator<<(std::ostream& os, const Scope& v)
     }
     os << '\t';
     const bool orig_parenthesize_fun_types = stream_options(os).parenthesize_fun_types;
+    const bool orig_qualify_type_args = stream_options(os).qualify_type_vars;
     stream_options(os).parenthesize_fun_types = true;
     if (v.has_type_args()) {
         os << "Type args: ";
@@ -1206,17 +1210,23 @@ std::ostream& operator<<(std::ostream& os, const Scope& v)
                 first = false;
             if (&v.function().symtab() != arg.first.symtab())
                 os << arg.first.symtab()->qualified_name() << "::";  // qualify non-own symbols
-            os << arg.first->name() << "=" << arg.second;
+            os << arg.first->name() << "=";
+            if (arg.second.is_unknown()) {
+                auto var = arg.second.generic_var();
+                stream_options(os).qualify_type_vars = (var.symtab() != &v.function().symtab());
+            }
+            os << arg.second;
         }
     }
     stream_options(os).parenthesize_fun_types = orig_parenthesize_fun_types;
+    stream_options(os).qualify_type_vars = orig_qualify_type_args;
     return os;
 }
 
 
 std::ostream& operator<<(std::ostream& os, const TypeArgs& v)
 {
-    const bool qualify = stream_options(os).qualify_type_args;
+    const bool qualify = stream_options(os).qualify_type_vars;
     bool first = true;
     for (const auto& arg : v) {
         if (!first)

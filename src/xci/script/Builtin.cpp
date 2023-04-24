@@ -237,6 +237,7 @@ void BuiltinModule::add_string_functions()
 
     add_native_function("string_equal", {ti_string(), ti_string()}, ti_bool(), string_equal);
     add_native_function("string_compare", {ti_string(), ti_string()}, ti_int32(), string_compare);
+    add_native_function("string_concat", [](std::string_view a, std::string_view b) -> std::string { return std::string(a) + std::string(b); });
 }
 
 
@@ -416,6 +417,10 @@ static void introspect_module(Stack& stack, void*, void*)
 static void introspect_type_name(Stack& stack, void*, void*)
 {
     auto type_id = stack.pull<value::Int32>().value();
+    if (type_id == -1) {
+        stack.push(value::String{"unknown"});
+        return;
+    }
     const Module& mod = stack.frame().function.module();
     std::ostringstream os;
     if (type_id < 32) {

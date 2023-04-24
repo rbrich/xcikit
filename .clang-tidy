@@ -27,6 +27,7 @@ Checks: >
   -misc-unused-parameters,
   -misc-non-private-member-variables-in-classes,
   -misc-no-recursion,
+  -misc-use-anonymous-namespace,
   modernize-*,
   -modernize-avoid-c-arrays,
   -modernize-deprecated-headers,
