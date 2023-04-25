@@ -1016,6 +1016,11 @@ TEST_CASE( "Explicit type params", "[script][interpreter]")
 
 TEST_CASE( "Type introspection", "[script][interpreter]")
 {
+    CHECK(interpret_std("type_id<Void>; type_id<String>; type_id<Int>") == "0;10;6");
+    CHECK(interpret_std("type_id<Int> == type_id<Int32>") == "true");
+    CHECK(interpret_std("type_size<Void>; type_size<Int>; type_size<Float64>") == "0;4;8");
+    constexpr size_t ptr_size = sizeof(void*);
+    CHECK(interpret_std("type_size<(Int, Int64, String)>; type_size<[Int]>") == fmt::format("{};{}", 12 + ptr_size, ptr_size));
     CHECK(interpret_std("type_name<Void>; type_name<String>; type_name<Int>") == R"=("()";"String";"Int32")=");
     CHECK(interpret_std("Void.type_name; String.type_name; Int.type_name") == R"=("()";"String";"Int32")=");
     CHECK(interpret_std("type_name<(Float,String)>; type_name<[Int64]>") == R"=("(Float32, String)";"[Int64]")=");
@@ -1026,6 +1031,12 @@ TEST_CASE( "Type introspection", "[script][interpreter]")
     CHECK(interpret_std("type MyInt=Int; type_name<MyInt>") == R"=("MyInt")=");
     // type_name works on type vars, dot-call on type can take normal args
     CHECK(interpret_std(R"(f=fun<T> a:String { a + T.type_name }; Int.f "The type is ")") == R"=("The type is Int32")=");
+    CHECK(interpret_std("type X = Int; X.type_name; X.underlying_type") == R"("X";"Int32")");
+    CHECK(interpret_std("subtypes<Int>") == R"(["Int32"])");
+    CHECK(interpret_std("subtypes<[Int]>") == R"(["Int32"])");
+    CHECK(interpret_std("subtypes<(Int32, String, Float64)>") == R"(["Int32", "String", "Float64"])");
+    CHECK(interpret_std("subtypes<(a:Int32, b:String, c:Float64)>") == R"(["Int32", "String", "Float64"])");
+    CHECK(interpret_std("subtypes<(Int32, (String, Float64))>") == R"=(["Int32", "(String, Float64)"])=");
 }
 
 

@@ -476,6 +476,14 @@ Value ListV::value_at(size_t idx, const TypeInfo& elem_type) const
 }
 
 
+void ListV::set_value(size_t idx, const Value& v)
+{
+    assert(idx < length());
+    const auto elem_size = v.size_on_stack();
+    v.write(raw_data() + idx * elem_size);
+}
+
+
 void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
 {
     const auto* data = slot.data();

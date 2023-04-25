@@ -201,7 +201,7 @@ public:
         Function& func = module().get_scope(v.scope_index).function();
 
         // collapse block with single statement
-        if (!func.has_parameters() && v.body.statements.size() == 1) {
+        if (!func.has_nonvoid_parameters() && v.body.statements.size() == 1) {
             auto* ret = dynamic_cast<ast::Return*>(v.body.statements[0].get());
             assert(ret != nullptr);
             apply_and_fold(ret->expression);

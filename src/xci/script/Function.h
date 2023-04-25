@@ -59,7 +59,7 @@ public:
 
     // parameters
     void add_parameter(std::string name, TypeInfo&& type_info);
-    bool has_parameters() const { return !m_signature->params.empty(); }
+    bool has_nonvoid_parameters() const { return m_signature->has_nonvoid_params(); }
     const TypeInfo& parameter(Index idx) const { return m_signature->params[idx]; }
     const std::vector<TypeInfo>& parameters() const { return m_signature->params; }
     size_t raw_size_of_parameters() const;

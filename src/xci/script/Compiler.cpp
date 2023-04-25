@@ -345,7 +345,7 @@ public:
                         // EXECUTE
                         code().add_opcode(Opcode::Execute);
                     } else {
-                        if (!m_callable && fn.has_parameters()) {
+                        if (!m_callable && fn.has_nonvoid_parameters()) {
                             // LOAD_FUNCTION <function_idx>
                             code().add_L1(Opcode::LoadFunction, scope.function_index());
                         } else {
@@ -445,7 +445,7 @@ public:
             if (!v.definition) {
                 // MAKE_CLOSURE <function_idx>
                 code().add_L1(Opcode::MakeClosure, scope.function_index());
-                if (!fn.has_parameters()) {
+                if (!fn.has_nonvoid_parameters()) {
                     // EXECUTE
                     code().add_opcode(Opcode::Execute);
                 }
@@ -540,7 +540,7 @@ public:
 
         if (scope.has_nonlocals()) {
             if (v.definition) {
-                /*if (!func.has_parameters()) {
+                /*if (!func.has_nonvoid_parameters()) {
                     // parameterless closure is executed immediately
                     make_closure(func);
                     // MAKE_CLOSURE <function_idx>
@@ -552,7 +552,7 @@ public:
                 make_closure(scope);
                 // MAKE_CLOSURE <function_idx>
                 code().add_L1(Opcode::MakeClosure, scope.function_index());
-                if (!func.has_parameters()) {
+                if (!func.has_nonvoid_parameters()) {
                     // parameterless closure is executed immediately
                     // EXECUTE
                     code().add_opcode(Opcode::Execute);
@@ -642,7 +642,7 @@ private:
                         make_closure(subscope);
                         // MAKE_CLOSURE <function_idx>
                         code().add_L1(Opcode::MakeClosure, fn_idx);
-                    } else if (fn.has_parameters()) {
+                    } else if (fn.has_nonvoid_parameters()) {
                         // LOAD_FUNCTION <function_idx>
                         code().add_L1(Opcode::LoadFunction, fn_idx);
                     } else {

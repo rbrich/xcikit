@@ -107,7 +107,9 @@ struct ListV {
     bool operator ==(const ListV& rhs) const { return slot.slot() == rhs.slot.slot(); }  // same slot - cannot compare content without elem_type
     size_t length() const;
     const std::byte* raw_data() const;
+    std::byte* raw_data() { return (std::byte*) const_cast<const ListV*>(this)->raw_data(); }
     Value value_at(size_t idx, const TypeInfo& elem_type) const;
+    void set_value(size_t idx, const Value& v);
 
     /// Slice the list. Indexes work similarly to Python.
     /// Automatically copies the list on heap when it has more than 1 reference.
@@ -544,6 +546,7 @@ public:
     size_t length() const { return get<ListV>().length(); }
     Value value_at(size_t idx, const TypeInfo& elem_type) const { return get<ListV>().value_at(idx, elem_type); }
     TypedValue typed_value_at(size_t idx, const TypeInfo& elem_type) const { return {value_at(idx, elem_type), elem_type}; }
+    void set_value(size_t idx, const Value& v) { get<ListV>().set_value(idx, v); }
 };
 
 

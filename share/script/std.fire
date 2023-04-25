@@ -399,10 +399,15 @@ instance Parse Bool { parse = fun x _f { x == "true" } }
 to_string = fun<T> x:T -> String { format x () }
 from_string = fun<T> x:String -> T { parse x () }
 
+
 // -----------------------------------------------------------------------------
 // Type introspection
 
-type_name = fun<T> Void -> String { __type_name __type_id<T> }
+type_id = fun<T> Void -> Int { __type_id<T> }
+type_size = fun<T> Void -> Int { __type_id<T>.__type_size }
+type_name = fun<T> Void -> String { __type_id<T>.__type_name }
+underlying_type = fun<T> Void -> String { __type_id<T>.__underlying_type }
+subtypes = fun<T> Void -> [String] { __type_id<T>.__subtypes }
 
 
 // -----------------------------------------------------------------------------

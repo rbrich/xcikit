@@ -8,9 +8,14 @@
 #include "dump.h"
 #include <xci/core/string.h>
 #include <xci/compat/macros.h>
+
+#include <range/v3/view/enumerate.hpp>
+
 #include <sstream>
 
 namespace xci::script {
+
+using ranges::views::enumerate;
 
 
 const char* builtin::op_to_function_name(ast::Operator::Op op)
@@ -414,28 +419,91 @@ static void introspect_module(Stack& stack, void*, void*)
 }
 
 
+static const TypeInfo& get_type_info(const Module& mod, int32_t type_id)
+{
+    static TypeInfo unknown = ti_unknown();
+    if (type_id < 0)
+        return unknown;
+    if (type_id < 32) {
+        // builtin module
+        const Module& builtin = mod.get_imported_module(0);
+        if ((size_t)type_id >= builtin.num_types())
+            return unknown;
+        return builtin.get_type(type_id);
+    }
+    type_id -= 32;
+    if ((size_t)type_id >= mod.num_types())
+        return unknown;
+    return mod.get_type(type_id);
+}
+
+
+static void introspect_type_size(Stack& stack, void*, void*)
+{
+    auto type_id = stack.pull<value::Int32>().value();
+    const Module& mod = stack.frame().function.module();
+    const TypeInfo& ti = get_type_info(mod, type_id);
+    stack.push(value::Int32{(int32_t)ti.size()});
+}
+
+
 static void introspect_type_name(Stack& stack, void*, void*)
 {
     auto type_id = stack.pull<value::Int32>().value();
-    if (type_id == -1) {
-        stack.push(value::String{"unknown"});
+    const Module& mod = stack.frame().function.module();
+    const TypeInfo& ti = get_type_info(mod, type_id);
+    std::ostringstream os;
+    os << ti;
+    stack.push(value::String{os.str()});
+}
+
+
+static void introspect_underlying_type(Stack& stack, void*, void*)
+{
+    auto type_id = stack.pull<value::Int32>().value();
+    const Module& mod = stack.frame().function.module();
+    const TypeInfo& ti = get_type_info(mod, type_id);
+    std::ostringstream os;
+    os << ti.underlying();
+    stack.push(value::String{os.str()});
+}
+
+
+static void introspect_subtypes(Stack& stack, void*, void*)
+{
+    auto type_id = stack.pull<value::Int32>().value();
+    const Module& mod = stack.frame().function.module();
+    const TypeInfo& ti = get_type_info(mod, type_id);
+    if (ti.is_tuple() || ti.is_struct()) {
+        const auto& subtypes = ti.struct_or_tuple_subtypes();
+        value::List res(subtypes.size(), ti_string());
+        for (const auto& [i, sub] : subtypes | enumerate) {
+            std::ostringstream os;
+            os << sub;
+            res.set_value(i, value::String(os.str()));
+        }
+        stack.push(res);
         return;
     }
-    const Module& mod = stack.frame().function.module();
+    value::List res(1, ti_string());
     std::ostringstream os;
-    if (type_id < 32) {
-        // builtin module
-        os << mod.get_imported_module(0).get_type(type_id);
+    if (ti.is_list()) {
+        os << ti.elem_type();
+        res.set_value(0, value::String(os.str()));
     } else {
-        os << mod.get_type(type_id - 32);
+        os << ti;
+        res.set_value(0, value::String(os.str()));
     }
-    stack.push(value::String{os.str()});
+    stack.push(res);
 }
 
 
 void BuiltinModule::add_introspections()
 {
+    add_native_function("__type_size", {ti_int32()}, ti_int32(), introspect_type_size);
     add_native_function("__type_name", {ti_int32()}, ti_string(), introspect_type_name);
+    add_native_function("__underlying_type", {ti_int32()}, ti_string(), introspect_underlying_type);
+    add_native_function("__subtypes", {ti_int32()}, ti_list(ti_string()), introspect_subtypes);
     // return the builtin module
     add_native_function("__builtin",
             [](void* m) -> Module& { return *static_cast<Module*>(m); },

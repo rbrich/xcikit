@@ -15,8 +15,6 @@
 #include <xci/compat/macros.h>
 #include <xci/core/log.h>
 
-#include <range/v3/view/enumerate.hpp>
-
 #include <sstream>
 #include <optional>
 

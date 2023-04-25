@@ -332,8 +332,7 @@ template<>
 struct Action<PrefixOperator> {
     template<typename Input>
     static void apply(const Input &in, ast::OpCall& opc) {
-        ast::Operator op{in.string_view(), true};
-        opc.op = op;
+        opc.op = ast::Operator{in.string_view(), true};
     }
 };
 
@@ -366,8 +365,7 @@ template<>
 struct Action<InfixOperator> {
     template<typename Input>
     static void apply(const Input &in, ast::OpCall& opc) {
-        ast::Operator op{in.string_view()};
-        opc.op = op;
+        opc.op = ast::Operator{in.string_view()};
     }
 };
 
