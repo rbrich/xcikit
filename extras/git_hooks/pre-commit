@@ -1,0 +1,15 @@
+#!/bin/sh
+# Check that all modified files have current year in copyright header
+
+STATUS=0
+AGAINST=${1:-HEAD}
+for f in $(git diff --name-only "$AGAINST"); do
+    if head -n5 $f | grep Copyright | grep -v $(date '+%Y') ; then
+        STATUS=1
+        echo "$f"
+        echo "^ Please update copyright year"
+        echo
+    fi
+done
+
+exit $STATUS

@@ -1,7 +1,7 @@
 // Value.cpp created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Value.h"
@@ -490,8 +490,8 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
     auto length = (int32_t) bit_read<uint32_t>(data);
 
     // deleter data
-    auto offsets_size = bit_read<uint16_t>(data);
-    std::vector<size_t> offsets = list_deleter_read_offsets(data, offsets_size);
+    const auto offsets_size = bit_read<uint16_t>(data);
+    const auto offsets = list_deleter_read_offsets(data, offsets_size);
 
     // adjust indexes
     if (end < 0)
