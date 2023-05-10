@@ -1,7 +1,7 @@
 // SymbolTable.h created on 2019-07-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_SYMBOL_TABLE_H
@@ -106,7 +106,7 @@ public:
         StructItem,         // name = item name, index = struct type index in module
 
         // special
-        TypeId,             // translate type name to type ID (index = type index in builtin if < 32, else type index in current module + 32)
+        TypeIndex,          // translate type name to TypeIndex (index = type index in builtin if < 32, else type index in current module + 32)
     };
 
     Symbol() = default;  // only for deserialization

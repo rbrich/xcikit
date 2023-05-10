@@ -1,7 +1,7 @@
 // AST.cpp created on 2019-05-15 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "AST.h"
@@ -111,7 +111,7 @@ void Definition::copy_to(Definition& r) const
 std::unique_ptr<ast::Statement> Invocation::make_copy() const
 {
     auto r = std::make_unique<Invocation>(expression->make_copy());
-    r->type_id = type_id;
+    r->ti = ti;
     return r;
 }
 
@@ -304,7 +304,6 @@ std::unique_ptr<ast::Expression> List::make_copy() const
     Expression::copy_to(*r);
     r->items = copy_ptr_vector(items);
     r->ti = ti;
-    r->elem_type_id = elem_type_id;
     return r;
 }
 

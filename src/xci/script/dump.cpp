@@ -1,7 +1,7 @@
 // dump.cpp created on 2019-10-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "dump.h"
@@ -1049,6 +1049,7 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
                 return os << v.signature();
         case Type::Module:      return os << "Module";
         case Type::Stream:      return os << "Stream";
+        case Type::TypeIndex:   return os << "TypeIndex";
         case Type::Named:       return os << v.name();
     }
     XCI_UNREACHABLE;
@@ -1108,7 +1109,7 @@ std::ostream& operator<<(std::ostream& os, Symbol::Type v)
         case Symbol::TypeName:          return os << "TypeName";
         case Symbol::TypeVar:           return os << "TypeVar";
         case Symbol::StructItem:        return os << "StructItem";
-        case Symbol::TypeId:            return os << "TypeId";
+        case Symbol::TypeIndex:         return os << "TypeIndex";
     }
     return os;
 }

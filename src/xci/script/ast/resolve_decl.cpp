@@ -1,7 +1,7 @@
 // resolve_decl.cpp created on 2022-07-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022 Radek Brich
+// Copyright 2022–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_decl.h"
@@ -187,7 +187,7 @@ public:
         const auto& sym = *v.identifier.symbol;
 
         if (!v.type_args.empty()) {
-            if (sym.type() != Symbol::Function && sym.type() != Symbol::TypeId)
+            if (sym.type() != Symbol::Function && sym.type() != Symbol::TypeIndex)
                 throw UnexpectedTypeArg(v.type_args.front()->source_loc);
             auto orig_type_info = std::move(m_type_info);
             for (auto& type_arg : v.type_args) {
@@ -203,7 +203,7 @@ public:
                 m_intrinsic = true;
                 return;
             }
-            case Symbol::TypeId: {
+            case Symbol::TypeIndex: {
                 if (v.type_args_ti.empty())
                     throw MissingTypeArg(v.source_loc);
                 if (v.type_args_ti.size() > 1)

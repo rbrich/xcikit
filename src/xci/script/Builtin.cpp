@@ -8,6 +8,7 @@
 #include "dump.h"
 #include <xci/core/string.h>
 #include <xci/compat/macros.h>
+#include <xci/script/typing/type_index.h>
 
 #include <range/v3/view/enumerate.hpp>
 
@@ -135,8 +136,8 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__partial", Symbol::Instruction, Index(Opcode::Partial)});
     */
 
-    // `__type_id<Int>` is index of Int type
-    symtab().add({"__type_id", Symbol::TypeId});
+    // `__type_index<Int>` is index of Int type
+    symtab().add({"__type_index", Symbol::TypeIndex});
     // `__value 42` is index of static value 42 (e.g. `__load_static (__value 42)`)
     symtab().add({"__value", Symbol::Value});
 }
@@ -158,6 +159,7 @@ void BuiltinModule::add_types()
     symtab().add({"Float32", Symbol::TypeName, add_type(ti_float32())});
     symtab().add({"Float64", Symbol::TypeName, add_type(ti_float64())});
     symtab().add({"String", Symbol::TypeName, add_type(ti_string())});
+    symtab().add({"TypeIndex", Symbol::TypeName, add_type(ti_type_index())});
 }
 
 
@@ -419,39 +421,20 @@ static void introspect_module(Stack& stack, void*, void*)
 }
 
 
-static const TypeInfo& get_type_info(const Module& mod, int32_t type_id)
-{
-    static TypeInfo unknown = ti_unknown();
-    if (type_id < 0)
-        return unknown;
-    if (type_id < 32) {
-        // builtin module
-        const Module& builtin = mod.get_imported_module(0);
-        if ((size_t)type_id >= builtin.num_types())
-            return unknown;
-        return builtin.get_type(type_id);
-    }
-    type_id -= 32;
-    if ((size_t)type_id >= mod.num_types())
-        return unknown;
-    return mod.get_type(type_id);
-}
-
-
 static void introspect_type_size(Stack& stack, void*, void*)
 {
-    auto type_id = stack.pull<value::Int32>().value();
+    auto type_idx = stack.pull<value::Int32>().value();
     const Module& mod = stack.frame().function.module();
-    const TypeInfo& ti = get_type_info(mod, type_id);
+    const TypeInfo& ti = get_type_info(mod, type_idx);
     stack.push(value::Int32{(int32_t)ti.size()});
 }
 
 
 static void introspect_type_name(Stack& stack, void*, void*)
 {
-    auto type_id = stack.pull<value::Int32>().value();
+    auto type_idx = stack.pull<value::Int32>().value();
     const Module& mod = stack.frame().function.module();
-    const TypeInfo& ti = get_type_info(mod, type_id);
+    const TypeInfo& ti = get_type_info(mod, type_idx);
     std::ostringstream os;
     os << ti;
     stack.push(value::String{os.str()});
@@ -460,20 +443,18 @@ static void introspect_type_name(Stack& stack, void*, void*)
 
 static void introspect_underlying_type(Stack& stack, void*, void*)
 {
-    auto type_id = stack.pull<value::Int32>().value();
+    auto type_idx = stack.pull<value::Int32>().value();
     const Module& mod = stack.frame().function.module();
-    const TypeInfo& ti = get_type_info(mod, type_id);
-    std::ostringstream os;
-    os << ti.underlying();
-    stack.push(value::String{os.str()});
+    const TypeInfo& ti = get_type_info(mod, type_idx);
+    stack.push(value::TypeIndex{int32_t(get_type_index(mod, ti.underlying()))});
 }
 
 
 static void introspect_subtypes(Stack& stack, void*, void*)
 {
-    auto type_id = stack.pull<value::Int32>().value();
+    auto type_idx = stack.pull<value::Int32>().value();
     const Module& mod = stack.frame().function.module();
-    const TypeInfo& ti = get_type_info(mod, type_id);
+    const TypeInfo& ti = get_type_info(mod, type_idx);
     if (ti.is_tuple() || ti.is_struct()) {
         const auto& subtypes = ti.struct_or_tuple_subtypes();
         value::List res(subtypes.size(), ti_string());
@@ -485,14 +466,11 @@ static void introspect_subtypes(Stack& stack, void*, void*)
         stack.push(res);
         return;
     }
-    value::List res(1, ti_string());
-    std::ostringstream os;
+    value::List res(1, ti_type_index());
     if (ti.is_list()) {
-        os << ti.elem_type();
-        res.set_value(0, value::String(os.str()));
+        res.set_value(0, value::TypeIndex(int32_t(get_type_index(mod, ti.elem_type()))));
     } else {
-        os << ti;
-        res.set_value(0, value::String(os.str()));
+        res.set_value(0, value::TypeIndex(int32_t(get_type_index(mod, ti))));
     }
     stack.push(res);
 }
@@ -500,10 +478,10 @@ static void introspect_subtypes(Stack& stack, void*, void*)
 
 void BuiltinModule::add_introspections()
 {
-    add_native_function("__type_size", {ti_int32()}, ti_int32(), introspect_type_size);
-    add_native_function("__type_name", {ti_int32()}, ti_string(), introspect_type_name);
-    add_native_function("__underlying_type", {ti_int32()}, ti_string(), introspect_underlying_type);
-    add_native_function("__subtypes", {ti_int32()}, ti_list(ti_string()), introspect_subtypes);
+    add_native_function("__type_size", {ti_type_index()}, ti_int32(), introspect_type_size);
+    add_native_function("__type_name", {ti_type_index()}, ti_string(), introspect_type_name);
+    add_native_function("__underlying_type", {ti_type_index()}, ti_type_index(), introspect_underlying_type);
+    add_native_function("__subtypes", {ti_type_index()}, ti_list(ti_type_index()), introspect_subtypes);
     // return the builtin module
     add_native_function("__builtin",
             [](void* m) -> Module& { return *static_cast<Module*>(m); },

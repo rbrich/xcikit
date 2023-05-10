@@ -65,7 +65,7 @@ public:
             case Symbol::TypeName:
             case Symbol::TypeVar:
             case Symbol::StructItem:
-            case Symbol::TypeId:
+            case Symbol::TypeIndex:
                 break;
             case Symbol::Function: {
                 assert(v.index != no_index);

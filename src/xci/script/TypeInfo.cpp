@@ -1,7 +1,7 @@
 // TypeInfo.cpp created on 2019-06-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TypeInfo.h"
@@ -43,6 +43,7 @@ size_t type_size_on_stack(Type type)
         case Type::UInt32:
         case Type::Int32:
         case Type::Float32:
+        case Type::TypeIndex:
             return 4;
         case Type::UInt64:
         case Type::Int64:
@@ -231,6 +232,7 @@ bool is_same_underlying(const TypeInfo& lhs, const TypeInfo& rhs)
         case Type::String:
         case Type::Module:
         case Type::Stream:
+        case Type::TypeIndex:
             return l.type() == r.type();
         case Type::List:
             return r.type() == Type::List &&

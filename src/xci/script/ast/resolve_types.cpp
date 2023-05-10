@@ -6,8 +6,8 @@
 
 #include "resolve_types.h"
 #include <xci/script/typing/TypeChecker.h>
-#include <xci/script/typing/OverloadResolver.h>
-#include <xci/script/typing/GenericResolver.h>
+#include <xci/script/typing/overload_resolver.h>
+#include <xci/script/typing/generic_resolver.h>
 #include <xci/script/Value.h>
 #include <xci/script/Builtin.h>
 #include <xci/script/Function.h>
@@ -178,10 +178,10 @@ public:
                     if (m_call_sig.n_args() != 2)
                         throw UnexpectedArgumentCount(2, m_call_sig.n_args(), v.source_loc);
                 }
-                // check type of args (they must be Int or Byte)
+                // check type of args (they must be Int, TypeIndex or Byte)
                 for (const auto&& [i, arg] : m_call_sig.args | enumerate) {
                     const Type t = arg.type_info.type();
-                    if (t != Type::Unknown && t != Type::Byte && t != Type::Int32)
+                    if (t != Type::Unknown && t != Type::Byte && t != Type::Int32 && t != Type::TypeIndex)
                         throw UnexpectedArgumentType(i+1, ti_int32(),
                                                      arg.type_info, arg.source_loc);
                 }
@@ -189,7 +189,7 @@ public:
                 m_call_sig.clear();
                 break;
             }
-            case Symbol::TypeId: {
+            case Symbol::TypeIndex: {
                 if (v.ti.is_unknown()) {
                     // try to resolve via known type args
                     auto var = v.ti.generic_var();
@@ -199,7 +199,7 @@ public:
                         v.ti = resolved;
                     }
                 }
-                m_value_type = ti_int32();
+                m_value_type = ti_type_index();
                 return;  // do not overwrite v.ti below
             }
             case Symbol::Class:

@@ -184,6 +184,11 @@ instance Eq String {
     ne = fun a b { ! string_equal a b }
 }
 
+instance Eq TypeIndex {
+    eq = { __equal 0x88 }
+    ne = { __not_equal 0x88 }
+}
+
 /*
 instance Eq [T] ( Eq T ) {
     eq = fun x y {
@@ -342,6 +347,7 @@ instance Cast String [Char] { cast = cast_to_chars }
 instance Cast String [Byte] { cast = cast_to_bytes }
 instance Cast [Char] String { cast = cast_to_string }
 instance Cast [Byte] String { cast = cast_to_string }
+instance Cast Int32 TypeIndex { cast = { __noop } }
 
 class Bounded T {
     min : Void -> T
@@ -364,7 +370,7 @@ class Subscript T U R {
 }
 
 instance<T> Subscript [T] Int T {
-    subscript = { __subscript __type_id<T> }
+    subscript = { __subscript __type_index<T> }
 }
 
 
@@ -403,11 +409,23 @@ from_string = fun<T> x:String -> T { parse x () }
 // -----------------------------------------------------------------------------
 // Type introspection
 
-type_id = fun<T> Void -> Int { __type_id<T> }
-type_size = fun<T> Void -> Int { __type_id<T>.__type_size }
-type_name = fun<T> Void -> String { __type_id<T>.__type_name }
-underlying_type = fun<T> Void -> String { __type_id<T>.__underlying_type }
-subtypes = fun<T> Void -> [String] { __type_id<T>.__subtypes }
+class TypeInfo T {
+    size : T -> Int
+    name : T -> String
+    underlying : T -> T
+    subtypes : T -> [T]
+}
+
+instance TypeInfo TypeIndex {
+    size = fun t { __type_size t }
+    name = fun t { __type_name t }
+    underlying = fun t { __underlying_type t }
+    subtypes = fun t { __subtypes t }
+}
+
+type_index = fun<T> Void -> TypeIndex { __type_index<T> }
+type_size = fun<T> Void -> Int { __type_index<T>.__type_size }
+type_name = fun<T> Void -> String { __type_index<T>.__type_name }
 
 
 // -----------------------------------------------------------------------------
@@ -418,8 +436,8 @@ larger = fun<T> x:T y:T -> T { if x > y then x else y }
 smaller = fun<T> x:T y:T -> T { if x < y then x else y }
 sign = fun x:Int -> Int { if x < 0 then -1  if x > 0 then +1  else 0 }
 
-len = fun<T> [T] -> UInt { __length __type_id<T> }
-slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __slice __type_id<T> }
+len = fun<T> [T] -> UInt { __length __type_index<T> }
+slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __slice __type_index<T> }
 
 head = fun<T> a:[T] -> T { a!0 }
 tail = fun<T> a:[T] -> [T] { a .slice 1 max:Int 1 }
@@ -429,4 +447,4 @@ tail = fun<T> a:[T] -> [T] { a .slice 1 max:Int 1 }
 //reduce = fun<Ord T> fn [T] -> T { }
 //sum = reduce add
 
-//sort = fun<Ord T> [T] -> [T] { __sort __type_id<T> }
+//sort = fun<Ord T> [T] -> [T] { __sort __type_index<T> }

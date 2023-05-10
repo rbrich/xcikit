@@ -14,6 +14,7 @@
 #include "ast/fold_const_expr.h"
 #include "ast/fold_dot_call.h"
 #include "ast/fold_tuple.h"
+#include "typing/type_index.h"
 #include "Stack.h"
 #include <xci/compat/macros.h>
 
@@ -58,8 +59,11 @@ public:
 
     void visit(ast::Invocation& inv) override {
         inv.expression->apply(*this);
-        if (inv.type_id != no_index)
-            code().add_L1(Opcode::Invoke, inv.type_id);
+        // Unknown in intrinsics function
+        if (!inv.ti.is_void() && !inv.ti.is_unknown()) {
+            Index type_index = make_type_index(module(), inv.ti);
+            code().add_L1(Opcode::Invoke, type_index);
+        }
     }
 
     void visit(ast::Return& ret) override {
@@ -148,7 +152,7 @@ public:
             item->apply(*this);
         }
         // MAKE_LIST <length> <elem_type>
-        code().add_L2(Opcode::MakeList, v.items.size(), v.elem_type_id);
+        code().add_L2(Opcode::MakeList, v.items.size(), get_type_index(module(), v.ti.elem_type()));
     }
 
     void visit(ast::StructInit& v) override {
@@ -216,14 +220,15 @@ public:
                 }
                 break;
             }
-            case Symbol::TypeId: {
-                const value::Int32 type_id_val((int32_t) v.index);
+            case Symbol::TypeIndex: {
+                const Index index = make_type_index(module(), v.ti);
+                const value::TypeIndex type_id_val((int32_t) index);
                 if (m_intrinsic) {
                     m_instruction_args.emplace_back(type_id_val);
                     return;
                 }
 
-                // create static Int value in this module
+                // create static TypeIndex value in this module
                 auto idx = module().add_value(TypedValue(type_id_val));
                 // LOAD_STATIC <static_idx>
                 code().add_L1(Opcode::LoadStatic, idx);

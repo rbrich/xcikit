@@ -1,10 +1,10 @@
-// GenericResolver.cpp created on 2022-12-31 as part of xcikit project
+// generic_resolver.cpp created on 2022-12-31 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022 Radek Brich
+// Copyright 2022–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include "GenericResolver.h"
+#include "generic_resolver.h"
 
 #include <range/v3/view/zip.hpp>
 

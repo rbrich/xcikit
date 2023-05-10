@@ -759,7 +759,7 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
     //CHECK(interpret("f = fun<Add T> (T,T) -> T { add }; f (1,2)") == "3");
     // deducing list type
     CHECK(interpret("fun<T> [T] -> [T] { __noop } [1,2]") == "[1, 2]");
-    CHECK(interpret("len = fun<T> [T] -> UInt { __length __type_id<T> }; len [1,2,3]") == "3U");
+    CHECK(interpret("len = fun<T> [T] -> UInt { __length __type_index<T> }; len [1,2,3]") == "3U");
     CHECK(interpret_std("f = fun<T> a:[T] -> T { a!1 }; f [1,2,3]") == "2");
 }
 
@@ -894,9 +894,9 @@ TEST_CASE( "String operations", "[script][interpreter]" )
 TEST_CASE( "Subscript", "[script][interpreter]" )
 {
     // custom implementation (same as in std.fire)
-    CHECK(interpret("__type_id<Void>") == "0");
-    CHECK_THROWS_AS(interpret("__type_id<X>"), UndefinedTypeName);
-    CHECK(interpret("subscript = fun<T> [T] Int -> T { __subscript __type_id<T> }; subscript [1,2,3] 1") == "2");
+    CHECK(interpret("__type_index<Void>") == "0");
+    CHECK_THROWS_AS(interpret("__type_index<X>"), UndefinedTypeName);
+    CHECK(interpret("subscript = fun<T> [T] Int -> T { __subscript __type_index<T> }; subscript [1,2,3] 1") == "2");
     // std implementation
     CHECK(interpret_std("subscript [1,2,3] 1") == "2");
     CHECK(interpret_std("[1,2,3] .subscript 0") == "1");
@@ -912,7 +912,7 @@ TEST_CASE( "Subscript", "[script][interpreter]" )
 
 TEST_CASE( "Slice", "[script][interpreter]" )
 {
-    CHECK(interpret("slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __slice __type_id<T> }; [1,2,3,4,5] .slice 1 4 1") == "[2, 3, 4]");
+    CHECK(interpret("slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __slice __type_index<T> }; [1,2,3,4,5] .slice 1 4 1") == "[2, 3, 4]");
     // step=0 -- pick one element for a new list
     CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int 0") == "[4]");
     CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int max:Int") == "[4]");
@@ -1009,15 +1009,15 @@ TEST_CASE( "Explicit type params", "[script][interpreter]")
 {
     // no generic params or return value, only an explicit type param,
     // which is used directly in the body and requires explicit instantiations
-    CHECK(interpret("type_id = fun<T> () -> Int { __type_id<T> }; "
-                    "x = type_id<Int>; x; type_id<String>; type_id<Void>") == "6;10;0");
+    CHECK(interpret("type_idx = fun<T> () -> TypeIndex { __type_index<T> }; "
+                    "x = type_idx<Int>; x; type_idx<String>; type_idx<Void>") == "6;10;0");
 }
 
 
 TEST_CASE( "Type introspection", "[script][interpreter]")
 {
-    CHECK(interpret_std("type_id<Void>; type_id<String>; type_id<Int>") == "0;10;6");
-    CHECK(interpret_std("type_id<Int> == type_id<Int32>") == "true");
+    CHECK(interpret_std("type_index<Void>; type_index<String>; type_index<Int>") == "0;10;6");
+    CHECK(interpret_std("type_index<Int> == type_index<Int32>") == "true");
     CHECK(interpret_std("type_size<Void>; type_size<Int>; type_size<Float64>") == "0;4;8");
     constexpr size_t ptr_size = sizeof(void*);
     CHECK(interpret_std("type_size<(Int, Int64, String)>; type_size<[Int]>") == fmt::format("{};{}", 12 + ptr_size, ptr_size));
@@ -1031,12 +1031,12 @@ TEST_CASE( "Type introspection", "[script][interpreter]")
     CHECK(interpret_std("type MyInt=Int; type_name<MyInt>") == R"=("MyInt")=");
     // type_name works on type vars, dot-call on type can take normal args
     CHECK(interpret_std(R"(f=fun<T> a:String { a + T.type_name }; Int.f "The type is ")") == R"=("The type is Int32")=");
-    CHECK(interpret_std("type X = Int; X.type_name; X.underlying_type") == R"("X";"Int32")");
+    CHECK(interpret_std("type X = Int; X.type_name; type_index<X>.underlying; type_index<X>.underlying.name") == R"("X";6;"Int32")");
     CHECK(interpret_std("subtypes<Int>") == R"(["Int32"])");
     CHECK(interpret_std("subtypes<[Int]>") == R"(["Int32"])");
     CHECK(interpret_std("subtypes<(Int32, String, Float64)>") == R"(["Int32", "String", "Float64"])");
     CHECK(interpret_std("subtypes<(a:Int32, b:String, c:Float64)>") == R"(["Int32", "String", "Float64"])");
-    CHECK(interpret_std("subtypes<(Int32, (String, Float64))>") == R"=(["Int32", "(String, Float64)"])=");
+    CHECK(interpret_std("type_index<(Int32, (String, Float64))>.subtypes") == R"=(["Int32", "(String, Float64)"])=");
 }
 
 

@@ -29,6 +29,7 @@ class Value;
 struct ListV;
 struct TupleV;
 struct ClosureV;
+struct TypeIndexV;
 class Values;
 class Function;
 class Module;
@@ -67,6 +68,7 @@ public:
     virtual void visit(const ClosureV&) = 0;
     virtual void visit(const script::Module*) = 0;
     virtual void visit(const script::Stream&) = 0;
+    virtual void visit(const TypeIndexV&) = 0;
 };
 
 class PartialVisitor : public Visitor {
@@ -85,6 +87,7 @@ class PartialVisitor : public Visitor {
     void visit(const ClosureV&) override {}
     void visit(const script::Module*) override {}
     void visit(const script::Stream&) override {}
+    void visit(const TypeIndexV&) override {}
 };
 
 } // namespace value
@@ -172,6 +175,18 @@ struct ModuleV {
 };
 
 
+struct TypeIndexV {
+    TypeIndexV() = default;
+    explicit TypeIndexV(int32_t v) : type_index(v) {}
+
+    bool operator ==(const TypeIndexV& rhs) const { return value() == rhs.value(); }
+    operator int32_t() const { return type_index; }
+    int32_t value() const { return type_index; }
+
+    int32_t type_index = -1;
+};
+
+
 class Value {
 public:
     struct StringTag {};
@@ -179,6 +194,7 @@ public:
     struct ClosureTag {};
     struct StreamTag {};
     struct ModuleTag {};
+    struct TypeIndexTag {};
 
     Value() = default;  // Unknown (invalid value)
     explicit Value(bool v) : m_value(v) {}  // Bool
@@ -206,6 +222,8 @@ public:
     explicit Value(const script::Stream& v) : m_value(StreamV{v}) {}  // Stream
     explicit Value(ModuleTag) : m_value(ModuleV{}) {}  // Module
     explicit Value(script::Module& v) : m_value(ModuleV{v}) {}  // Module
+    explicit Value(TypeIndexTag) : m_value(TypeIndexV{}) {}  // TypeIndex
+    explicit Value(TypeIndexTag, int32_t v) : m_value(TypeIndexV{v}) {}  // TypeIndex
 
     bool operator ==(const Value& rhs) const;
 
@@ -292,7 +310,7 @@ protected:
     using ValueVariant = std::variant<
             std::monostate,  // Unknown (invalid value)
             bool, std::byte, char32_t, uint32_t, uint64_t, int32_t, int64_t, float, double,
-            StringV, ListV, TupleV, ClosureV, StreamV, ModuleV
+            StringV, ListV, TupleV, ClosureV, StreamV, ModuleV, TypeIndexV
         >;
     ValueVariant m_value;
 };
@@ -612,6 +630,17 @@ public:
     script::Module& value() { return *get<ModuleV>().module_ptr; }
     const script::Module& value() const { return get_module(); }
 };
+
+
+class TypeIndex: public Value {
+public:
+    TypeIndex() : Value(Value::TypeIndexTag{}) {}
+    explicit TypeIndex(int32_t v) : Value(Value::TypeIndexTag{}, v) {}
+    TypeInfo type_info() const { return ti_type_index(); }
+    int32_t value() const { return std::get<TypeIndexV>(m_value).value(); }
+    void set_value(int32_t v) { m_value = TypeIndexV{v}; }
+};
+
 
 } // namespace value
 
