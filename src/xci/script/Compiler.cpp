@@ -61,7 +61,7 @@ public:
         inv.expression->apply(*this);
         // Unknown in intrinsics function
         if (!inv.ti.is_void() && !inv.ti.is_unknown()) {
-            Index type_index = make_type_index(module(), inv.ti);
+            const Index type_index = make_type_index(module(), inv.ti);
             code().add_L1(Opcode::Invoke, type_index);
         }
     }
@@ -152,7 +152,7 @@ public:
             item->apply(*this);
         }
         // MAKE_LIST <length> <elem_type>
-        code().add_L2(Opcode::MakeList, v.items.size(), get_type_index(module(), v.ti.elem_type()));
+        code().add_L2(Opcode::MakeList, v.items.size(), get_type_index(module().module_manager(), v.ti.elem_type()));
     }
 
     void visit(ast::StructInit& v) override {

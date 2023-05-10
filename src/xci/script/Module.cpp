@@ -1,7 +1,7 @@
 // Module.cpp created on 2019-06-12 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Module.h"
@@ -55,17 +55,17 @@ Index Module::import_module(const std::string& name)
 }
 
 
-Index Module::add_imported_module(std::shared_ptr<Module> module)
+Index Module::add_imported_module(std::shared_ptr<Module> mod)
 {
-    m_modules.push_back(std::move(module));
+    m_modules.push_back(std::move(mod));
     return Index(m_modules.size() - 1);
 }
 
 
-Index Module::get_imported_module_index(Module* module) const
+Index Module::get_imported_module_index(Module* mod) const
 {
     auto it = find_if(m_modules.begin(), m_modules.end(),
-            [module](const std::shared_ptr<Module>& a){ return module == a.get(); });
+            [mod](const std::shared_ptr<Module>& a){ return mod == a.get(); });
     if (it == m_modules.end())
         return no_index;
     return it - m_modules.begin();

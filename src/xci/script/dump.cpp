@@ -7,6 +7,7 @@
 #include "dump.h"
 #include "Function.h"
 #include "Module.h"
+#include "typing/type_index.h"
 #include <xci/data/coding/leb128.h>
 #include <xci/compat/macros.h>
 #include <iomanip>
@@ -842,14 +843,8 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
             case Opcode::Subscript:
             case Opcode::Length:
             case Opcode::Slice: {
-                const TypeInfo* ti;
-                if (arg < 32) {
-                    // builtin module
-                    ti = &v.func.module().get_imported_module(0).get_type(arg);
-                } else {
-                    ti = &v.func.module().get_type(arg - 32);
-                }
-                os << " (" << *ti << ")";
+                const TypeInfo& ti = get_type_info(v.func.module().module_manager(), arg);
+                os << " (" << ti << ")";
                 break;
             }
             default:
@@ -868,14 +863,8 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
                 break;
             }
             case Opcode::MakeList: {
-                const TypeInfo* ti;
-                if (arg2 < 32) {
-                    // builtin module
-                    ti = &v.func.module().get_imported_module(0).get_type(arg2);
-                } else {
-                    ti = &v.func.module().get_type(arg2 - 32);
-                }
-                os << " (" << *ti << ")";
+                const TypeInfo& ti = get_type_info(v.func.module().module_manager(), arg2);
+                os << " (" << ti << ")";
                 break;
             }
             default:

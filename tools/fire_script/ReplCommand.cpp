@@ -1,7 +1,7 @@
 // ReplCommand.cpp created on 2020-01-11 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2022 Radek Brich
+// Copyright 2020–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "ReplCommand.h"
@@ -331,8 +331,8 @@ ReplCommand::ReplCommand(Context& ctx)
 
 void ReplCommand::eval(std::string_view input)
 {
-    Module module(m_ctx.interpreter.module_manager());
-    module.add_imported_module(m_module);
+    auto module = std::make_shared<Module>(m_ctx.interpreter.module_manager());
+    module->add_imported_module(m_module);
 
     std::string input_str;
     input_str.reserve(input.size());

@@ -106,7 +106,7 @@ public:
         StructItem,         // name = item name, index = struct type index in module
 
         // special
-        TypeIndex,          // translate type name to TypeIndex (index = type index in builtin if < 32, else type index in current module + 32)
+        TypeIndex,          // translate type name to TypeIndex (index = (type index in module << 7) + module_index)
     };
 
     Symbol() = default;  // only for deserialization

@@ -1,7 +1,7 @@
 // Stack.h created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_STACK_H
@@ -17,6 +17,7 @@
 namespace xci::script {
 
 class Function;
+class ModuleManager;
 
 
 /// Call stack
@@ -113,6 +114,8 @@ public:
     const Frame& frame() const { return m_frame.top(); }
     const Frame& frame(size_t pos) const { return m_frame[pos]; }
     size_t n_frames() const { return m_frame.size(); }
+
+    const ModuleManager& module_manager() const;
 
     // ------------------------------------------------------------------------
     // Unwinding
