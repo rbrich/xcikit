@@ -227,7 +227,7 @@ public:
                 break;
             }
             case Symbol::Module:
-                v.ti = TypeInfo{Type::Module};
+                v.ti = ti_unknown();
                 break;
             case Symbol::Parameter: {
                 const auto* ref_scope = m_scope.find_parent_scope(&symtab);

@@ -163,9 +163,6 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
                 t.print("{t:bold}{fg:magenta}{}:{} = {fg:default}{}{t:normal}\n",
                         module_name, result.type_info(), result);
             }
-            // add symbol for main function, so it will be visible by following input,
-            // which imports this module
-            module.symtab().add({module_name, Symbol::Function, 0});
         } else {
             // single input mode
             assert(mode == EvalMode::SingleInput);

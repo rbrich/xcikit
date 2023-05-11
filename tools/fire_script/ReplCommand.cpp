@@ -233,27 +233,20 @@ void ReplCommand::cmd_describe(std::string_view name) {
 
     for (const auto& module : m_ctx.input_modules | reverse) {
         if (module->name() == name) {
-            t.print("Module {}\n", name);
+            t.print("Module {}: ", name);
+            t.stream() << module->get_main_function().signature() << std::endl;
             return;
         }
         auto sym_ptr = module->symtab().find_by_name(name);
-        if (!sym_ptr) {
-            // FIXME: this is workaround, remove when all imported modules have a relevant symbol
-            for (Index i = 0; i != module->num_imported_modules(); ++i) {
-                const auto& imp_mod = module->get_imported_module(i);
-                if (imp_mod.name() == name) {
-                    t.print("Module {} (imported from {})\n",
-                            name, module->name());
-                    return;
-                }
-            }
+        if (!sym_ptr)
             continue;
-        }
         switch (sym_ptr->type()) {
-            case Symbol::Module:
-                t.print("Module {} (imported from {})\n",
-                        name, module->name());
+            case Symbol::Module: {
+                t.print("Module {} (imported from {}): ", name, module->name());
+                auto& imp_mod = module->get_imported_module(sym_ptr->index());
+                t.stream() << imp_mod.get_main_function().signature() << std::endl;
                 return;
+            }
             case Symbol::Function: {
                 const auto& function = sym_ptr.get_generic_scope().function();
                 t.print("Function {}: ", name);

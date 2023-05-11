@@ -360,6 +360,14 @@ void Machine::run(const InvokeCallback& cb)
                 break;
             }
 
+            case Opcode::LoadModule: {
+                auto arg = leb128_decode<Index>(it);
+                auto& mod = function->module().get_imported_module(arg);
+                m_stack.push(value::Module(mod));
+                //m_stack.push(value::Closure(mod.get_main_function()));
+                break;
+            }
+
             case Opcode::SetBase: {
                 const auto level = leb128_decode<size_t>(it);
                 base = m_stack.frame(m_stack.n_frames() - 1 - level).base;

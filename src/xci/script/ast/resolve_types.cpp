@@ -267,7 +267,8 @@ public:
                     throw FunctionNotFound(o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
             }
             case Symbol::Function:
-            case Symbol::StructItem: {
+            case Symbol::StructItem:
+            case Symbol::Module: {
                 // specified type in declaration
                 if (sym.type() == Symbol::Function && v.definition && v.ti) {
                     assert(m_call_sig.empty());
@@ -292,17 +293,16 @@ public:
                     if (v.definition) {
                         m_call_sig.clear();
                     }
-                } else {
-                    assert(res.symptr->type() == Symbol::StructItem);
+                } else if (res.symptr->type() == Symbol::StructItem) {
                     m_value_type = res.type.signature().return_type;
                     m_call_sig.clear();
+                } else {
+                    assert(res.symptr->type() == Symbol::Module);
+                    m_value_type = res.type;
                 }
                 v.identifier.symbol = res.symptr;
                 break;
             }
-            case Symbol::Module:
-                m_value_type = TypeInfo{Type::Module};
-                break;
             case Symbol::Parameter: {
                 const auto* ref_scope = m_scope.find_parent_scope(&symtab);
                 const auto& sig_type = ref_scope->function().parameter(sym.index());
@@ -587,8 +587,7 @@ private:
                 } else {
                     sig_ptr = fn.signature_ptr();
                 }
-            } else {
-                assert(symptr->type() == Symbol::StructItem);
+            } else if (symptr->type() == Symbol::StructItem) {
                 scope_idx = no_index;
                 sig_ptr = std::make_shared<Signature>();
                 const auto& struct_type = symptr.get_type();
@@ -596,6 +595,11 @@ private:
                 const auto* item_type = struct_type.struct_item_by_name(symptr->name());
                 assert(item_type != nullptr);
                 sig_ptr->set_return_type(*item_type);
+            } else {
+                assert(symptr->type() == Symbol::Module);
+                scope_idx = no_index;
+                Module& imp_mod = symptr.get_module();
+                sig_ptr = imp_mod.get_main_function().signature_ptr();
             }
             auto match = match_signature(*sig_ptr);
             candidates.push_back({symmod, scope_idx, symptr, TypeInfo{std::move(sig_ptr)}, std::move(res_type_args), match});

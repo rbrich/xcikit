@@ -1035,6 +1035,14 @@ TEST_CASE( "Type introspection", "[script][interpreter]")
 }
 
 
+TEST_CASE( "Modules", "[script][module]" )
+{
+    // modules are callable, builtin and std return Void
+    CHECK(interpret_std("builtin") == "()");
+    CHECK(interpret_std("std") == "()");
+}
+
+
 TEST_CASE( "Native to TypeInfo mapping", "[script][native]" )
 {
     CHECK(native::make_type_info<void>().is_void());

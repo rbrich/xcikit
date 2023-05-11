@@ -50,6 +50,7 @@ public:
     const TypeInfo& get_type() const;
 
     Class& get_class() const;
+    Module& get_module() const;
 
     SymbolTable* symtab() const { return m_symtab; }
     Index symidx() const { return m_symidx; }

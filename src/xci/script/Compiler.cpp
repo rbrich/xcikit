@@ -236,8 +236,15 @@ public:
             }
             case Symbol::Module: {
                 assert(sym.depth() == 0);
+                // Call main function of the module
+                // CALL <module_idx> <function_idx>
+                code().add_L2(Opcode::Call, sym.index(), 0);
+
+                // Alternatively, there is Module type and value.
+                // This could be used for accessing other parts of the module.
+                // Currently unused.
                 // LOAD_MODULE <module_idx>
-                code().add_L1(Opcode::LoadModule, sym.index());
+                //code().add_L1(Opcode::LoadModule, sym.index());
                 break;
             }
             case Symbol::Nonlocal: {

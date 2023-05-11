@@ -284,6 +284,7 @@ public:
             }
             case Symbol::Value:
             case Symbol::Module:
+                break;
             case Symbol::Parameter: {
                 const auto* ref_scope = m_scope.find_parent_scope(&symtab);
                 if (ref_scope) {
