@@ -1,7 +1,7 @@
 // demo_script.cpp created on 2020-01-11 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2021 Radek Brich
+// Copyright 2020–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/script/Interpreter.h>
@@ -73,11 +73,11 @@ int main()
     Interpreter interpreter {vfs};
 
     // create module with our native function
-    Module module {interpreter.module_manager()};
+    auto module = interpreter.module_manager().make_module("<native>");
 
     // low level interface - the native function has to operate directly on Stack
     // and its signature is specified explicitly
-    module.add_native_function(
+    module->add_native_function(
             // symbolic name
             "hello",
             // signature: String -> Int32
@@ -86,22 +86,22 @@ int main()
             hello_fun);
 
     // still low level interface
-    module.add_native_function(
+    module->add_native_function(
             "toupper_at_wrapped",
             {ti_string(), ti_int32()},
             ti_string(),
             toupper_at_wrapped);
     // the same function with auto-generated wrapper function
     // (which is essentially the same as our manually written `toupper_at_wrapped`)
-    module.add_native_function("toupper_at", toupper_at);
+    module->add_native_function("toupper_at", toupper_at);
 
     // capture-less lambda works, too
-    module.add_native_function("add2", [](int a, int b) { return a + b; });
+    module->add_native_function("add2", [](int a, int b) { return a + b; });
 
     // lambda with capture and other function objects can't be passed directly,
     // but they can be wrapped in captureless lambda
     auto lambda_with_capture = [v=1](int a, int b) { return a + b + v; };
-    module.add_native_function("add_v", [](void* l, int a, int b)
+    module->add_native_function("add_v", [](void* l, int a, int b)
         { return (*static_cast<decltype(lambda_with_capture)*>(l)) (a, b); },
         &lambda_with_capture);
 
@@ -116,12 +116,12 @@ int main()
     assert(result.get<int32_t>() == 42);
 
     // use standard functions in a script - they must be imported manually
-    module.import_module("builtin");  // builtin `__add` intrinsic
+    module->import_module("builtin");  // builtin `__add` intrinsic
 
     // std module is loaded from std.fire file, looked up in VFS as "script/std.fire"
     if (!vfs.mount(XCI_SHARE))
         return EXIT_FAILURE;
-    module.import_module("std");    // `add` function, which is alias of `+` operator
+    module->import_module("std");    // `add` function, which is alias of `+` operator
 
     auto result2 = interpreter.eval(module, R"(10 + 2)");
     assert(result2.type() == Type::Int32);

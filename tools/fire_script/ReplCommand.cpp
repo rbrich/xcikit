@@ -52,11 +52,11 @@ static void cmd_dump_info() {
 }
 
 
-static void print_module_header(const Module& module)
+static void print_module_header(const Module& mod)
 {
     TermCtl& t = xci::core::TermCtl::stdout_instance();
-    t.stream() << "Module \"" << module.name() << '"'
-         << " (" << std::hex << intptr_t(&module.symtab()) << std::dec << ')' << std::endl;
+    t.stream() << "Module \"" << mod.name() << '"'
+         << " (" << std::hex << intptr_t(&mod.symtab()) << std::dec << ')' << std::endl;
 }
 
 
@@ -106,11 +106,11 @@ const Module* ReplCommand::module_by_name(std::string_view mod_name) {
 
 
 void ReplCommand::dump_module(Index mod_idx) {
-    auto* module = module_by_idx(mod_idx);
-    if (!module)
+    auto* mod = module_by_idx(mod_idx);
+    if (!mod)
         return;
-    print_module_header(*module);
-    m_ctx.term_out.stream() << *module << std::endl;
+    print_module_header(*mod);
+    m_ctx.term_out.stream() << *mod << std::endl;
 }
 
 
@@ -125,25 +125,25 @@ void ReplCommand::cmd_dump_module(Index mod_idx) {
 
 
 void ReplCommand::cmd_dump_module(std::string_view mod_name) {
-    auto* module = module_by_name(mod_name);
-    if (!module)
+    auto* mod = module_by_name(mod_name);
+    if (!mod)
         return;
-    print_module_header(*module);
-    m_ctx.term_out.stream() << *module << std::endl;
+    print_module_header(*mod);
+    m_ctx.term_out.stream() << *mod << std::endl;
 }
 
 
-void ReplCommand::dump_function(const Module& module, Index fun_idx) {
+void ReplCommand::dump_function(const Module& mod, Index fun_idx) {
     TermCtl& t = m_ctx.term_out;
 
-    if (fun_idx >= module.num_functions()) {
+    if (fun_idx >= mod.num_functions()) {
         t.print("{t:bold}{fg:red}Error: function index out of range: {}{t:normal}\n",
                 fun_idx);
         return;
     }
-    const auto& function = module.get_function(fun_idx);
+    const auto& function = mod.get_function(fun_idx);
 
-    print_module_header(module);
+    print_module_header(mod);
     t.print("Function [{}] {}: ", fun_idx, function.name());
     t.stream() << function << std::endl;
 }
@@ -156,14 +156,14 @@ void ReplCommand::cmd_dump_function() {
         return;
     }
     size_t mod_idx = m_ctx.input_modules.size() - 1;
-    const auto& module = *m_ctx.input_modules[mod_idx];
+    const auto& mod = *m_ctx.input_modules[mod_idx];
 
-    if (module.num_functions() == 0) {
+    if (mod.num_functions() == 0) {
         t.print("{t:bold}{fg:red}Error: no functions available{t:normal}\n");
         return;
     }
 
-    dump_function(module, module.num_functions() - 1);
+    dump_function(mod, mod.num_functions() - 1);
 }
 
 
@@ -174,11 +174,11 @@ void ReplCommand::cmd_dump_function(std::string_view fun_name) {
         return;
     }
     size_t mod_idx = m_ctx.input_modules.size() - 1;
-    const auto& module = *m_ctx.input_modules[mod_idx];
+    const auto& mod = *m_ctx.input_modules[mod_idx];
 
-    for (Index i = 0; i != module.num_functions(); ++i) {
-        if (module.get_function(i).name() == fun_name) {
-            dump_function(module, i);
+    for (Index i = 0; i != mod.num_functions(); ++i) {
+        if (mod.get_function(i).name() == fun_name) {
+            dump_function(mod, i);
             return;
         }
     }
@@ -191,14 +191,14 @@ void ReplCommand::cmd_dump_function(std::string_view fun_name, std::string_view 
     TermCtl& t = m_ctx.term_out;
 
     // lookup module
-    auto* module = module_by_name(mod_name);
-    if (!module)
+    auto* mod = module_by_name(mod_name);
+    if (!mod)
         return;
 
     // lookup function
-    for (Index i = 0; i != module->num_functions(); ++i) {
-        if (module->get_function(i).name() == fun_name) {
-            dump_function(*module, i);
+    for (Index i = 0; i != mod->num_functions(); ++i) {
+        if (mod->get_function(i).name() == fun_name) {
+            dump_function(*mod, i);
             return;
         }
     }
@@ -221,29 +221,29 @@ void ReplCommand::cmd_dump_function(Index fun_idx)
 
 void ReplCommand::cmd_dump_function(Index fun_idx, Index mod_idx)
 {
-    auto* module = module_by_idx(mod_idx);
-    if (!module)
+    auto* mod = module_by_idx(mod_idx);
+    if (!mod)
         return;
-    dump_function(*module, fun_idx);
+    dump_function(*mod, fun_idx);
 }
 
 
 void ReplCommand::cmd_describe(std::string_view name) {
     TermCtl& t = m_ctx.term_out;
 
-    for (const auto& module : m_ctx.input_modules | reverse) {
-        if (module->name() == name) {
+    for (const auto& mod : m_ctx.input_modules | reverse) {
+        if (mod->name() == name) {
             t.print("Module {}: ", name);
-            t.stream() << module->get_main_function().signature() << std::endl;
+            t.stream() << mod->get_main_function().signature() << std::endl;
             return;
         }
-        auto sym_ptr = module->symtab().find_by_name(name);
+        auto sym_ptr = mod->symtab().find_by_name(name);
         if (!sym_ptr)
             continue;
         switch (sym_ptr->type()) {
             case Symbol::Module: {
-                t.print("Module {} (imported from {}): ", name, module->name());
-                auto& imp_mod = module->get_imported_module(sym_ptr->index());
+                t.print("Module {} (imported from {}): ", name, mod->name());
+                auto& imp_mod = mod->get_imported_module(sym_ptr->index());
                 t.stream() << imp_mod.get_main_function().signature() << std::endl;
                 return;
             }
@@ -254,7 +254,7 @@ void ReplCommand::cmd_describe(std::string_view name) {
                 return;
             }
             case Symbol::TypeName: {
-                const auto& ti = module->get_type(sym_ptr->index());
+                const auto& ti = mod->get_type(sym_ptr->index());
                 if (ti.is_named() && ti.name() == name) {
                     t.print("Named type {} = ", name);
                     t.stream() << ti.underlying() << std::endl;
@@ -276,10 +276,9 @@ void ReplCommand::cmd_describe(std::string_view name) {
 
 
 ReplCommand::ReplCommand(Context& ctx)
-        : m_ctx(ctx),
-          m_module(std::make_shared<Module>(m_ctx.interpreter.module_manager()))
+        : m_ctx(ctx)
 {
-    m_ctx.interpreter.add_module("cmd", m_module);
+    m_module = m_ctx.interpreter.module_manager().make_module("cmd");
     add_cmd("quit", "q", [](void* self) { ((ReplCommand*)self)->cmd_quit(); }, this);
     add_cmd("help", "h", cmd_help);
     add_cmd("dump_info", "di", cmd_dump_info);
@@ -324,9 +323,6 @@ ReplCommand::ReplCommand(Context& ctx)
 
 void ReplCommand::eval(std::string_view input)
 {
-    auto module = std::make_shared<Module>(m_ctx.interpreter.module_manager());
-    module->add_imported_module(m_module);
-
     std::string input_str;
     input_str.reserve(input.size());
 
@@ -346,7 +342,7 @@ void ReplCommand::eval(std::string_view input)
         }
     }
 
-    m_ctx.interpreter.eval(module, std::move(input_str));
+    m_ctx.interpreter.eval(m_module, std::move(input_str));
 }
 
 

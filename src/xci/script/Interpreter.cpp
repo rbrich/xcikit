@@ -53,8 +53,7 @@ TypedValue Interpreter::eval(size_t mod_idx, SourceId source_id, const InvokeCal
     m_parser.parse(source_id, ast);
 
     // compile
-    Module& mod = m_module_manager.get_module(mod_idx);
-    auto& scope = mod.get_main_scope();
+    auto& scope = m_module_manager.get_module(mod_idx)->get_main_scope();
     m_compiler.compile(scope, ast);
 
     // execute
@@ -69,23 +68,24 @@ TypedValue Interpreter::eval(size_t mod_idx, SourceId source_id, const InvokeCal
 
 TypedValue Interpreter::eval(std::shared_ptr<Module> mod, std::string input, const Interpreter::InvokeCallback& cb)
 {
-    auto module_name = fmt::format("<input{}>", m_input_num++);
-    auto src_id = m_source_manager.add_source(
-            module_name,
-            std::move(input));
-    auto mod_idx = m_module_manager.add_module(module_name, std::move(mod));
+    auto module_name = mod->name();
+    auto src_id = m_source_manager.add_source(module_name, std::move(input));
+    auto mod_idx = m_module_manager.replace_module(module_name, std::move(mod));
     return eval(mod_idx, src_id, cb);
 }
 
 
 TypedValue Interpreter::eval(std::string input, bool import_std, const Interpreter::InvokeCallback& cb)
 {
-    auto main = std::make_shared<Module>(m_module_manager);
+    auto module_name = fmt::format("<input{}>", m_input_num++);
+    auto src_id = m_source_manager.add_source(module_name, std::move(input));
+    auto mod_idx = m_module_manager.replace_module(module_name);
+    auto main = m_module_manager.get_module(mod_idx);
     main->import_module("builtin");
     if (import_std) {
         main->import_module("std");
     }
-    return eval(std::move(main), std::move(input), cb);
+    return eval(mod_idx, src_id, cb);
 }
 
 

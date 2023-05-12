@@ -52,7 +52,7 @@ bool Repl::evaluate(const std::string& module_name, std::string module_source, E
 
         // create new module for the input
         auto module = prepare_module(module_name);
-        auto r = module_manager.add_module(module_name, module);
+        auto r = module_manager.replace_module(module_name, module);
         assert(r != no_index); (void) r;
 
         // compile

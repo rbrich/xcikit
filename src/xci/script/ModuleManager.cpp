@@ -22,7 +22,7 @@ ModuleManager::ModuleManager(const core::Vfs& vfs, Interpreter& interpreter)
 }
 
 
-std::shared_ptr<Module> ModuleManager::import_module(const std::string& name)
+ModulePtr ModuleManager::import_module(const std::string& name)
 {
     auto it = m_module_names.try_emplace(name, 0);
     if (it.second) {
@@ -43,7 +43,13 @@ std::shared_ptr<Module> ModuleManager::import_module(const std::string& name)
 }
 
 
-Index ModuleManager::add_module(const std::string& name, std::shared_ptr<Module> mod)  // NOLINT(performance-unnecessary-value-param)
+Index ModuleManager::replace_module(const std::string& name)
+{
+    return replace_module(name, std::make_shared<Module>(*this, name));
+}
+
+
+Index ModuleManager::replace_module(const std::string& name, ModulePtr mod)  // NOLINT(performance-unnecessary-value-param)
 {
     auto it = m_module_names.try_emplace(name, 0);
     if (it.second) {
@@ -53,6 +59,7 @@ Index ModuleManager::add_module(const std::string& name, std::shared_ptr<Module>
         return it.first->second;
     }
     // already existed
+    m_modules[it.first->second] = std::move(mod);
     return it.first->second;
 }
 
@@ -60,7 +67,7 @@ Index ModuleManager::add_module(const std::string& name, std::shared_ptr<Module>
 Index ModuleManager::get_module_index(const Module& mod) const
 {
     auto it = find_if(m_modules.begin(), m_modules.end(),
-                      [&mod](const std::shared_ptr<Module>& a){ return &mod == a.get(); });
+                      [&mod](const ModulePtr& a){ return &mod == a.get(); });
     if (it == m_modules.end())
         return no_index;
     return it - m_modules.begin();
@@ -69,15 +76,15 @@ Index ModuleManager::get_module_index(const Module& mod) const
 
 void ModuleManager::clear(bool keep_std)
 {
-    std::shared_ptr<Module> builtin = std::move(m_modules[0]);
-    std::shared_ptr<Module> std;
+    ModulePtr builtin = std::move(m_modules[0]);
+    ModulePtr std;
     if (keep_std && m_module_names.contains("std"))
         std = std::move(m_modules[m_module_names["std"]]);
     m_modules.clear();
     m_module_names.clear();
-    add_module("builtin", std::move(builtin));
+    replace_module("builtin", std::move(builtin));
     if (std)
-        add_module("std", std::move(std));
+        replace_module("std", std::move(std));
 }
 
 

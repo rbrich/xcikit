@@ -27,8 +27,6 @@ public:
     void configure(Compiler::Flags flags) { m_compiler.set_flags(flags); }
 
     std::shared_ptr<Module> build_module(const std::string& name, SourceId source_id);
-    Index add_module(const std::string& name, std::shared_ptr<Module> mod)
-        { return m_module_manager.add_module(name, std::move(mod)); }
 
     using InvokeCallback = Machine::InvokeCallback;
     TypedValue eval(size_t mod_idx, SourceId source_id, const InvokeCallback& cb = Machine::no_invoke_cb);
