@@ -27,12 +27,12 @@ Index get_type_index(const ModuleManager& mm, const TypeInfo& type_info);
 /// \param mm           The global ModuleManager with all modules imported in the program
 /// \param type_idx     The TypeIndex to be resolved
 /// \returns found TypeInfo or ti_unknown() if not found
-const TypeInfo& get_type_info(const ModuleManager& mm, int32_t type_idx);
+const TypeInfo& get_type_info(const ModuleManager& mm, Index type_idx);
 
 /// Get TypeInfo for a given TypeIndex
 /// Same as `get_type_info` but crashes if not found.
 /// For use in Machine where the index must always be valid.
-const TypeInfo& get_type_info_unchecked(const ModuleManager& mm, int32_t type_idx);
+const TypeInfo& get_type_info_unchecked(const ModuleManager& mm, Index type_idx);
 
 
 }  // namespace xci::script

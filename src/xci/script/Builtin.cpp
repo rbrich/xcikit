@@ -423,18 +423,24 @@ static void introspect_module(Stack& stack, void*, void*)
 }
 
 
+static const TypeInfo& read_type_index(Stack& stack)
+{
+    const auto arg = stack.pull<value::Int32>().value();
+    return get_type_info(stack.module_manager(),
+                         arg < 0 ? no_index : Index(arg));
+}
+
+
 static void introspect_type_size(Stack& stack, void*, void*)
 {
-    auto type_idx = stack.pull<value::Int32>().value();
-    const TypeInfo& ti = get_type_info(stack.module_manager(), type_idx);
+    const TypeInfo& ti = read_type_index(stack);
     stack.push(value::Int32{(int32_t)ti.size()});
 }
 
 
 static void introspect_type_name(Stack& stack, void*, void*)
 {
-    auto type_idx = stack.pull<value::Int32>().value();
-    const TypeInfo& ti = get_type_info(stack.module_manager(), type_idx);
+    const TypeInfo& ti = read_type_index(stack);
     std::ostringstream os;
     os << ti;
     stack.push(value::String{os.str()});
@@ -443,18 +449,15 @@ static void introspect_type_name(Stack& stack, void*, void*)
 
 static void introspect_underlying_type(Stack& stack, void*, void*)
 {
-    auto type_idx = stack.pull<value::Int32>().value();
+    const TypeInfo& ti = read_type_index(stack);
     const ModuleManager& mm = stack.module_manager();
-    const TypeInfo& ti = get_type_info(mm, type_idx);
     stack.push(value::TypeIndex{int32_t(get_type_index(mm, ti.underlying()))});
 }
 
 
 static void introspect_subtypes(Stack& stack, void*, void*)
 {
-    auto type_idx = stack.pull<value::Int32>().value();
-    const ModuleManager& mm = stack.module_manager();
-    const TypeInfo& ti = get_type_info(mm, type_idx);
+    const TypeInfo& ti = read_type_index(stack);
     if (ti.is_tuple() || ti.is_struct()) {
         const auto& subtypes = ti.struct_or_tuple_subtypes();
         value::List res(subtypes.size(), ti_string());
@@ -466,6 +469,7 @@ static void introspect_subtypes(Stack& stack, void*, void*)
         stack.push(res);
         return;
     }
+    const ModuleManager& mm = stack.module_manager();
     value::List res(1, ti_type_index());
     if (ti.is_list()) {
         res.set_value(0, value::TypeIndex(int32_t(get_type_index(mm, ti.elem_type()))));

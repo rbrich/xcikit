@@ -50,29 +50,29 @@ Index get_type_index(const ModuleManager& mm, const TypeInfo& type_info)
 }
 
 
-const TypeInfo& get_type_info(const ModuleManager& mm, int32_t type_idx)
+const TypeInfo& get_type_info(const ModuleManager& mm, Index type_idx)
 {
     static const TypeInfo unknown = ti_unknown();
-    if (type_idx < 0)
+    if (type_idx == no_index)
         return unknown;
 
-    auto module_index = size_t(type_idx % 128);
+    auto module_index = type_idx % size_t(128);
     if (module_index >= mm.num_modules())
         return unknown;
     const Module& mod = mm.get_module(module_index);
 
-    auto type_index = size_t(type_idx / 128);
+    auto type_index = type_idx / size_t(128);
     if (type_index >= mod.num_types())
         return unknown;
     return mod.get_type(type_index);
 }
 
 
-const TypeInfo& get_type_info_unchecked(const ModuleManager& mm, int32_t type_idx)
+const TypeInfo& get_type_info_unchecked(const ModuleManager& mm, Index type_idx)
 {
-    assert(type_idx >= 0);
-    auto module_index = size_t(type_idx % 128);
-    auto type_index = size_t(type_idx / 128);
+    assert(type_idx != no_index);
+    auto module_index = type_idx % size_t(128);
+    auto type_index = type_idx / size_t(128);
 
     assert(module_index < mm.num_modules());
     const Module& mod = mm.get_module(module_index);
