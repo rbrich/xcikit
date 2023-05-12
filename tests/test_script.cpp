@@ -1011,7 +1011,9 @@ TEST_CASE( "Explicit type params", "[script][interpreter]")
 
 TEST_CASE( "Type introspection", "[script][interpreter]")
 {
-    CHECK(interpret_std("type_index<Void>; type_index<String>; type_index<Int>") == "0;1280;768");  // 0<<7; 10<<7; 6<<7
+    CHECK(interpret_std("type_index_of void; type_index_of \"abc\"; type_index_of 42") == "0;1280;768");  // 0<<7; 10<<7; 6<<7
+    CHECK(interpret_std("type_index_of [1] .name") == R"=("[Int32]")=");
+    CHECK(interpret_std("type_index<Void>; type_index<String>; type_index<Int>") == "0;1280;768");
     CHECK(interpret_std("type_index<Int> == type_index<Int32>") == "true");
     CHECK(interpret_std("type_size<Void>; type_size<Int>; type_size<Float64>") == "0;4;8");
     constexpr size_t ptr_size = sizeof(void*);

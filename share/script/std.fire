@@ -424,6 +424,7 @@ instance TypeInfo TypeIndex {
 }
 
 type_index = fun<T> Void -> TypeIndex { __type_index<T> }
+type_index_of = fun<T> a:T -> TypeIndex { __type_index<T> }
 type_size = fun<T> Void -> Int { __type_index<T>.__type_size }
 type_name = fun<T> Void -> String { __type_index<T>.__type_name }
 
@@ -442,8 +443,8 @@ slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __slice __type_index<T> 
 head = fun<T> a:[T] -> T { a!0 }
 tail = fun<T> a:[T] -> [T] { a .slice 1 max:Int 1 }
 
+//map = fun<T,U> f:(T->U) l:[T] -> [U] { [f (l!0)] + map f (l.slice 1 max:Int 1) }
 //filter = fun<Ord T> fn [T] -> [T] { }
-//map = fun<T> fn l:[T] -> [T] { (fn l[0]) + l[1:] }
 //reduce = fun<Ord T> fn [T] -> T { }
 //sum = reduce add
 
