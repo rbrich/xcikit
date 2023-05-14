@@ -236,7 +236,9 @@ public:
             v.sym_list.insert(v.sym_list.end(), struct_syms.begin(), struct_syms.end());
         }
         if (symptr->type() == Symbol::Module) {
-            v.sym_list.emplace_back(symptr);
+            // add module to overload set (only if it's actual module symbol, not builtin __module)
+            if (symptr->index() != no_index)
+                v.sym_list.emplace_back(symptr);
         }
     }
 

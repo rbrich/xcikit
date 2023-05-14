@@ -274,9 +274,15 @@ void Stack::pop_type(const Value& v)
 }
 
 
+const Module& Stack::module() const
+{
+    return frame().function.module();
+}
+
+
 const ModuleManager& Stack::module_manager() const
 {
-    return frame().function.module().module_manager();
+    return module().module_manager();
 }
 
 

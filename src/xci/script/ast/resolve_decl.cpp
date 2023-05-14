@@ -227,7 +227,14 @@ public:
                 break;
             }
             case Symbol::Module:
-                v.ti = ti_unknown();
+                if (sym.index() == no_index) {
+                    // builtin __module symbol
+                    m_intrinsic = true;
+                    v.ti = ti_module();
+                } else {
+                    // actual module name like `builtin` or `std`
+                    v.ti = ti_unknown();
+                }
                 break;
             case Symbol::Parameter: {
                 const auto* ref_scope = m_scope.find_parent_scope(&symtab);

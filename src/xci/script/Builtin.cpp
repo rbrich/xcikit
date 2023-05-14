@@ -9,6 +9,7 @@
 #include <xci/core/string.h>
 #include <xci/compat/macros.h>
 #include <xci/script/typing/type_index.h>
+#include <xci/script/Error.h>
 
 #include <range/v3/view/enumerate.hpp>
 
@@ -138,6 +139,8 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__partial", Symbol::Instruction, Index(Opcode::Partial)});
     */
 
+    // `__module` is current Module, `__module 1` is imported module by index 1
+    symtab().add({"__module", Symbol::Module});
     // `__type_index<Int>` is index of Int type
     symtab().add({"__type_index", Symbol::TypeIndex});
     // `__value 42` is index of static value 42 (e.g. `__load_static (__value 42)`)
@@ -161,6 +164,7 @@ void BuiltinModule::add_types()
     symtab().add({"Float32", Symbol::TypeName, add_type(ti_float32())});
     symtab().add({"Float64", Symbol::TypeName, add_type(ti_float64())});
     symtab().add({"String", Symbol::TypeName, add_type(ti_string())});
+    symtab().add({"Module", Symbol::TypeName, add_type(ti_module())});
     symtab().add({"TypeIndex", Symbol::TypeName, add_type(ti_type_index())});
 }
 
@@ -417,12 +421,6 @@ void BuiltinModule::add_io_functions()
 }
 
 
-static void introspect_module(Stack& stack, void*, void*)
-{
-    stack.push(value::Module{stack.frame().function.module()});
-}
-
-
 static const TypeInfo& read_type_index(Stack& stack)
 {
     const auto arg = stack.pull<value::Int32>().value();
@@ -480,6 +478,17 @@ static void introspect_subtypes(Stack& stack, void*, void*)
 }
 
 
+static void introspect_module_by_name(Stack& stack, void*, void*)
+{
+    auto name = stack.pull<value::String>();
+    name.decref();
+    const auto idx = stack.module().get_imported_module_index(name.value());
+    if (idx == no_index)
+        throw RuntimeError("Imported module not found: " + std::string(name.value()));
+    stack.push(value::Module{stack.module().get_imported_module(idx)});
+}
+
+
 void BuiltinModule::add_introspections()
 {
     add_native_function("__type_size", {ti_type_index()}, ti_int32(), introspect_type_size);
@@ -490,9 +499,8 @@ void BuiltinModule::add_introspections()
     add_native_function("__builtin",
             [](void* m) -> Module& { return *static_cast<Module*>(m); },
             this);
-    // return current module
-    add_native_function("__module", {}, ti_module(), introspect_module);
-    // get number of functions in a module
+    add_native_function("__module_name", [](Module& m) -> std::string { return m.name(); });
+    add_native_function("__module_by_name", {ti_string()}, ti_module(), introspect_module_by_name);
     add_native_function("__n_fn", [](Module& m) { return (int) m.num_functions(); });
     add_native_function("__n_types", [](Module& m) { return (int) m.num_types(); });
 }

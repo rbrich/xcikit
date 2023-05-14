@@ -76,6 +76,16 @@ Index Module::get_imported_module_index(Module* mod) const
 }
 
 
+Index Module::get_imported_module_index(std::string_view name) const
+{
+    auto it = find_if(m_modules.begin(), m_modules.end(),
+                      [name](const std::shared_ptr<Module>& a){ return name == a->name(); });
+    if (it == m_modules.end())
+        return no_index;
+    return it - m_modules.begin();
+}
+
+
 auto Module::add_function(Function&& fn) -> WeakFunctionId
 {
     return m_functions.add(std::move(fn));

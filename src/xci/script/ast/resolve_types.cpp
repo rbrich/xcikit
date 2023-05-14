@@ -266,9 +266,25 @@ public:
                 else
                     throw FunctionNotFound(o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
             }
+            case Symbol::Module:
+                if (sym.index() == no_index) {
+                    // builtin __module
+                    if (m_call_sig.n_args() > 1)
+                        throw UnexpectedArgumentCount(1, m_call_sig.n_args(), v.source_loc);
+                    if (m_call_sig.n_args() == 1) {
+                        // the arg must be Int32 (index of imported module)
+                        const auto& arg = m_call_sig.args.front();
+                        if (arg.type_info.type() != Type::Int32)
+                            throw UnexpectedArgumentType(1, ti_int32(), arg.type_info, arg.source_loc);
+                    }
+                    // cleanup - args are now fully processed
+                    m_call_sig.clear();
+                    m_value_type = ti_module();
+                    break;
+                }
+                [[fallthrough]];
             case Symbol::Function:
-            case Symbol::StructItem:
-            case Symbol::Module: {
+            case Symbol::StructItem: {
                 // specified type in declaration
                 if (sym.type() == Symbol::Function && v.definition && v.ti) {
                     assert(m_call_sig.empty());

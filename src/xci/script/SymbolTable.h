@@ -89,7 +89,7 @@ public:
         Unresolved,
 
         // module-level
-        Module,             // imported module
+        Module,             // imported module (index = module index, no_index for builtin __module symbol)
         Function,           // scope-level function (index = subscope index in scope)
         Value,              // static value
         TypeName,           // type information (index = type index in module)

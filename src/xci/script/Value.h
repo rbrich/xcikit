@@ -394,6 +394,7 @@ public:
     bool is_unknown() const { return m_type_info.is_unknown(); }
     bool is_void() const { return m_type_info.is_void(); }
     bool is_bool() const { return m_type_info.is_bool(); }
+    bool is_string() const { return m_type_info.is_string(); }
 
     template <class T> T& get() { return m_value.get<T>(); }
     template <class T> const T& get() const { return m_value.get<T>(); }

@@ -362,9 +362,8 @@ void Machine::run(const InvokeCallback& cb)
 
             case Opcode::LoadModule: {
                 auto arg = leb128_decode<Index>(it);
-                auto& mod = function->module().get_imported_module(arg);
+                auto& mod = (arg == no_index)? function->module() : function->module().get_imported_module(arg);
                 m_stack.push(value::Module(mod));
-                //m_stack.push(value::Closure(mod.get_main_function()));
                 break;
             }
 

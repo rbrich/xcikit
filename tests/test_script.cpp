@@ -997,6 +997,13 @@ TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
     // Static value
     CHECK(interpret("add42 = fun Int->Int { __load_static (__value 42); __add 0x88 }; add42 8") == "50");
     CHECK(interpret("add42 = fun Int->Int { __value 42 . __load_static; __add 0x88 }; add42 8") == "50");
+    // Modules - self or imported
+    CHECK(interpret("__module .__n_fn") == "1");  // __module is self, every module contains at least 1 function (main)
+    CHECK(interpret("a=1; __module .__n_fn") == "2");  // `a` is counted as a function
+    CHECK(interpret("__module 0 .__module_name") == R"("builtin")");  // module 0 is always builtin
+    CHECK(interpret_std("__module 1 .__module_name") == R"("std")");  // module 1 is usually std
+    CHECK_THROWS_AS(interpret("__module 1 2"), UnexpectedArgumentCount);
+    CHECK_THROWS_AS(interpret("__module \"builtin\""), UnexpectedArgumentType); // see builtin __module_by_name
 }
 
 
@@ -1040,8 +1047,11 @@ TEST_CASE( "Type introspection", "[script][interpreter]")
 TEST_CASE( "Modules", "[script][module]" )
 {
     // modules are callable, builtin and std return Void
-    CHECK(interpret_std("builtin") == "()");
+    CHECK(interpret("builtin") == "()");
     CHECK(interpret_std("std") == "()");
+    CHECK(interpret("__module_by_name \"builtin\"") == "<module:builtin>");
+    CHECK_THROWS_AS(interpret("__module_by_name \"xyz\""), RuntimeError);
+    CHECK(interpret("__module_by_name \"builtin\" .__module_name") == R"("builtin")");
 }
 
 

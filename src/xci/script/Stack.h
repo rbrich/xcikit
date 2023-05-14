@@ -115,6 +115,8 @@ public:
     const Frame& frame(size_t pos) const { return m_frame[pos]; }
     size_t n_frames() const { return m_frame.size(); }
 
+    // top frame's module
+    const Module& module() const;
     const ModuleManager& module_manager() const;
 
     // ------------------------------------------------------------------------

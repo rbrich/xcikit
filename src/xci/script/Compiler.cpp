@@ -236,15 +236,24 @@ public:
             }
             case Symbol::Module: {
                 assert(sym.depth() == 0);
+                if (sym.index() == no_index) {
+                    // builtin __module
+                    if (m_instruction_args.empty()) {
+                        // LOAD_MODULE <module_idx>
+                        code().add_L1(Opcode::LoadModule, no_index);
+                    } else {
+                        assert(m_intrinsic);
+                        assert(m_instruction_args.size() == 1);
+                        const Index module_idx = m_instruction_args[0].value().to_int64();
+                        assert(module_idx < m_scope.module().num_imported_modules());
+                        // LOAD_MODULE <module_idx>
+                        code().add_L1(Opcode::LoadModule, module_idx);
+                    }
+                    break;
+                }
                 // Call main function of the module
                 // CALL <module_idx> <function_idx>
                 code().add_L2(Opcode::Call, sym.index(), 0);
-
-                // Alternatively, there is Module type and value.
-                // This could be used for accessing other parts of the module.
-                // Currently unused.
-                // LOAD_MODULE <module_idx>
-                //code().add_L1(Opcode::LoadModule, sym.index());
                 break;
             }
             case Symbol::Nonlocal: {

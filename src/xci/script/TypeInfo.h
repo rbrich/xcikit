@@ -118,6 +118,7 @@ public:
     bool is_callable() const { return underlying_type() == Type::Function; }
     bool is_void() const { return is_tuple() && subtypes().empty(); }
     bool is_bool() const { return underlying_type() == Type::Bool; }
+    bool is_string() const { return underlying_type() == Type::String; }
     bool is_list() const { return underlying_type() == Type::List; }
     bool is_tuple() const { return underlying_type() == Type::Tuple; }
     bool is_struct() const { return underlying_type() == Type::Struct; }

@@ -72,6 +72,7 @@ public:
     Index add_imported_module(std::shared_ptr<Module> mod);
     Module& get_imported_module(Index idx) const { return *m_modules[idx]; }
     Index get_imported_module_index(Module* mod) const;
+    Index get_imported_module_index(std::string_view name) const;
     Size num_imported_modules() const { return Size(m_modules.size()); }
 
     // Functions
