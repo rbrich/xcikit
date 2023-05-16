@@ -1,12 +1,13 @@
 // TermCtl.h created on 2018-07-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_TERM_H
 #define XCI_CORE_TERM_H
 
+#include <xci/compat/macros.h>
 #include <fmt/format.h>
 #include <vector>
 #include <string>
@@ -211,7 +212,9 @@ public:
                     return r;
                 r = static_cast<Color>(uint8_t(r) + 1);
             }
-            throw fmt::format_error("invalid color name: " + std::string(name));
+            if (r > Color::Last)  // this condition is needed for GCC 10 to allow throw in constexpr
+                throw fmt::format_error("invalid color name: " + std::string(name));
+            XCI_UNREACHABLE;
         }
     };
     struct FgPlaceholder: ColorPlaceholder {
@@ -229,7 +232,9 @@ public:
                     return r;
                 r = static_cast<Mode>(uint8_t(r) + 1);
             }
-            throw fmt::format_error("invalid mode name: " + std::string(name));
+            if (r > Mode::Last)
+                throw fmt::format_error("invalid mode name: " + std::string(name));
+            XCI_UNREACHABLE;
         }
         std::string seq(Mode mode) const;
     };
