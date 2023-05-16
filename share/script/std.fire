@@ -429,6 +429,17 @@ type_size = fun<T> Void -> Int { __type_index<T>.__type_size }
 type_name = fun<T> Void -> String { __type_index<T>.__type_name }
 
 
+class ModuleInfo T {
+    name : T -> String
+}
+
+instance ModuleInfo Module {
+    name = fun m { __module_name m }
+}
+
+//module_of = fun<T> a:(T->U) -> Module { __module_of a }
+
+
 // -----------------------------------------------------------------------------
 
 succ = fun<T> x:T -> T { x + 1:T }

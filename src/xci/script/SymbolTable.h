@@ -94,7 +94,7 @@ public:
         Value,              // static value
         TypeName,           // type information (index = type index in module)
         Class,              // type class (index = class index in module)
-        Instance,           // instance of type class (index = instance index in module)
+        Instance,           // instance of type class (index = instance index in module, ref = class symbol)
         Method,             // method declaration (index = class index, ref = symbol in class scope)
 
         // function scope

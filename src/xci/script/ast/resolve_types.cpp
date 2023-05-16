@@ -212,29 +212,38 @@ public:
                     m_call_sig.load_from(fn.signature(), v.source_loc);
                 }
 
-                // find prototype of the function, resolve actual type of T
-                const auto& symmod = symtab.module() == nullptr ? module() : *symtab.module();
-                auto& cls = symmod.get_class(sym.index());
-                const Index cls_fn_idx = cls.get_index_of_function(sym.ref()->index());
-                const auto& cls_fn = sym.ref().get_generic_scope().function();
-                auto inst_types = resolve_instance_types(cls_fn.signature());
-                std::vector<TypeInfo> resolved_types;
-                for (Index i = 1; i <= cls.symtab().count(Symbol::TypeVar); ++i) {
-                    auto symptr = cls.symtab().find_by_index(Symbol::TypeVar, i);
-                    resolved_types.push_back(inst_types.get(symptr));
-                }
                 // find instance using resolved T
                 std::vector<Candidate> candidates;
-                for (auto inst_psym : v.sym_list) {
-                    assert(inst_psym->type() == Symbol::Instance);
-                    auto* inst_mod = inst_psym.symtab()->module();
+                Index cls_fn_idx = no_index;
+                TypeInfo cls_fn_ti;
+                TypeArgs inst_type_args;
+                std::vector<TypeInfo> resolved_types;
+                for (auto psym : v.sym_list) {
+                    auto* inst_mod = psym.symtab()->module();
                     if (inst_mod == nullptr)
                         inst_mod = &module();
-                    auto& inst = inst_mod->get_instance(inst_psym->index());
+
+                    if (psym->type() == Symbol::Method) {
+                        // find prototype of the function, resolve actual type of T
+                        auto& cls = inst_mod->get_class(psym->index());
+                        cls_fn_idx = cls.get_index_of_function(psym->ref()->index());
+                        const auto& cls_fn = psym->ref().get_generic_scope().function();
+                        inst_type_args = resolve_instance_types(cls_fn.signature());
+                        resolved_types.clear();
+                        for (Index i = 1; i <= cls.symtab().count(Symbol::TypeVar); ++i) {
+                            auto var_psym = cls.symtab().find_by_index(Symbol::TypeVar, i);
+                            resolved_types.push_back(inst_type_args.get(var_psym));
+                        }
+                        cls_fn_ti = TypeInfo{cls_fn.signature_ptr()};
+                        continue;
+                    }
+
+                    assert(psym->type() == Symbol::Instance);
+                    auto& inst = inst_mod->get_instance(psym->index());
                     auto inst_fn_info = inst.get_function(cls_fn_idx);
                     const auto& fn = inst_mod->get_scope(inst_fn_info.scope_index).function();
-                    auto m = match_params(inst.types(), resolved_types);
-                    candidates.push_back({inst_mod, inst_fn_info.scope_index, inst_psym, TypeInfo{fn.signature_ptr()}, {}, m});
+                    const auto m = match_params(inst.types(), resolved_types);
+                    candidates.push_back({inst_mod, inst_fn_info.scope_index, psym, TypeInfo{fn.signature_ptr()}, cls_fn_ti, inst_type_args, m});
                 }
 
                 auto [found, conflict] = find_best_candidate(candidates);
@@ -248,8 +257,8 @@ public:
 
                 // Partial instantiation with generic args -> just resolve the type, not the concrete instance
                 if (conflict && found->match.is_generic()) {
-                    m_value_type = TypeInfo(cls_fn.signature_ptr());
-                    resolve_generic_type(m_value_type, inst_types);
+                    m_value_type = found->gen_type;
+                    resolve_generic_type(m_value_type, found->type_args);
                     break;
                 }
 
@@ -262,9 +271,9 @@ public:
                 stringstream o_ftype;
                 o_ftype << v.identifier.name << ' ' << m_call_sig.signature();
                 if (conflict)
-                    throw FunctionConflict(o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
+                    throw FunctionConflict(o_ftype.str(), o_candidates.str(), v.source_loc);
                 else
-                    throw FunctionNotFound(o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
+                    throw FunctionNotFound(o_ftype.str(), o_candidates.str(), v.source_loc);
             }
             case Symbol::Module:
                 if (sym.index() == no_index) {
@@ -577,7 +586,7 @@ private:
                 auto& fn = symmod->get_scope(scope_idx).function();
                 if (type_args.size() > fn.num_type_params()) {
                     // skip - not enough type vars for explicit type args
-                    candidates.push_back({symmod, scope_idx, symptr, TypeInfo{fn.signature_ptr()}, {}, MatchScore{-1}});
+                    candidates.push_back({symmod, scope_idx, symptr, TypeInfo{fn.signature_ptr()}, {}, {}, MatchScore{-1}});
                     continue;
                 }
                 if (!type_args.empty()) {
@@ -595,7 +604,7 @@ private:
                     }
                     if (!compatible) {
                         // skip - incompatible type args
-                        candidates.push_back({symmod, scope_idx, symptr, TypeInfo{fn.signature_ptr()}, std::move(res_type_args), MatchScore{-1}});
+                        candidates.push_back({symmod, scope_idx, symptr, TypeInfo{fn.signature_ptr()}, {}, std::move(res_type_args), MatchScore{-1}});
                         continue;
                     }
                     sig_ptr = std::make_shared<Signature>(fn.signature());  // copy
@@ -618,7 +627,7 @@ private:
                 sig_ptr = imp_mod.get_main_function().signature_ptr();
             }
             auto match = match_signature(*sig_ptr);
-            candidates.push_back({symmod, scope_idx, symptr, TypeInfo{std::move(sig_ptr)}, std::move(res_type_args), match});
+            candidates.push_back({symmod, scope_idx, symptr, TypeInfo{std::move(sig_ptr)}, {}, std::move(res_type_args), match});
         }
 
         auto [found, conflict] = find_best_candidate(candidates);
