@@ -8,6 +8,10 @@ compiler=clang
 compiler.version=17
 compiler.cppstd=20
 build_type=Release
-[options]
+
 [conf]
 tools.cmake.cmaketoolchain:user_toolchain = ["/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake"]
+
+[system_tools]
+# Override cmake tool_requires from benchmark package (the version must match that package, not the system)
+cmake/3.26.3
