@@ -1,12 +1,13 @@
 // TermCtl.h created on 2018-07-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_TERM_H
 #define XCI_CORE_TERM_H
 
+#include <xci/compat/macros.h>
 #include <fmt/format.h>
 #include <vector>
 #include <string>
@@ -18,6 +19,8 @@
 #include <functional>
 
 namespace xci::core {
+
+using namespace fmt::literals;
 
 // Sends control codes and escape sequences to controlling terminal
 // or does nothing if the output stream is not connected to TTY.
@@ -63,17 +66,36 @@ public:
     // to a copy of TermCtl instance, which can then be send to stream
 
     enum class Color: uint8_t {
-        Default = 9,
         Black = 0, Red, Green, Yellow, Blue, Magenta, Cyan, White,
+        Invalid = 8, Default = 9,
         BrightBlack = 10, BrightRed, BrightGreen, BrightYellow,
         BrightBlue, BrightMagenta, BrightCyan, BrightWhite,
+        Last = BrightWhite
     };
-    enum class Mode: uint8_t { Normal,  // reset all attributes
+    static constexpr const char* c_color_names[] = {
+        "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
+        "invalid", "default",
+        "*black", "*red", "*green", "*yellow",
+        "*blue", "*magenta", "*cyan", "*white"
+    };
+    static_assert(std::size(c_color_names) == size_t(Color::Last) + 1);
+
+    enum class Mode: uint8_t {
+        Normal,  // reset all attributes
         Bold, Dim, Italic, Underline, Overline, CrossOut, Frame,
         Blink, Reverse, Hidden,
         NormalIntensity, NoItalic, NoUnderline, NoOverline, NoCrossOut, NoFrame,
-        NoBlink, NoReverse, NoHidden
+        NoBlink, NoReverse, NoHidden,
+        Last = NoHidden
     };
+    static constexpr const char* c_mode_names[] = {
+        "normal",
+        "bold", "dim", "italic", "underline", "overline", "cross_out", "frame",
+        "blink", "reverse", "hidden",
+        "normal_intensity", "no_italic", "no_underline", "no_overline", "no_cross_out", "no_frame",
+        "no_blink", "no_reverse", "no_hidden"
+    };
+    static_assert(std::size(c_mode_names) == size_t(Mode::Last) + 1);
 
     // foreground
     TermCtl& fg(Color color);
@@ -179,11 +201,21 @@ public:
 
     // Formatting helpers
     struct Placeholder {
-        TermCtl& term_ctl;
+        TermCtl* term_ctl;
     };
     struct ColorPlaceholder: Placeholder {
         using ValueType = Color;
-        static Color parse(std::string_view name);
+        static constexpr Color parse(std::string_view name) {
+            Color r = Color::Black;
+            for (const char* n : c_color_names) {
+                if (name == n)
+                    return r;
+                r = static_cast<Color>(uint8_t(r) + 1);
+            }
+            if (r > Color::Last)  // this condition is needed for GCC 10 to allow throw in constexpr
+                throw fmt::format_error("invalid color name: " + std::string(name));
+            XCI_UNREACHABLE;
+        }
     };
     struct FgPlaceholder: ColorPlaceholder {
         std::string seq(Color color) const;
@@ -193,7 +225,17 @@ public:
     };
     struct ModePlaceholder: Placeholder {
         using ValueType = Mode;
-        static Mode parse(std::string_view name);
+        static constexpr Mode parse(std::string_view name) {
+            Mode r = Mode::Normal;
+            for (const char* n : c_mode_names) {
+                if (name == n)
+                    return r;
+                r = static_cast<Mode>(uint8_t(r) + 1);
+            }
+            if (r > Mode::Last)
+                throw fmt::format_error("invalid mode name: " + std::string(name));
+            XCI_UNREACHABLE;
+        }
         std::string seq(Mode mode) const;
     };
 
@@ -201,17 +243,22 @@ public:
     /// {fg:COLOR} where COLOR is default | red | *red ... ("*" = bright)
     /// {bg:COLOR} where COLOR is the same as for fg
     /// {t:MODE} where MODE is bold | underline | normal ...
+    #define XCI_TERMCTL_FMT_ARGS decltype("fg"_a = FgPlaceholder{}), \
+                                 decltype("bg"_a = BgPlaceholder{}), \
+                                 decltype("t"_a = ModePlaceholder{})
     template<typename... T>
-    std::string format(fmt::string_view fmt, T&&... args) {
+    std::string format(fmt::format_string<T..., XCI_TERMCTL_FMT_ARGS> fmt,
+                       T&&... args) {
         return fmt::vformat(fmt, fmt::make_format_args(args...,
-                        fmt::arg("fg", FgPlaceholder{*this}),
-                        fmt::arg("bg", BgPlaceholder{*this}),
-                        fmt::arg("t",  ModePlaceholder{*this})));
+                        "fg"_a = FgPlaceholder{this},
+                        "bg"_a = BgPlaceholder{this},
+                        "t"_a = ModePlaceholder{this}));
     }
 
     /// Print string with special color/mode placeholders, see `format` above.
     template<typename... T>
-    void print(fmt::string_view fmt, T&&... args) {
+    void print(fmt::format_string<T..., XCI_TERMCTL_FMT_ARGS> fmt,
+               T&&... args) {
         write(format(fmt, std::forward<T>(args)...));
     }
 
@@ -407,7 +454,7 @@ struct [[maybe_unused]] fmt::formatter<T> {
     }
 
     template <typename FormatContext>
-    auto format(const T& p, FormatContext& ctx) {
+    auto format(const T& p, FormatContext& ctx) const {
         auto msg = p.seq(value);
         return std::copy(msg.begin(), msg.end(), ctx.out());
     }
@@ -425,7 +472,7 @@ struct [[maybe_unused]] fmt::formatter<xci::core::TermCtl> {
     }
 
     template <typename FormatContext>
-    auto format(xci::core::TermCtl& term, FormatContext& ctx) {
+    auto format(xci::core::TermCtl& term, FormatContext& ctx) const {
         auto seq = term.seq();
         return std::copy(seq.cbegin(), seq.cend(), ctx.out());
     }

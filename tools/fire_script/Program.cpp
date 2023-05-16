@@ -110,7 +110,7 @@ void Program::repl_init()
         return EditLine::HighlightResult{hl_data, is_open};
     });
 
-    t.print((const char*)intro, XCI_VERSION);
+    t.print(intro, XCI_VERSION);
     ctx.input_number = 0;
 }
 

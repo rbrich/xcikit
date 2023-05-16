@@ -5,7 +5,6 @@ from pathlib import Path
 from shlex import quote
 import sys
 import subprocess
-from conans.tools import Git
 
 script_dir = Path(__file__).parent
 
@@ -25,7 +24,7 @@ def sgr(code: str):
 
 def run(popen_args, *args, **kwargs):
     print(f"> {' '.join(quote(str(x)) for x in popen_args)}")
-    subprocess.run(popen_args, *args, **kwargs)
+    subprocess.run(popen_args, *args, **kwargs, check=True)
 
 
 def requirements():
@@ -74,8 +73,8 @@ def main():
         if not source_dir.exists():
             print(f"Cloning into {source_dir}")
             source_dir.mkdir(parents=True)
-            git = Git(folder=source_dir)
-            git.clone(url, git_ref, shallow=True)
+            run(["git", "-c", "advice.detachedHead=false",
+                 "clone", url, "--depth=1", "--branch", git_ref, source_dir])
 
         build_dir.mkdir(parents=True, exist_ok=True)
         cmake_args = ["-D" + d for d in cmake_defs.split()]

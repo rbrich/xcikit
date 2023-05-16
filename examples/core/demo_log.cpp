@@ -1,7 +1,7 @@
 // demo_logger.cpp created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2020 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/core/log.h>

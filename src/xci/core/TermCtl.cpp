@@ -608,70 +608,21 @@ TermCtl& TermCtl::clear_line_to_end() { return TERM_APPEND(clr_eol); }
 TermCtl& TermCtl::soft_reset() { return XCI_TERM_APPEND(seq::send_soft_reset); }
 
 
-auto TermCtl::ColorPlaceholder::parse(std::string_view name) -> Color
-{
-    if (name == "default")   return Color::Default;
-    if (name == "black")     return Color::Black;
-    if (name == "red")       return Color::Red;
-    if (name == "green")     return Color::Green;
-    if (name == "yellow")    return Color::Yellow;
-    if (name == "blue")      return Color::Blue;
-    if (name == "magenta")   return Color::Magenta;
-    if (name == "cyan")      return Color::Cyan;
-    if (name == "white")     return Color::White;
-    if (name == "*black")    return Color::BrightBlack;
-    if (name == "*red")      return Color::BrightRed;
-    if (name == "*green")    return Color::BrightGreen;
-    if (name == "*yellow")   return Color::BrightYellow;
-    if (name == "*blue")     return Color::BrightBlue;
-    if (name == "*magenta")  return Color::BrightMagenta;
-    if (name == "*cyan")     return Color::BrightCyan;
-    if (name == "*white")    return Color::BrightWhite;
-    throw fmt::format_error("invalid color name: " + std::string(name));
-}
-
-
-auto TermCtl::ModePlaceholder::parse(std::string_view name) -> Mode
-{
-    if (name == "bold")         return Mode::Bold;
-    if (name == "dim")          return Mode::Dim;
-    if (name == "italic")       return Mode::Italic;
-    if (name == "underline")    return Mode::Underline;
-    if (name == "overline")     return Mode::Overline;
-    if (name == "cross_out")    return Mode::CrossOut;
-    if (name == "frame")        return Mode::Frame;
-    if (name == "blink")        return Mode::Blink;
-    if (name == "reverse")      return Mode::Reverse;
-    if (name == "hidden")       return Mode::Hidden;
-    if (name == "normal")       return Mode::Normal;
-    if (name == "normal_intensity") return Mode::NormalIntensity;
-    if (name == "no_italic")    return Mode::NoItalic;
-    if (name == "no_underline") return Mode::NoUnderline;
-    if (name == "no_overline")  return Mode::NoOverline;
-    if (name == "no_cross_out") return Mode::NoCrossOut;
-    if (name == "no_frame")     return Mode::NoFrame;
-    if (name == "no_blink")     return Mode::NoBlink;
-    if (name == "no_reverse")   return Mode::NoReverse;
-    if (name == "no_hidden")    return Mode::NoHidden;
-    throw fmt::format_error("invalid mode name: " + std::string(name));
-}
-
-
 std::string TermCtl::FgPlaceholder::seq(Color color) const
 {
-    return term_ctl.fg(color).seq();
+    return term_ctl->fg(color).seq();
 }
 
 
 std::string TermCtl::BgPlaceholder::seq(Color color) const
 {
-    return term_ctl.bg(color).seq();
+    return term_ctl->bg(color).seq();
 }
 
 
 std::string TermCtl::ModePlaceholder::seq(Mode mode) const
 {
-    return term_ctl.mode(mode).seq();
+    return term_ctl->mode(mode).seq();
 }
 
 
