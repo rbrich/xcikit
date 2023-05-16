@@ -160,6 +160,9 @@ size_t Value::read(const byte* buffer)
         } else if constexpr (std::is_same_v<T, ModuleV>) {
             std::memcpy(&v.module_ptr, buffer, sizeof(v.module_ptr));
             return sizeof(v.module_ptr);
+        } else if constexpr (std::is_same_v<T, TypeIndexV>) {
+            std::memcpy(&v.type_index, buffer, sizeof(v.type_index));
+            return sizeof(v.type_index);
         } else if constexpr(std::is_trivially_copyable_v<T>) {
             std::memcpy(&v, buffer, sizeof(T));
             return sizeof(T);

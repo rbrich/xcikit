@@ -23,8 +23,8 @@
 
 requirements:
   fmt:
-    cmake: "fmt/9.0.0"
-    conan: "fmt/9.1.0"
+    cmake: "fmt/10.0.0"
+    conan: "fmt/10.0.0"
     public: True
   range_v3:
     cmake: "range-v3/0.12.0"
