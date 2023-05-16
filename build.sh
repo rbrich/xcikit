@@ -210,9 +210,6 @@ if [[ "${EMSCRIPTEN}" -eq 1 ]] ; then
     SYSTEM_DEPS=0
 elif [[ ${PLATFORM} = "Darwin" ]] ; then
     PLATFORM="macos"
-    if [[ -z "$MACOSX_DEPLOYMENT_TARGET" ]]; then
-        MACOSX_DEPLOYMENT_TARGET=$(conan profile show -pr "${CONAN_PROFILE}" | grep os.version | head -n1 | cut -d= -f2)
-    fi
     if [[ -n "$MACOSX_DEPLOYMENT_TARGET" ]]; then
         PLATFORM="${PLATFORM}-${MACOSX_DEPLOYMENT_TARGET}"
         CONAN_ARGS+=(-s "os.version=${MACOSX_DEPLOYMENT_TARGET}")
@@ -339,6 +336,7 @@ if phase deps; then
             CONAN_ARGS+=($(tail -n1 'system_deps.txt'))
         fi
 
+        export BUILD_DIR
         run conan install "${ROOT_DIR}" \
             --build missing \
             -s "build_type=${BUILD_TYPE}" \

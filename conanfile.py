@@ -1,8 +1,10 @@
+import os
+
 from conan import ConanFile
 from conan.tools.files import load
 from conan.tools.build import check_min_cppstd
 from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake, cmake_layout
-from conan.tools.files import copy, rmdir
+from conan.tools.files import copy
 from conan.tools.microsoft import is_msvc_static_runtime, is_msvc
 from pathlib import Path
 
@@ -127,8 +129,17 @@ class XcikitConan(ConanFile):
             del self.options.fPIC
 
     def layout(self):
-        # src_folder must use the same source folder name the project
-        cmake_layout(self)
+        # Explicit BUILD_DIR passed from build.sh
+        build_dir = os.environ.get("BUILD_DIR", None)
+        if build_dir:
+            self.folders.source = "."
+            self.folders.build = build_dir
+            self.folders.generators = os.path.join(self.folders.build, "generators")
+            self.cpp.source.includedirs = ["include"]
+            self.cpp.build.bindirs = ["."]
+            self.cpp.build.libdirs = ["."]
+        else:
+            cmake_layout(self)
 
     def _requirements(self):
         for name, info in self.conan_data["requirements"].items():
@@ -196,10 +207,10 @@ class XcikitConan(ConanFile):
                 delattr(self.options, info['option'])
 
         # Remove dependent / implicit options
-        if self.settings.os == "Emscripten":
+        if self.settings.os == "Emscripten" and 'system_zlib' in self.options:
             # These are imported from Emscripten Ports
             del self.options.system_zlib
-        if self.settings.os in ("Windows", "Emscripten"):
+        if self.settings.os in ("Windows", "Emscripten") and 'system_incbin' in self.options:
             # Incbin is not supported
             del self.options.system_incbin
 
