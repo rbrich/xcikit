@@ -21,7 +21,7 @@ npm install
 
 Then run the build:
 ```bash
-export CONAN_DEFAULT_PROFILE_PATH=emscripten
+export CONAN_DEFAULT_PROFILE=emscripten
 npm run build
 ```
 
