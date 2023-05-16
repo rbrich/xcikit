@@ -1,7 +1,7 @@
 // TypeInfo.h created on 2019-06-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_TYPEINFO_H
@@ -43,6 +43,7 @@ enum class Type : uint8_t {
     Function,   // function type, has signature (parameters, return type) and code
     Module,     // module type, carries global names, constants, functions
     Stream,     // I/O stream
+    TypeIndex,   // index of a type in current module or builtin module
 
     // Custom types
     Named,      // type NewType = ... (all other types are anonymous)
@@ -117,6 +118,7 @@ public:
     bool is_callable() const { return underlying_type() == Type::Function; }
     bool is_void() const { return is_tuple() && subtypes().empty(); }
     bool is_bool() const { return underlying_type() == Type::Bool; }
+    bool is_string() const { return underlying_type() == Type::String; }
     bool is_list() const { return underlying_type() == Type::List; }
     bool is_tuple() const { return underlying_type() == Type::Tuple; }
     bool is_struct() const { return underlying_type() == Type::Struct; }
@@ -317,6 +319,7 @@ inline TypeInfo ti_float64() { return TypeInfo(Type::Float64); }
 inline TypeInfo ti_string() { return TypeInfo(Type::String); }
 inline TypeInfo ti_stream() { return TypeInfo(Type::Stream); }
 inline TypeInfo ti_module() { return TypeInfo(Type::Module); }
+inline TypeInfo ti_type_index() { return TypeInfo(Type::TypeIndex); }
 
 inline TypeInfo ti_function(SignaturePtr&& signature)
 { return TypeInfo(std::forward<SignaturePtr>(signature)); }

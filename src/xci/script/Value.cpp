@@ -1,7 +1,7 @@
 // Value.cpp created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Value.h"
@@ -85,6 +85,7 @@ Value create_value(Type type)
         case Type::Function: return value::Closure{};
         case Type::Stream: return value::Stream{};
         case Type::Module: return value::Module{};
+        case Type::TypeIndex: return value::TypeIndex{};
         case Type::Named: assert(!"Cannot create empty Value of Named type"); break;
     }
     return {};
@@ -238,7 +239,8 @@ void Value::apply(value::Visitor& visitor) const
         using T = std::decay_t<decltype(v)>;
         if constexpr (std::is_same_v<T, std::monostate>) {
             assert(!"Cannot apply Value of unknown type");  // Unknown
-        } else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, StreamV> || std::is_same_v<T, ModuleV>)
+        } else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, StreamV>
+                || std::is_same_v<T, ModuleV> || std::is_same_v<T, TypeIndexV>)
             visitor.visit(v.value());
         else
             visitor.visit(v);
@@ -265,6 +267,7 @@ Type Value::type() const
             [](const ClosureV&) { return Type::Function; },
             [](const StreamV&) { return Type::Stream; },
             [](const ModuleV&) { return Type::Module; },
+            [](const TypeIndexV&) { return Type::TypeIndex; },
     }, m_value);
 }
 
@@ -283,6 +286,14 @@ bool Value::cast_from(const Value& src)
         if constexpr
                 ((std::is_integral_v<TFrom> || std::is_floating_point_v<TFrom> || std::is_same_v<TFrom, byte>)
                 && (std::is_integral_v<TTo> || std::is_floating_point_v<TTo> || std::is_same_v<TTo, byte>))
+        {
+            to = static_cast<TTo>(from);
+            return true;
+        }
+
+        if  constexpr
+                ((std::is_integral_v<TFrom> || std::is_same_v<TFrom, TypeIndexV>)
+                 && (std::is_integral_v<TTo> || std::is_same_v<TTo, TypeIndexV>))
         {
             to = static_cast<TTo>(from);
             return true;
@@ -476,14 +487,22 @@ Value ListV::value_at(size_t idx, const TypeInfo& elem_type) const
 }
 
 
+void ListV::set_value(size_t idx, const Value& v)
+{
+    assert(idx < length());
+    const auto elem_size = v.size_on_stack();
+    v.write(raw_data() + idx * elem_size);
+}
+
+
 void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
 {
     const auto* data = slot.data();
     auto length = (int32_t) bit_read<uint32_t>(data);
 
     // deleter data
-    auto offsets_size = bit_read<uint16_t>(data);
-    std::vector<size_t> offsets = list_deleter_read_offsets(data, offsets_size);
+    const auto offsets_size = bit_read<uint16_t>(data);
+    const auto offsets = list_deleter_read_offsets(data, offsets_size);
 
     // adjust indexes
     if (end < 0)
@@ -847,6 +866,9 @@ public:
     }
     void visit(const script::Stream& v) override {
         os << "<stream:" << v << ">";
+    }
+    void visit(const TypeIndexV& v) override {
+        os << "<type_index:" << v.value() << ">";
     }
 private:
     std::ostream& os;

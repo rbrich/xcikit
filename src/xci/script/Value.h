@@ -1,7 +1,7 @@
 // Value.h created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_VALUE_H
@@ -29,6 +29,7 @@ class Value;
 struct ListV;
 struct TupleV;
 struct ClosureV;
+struct TypeIndexV;
 class Values;
 class Function;
 class Module;
@@ -67,6 +68,7 @@ public:
     virtual void visit(const ClosureV&) = 0;
     virtual void visit(const script::Module*) = 0;
     virtual void visit(const script::Stream&) = 0;
+    virtual void visit(const TypeIndexV&) = 0;
 };
 
 class PartialVisitor : public Visitor {
@@ -85,6 +87,7 @@ class PartialVisitor : public Visitor {
     void visit(const ClosureV&) override {}
     void visit(const script::Module*) override {}
     void visit(const script::Stream&) override {}
+    void visit(const TypeIndexV&) override {}
 };
 
 } // namespace value
@@ -107,7 +110,9 @@ struct ListV {
     bool operator ==(const ListV& rhs) const { return slot.slot() == rhs.slot.slot(); }  // same slot - cannot compare content without elem_type
     size_t length() const;
     const std::byte* raw_data() const;
+    std::byte* raw_data() { return (std::byte*) const_cast<const ListV*>(this)->raw_data(); }
     Value value_at(size_t idx, const TypeInfo& elem_type) const;
+    void set_value(size_t idx, const Value& v);
 
     /// Slice the list. Indexes work similarly to Python.
     /// Automatically copies the list on heap when it has more than 1 reference.
@@ -170,6 +175,18 @@ struct ModuleV {
 };
 
 
+struct TypeIndexV {
+    TypeIndexV() = default;
+    explicit TypeIndexV(int32_t v) : type_index(v) {}
+
+    bool operator ==(const TypeIndexV& rhs) const { return value() == rhs.value(); }
+    operator int32_t() const { return type_index; }
+    int32_t value() const { return type_index; }
+
+    int32_t type_index = -1;
+};
+
+
 class Value {
 public:
     struct StringTag {};
@@ -177,6 +194,7 @@ public:
     struct ClosureTag {};
     struct StreamTag {};
     struct ModuleTag {};
+    struct TypeIndexTag {};
 
     Value() = default;  // Unknown (invalid value)
     explicit Value(bool v) : m_value(v) {}  // Bool
@@ -204,6 +222,8 @@ public:
     explicit Value(const script::Stream& v) : m_value(StreamV{v}) {}  // Stream
     explicit Value(ModuleTag) : m_value(ModuleV{}) {}  // Module
     explicit Value(script::Module& v) : m_value(ModuleV{v}) {}  // Module
+    explicit Value(TypeIndexTag) : m_value(TypeIndexV{}) {}  // TypeIndex
+    explicit Value(TypeIndexTag, int32_t v) : m_value(TypeIndexV{v}) {}  // TypeIndex
 
     bool operator ==(const Value& rhs) const;
 
@@ -290,7 +310,7 @@ protected:
     using ValueVariant = std::variant<
             std::monostate,  // Unknown (invalid value)
             bool, std::byte, char32_t, uint32_t, uint64_t, int32_t, int64_t, float, double,
-            StringV, ListV, TupleV, ClosureV, StreamV, ModuleV
+            StringV, ListV, TupleV, ClosureV, StreamV, ModuleV, TypeIndexV
         >;
     ValueVariant m_value;
 };
@@ -374,6 +394,7 @@ public:
     bool is_unknown() const { return m_type_info.is_unknown(); }
     bool is_void() const { return m_type_info.is_void(); }
     bool is_bool() const { return m_type_info.is_bool(); }
+    bool is_string() const { return m_type_info.is_string(); }
 
     template <class T> T& get() { return m_value.get<T>(); }
     template <class T> const T& get() const { return m_value.get<T>(); }
@@ -544,6 +565,7 @@ public:
     size_t length() const { return get<ListV>().length(); }
     Value value_at(size_t idx, const TypeInfo& elem_type) const { return get<ListV>().value_at(idx, elem_type); }
     TypedValue typed_value_at(size_t idx, const TypeInfo& elem_type) const { return {value_at(idx, elem_type), elem_type}; }
+    void set_value(size_t idx, const Value& v) { get<ListV>().set_value(idx, v); }
 };
 
 
@@ -609,6 +631,17 @@ public:
     script::Module& value() { return *get<ModuleV>().module_ptr; }
     const script::Module& value() const { return get_module(); }
 };
+
+
+class TypeIndex: public Value {
+public:
+    TypeIndex() : Value(Value::TypeIndexTag{}) {}
+    explicit TypeIndex(int32_t v) : Value(Value::TypeIndexTag{}, v) {}
+    TypeInfo type_info() const { return ti_type_index(); }
+    int32_t value() const { return std::get<TypeIndexV>(m_value).value(); }
+    void set_value(int32_t v) { m_value = TypeIndexV{v}; }
+};
+
 
 } // namespace value
 

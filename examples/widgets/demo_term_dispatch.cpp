@@ -1,7 +1,7 @@
 // demo_term_dispatch.cpp created on 2019-04-06 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -74,8 +74,8 @@ int main(int argc, const char* argv[])
                      std::lock_guard<SharedBuffer> guard(buffer);
                      if (buffer.pending() > 0)
                          break;
-                     size_t nread;
-                     if ((nread = ::read(fileno(f), buffer.data(), buffer.size())) > 0) {
+                     size_t nread = ::read(fileno(f), buffer.data(), buffer.size());
+                     if (nread > 0) {
                          buffer.set_pending(nread);
                          window.wakeup();
                      }

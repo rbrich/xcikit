@@ -1,7 +1,7 @@
 // Repl.cpp.c created on 2021-03-16 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2022 Radek Brich
+// Copyright 2021–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Repl.h"
@@ -29,6 +29,7 @@ bool Repl::evaluate(const std::string& module_name, std::string module_source, E
 {
     core::TermCtl& t = m_ctx.term_out;
     auto& source_manager = m_ctx.interpreter.source_manager();
+    auto& module_manager = m_ctx.interpreter.module_manager();
     auto& parser = m_ctx.interpreter.parser();
     auto& compiler = m_ctx.interpreter.compiler();
 
@@ -51,6 +52,8 @@ bool Repl::evaluate(const std::string& module_name, std::string module_source, E
 
         // create new module for the input
         auto module = prepare_module(module_name);
+        auto r = module_manager.replace_module(module_name, module);
+        assert(r != no_index); (void) r;
 
         // compile
         rusage.start_if(m_opts.print_rusage, "compiled");
@@ -160,9 +163,6 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
                 t.print("{t:bold}{fg:magenta}{}:{} = {fg:default}{}{t:normal}\n",
                         module_name, result.type_info(), result);
             }
-            // add symbol for main function, so it will be visible by following input,
-            // which imports this module
-            module.symtab().add({module_name, Symbol::Function, 0});
         } else {
             // single input mode
             assert(mode == EvalMode::SingleInput);

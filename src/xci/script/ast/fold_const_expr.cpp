@@ -1,7 +1,7 @@
 // fold_const_expr.cpp created on 2019-06-13 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "fold_const_expr.h"
@@ -65,7 +65,7 @@ public:
             case Symbol::TypeName:
             case Symbol::TypeVar:
             case Symbol::StructItem:
-            case Symbol::TypeId:
+            case Symbol::TypeIndex:
                 break;
             case Symbol::Function: {
                 assert(v.index != no_index);
@@ -201,7 +201,7 @@ public:
         Function& func = module().get_scope(v.scope_index).function();
 
         // collapse block with single statement
-        if (!func.has_parameters() && v.body.statements.size() == 1) {
+        if (!func.has_nonvoid_parameters() && v.body.statements.size() == 1) {
             auto* ret = dynamic_cast<ast::Return*>(v.body.statements[0].get());
             assert(ret != nullptr);
             apply_and_fold(ret->expression);

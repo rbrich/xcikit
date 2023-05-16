@@ -1,7 +1,7 @@
 // SymbolTable.h created on 2019-07-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_SYMBOL_TABLE_H
@@ -50,6 +50,7 @@ public:
     const TypeInfo& get_type() const;
 
     Class& get_class() const;
+    Module& get_module() const;
 
     SymbolTable* symtab() const { return m_symtab; }
     Index symidx() const { return m_symidx; }
@@ -88,7 +89,7 @@ public:
         Unresolved,
 
         // module-level
-        Module,             // imported module
+        Module,             // imported module (index = module index, no_index for builtin __module symbol)
         Function,           // scope-level function (index = subscope index in scope)
         Value,              // static value
         TypeName,           // type information (index = type index in module)
@@ -106,7 +107,7 @@ public:
         StructItem,         // name = item name, index = struct type index in module
 
         // special
-        TypeId,             // translate type name to type ID (index = type index in builtin if < 32, else type index in current module + 32)
+        TypeIndex,          // translate type name to TypeIndex (index = (type index in module << 7) + module_index)
     };
 
     Symbol() = default;  // only for deserialization

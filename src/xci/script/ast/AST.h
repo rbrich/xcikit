@@ -1,7 +1,7 @@
 // AST.h created on 2019-05-15 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_AST_H
@@ -365,7 +365,6 @@ struct List: public Expression {
 
     // resolved:
     TypeInfo ti;
-    size_t elem_type_id = 0;
 };
 
 // structured initializer, i.e. tuple with identifiers
@@ -587,7 +586,7 @@ struct Invocation: public Statement {
     std::unique_ptr<Expression> expression;
 
     // resolved:
-    Index type_id = no_index;
+    TypeInfo ti;
 };
 
 struct Return: public Statement {

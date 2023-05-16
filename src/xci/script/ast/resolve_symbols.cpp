@@ -1,7 +1,7 @@
 // resolve_symbols.cpp created on 2019-06-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_symbols.h"
@@ -234,6 +234,11 @@ public:
             // find all StructItem symbols, in all scopes
             auto struct_syms = find_all_symbols_of_type(v.identifier.name, Symbol::StructItem);
             v.sym_list.insert(v.sym_list.end(), struct_syms.begin(), struct_syms.end());
+        }
+        if (symptr->type() == Symbol::Module) {
+            // add module to overload set (only if it's actual module symbol, not builtin __module)
+            if (symptr->index() != no_index)
+                v.sym_list.emplace_back(symptr);
         }
     }
 

@@ -1,7 +1,7 @@
 // Program.cpp.cc created on 2021-03-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021 Radek Brich
+// Copyright 2021–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Program.h"
@@ -128,6 +128,7 @@ void Program::repl_loop()
         }
         evaluate_input(line);
     }
+    repl_command().set_quit_cb({});
 }
 
 

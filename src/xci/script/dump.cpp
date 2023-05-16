@@ -1,12 +1,13 @@
 // dump.cpp created on 2019-10-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "dump.h"
 #include "Function.h"
 #include "Module.h"
+#include "typing/type_index.h"
 #include <xci/data/coding/leb128.h>
 #include <xci/compat/macros.h>
 #include <iomanip>
@@ -842,14 +843,8 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
             case Opcode::Subscript:
             case Opcode::Length:
             case Opcode::Slice: {
-                const TypeInfo* ti;
-                if (arg < 32) {
-                    // builtin module
-                    ti = &v.func.module().get_imported_module(0).get_type(arg);
-                } else {
-                    ti = &v.func.module().get_type(arg - 32);
-                }
-                os << " (" << *ti << ")";
+                const TypeInfo& ti = get_type_info(v.func.module().module_manager(), arg);
+                os << " (" << ti << ")";
                 break;
             }
             default:
@@ -868,14 +863,8 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
                 break;
             }
             case Opcode::MakeList: {
-                const TypeInfo* ti;
-                if (arg2 < 32) {
-                    // builtin module
-                    ti = &v.func.module().get_imported_module(0).get_type(arg2);
-                } else {
-                    ti = &v.func.module().get_type(arg2 - 32);
-                }
-                os << " (" << *ti << ")";
+                const TypeInfo& ti = get_type_info(v.func.module().module_manager(), arg2);
+                os << " (" << ti << ")";
                 break;
             }
             default:
@@ -1049,6 +1038,7 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
                 return os << v.signature();
         case Type::Module:      return os << "Module";
         case Type::Stream:      return os << "Stream";
+        case Type::TypeIndex:   return os << "TypeIndex";
         case Type::Named:       return os << v.name();
     }
     XCI_UNREACHABLE;
@@ -1108,7 +1098,7 @@ std::ostream& operator<<(std::ostream& os, Symbol::Type v)
         case Symbol::TypeName:          return os << "TypeName";
         case Symbol::TypeVar:           return os << "TypeVar";
         case Symbol::StructItem:        return os << "StructItem";
-        case Symbol::TypeId:            return os << "TypeId";
+        case Symbol::TypeIndex:         return os << "TypeIndex";
     }
     return os;
 }

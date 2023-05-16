@@ -1,4 +1,4 @@
-// OverloadResolver.h created on 2022-12-31 as part of xcikit project
+// overload_resolver.h created on 2022-12-31 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
 // Copyright 2022–2023 Radek Brich

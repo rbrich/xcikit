@@ -6,7 +6,7 @@ from conan.tools.files import copy, rmdir
 from conan.tools.microsoft import is_msvc_static_runtime, is_msvc
 from pathlib import Path
 
-required_conan_version = ">=1.53.0"
+required_conan_version = ">=2.0.0"
 
 
 class XcikitConan(ConanFile):

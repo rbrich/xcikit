@@ -1,7 +1,7 @@
 // test_script.cpp created on 2019-05-27 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <catch2/catch_test_macros.hpp>
@@ -107,16 +107,10 @@ std::string optimize(const std::string& input)
 std::string interpret(const std::string& input, bool import_std=false)
 {
     Context& ctx = context();
-    Module module {ctx.interpreter.module_manager()};
-    module.import_module("builtin");
-    if (import_std) {
-        module.import_module("std");
-    }
-
     UNSCOPED_INFO(input);
     std::ostringstream os;
     try {
-        auto result = ctx.interpreter.eval(module, input, [&os](TypedValue&& invoked) {
+        auto result = ctx.interpreter.eval(input, import_std, [&os](TypedValue&& invoked) {
             os << invoked << ';';
             invoked.decref();
         });
@@ -130,6 +124,7 @@ std::string interpret(const std::string& input, bool import_std=false)
         assert(ctx.interpreter.machine().stack().n_frames() == 0);
         throw;
     }
+    ctx.interpreter.module_manager().clear();
     return os.str();
 }
 
@@ -759,7 +754,7 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
     //CHECK(interpret("f = fun<Add T> (T,T) -> T { add }; f (1,2)") == "3");
     // deducing list type
     CHECK(interpret("fun<T> [T] -> [T] { __noop } [1,2]") == "[1, 2]");
-    CHECK(interpret("len = fun<T> [T] -> UInt { __length __type_id<T> }; len [1,2,3]") == "3U");
+    CHECK(interpret("len = fun<T> [T] -> UInt { __length __type_index<T> }; len [1,2,3]") == "3U");
     CHECK(interpret_std("f = fun<T> a:[T] -> T { a!1 }; f [1,2,3]") == "2");
 }
 
@@ -894,9 +889,9 @@ TEST_CASE( "String operations", "[script][interpreter]" )
 TEST_CASE( "Subscript", "[script][interpreter]" )
 {
     // custom implementation (same as in std.fire)
-    CHECK(interpret("__type_id<Void>") == "0");
-    CHECK_THROWS_AS(interpret("__type_id<X>"), UndefinedTypeName);
-    CHECK(interpret("subscript = fun<T> [T] Int -> T { __subscript __type_id<T> }; subscript [1,2,3] 1") == "2");
+    CHECK(interpret("__type_index<Void>") == "0");
+    CHECK_THROWS_AS(interpret("__type_index<X>"), UndefinedTypeName);
+    CHECK(interpret("subscript = fun<T> [T] Int -> T { __subscript __type_index<T> }; subscript [1,2,3] 1") == "2");
     // std implementation
     CHECK(interpret_std("subscript [1,2,3] 1") == "2");
     CHECK(interpret_std("[1,2,3] .subscript 0") == "1");
@@ -912,7 +907,7 @@ TEST_CASE( "Subscript", "[script][interpreter]" )
 
 TEST_CASE( "Slice", "[script][interpreter]" )
 {
-    CHECK(interpret("slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __slice __type_id<T> }; [1,2,3,4,5] .slice 1 4 1") == "[2, 3, 4]");
+    CHECK(interpret("slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __slice __type_index<T> }; [1,2,3,4,5] .slice 1 4 1") == "[2, 3, 4]");
     // step=0 -- pick one element for a new list
     CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int 0") == "[4]");
     CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int max:Int") == "[4]");
@@ -1002,6 +997,13 @@ TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
     // Static value
     CHECK(interpret("add42 = fun Int->Int { __load_static (__value 42); __add 0x88 }; add42 8") == "50");
     CHECK(interpret("add42 = fun Int->Int { __value 42 . __load_static; __add 0x88 }; add42 8") == "50");
+    // Modules - self or imported
+    CHECK(interpret("__module .__n_fn") == "1");  // __module is self, every module contains at least 1 function (main)
+    CHECK(interpret("a=1; __module .__n_fn") == "2");  // `a` is counted as a function
+    CHECK(interpret("__module 0 .__module_name") == R"("builtin")");  // module 0 is always builtin
+    CHECK(interpret_std("__module 1 .__module_name") == R"("std")");  // module 1 is usually std
+    CHECK_THROWS_AS(interpret("__module 1 2"), UnexpectedArgumentCount);
+    CHECK_THROWS_AS(interpret("__module \"builtin\""), UnexpectedArgumentType); // see builtin __module_by_name
 }
 
 
@@ -1009,13 +1011,20 @@ TEST_CASE( "Explicit type params", "[script][interpreter]")
 {
     // no generic params or return value, only an explicit type param,
     // which is used directly in the body and requires explicit instantiations
-    CHECK(interpret("type_id = fun<T> () -> Int { __type_id<T> }; "
-                    "x = type_id<Int>; x; type_id<String>; type_id<Void>") == "6;10;0");
+    CHECK(interpret("type_idx = fun<T> () -> TypeIndex { __type_index<T> }; "
+                    "x = type_idx<Int>; x; type_idx<String>; type_idx<Void>") == "768;1280;0");  // 6<<7; 10<<7; 0<<7
 }
 
 
 TEST_CASE( "Type introspection", "[script][interpreter]")
 {
+    CHECK(interpret_std("type_index_of void; type_index_of \"abc\"; type_index_of 42") == "0;1280;768");  // 0<<7; 10<<7; 6<<7
+    CHECK(interpret_std("type_index_of [1] .name") == R"=("[Int32]")=");
+    CHECK(interpret_std("type_index<Void>; type_index<String>; type_index<Int>") == "0;1280;768");
+    CHECK(interpret_std("type_index<Int> == type_index<Int32>") == "true");
+    CHECK(interpret_std("type_size<Void>; type_size<Int>; type_size<Float64>") == "0;4;8");
+    constexpr size_t ptr_size = sizeof(void*);
+    CHECK(interpret_std("type_size<(Int, Int64, String)>; type_size<[Int]>") == fmt::format("{};{}", 12 + ptr_size, ptr_size));
     CHECK(interpret_std("type_name<Void>; type_name<String>; type_name<Int>") == R"=("()";"String";"Int32")=");
     CHECK(interpret_std("Void.type_name; String.type_name; Int.type_name") == R"=("()";"String";"Int32")=");
     CHECK(interpret_std("type_name<(Float,String)>; type_name<[Int64]>") == R"=("(Float32, String)";"[Int64]")=");
@@ -1026,6 +1035,23 @@ TEST_CASE( "Type introspection", "[script][interpreter]")
     CHECK(interpret_std("type MyInt=Int; type_name<MyInt>") == R"=("MyInt")=");
     // type_name works on type vars, dot-call on type can take normal args
     CHECK(interpret_std(R"(f=fun<T> a:String { a + T.type_name }; Int.f "The type is ")") == R"=("The type is Int32")=");
+    CHECK(interpret_std("type X = Int; X.type_name; type_index<X>.underlying; type_index<X>.underlying.name") == R"("X";768;"Int32")");
+//    CHECK(interpret_std("type_index<Int>.subtypes") == R"(["Int32"])");
+    CHECK(interpret_std("type_index<[Int]>.subtypes") == "[768]");
+//    CHECK(interpret_std("type_index<(Int32, String, Float64)>.subtypes") == R"(["Int32", "String", "Float64"])");
+//    CHECK(interpret_std("type_index<(a:Int32, b:String, c:Float64)>.subtypes") == R"(["Int32", "String", "Float64"])");
+//    CHECK(interpret_std("type_index<(Int32, (String, Float64))>.subtypes") == R"=(["Int32", "(String, Float64)"])=");
+}
+
+
+TEST_CASE( "Modules", "[script][module]" )
+{
+    // modules are callable, builtin and std return Void
+    CHECK(interpret("builtin") == "()");
+    CHECK(interpret_std("std") == "()");
+    CHECK(interpret("__module_by_name \"builtin\"") == "<module:builtin>");
+    CHECK_THROWS_AS(interpret("__module_by_name \"xyz\""), RuntimeError);
+    CHECK(interpret("__module_by_name \"builtin\" .__module_name") == R"("builtin")");
 }
 
 
@@ -1070,45 +1096,47 @@ int test_fun1(int a, int b, int c) { return (a - b) / c; }
 TEST_CASE( "Native functions: free function", "[script][native]" )
 {
     Context& ctx = context();
-    Module main_module {ctx.interpreter.module_manager()};
+    auto main_module = std::make_shared<Module>(ctx.interpreter.module_manager());
     auto native_module = std::make_shared<Module>(ctx.interpreter.module_manager());
-    main_module.import_module("builtin");
-    main_module.import_module("std");
-    main_module.add_imported_module(native_module);
+    main_module->import_module("builtin");
+    main_module->import_module("std");
+    main_module->add_imported_module(native_module);
 
     // free function
     native_module->add_native_function("test_fun1a", &test_fun1);
     native_module->add_native_function("test_fun1b", test_fun1);  // function pointer is deduced
 
-    auto result = ctx.interpreter.eval(main_module, R"(
+    auto result = ctx.interpreter.eval(std::move(main_module), R"(
         ((test_fun1a 10 4 2)     //  3
         + (test_fun1b 0 6 3))    // -2
     )");
     CHECK(result.type() == Type::Int32);
     CHECK(result.get<int32_t>() == 1);
+    ctx.interpreter.module_manager().clear();
 }
 
 
 TEST_CASE( "Native functions: lambda", "[script][native]" )
 {
     Context& ctx = context();
-    Module module {ctx.interpreter.module_manager()};
+    auto module = std::make_shared<Module>(ctx.interpreter.module_manager());
 
     // lambdas
-    module.add_native_function("add1", [](int a, int b) { return a + b; });
+    module->add_native_function("add1", [](int a, int b) { return a + b; });
 
     // lambda with state (can't use capture)
     int state = 10;
-    module.add_native_function("add2",
+    module->add_native_function("add2",
             [](void* s, int a, int b) { return a + b + *(int*)(s); },
             &state);
 
-    auto result = ctx.interpreter.eval(module, R"(
+    auto result = ctx.interpreter.eval(std::move(module), R"(
         (add1 (add1 1 6)       //  7
               (add2 3 4))      //  8  (+10 from state)
     )");
     CHECK(result.type() == Type::Int32);
     CHECK(result.get<int32_t>() == 24);
+    ctx.interpreter.module_manager().clear();
 }
 
 

@@ -6,8 +6,8 @@
 
 #include "resolve_types.h"
 #include <xci/script/typing/TypeChecker.h>
-#include <xci/script/typing/OverloadResolver.h>
-#include <xci/script/typing/GenericResolver.h>
+#include <xci/script/typing/overload_resolver.h>
+#include <xci/script/typing/generic_resolver.h>
 #include <xci/script/Value.h>
 #include <xci/script/Builtin.h>
 #include <xci/script/Function.h>
@@ -178,10 +178,10 @@ public:
                     if (m_call_sig.n_args() != 2)
                         throw UnexpectedArgumentCount(2, m_call_sig.n_args(), v.source_loc);
                 }
-                // check type of args (they must be Int or Byte)
+                // check type of args (they must be Int, TypeIndex or Byte)
                 for (const auto&& [i, arg] : m_call_sig.args | enumerate) {
                     const Type t = arg.type_info.type();
-                    if (t != Type::Unknown && t != Type::Byte && t != Type::Int32)
+                    if (t != Type::Unknown && t != Type::Byte && t != Type::Int32 && t != Type::TypeIndex)
                         throw UnexpectedArgumentType(i+1, ti_int32(),
                                                      arg.type_info, arg.source_loc);
                 }
@@ -189,7 +189,7 @@ public:
                 m_call_sig.clear();
                 break;
             }
-            case Symbol::TypeId: {
+            case Symbol::TypeIndex: {
                 if (v.ti.is_unknown()) {
                     // try to resolve via known type args
                     auto var = v.ti.generic_var();
@@ -199,7 +199,7 @@ public:
                         v.ti = resolved;
                     }
                 }
-                m_value_type = ti_int32();
+                m_value_type = ti_type_index();
                 return;  // do not overwrite v.ti below
             }
             case Symbol::Class:
@@ -266,6 +266,23 @@ public:
                 else
                     throw FunctionNotFound(o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
             }
+            case Symbol::Module:
+                if (sym.index() == no_index) {
+                    // builtin __module
+                    if (m_call_sig.n_args() > 1)
+                        throw UnexpectedArgumentCount(1, m_call_sig.n_args(), v.source_loc);
+                    if (m_call_sig.n_args() == 1) {
+                        // the arg must be Int32 (index of imported module)
+                        const auto& arg = m_call_sig.args.front();
+                        if (arg.type_info.type() != Type::Int32)
+                            throw UnexpectedArgumentType(1, ti_int32(), arg.type_info, arg.source_loc);
+                    }
+                    // cleanup - args are now fully processed
+                    m_call_sig.clear();
+                    m_value_type = ti_module();
+                    break;
+                }
+                [[fallthrough]];
             case Symbol::Function:
             case Symbol::StructItem: {
                 // specified type in declaration
@@ -292,17 +309,16 @@ public:
                     if (v.definition) {
                         m_call_sig.clear();
                     }
-                } else {
-                    assert(res.symptr->type() == Symbol::StructItem);
+                } else if (res.symptr->type() == Symbol::StructItem) {
                     m_value_type = res.type.signature().return_type;
                     m_call_sig.clear();
+                } else {
+                    assert(res.symptr->type() == Symbol::Module);
+                    m_value_type = res.type;
                 }
                 v.identifier.symbol = res.symptr;
                 break;
             }
-            case Symbol::Module:
-                m_value_type = TypeInfo{Type::Module};
-                break;
             case Symbol::Parameter: {
                 const auto* ref_scope = m_scope.find_parent_scope(&symtab);
                 const auto& sig_type = ref_scope->function().parameter(sym.index());
@@ -587,8 +603,7 @@ private:
                 } else {
                     sig_ptr = fn.signature_ptr();
                 }
-            } else {
-                assert(symptr->type() == Symbol::StructItem);
+            } else if (symptr->type() == Symbol::StructItem) {
                 scope_idx = no_index;
                 sig_ptr = std::make_shared<Signature>();
                 const auto& struct_type = symptr.get_type();
@@ -596,6 +611,11 @@ private:
                 const auto* item_type = struct_type.struct_item_by_name(symptr->name());
                 assert(item_type != nullptr);
                 sig_ptr->set_return_type(*item_type);
+            } else {
+                assert(symptr->type() == Symbol::Module);
+                scope_idx = no_index;
+                Module& imp_mod = symptr.get_module();
+                sig_ptr = imp_mod.get_main_function().signature_ptr();
             }
             auto match = match_signature(*sig_ptr);
             candidates.push_back({symmod, scope_idx, symptr, TypeInfo{std::move(sig_ptr)}, std::move(res_type_args), match});

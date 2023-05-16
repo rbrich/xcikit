@@ -1,7 +1,7 @@
 // Interpreter.cpp created on 2019-06-21 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Interpreter.h"
@@ -46,14 +46,14 @@ std::shared_ptr<Module> Interpreter::build_module(const std::string& name, Sourc
 }
 
 
-TypedValue Interpreter::eval(Module& module, SourceId source_id, const InvokeCallback& cb)
+TypedValue Interpreter::eval(size_t mod_idx, SourceId source_id, const InvokeCallback& cb)
 {
     // parse
     ast::Module ast;
     m_parser.parse(source_id, ast);
 
     // compile
-    auto& scope = module.get_main_scope();
+    auto& scope = m_module_manager.get_module(mod_idx)->get_main_scope();
     m_compiler.compile(scope, ast);
 
     // execute
@@ -66,21 +66,26 @@ TypedValue Interpreter::eval(Module& module, SourceId source_id, const InvokeCal
 }
 
 
-TypedValue Interpreter::eval(Module& module, std::string input, const Interpreter::InvokeCallback& cb)
+TypedValue Interpreter::eval(std::shared_ptr<Module> mod, std::string input, const Interpreter::InvokeCallback& cb)
 {
-    auto src_id = m_source_manager.add_source(
-            fmt::format("<input{}>", m_input_num++),
-            std::move(input));
-
-    return eval(module, src_id, cb);
+    auto module_name = mod->name();
+    auto src_id = m_source_manager.add_source(module_name, std::move(input));
+    auto mod_idx = m_module_manager.replace_module(module_name, std::move(mod));
+    return eval(mod_idx, src_id, cb);
 }
 
 
-TypedValue Interpreter::eval(std::string input, const Interpreter::InvokeCallback& cb)
+TypedValue Interpreter::eval(std::string input, bool import_std, const Interpreter::InvokeCallback& cb)
 {
-    Module main(m_module_manager);
-    main.import_module("builtin");
-    return eval(main, std::move(input), cb);
+    auto module_name = fmt::format("<input{}>", m_input_num++);
+    auto src_id = m_source_manager.add_source(module_name, std::move(input));
+    auto mod_idx = m_module_manager.replace_module(module_name);
+    auto main = m_module_manager.get_module(mod_idx);
+    main->import_module("builtin");
+    if (import_std) {
+        main->import_module("std");
+    }
+    return eval(mod_idx, src_id, cb);
 }
 
 

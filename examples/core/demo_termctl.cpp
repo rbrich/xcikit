@@ -47,7 +47,7 @@ int main()
     TermCtl& tin = TermCtl::stdin_instance();
     bool done = false;
     while (!done) {
-        std::string in = tin.raw_input();
+        const std::string in = tin.raw_input();
         cout << "\nKey pressed:\n";
 
         cout << "* seq: ";

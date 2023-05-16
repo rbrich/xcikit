@@ -1,7 +1,7 @@
 // Compiler.cpp created on 2019-05-30 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Compiler.h"
@@ -14,6 +14,7 @@
 #include "ast/fold_const_expr.h"
 #include "ast/fold_dot_call.h"
 #include "ast/fold_tuple.h"
+#include "typing/type_index.h"
 #include "Stack.h"
 #include <xci/compat/macros.h>
 
@@ -58,8 +59,11 @@ public:
 
     void visit(ast::Invocation& inv) override {
         inv.expression->apply(*this);
-        if (inv.type_id != no_index)
-            code().add_L1(Opcode::Invoke, inv.type_id);
+        // Unknown in intrinsics function
+        if (!inv.ti.is_void() && !inv.ti.is_unknown()) {
+            const Index type_index = make_type_index(module(), inv.ti);
+            code().add_L1(Opcode::Invoke, type_index);
+        }
     }
 
     void visit(ast::Return& ret) override {
@@ -148,7 +152,7 @@ public:
             item->apply(*this);
         }
         // MAKE_LIST <length> <elem_type>
-        code().add_L2(Opcode::MakeList, v.items.size(), v.elem_type_id);
+        code().add_L2(Opcode::MakeList, v.items.size(), get_type_index(module().module_manager(), v.ti.elem_type()));
     }
 
     void visit(ast::StructInit& v) override {
@@ -216,14 +220,15 @@ public:
                 }
                 break;
             }
-            case Symbol::TypeId: {
-                const value::Int32 type_id_val((int32_t) v.index);
+            case Symbol::TypeIndex: {
+                const Index index = make_type_index(module(), v.ti);
+                const value::TypeIndex type_id_val((int32_t) index);
                 if (m_intrinsic) {
                     m_instruction_args.emplace_back(type_id_val);
                     return;
                 }
 
-                // create static Int value in this module
+                // create static TypeIndex value in this module
                 auto idx = module().add_value(TypedValue(type_id_val));
                 // LOAD_STATIC <static_idx>
                 code().add_L1(Opcode::LoadStatic, idx);
@@ -231,8 +236,24 @@ public:
             }
             case Symbol::Module: {
                 assert(sym.depth() == 0);
-                // LOAD_MODULE <module_idx>
-                code().add_L1(Opcode::LoadModule, sym.index());
+                if (sym.index() == no_index) {
+                    // builtin __module
+                    if (m_instruction_args.empty()) {
+                        // LOAD_MODULE <module_idx>
+                        code().add_L1(Opcode::LoadModule, no_index);
+                    } else {
+                        assert(m_intrinsic);
+                        assert(m_instruction_args.size() == 1);
+                        const Index module_idx = m_instruction_args[0].value().to_int64();
+                        assert(module_idx < m_scope.module().num_imported_modules());
+                        // LOAD_MODULE <module_idx>
+                        code().add_L1(Opcode::LoadModule, module_idx);
+                    }
+                    break;
+                }
+                // Call main function of the module
+                // CALL <module_idx> <function_idx>
+                code().add_L2(Opcode::Call, sym.index(), 0);
                 break;
             }
             case Symbol::Nonlocal: {
@@ -345,7 +366,7 @@ public:
                         // EXECUTE
                         code().add_opcode(Opcode::Execute);
                     } else {
-                        if (!m_callable && fn.has_parameters()) {
+                        if (!m_callable && fn.has_nonvoid_parameters()) {
                             // LOAD_FUNCTION <function_idx>
                             code().add_L1(Opcode::LoadFunction, scope.function_index());
                         } else {
@@ -445,7 +466,7 @@ public:
             if (!v.definition) {
                 // MAKE_CLOSURE <function_idx>
                 code().add_L1(Opcode::MakeClosure, scope.function_index());
-                if (!fn.has_parameters()) {
+                if (!fn.has_nonvoid_parameters()) {
                     // EXECUTE
                     code().add_opcode(Opcode::Execute);
                 }
@@ -540,7 +561,7 @@ public:
 
         if (scope.has_nonlocals()) {
             if (v.definition) {
-                /*if (!func.has_parameters()) {
+                /*if (!func.has_nonvoid_parameters()) {
                     // parameterless closure is executed immediately
                     make_closure(func);
                     // MAKE_CLOSURE <function_idx>
@@ -552,7 +573,7 @@ public:
                 make_closure(scope);
                 // MAKE_CLOSURE <function_idx>
                 code().add_L1(Opcode::MakeClosure, scope.function_index());
-                if (!func.has_parameters()) {
+                if (!func.has_nonvoid_parameters()) {
                     // parameterless closure is executed immediately
                     // EXECUTE
                     code().add_opcode(Opcode::Execute);
@@ -642,7 +663,7 @@ private:
                         make_closure(subscope);
                         // MAKE_CLOSURE <function_idx>
                         code().add_L1(Opcode::MakeClosure, fn_idx);
-                    } else if (fn.has_parameters()) {
+                    } else if (fn.has_nonvoid_parameters()) {
                         // LOAD_FUNCTION <function_idx>
                         code().add_L1(Opcode::LoadFunction, fn_idx);
                     } else {

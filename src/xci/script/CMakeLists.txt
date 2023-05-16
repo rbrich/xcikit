@@ -14,8 +14,9 @@ add_library(xci-script
     ast/resolve_types.cpp
     parser/raw_string.cpp
     typing/TypeChecker.cpp
-    typing/GenericResolver.cpp
-    typing/OverloadResolver.cpp
+    typing/generic_resolver.cpp
+    typing/overload_resolver.cpp
+    typing/type_index.cpp
     Builtin.cpp
     Class.cpp
     Code.cpp

@@ -6,16 +6,15 @@
 
 #include "resolve_spec.h"
 #include <xci/script/typing/TypeChecker.h>
-#include <xci/script/typing/OverloadResolver.h>
-#include <xci/script/typing/GenericResolver.h>
+#include <xci/script/typing/overload_resolver.h>
+#include <xci/script/typing/generic_resolver.h>
+#include <xci/script/typing/type_index.h>
 #include <xci/script/Builtin.h>
 #include <xci/script/Function.h>
 #include <xci/script/Error.h>
 #include <xci/script/dump.h>
 #include <xci/compat/macros.h>
 #include <xci/core/log.h>
-
-#include <range/v3/view/enumerate.hpp>
 
 #include <sstream>
 #include <optional>
@@ -52,10 +51,7 @@ public:
 
     void visit(ast::Invocation& inv) override {
         inv.expression->apply(*this);
-        auto res_type = m_value_type.effective_type();
-        // Unknown in intrinsics function
-        if (!res_type.is_void() && !res_type.is_unknown())
-            inv.type_id = get_type_id(std::move(res_type));
+        inv.ti = m_value_type.effective_type();
     }
 
     void visit(ast::Return& ret) override {
@@ -110,7 +106,6 @@ public:
         if (m_value_type.elem_type().is_generic())
             throw MissingExplicitType(v.source_loc);
         v.ti = m_value_type;
-        v.elem_type_id = get_type_id(m_value_type.elem_type());
     }
 
     void visit(ast::StructInit& v) override {
@@ -163,7 +158,7 @@ public:
             case Symbol::Instruction:
                 m_call_sig.clear();
                 break;
-            case Symbol::TypeId: {
+            case Symbol::TypeIndex: {
                 if (v.ti.is_unknown()) {
                     // try to resolve via known type args
                     auto var = v.ti.generic_var();
@@ -178,9 +173,7 @@ public:
                         return;
                     }
                 }
-                // Record the resolved Type ID for Compiler
-                v.index = get_type_id(v.ti);
-                m_value_type = ti_int32();
+                m_value_type = ti_type_index();
                 return;  // do not overwrite m_value_type below
             }
             case Symbol::Class:
@@ -291,6 +284,7 @@ public:
             }
             case Symbol::Value:
             case Symbol::Module:
+                break;
             case Symbol::Parameter: {
                 const auto* ref_scope = m_scope.find_parent_scope(&symtab);
                 if (ref_scope) {
@@ -550,28 +544,6 @@ public:
 private:
     Module& module() const { return m_scope.module(); }
     Function& function() const { return m_scope.function(); }
-
-    Index get_type_id(TypeInfo&& type_info) {
-        // is the type builtin?
-        const Module& builtin_module = module().module_manager().builtin_module();
-        Index type_id = builtin_module.find_type(type_info);
-        if (type_id >= 32) {
-            // add to current module
-            type_id = 32 + module().add_type(std::move(type_info));
-        }
-        return type_id;
-    }
-
-    Index get_type_id(const TypeInfo& type_info) {
-        // is the type builtin?
-        const Module& builtin_module = module().module_manager().builtin_module();
-        Index type_id = builtin_module.find_type(type_info);
-        if (type_id >= 32) {
-            // add to current module
-            type_id = 32 + module().add_type(type_info);
-        }
-        return type_id;
-    }
 
     // Check return type matches and set it to concrete type if it's generic.
     void resolve_return_type(Signature& sig, const TypeInfo& deduced,

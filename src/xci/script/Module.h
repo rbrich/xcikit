@@ -1,7 +1,7 @@
 // Module.h created on 2019-06-12 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_MODULE_H
@@ -69,9 +69,10 @@ public:
     // - index 1 should be std
     // - imported modules are added in import order
     Index import_module(const std::string& name);
-    Index add_imported_module(std::shared_ptr<Module> module);
+    Index add_imported_module(std::shared_ptr<Module> mod);
     Module& get_imported_module(Index idx) const { return *m_modules[idx]; }
-    Index get_imported_module_index(Module* module) const;
+    Index get_imported_module_index(Module* mod) const;
+    Index get_imported_module_index(std::string_view name) const;
     Size num_imported_modules() const { return Size(m_modules.size()); }
 
     // Functions

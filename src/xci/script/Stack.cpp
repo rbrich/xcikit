@@ -1,12 +1,13 @@
 // Stack.cpp created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Stack.h"
 #include "Error.h"
 #include "Function.h"
+#include "Module.h"
 
 #include <range/v3/view/reverse.hpp>
 
@@ -270,6 +271,18 @@ void Stack::pop_type(const Value& v)
         assert(v.size_on_stack() == type_size_on_stack(top_type()));
         m_stack_types.pop_back();
     }
+}
+
+
+const Module& Stack::module() const
+{
+    return frame().function.module();
+}
+
+
+const ModuleManager& Stack::module_manager() const
+{
+    return module().module_manager();
 }
 
 
