@@ -223,10 +223,25 @@ public:
         for (auto& type_arg : v.type_args)
             type_arg->apply(*this);
         if (symptr->type() == Symbol::Method) {
-            // if the reference points to a class function, find the nearest
-            // instance of the class
-            const auto& class_name = symptr.get_class().name();
-            v.sym_list = find_all_symbols_of_type(class_name, Symbol::Instance);
+            if (v.definition) {
+                // find all instances of the class
+                const auto& class_name = symptr.get_class().name();
+                v.sym_list.emplace_back(symptr);
+                auto instances = find_all_symbols_of_type(class_name, Symbol::Instance);
+                v.sym_list.insert(v.sym_list.end(), instances.begin(), instances.end());
+            } else {
+                // if the reference points to a method, find all instances of the class
+                // sym_list will contain each Method symbol followed by all found Instances
+                // (there can be multiple Methods from different classes sharing the same name)
+                auto method_syms = find_all_symbols_of_type(v.identifier.name, Symbol::Method);
+                assert(std::find(method_syms.begin(), method_syms.end(), symptr) != method_syms.end());
+                for (auto method_sym : method_syms) {
+                    v.sym_list.emplace_back(method_sym);
+                    const auto& class_name = method_sym.get_class().name();
+                    auto instances = find_all_symbols_of_type(class_name, Symbol::Instance);
+                    v.sym_list.insert(v.sym_list.end(), instances.begin(), instances.end());
+                }
+            }
         }
         if (symptr->type() == Symbol::Function || symptr->type() == Symbol::StructItem) {
             // find all visible function overloads (in the nearest scope)

@@ -53,7 +53,8 @@ struct Candidate {
     Module* module;
     Index scope_index;
     SymbolPointer symptr;
-    TypeInfo type;
+    TypeInfo type;      // Method: instance type
+    TypeInfo gen_type;  // Method: class fn type
     TypeArgs type_args;
     MatchScore match;
 };

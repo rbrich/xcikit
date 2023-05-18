@@ -1001,7 +1001,7 @@ TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
     CHECK(interpret("__module .__n_fn") == "1");  // __module is self, every module contains at least 1 function (main)
     CHECK(interpret("a=1; __module .__n_fn") == "2");  // `a` is counted as a function
     CHECK(interpret("__module 0 .__module_name") == R"("builtin")");  // module 0 is always builtin
-    CHECK(interpret_std("__module 1 .__module_name") == R"("std")");  // module 1 is usually std
+    CHECK(interpret_std("__module 1 .name") == R"("std")");  // module 1 is usually std
     CHECK_THROWS_AS(interpret("__module 1 2"), UnexpectedArgumentCount);
     CHECK_THROWS_AS(interpret("__module \"builtin\""), UnexpectedArgumentType); // see builtin __module_by_name
 }
@@ -1096,8 +1096,8 @@ int test_fun1(int a, int b, int c) { return (a - b) / c; }
 TEST_CASE( "Native functions: free function", "[script][native]" )
 {
     Context& ctx = context();
-    auto main_module = std::make_shared<Module>(ctx.interpreter.module_manager());
-    auto native_module = std::make_shared<Module>(ctx.interpreter.module_manager());
+    auto main_module = ctx.interpreter.module_manager().make_module("main");
+    auto native_module = ctx.interpreter.module_manager().make_module("native");
     main_module->import_module("builtin");
     main_module->import_module("std");
     main_module->add_imported_module(native_module);
@@ -1119,7 +1119,7 @@ TEST_CASE( "Native functions: free function", "[script][native]" )
 TEST_CASE( "Native functions: lambda", "[script][native]" )
 {
     Context& ctx = context();
-    auto module = std::make_shared<Module>(ctx.interpreter.module_manager());
+    auto module = ctx.interpreter.module_manager().make_module("native");
 
     // lambdas
     module->add_native_function("add1", [](int a, int b) { return a + b; });

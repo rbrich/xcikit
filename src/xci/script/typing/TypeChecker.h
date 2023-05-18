@@ -1,7 +1,7 @@
 // TypeChecker.h created on 2022-07-24 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022 Radek Brich
+// Copyright 2022–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_TYPE_CHECKER_H
@@ -21,9 +21,9 @@ public:
             : m_exact(exact), m_coerce(coerce), m_generic(generic) {}
     explicit MatchScore(int8_t exact) : m_exact(exact) {}  // -1 => mismatch
 
-    static MatchScore exact() { return MatchScore(1); }
-    static MatchScore coerce() { return MatchScore(0, 1, 0); }
-    static MatchScore generic() { return MatchScore(0, 0, 1); }
+    static MatchScore exact(int8_t n=1) { return MatchScore(n); }
+    static MatchScore coerce(int8_t n=1) { return MatchScore(0, n, 0); }
+    static MatchScore generic(int8_t n=1) { return MatchScore(0, 0, n); }
     static MatchScore mismatch() { return MatchScore(-1); }
 
     void add_exact() { ++m_exact; }

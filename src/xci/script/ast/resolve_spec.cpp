@@ -185,31 +185,37 @@ public:
                     m_call_sig.load_from(fn.signature(), v.source_loc);
                 }
 
-                // find prototype of the function, resolve actual type of T
-                const auto& symmod = symtab.module() == nullptr ? module() : *symtab.module();
-                auto& cls = symmod.get_class(sym.index());
-                const Index cls_fn_idx = cls.get_index_of_function(sym.ref()->index());
-                const auto& cls_fn = sym.ref().get_generic_scope().function();
-                auto inst_types = resolve_instance_types(cls_fn.signature());
-                std::vector<TypeInfo> resolved_types;
-                for (Index i = 1; i <= cls.symtab().count(Symbol::TypeVar); ++i) {
-                    auto symptr = cls.symtab().find_by_index(Symbol::TypeVar, i);
-                    TypeInfo ti;
-                    get_type_arg(symptr, ti, inst_types);
-                    resolved_types.push_back(ti);
-                }
-
                 // find instance using resolved T
                 std::vector<Candidate> candidates;
-                for (auto inst_psym : v.sym_list) {
-                    assert(inst_psym->type() == Symbol::Instance);
-                    auto* inst_mod = inst_psym.symtab()->module();
+                Index cls_fn_idx = no_index;
+                TypeArgs inst_type_args;
+                std::vector<TypeInfo> resolved_types;
+                for (auto psym : v.sym_list) {
+                    auto* inst_mod = psym.symtab()->module();
                     if (inst_mod == nullptr)
                         inst_mod = &module();
-                    auto& inst = inst_mod->get_instance(inst_psym->index());
+
+                    if (psym->type() == Symbol::Method) {
+                        // find prototype of the function, resolve actual type of T
+                        auto& cls = inst_mod->get_class(psym->index());
+                        cls_fn_idx = cls.get_index_of_function(psym->ref()->index());
+                        const auto& cls_fn = psym->ref().get_generic_scope().function();
+                        inst_type_args = resolve_instance_types(cls_fn.signature());
+                        resolved_types.clear();
+                        for (Index i = 1; i <= cls.symtab().count(Symbol::TypeVar); ++i) {
+                            auto var_psym = cls.symtab().find_by_index(Symbol::TypeVar, i);
+                            TypeInfo ti;
+                            get_type_arg(var_psym, ti, inst_type_args);
+                            resolved_types.push_back(ti);
+                        }
+                        continue;
+                    }
+
+                    assert(psym->type() == Symbol::Instance);
+                    auto& inst = inst_mod->get_instance(psym->index());
                     auto inst_fn = inst.get_function(cls_fn_idx);
                     auto m = match_params(inst.types(), resolved_types);
-                    candidates.push_back({inst_mod, inst_fn.scope_index, inst_psym, TypeInfo{}, {}, m});
+                    candidates.push_back({inst_mod, inst_fn.scope_index, psym, {}, {}, inst_type_args, m});
                 }
 
                 auto [found, conflict] = find_best_candidate(candidates);
@@ -222,7 +228,7 @@ public:
                         v.module = &module();
                         v.index = inst_scope_idx;
                         auto& scope = v.module->get_scope(v.index);
-                        scope.type_args().add_from(inst_types);
+                        scope.type_args().add_from(found->type_args);
                     } else {
                         v.module = found->module;
                         v.index = found->scope_index;
