@@ -1,7 +1,7 @@
 // Heap.cpp created on 2019-08-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Heap.h"
@@ -17,6 +17,14 @@ HeapSlot::HeapSlot(size_t user_size, Deleter deleter)
     RefCount refs = 1;
     memcpy(m_slot, &refs, sizeof(refs));
     memcpy(m_slot + sizeof(RefCount), &deleter, sizeof(Deleter));
+}
+
+
+auto HeapSlot::refcount() const -> RefCount
+{
+    if (m_slot == nullptr)
+        return 0;
+    return bit_copy<RefCount>(m_slot);
 }
 
 
@@ -45,14 +53,6 @@ bool HeapSlot::decref() const
         memcpy(m_slot, &refs, sizeof(refs));
         return false;
     }
-}
-
-
-auto HeapSlot::refcount() const -> RefCount
-{
-    if (m_slot == nullptr)
-        return 0;
-    return bit_copy<RefCount>(m_slot);
 }
 
 

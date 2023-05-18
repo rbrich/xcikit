@@ -754,7 +754,7 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
     //CHECK(interpret("f = fun<Add T> (T,T) -> T { add }; f (1,2)") == "3");
     // deducing list type
     CHECK(interpret("fun<T> [T] -> [T] { __noop } [1,2]") == "[1, 2]");
-    CHECK(interpret("len = fun<T> [T] -> UInt { __length __type_index<T> }; len [1,2,3]") == "3U");
+    CHECK(interpret("len = fun<T> [T] -> UInt { __list_length __type_index<T> }; len [1,2,3]") == "3U");
     CHECK(interpret_std("f = fun<T> a:[T] -> T { a!1 }; f [1,2,3]") == "2");
 }
 
@@ -886,12 +886,12 @@ TEST_CASE( "String operations", "[script][interpreter]" )
 }
 
 
-TEST_CASE( "Subscript", "[script][interpreter]" )
+TEST_CASE( "List subscript", "[script][interpreter]" )
 {
     // custom implementation (same as in std.fire)
     CHECK(interpret("__type_index<Void>") == "0");
     CHECK_THROWS_AS(interpret("__type_index<X>"), UndefinedTypeName);
-    CHECK(interpret("subscript = fun<T> [T] Int -> T { __subscript __type_index<T> }; subscript [1,2,3] 1") == "2");
+    CHECK(interpret("subscript = fun<T> [T] Int -> T { __list_subscript __type_index<T> }; subscript [1,2,3] 1") == "2");
     // std implementation
     CHECK(interpret_std("subscript [1,2,3] 1") == "2");
     CHECK(interpret_std("[1,2,3] .subscript 0") == "1");
@@ -905,9 +905,9 @@ TEST_CASE( "Subscript", "[script][interpreter]" )
 }
 
 
-TEST_CASE( "Slice", "[script][interpreter]" )
+TEST_CASE( "List slice", "[script][interpreter]" )
 {
-    CHECK(interpret("slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __slice __type_index<T> }; [1,2,3,4,5] .slice 1 4 1") == "[2, 3, 4]");
+    CHECK(interpret("slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __list_slice __type_index<T> }; [1,2,3,4,5] .slice 1 4 1") == "[2, 3, 4]");
     // step=0 -- pick one element for a new list
     CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int 0") == "[4]");
     CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int max:Int") == "[4]");
@@ -935,6 +935,23 @@ TEST_CASE( "Slice", "[script][interpreter]" )
     CHECK(interpret_std("[] .slice 0 5 1") == "[]");
     CHECK(interpret_std("[]:[Int] .slice 0 5 1") == "[]");
     CHECK(interpret_std("tail [1,2,3]") == "[2, 3]");
+    // heap-allocated type
+    CHECK(interpret_std("[[1],[2],[3],[4],[5]] .slice 2 4 1") == "[[3], [4]]");
+}
+
+
+TEST_CASE( "List concat", "[script][interpreter]" )
+{
+    // custom implementation
+    CHECK(interpret("concat = fun<T> [T] [T] -> [T] { __list_concat __type_index<T> }; concat [1,2,3] [4,5]") == "[1, 2, 3, 4, 5]");
+    // std implementation uses operator `+`
+    CHECK(interpret_std("[1,2,3] + [4,5]") == "[1, 2, 3, 4, 5]");
+    CHECK(interpret_std("[] + []") == "[]");  // result type is [Void]
+    CHECK(interpret_std("[]:[Int] + []:[Int]") == "[]");  // result type is [Int]
+    CHECK_THROWS_AS(interpret_std("[1,2,3] + []"), UnexpectedArgumentType);
+    // heap-allocated elements
+    CHECK(interpret_std(R"(["a", "bb", "ccc"] + ["dd", "e"])") == R"(["a", "bb", "ccc", "dd", "e"])");
+    CHECK(interpret_std("[[1,2], [3,4]] + [[5,6]]") == "[[1, 2], [3, 4], [5, 6]]");
 }
 
 

@@ -1,7 +1,7 @@
 // Code.h created on 2019-05-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_CODE_H
@@ -113,9 +113,10 @@ enum class Opcode: uint8_t {
     IncRef,                 // arg = offset from top, (uint32*) at the offset is dereferenced and incremented
     DecRef,                 // arg = offset from top, (uint32*) at the offset is dereferenced and decremented
 
-    Subscript,              // arg => elem type (type index), get list element - pull the list, index:Int32 from stack, push element
-    Length,                 // arg => elem type (type index), get list length - pull the list, push length:UInt32
-    Slice,                  // arg => elem type, slice a list - pull the list, pull begin:Int, end:Int, step:Int, push sliced list
+    ListSubscript,          // arg => elem type (type index), get list element - pull the list, index:Int32 from stack, push element
+    ListLength,             // arg => elem type (type index), get list length - pull the list, push length:UInt32
+    ListSlice,              // arg => elem type, slice a list - pull the list, pull begin:Int, end:Int, step:Int, push sliced list
+    ListConcat,             // arg => elem type, concat two lists - pull a, b lists from stack, push a + b
 
     Invoke,                 // arg => type index in current module, pull value from stack, invoke it
 

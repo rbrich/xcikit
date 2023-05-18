@@ -115,9 +115,9 @@ instance Exp Int64 { exp = { __exp 0x99 } }
 instance Exp Float32 { exp = { __exp 0xCC } }
 instance Exp Float64 { exp = { __exp 0xDD } }
 
-// Add strings => concatenate
+// Add strings, lists => concatenate
 instance Add String { add = fun a b { string_concat a b } }
-
+instance<T> Add [T] { add = { __list_concat __type_index<T> } }
 
 // Comparison operators
 
@@ -370,7 +370,7 @@ class Subscript T U R {
 }
 
 instance<T> Subscript [T] Int T {
-    subscript = { __subscript __type_index<T> }
+    subscript = { __list_subscript __type_index<T> }
 }
 
 
@@ -448,8 +448,8 @@ larger = fun<T> x:T y:T -> T { if x > y then x else y }
 smaller = fun<T> x:T y:T -> T { if x < y then x else y }
 sign = fun x:Int -> Int { if x < 0 then -1  if x > 0 then +1  else 0 }
 
-len = fun<T> [T] -> UInt { __length __type_index<T> }
-slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __slice __type_index<T> }
+len = fun<T> [T] -> UInt { __list_length __type_index<T> }
+slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __list_slice __type_index<T> }
 
 head = fun<T> a:[T] -> T { a!0 }
 tail = fun<T> a:[T] -> [T] { a .slice 1 max:Int 1 }
