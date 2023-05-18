@@ -3,6 +3,7 @@
     "extends": [
         ":autodetectPinVersions"
     ],
+    "dependencyDashboard": true,
     "regexManagers": [
         {
             "fileMatch": ["^conandata.yml$"],
@@ -23,12 +24,18 @@
         {
             "matchManagers": ["github-actions"],
             "groupName": "github-actions",
-            "separateMajorMinor": false
+            "separateMajorMinor": false,
+            "dependencyDashboardApproval": true
         },
         {
             "matchManagers": ["npm"],
             "groupName": "npm",
-            "separateMajorMinor": false
+            "separateMajorMinor": false,
+            "dependencyDashboardApproval": true
+        },
+        {
+            "matchManagers": ["dockerfile"],
+            "dependencyDashboardApproval": true
         },
         {
             "matchManagers": ["regex"],
@@ -36,10 +43,10 @@
             "groupName": "conan dependencies",
             "groupSlug": "conan-deps-patch"
         },
-        {  // Renovate keeps offering downgrade for this package
+        {
             "matchManagers": ["regex"],
             "matchPackageNames": ["spirv-cross"],
-            "enabled": false
+            "dependencyDashboardApproval": true
         }
     ],
     "prConcurrentLimit": 2,
