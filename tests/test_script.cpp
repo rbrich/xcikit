@@ -403,6 +403,9 @@ TEST_CASE( "Literals", "[script][interpreter]" )
     CHECK(interpret_std("[]:[Void]") == "[]");  // same
     CHECK(interpret_std("[]:[Int]") == "[]");
     CHECK(interpret_std("[].len") == "0U");
+    CHECK(interpret_std("[1,2,3].len") == "3U");
+    CHECK(interpret_std("[].empty") == "true");
+    CHECK(interpret_std("[1,2,3].empty") == "false");
     CHECK(interpret("[1,2,3]") == "[1, 2, 3]");
 }
 
@@ -479,15 +482,16 @@ TEST_CASE( "Coercion", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret("t=(); a:(x:String,y:Int) = t"), FunctionNotFound);
     CHECK_THROWS_AS(interpret("f = fun a:(x:String,y:Int) {a.y}; t = (); f t"), FunctionNotFound);
     // named type - literal of underlying type coerces
-    std::string num_def = "type Num = Int; f = fun a:Num b:Num -> Num { (a:Int + b:Int):Num };";
+    const std::string num_def = "type Num = Int; f = fun a:Num b:Num -> Num { (a:Int + b:Int):Num };";
     CHECK(interpret_std(num_def + "f 11 22") == "33");
     CHECK_THROWS_AS(interpret_std(num_def + "a = 11; f a a"), FunctionNotFound);
     CHECK(interpret_std(num_def + "b = 22:Num; f b b") == "44");
     CHECK(interpret_std(num_def + "a = 11; b = 22:Num; f a:Num b") == "33");
     // same with a struct
-    std::string struct_def = "type MyStruct = (name:String, age:Int); "
-                             "get_age = fun st:MyStruct -> Int { st.age }; "
-                             "a = (\"Luke\", 10); ";
+    const std::string struct_def =
+            "type MyStruct = (name:String, age:Int); "
+            "get_age = fun st:MyStruct -> Int { st.age }; "
+            "a = (\"Luke\", 10); ";
     CHECK_THROWS_AS(interpret_std(struct_def + "get_age a"), FunctionNotFound);
     CHECK_THROWS_AS(interpret_std(struct_def + "get_age { (\"Luke\", 10) }"), FunctionNotFound);
     CHECK(interpret_std(struct_def + "get_age a:MyStruct") == "10");
@@ -952,6 +956,14 @@ TEST_CASE( "List concat", "[script][interpreter]" )
     // heap-allocated elements
     CHECK(interpret_std(R"(["a", "bb", "ccc"] + ["dd", "e"])") == R"(["a", "bb", "ccc", "dd", "e"])");
     CHECK(interpret_std("[[1,2], [3,4]] + [[5,6]]") == "[[1, 2], [3, 4], [5, 6]]");
+}
+
+
+TEST_CASE( "List map", "[script][interpreter]" )
+{
+    CHECK(interpret_std("map succ []:[Int]") == "[]");
+    CHECK(interpret_std("map succ [41]") == "[42]");
+    CHECK(interpret_std("map succ [1,2,3]") == "[2, 3, 4]");
 }
 
 

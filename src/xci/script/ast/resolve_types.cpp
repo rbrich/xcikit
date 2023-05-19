@@ -109,8 +109,7 @@ public:
         assert(m_value_type.is_list());
         if (m_value_type.elem_type().is_unknown() && type_check.eval_type())
             m_value_type = std::move(type_check.eval_type());
-        // FIXME: allow generic type: fun <T> Void->[T] { []:[T] }
-        if (m_value_type.elem_type().is_generic())
+        if (m_value_type.elem_type().is_unknown() && !m_value_type.is_generic())
             throw MissingExplicitType(v.source_loc);
         v.ti = m_value_type;
     }

@@ -644,7 +644,7 @@ void ListV::extend(const ListV& rhs, const TypeInfo& elem_type)
             list_deleter_foreach_heap_slot(data2, length2, offsets,
                                [](HeapSlot&& heap_slot){ heap_slot.incref(); });
         }
-        slot.destroy_and_leak();
+        slot.release();
     } else {
         // incref all copied elements
         if (!offsets.empty()) {

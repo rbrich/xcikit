@@ -52,9 +52,9 @@ public:
     const std::byte* data() const { return data_(); }
     const std::byte* slot() const { return m_slot; }
 
-    /// Free the object now, ignoring refcount, not calling deleter
+    /// Release the object, ignoring refcount, not calling deleter.
     /// Use only after bit-copying the data to another HeapSlot.
-    void destroy_and_leak() const { delete[] m_slot; }
+    void release() { delete[] m_slot; m_slot = nullptr; }
 
     bool operator==(const HeapSlot&) const = default;
     explicit operator bool() const { return m_slot != nullptr; }
