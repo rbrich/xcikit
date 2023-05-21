@@ -88,22 +88,21 @@ public:
         if (!type_check.eval_type() && v.items.empty())
             elem_type = ti_void();
         else for (auto& item : v.items) {
-                item->apply(*this);
-                if (item.get() == v.items.front().get()) {
-                    // first item
-                    elem_type = std::move(m_value_type);
-                } else {
-                    // other items
-                    if (elem_type != m_value_type)
-                        throw ListElemTypeMismatch(elem_type, m_value_type, item->source_loc);
-                }
+            item->apply(*this);
+            if (item.get() == v.items.front().get()) {
+                // first item
+                elem_type = std::move(m_value_type);
+            } else {
+                // other items
+                if (elem_type != m_value_type)
+                    throw ListElemTypeMismatch(elem_type, m_value_type, item->source_loc);
             }
+        }
         m_value_type = type_check.resolve(ti_list(std::move(elem_type)), v.source_loc);
         assert(m_value_type.is_list());
         if (m_value_type.elem_type().is_unknown() && type_check.eval_type())
             m_value_type = std::move(type_check.eval_type());
-        // FIXME: allow generic type: fun <T> Void->[T] { []:[T] }
-        if (m_value_type.elem_type().is_generic())
+        if (m_value_type.elem_type().is_unknown_or_generic())
             throw MissingExplicitType(v.source_loc);
         v.ti = m_value_type;
     }
@@ -696,8 +695,6 @@ private:
     {
         auto& scope = symptr.get_scope(m_scope);
         auto& fn = scope.function();
-        if (m_scope.find_parent_scope(&fn.symtab()))
-            return {};  // recursive call - cannot specialize parent function from nested
 
         const auto& generic_scope = symptr.get_generic_scope();
         const auto& generic_fn = generic_scope.function();
@@ -764,6 +761,10 @@ private:
                 return {TypeInfo{spec_fn.signature_ptr()}, spec_scope_idx};
         }
 
+        // recursive call - cannot specialize parent function from nested
+        if (m_scope.find_parent_scope(&fn.symtab()))
+            return {};
+
         auto fspec_idx = clone_function(generic_scope);
         auto& fspec = module().get_function(fspec_idx);
         fspec.set_specialized();
@@ -776,11 +777,11 @@ private:
         // (that happens when the function being specialized was called)
         fscope.type_args().add_from(m_scope.type_args());
 
-        specialize_to_call_args(fscope, fspec.ast(), loc, std::move(explicit_type_args));
-
         assert(symptr->depth() == 0);
         // add to specialized functions in this module
         module().add_spec_function(symptr, fscope_idx);
+
+        specialize_to_call_args(fscope, fspec.ast(), loc, std::move(explicit_type_args));
         return {TypeInfo{fspec.signature_ptr()}, fscope_idx};
     }
 

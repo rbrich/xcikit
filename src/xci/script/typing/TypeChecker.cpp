@@ -1,7 +1,7 @@
 // TypeChecker.cpp created on 2022-07-24 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022 Radek Brich
+// Copyright 2022–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TypeChecker.h"
@@ -144,6 +144,15 @@ auto TypeChecker::resolve(const TypeInfo& inferred, const SourceLocation& loc) c
             // allow initializing a single-field struct with the value of first field (as there is no single-item tuple)
             if (!match_type(inferred, ti.struct_items().front().second))
                 throw DefinitionTypeMismatch(ti, inferred, loc);
+            return ti;
+        }
+    }
+    if (ti.is_list()) {
+        if (inferred.is_list()) {
+            if (!match_type(inferred.elem_type(), ti.elem_type()))
+                throw DefinitionTypeMismatch(ti, inferred, loc);
+            if (ti.elem_type().is_unknown_or_generic() && !inferred.elem_type().is_unknown_or_generic())
+                return inferred;
             return ti;
         }
     }

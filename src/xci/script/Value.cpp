@@ -393,10 +393,10 @@ template <typename InIter = byte*, typename F>
 void list_deleter_foreach_heap_slot(InIter& data, uint32_t length,
                                     const std::vector<size_t>& offsets, F&& cb)
 {
-    size_t n_skip = offsets.back();
+   const size_t n_skip = offsets.back();
 
     for (size_t el = 0; el != length; ++el) {
-        for (size_t offset : offsets | views::take(offsets.size() - 1)) {
+        for (const size_t offset : offsets | views::take(offsets.size() - 1)) {
             data += offset;
             // Read and decref the heap slot
             auto* slot_ptr = bit_copy<byte*>(data);
@@ -413,7 +413,7 @@ static void list_deleter(byte* data)
     if (length == 0 || deleter_data_size == 0)
         return;  // no slots to decref
 
-    std::vector<size_t> offsets = list_deleter_read_offsets(data, deleter_data_size);
+    const std::vector<size_t> offsets = list_deleter_read_offsets(data, deleter_data_size);
     assert(!offsets.empty());  // last offset skips the whole element - must be present
     list_deleter_foreach_heap_slot(data, length, offsets,
             [](HeapSlot&& slot){ slot.decref(); });
@@ -604,11 +604,57 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
     // incref all new elements
     if (!offsets.empty()) {
         list_deleter_foreach_heap_slot(new_data, n_sliced, offsets,
-                [](HeapSlot&& heap_slot){ heap_slot.decref(); });
+                [](HeapSlot&& heap_slot){ heap_slot.incref(); });
     }
 
     // decref original slot (all elements) and replace it
     slot.decref();
+    slot = new_slot;
+}
+
+
+void ListV::extend(const ListV& rhs, const TypeInfo& elem_type)
+{
+    const auto* data1 = slot.data();
+    auto length1 = (int32_t) bit_read<uint32_t>(data1);
+    const auto offsets_size = bit_read<uint16_t>(data1);
+    const auto offsets = list_deleter_read_offsets(data1, offsets_size);
+    const auto* data2 = rhs.slot.data();
+    auto length2 = (int32_t) bit_read<uint32_t>(data2);
+    data2 += 2 + offsets_size;
+
+    // prepare new list
+    const auto elem_size = elem_type.size();
+    const auto new_length = length1 + length2;
+    HeapSlot new_slot(6 + offsets_size + new_length * elem_size, list_deleter);
+    auto* new_data = new_slot.data();
+
+    bit_write(new_data, (uint32_t) new_length);
+    bit_write(new_data, (uint16_t) offsets_size);
+    std::memcpy(new_data, slot.data() + 6, offsets_size);
+    new_data += offsets_size;
+
+    std::memcpy(new_data, data1, length1 * elem_size);
+    new_data += length1 * elem_size;
+    std::memcpy(new_data, data2, length2 * elem_size);
+
+    if (slot.refcount() == 1) {
+        // in-place: incref only other, do not touch refs of this
+        if (!offsets.empty()) {
+            list_deleter_foreach_heap_slot(data2, length2, offsets,
+                               [](HeapSlot&& heap_slot){ heap_slot.incref(); });
+        }
+        slot.release();
+    } else {
+        // incref all copied elements
+        if (!offsets.empty()) {
+            list_deleter_foreach_heap_slot(data1, length1, offsets,
+                               [](HeapSlot&& heap_slot){ heap_slot.incref(); });
+            list_deleter_foreach_heap_slot(data2, length2, offsets,
+                               [](HeapSlot&& heap_slot){ heap_slot.incref(); });
+        }
+        slot.decref();
+    }
     slot = new_slot;
 }
 

@@ -196,7 +196,7 @@ void Machine::run(const InvokeCallback& cb)
                 switch (opcode) {
                     case Opcode::ShiftLeft: m_stack.push(lhs.binary_op<builtin::shift_left, true>(rhs)); break;
                     case Opcode::ShiftRight: m_stack.push(lhs.binary_op<builtin::shift_right, true>(rhs)); break;
-                    default: break;
+                    default: XCI_UNREACHABLE;
                 }
                 break;
             }
@@ -220,7 +220,7 @@ void Machine::run(const InvokeCallback& cb)
                     case Opcode::Mul: m_stack.push(lhs.binary_op<std::multiplies<>>(rhs)); break;
                     case Opcode::Div: m_stack.push(lhs.binary_op<std::divides<>>(rhs)); break;
                     case Opcode::Exp: m_stack.push(lhs.binary_op<builtin::exp>(rhs)); break;
-                    default: break;
+                    default: XCI_UNREACHABLE;
                 }
                 break;
             }
@@ -269,7 +269,7 @@ void Machine::run(const InvokeCallback& cb)
                 break;
             }
 
-            case Opcode::Subscript: {
+            case Opcode::ListSubscript: {
                 const auto& elem_ti = read_type_arg();
                 auto lhs = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
                 auto rhs = m_stack.pull<value::Int32>();
@@ -281,14 +281,14 @@ void Machine::run(const InvokeCallback& cb)
                     lhs.decref();
                     throw IndexOutOfBounds(idx, len);
                 }
-                Value item = lhs.get<ListV>().value_at(idx, elem_ti);
+                const Value item = lhs.get<ListV>().value_at(idx, elem_ti);
                 item.incref();
                 lhs.decref();
                 m_stack.push(item);
                 break;
             }
 
-            case Opcode::Length: {
+            case Opcode::ListLength: {
                 const auto& elem_ti = read_type_arg();
                 auto arg = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
                 auto len = arg.get<ListV>().length();
@@ -297,7 +297,7 @@ void Machine::run(const InvokeCallback& cb)
                 break;
             }
 
-            case Opcode::Slice: {
+            case Opcode::ListSlice: {
                 const auto& elem_ti = read_type_arg();
                 auto list = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
                 auto idx1 = m_stack.pull<value::Int32>().value();
@@ -305,6 +305,16 @@ void Machine::run(const InvokeCallback& cb)
                 auto step = m_stack.pull<value::Int32>().value();
                 list.get<ListV>().slice(idx1, idx2, step, elem_ti);
                 m_stack.push(list);
+                break;
+            }
+
+            case Opcode::ListConcat: {
+                const auto& elem_ti = read_type_arg();
+                auto lhs = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
+                auto rhs = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
+                lhs.get<ListV>().extend(rhs.get<ListV>(), elem_ti);
+                rhs.decref();
+                m_stack.push(lhs);
                 break;
             }
 
@@ -450,14 +460,14 @@ void Machine::run(const InvokeCallback& cb)
 
             case Opcode::IncRef: {
                 auto arg = leb128_decode<Stack::StackRel>(it);
-                HeapSlot slot {static_cast<byte*>(m_stack.get_ptr(arg))};
+                const HeapSlot slot {static_cast<byte*>(m_stack.get_ptr(arg))};
                 slot.incref();
                 break;
             }
 
             case Opcode::DecRef: {
                 auto arg = leb128_decode<Stack::StackRel>(it);
-                HeapSlot slot {static_cast<byte*>(m_stack.get_ptr(arg))};
+                const HeapSlot slot {static_cast<byte*>(m_stack.get_ptr(arg))};
                 if (slot.decref())
                     m_stack.clear_ptr(arg);  // without this, stack dump would read after use
                 break;

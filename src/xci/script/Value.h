@@ -119,6 +119,11 @@ struct ListV {
     /// Works in-place otherwise.
     void slice(int begin, int end, int step, const TypeInfo& elem_type);
 
+    /// Extend this list by concatenating another list (of same type).
+    /// Automatically copies the list on heap when it has more than 1 reference.
+    /// Works in-place otherwise.
+    void extend(const ListV& rhs, const TypeInfo& elem_type);
+
     HeapSlot slot;
 };
 

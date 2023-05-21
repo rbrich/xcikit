@@ -840,9 +840,10 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
                 os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
                 break;
             }
-            case Opcode::Subscript:
-            case Opcode::Length:
-            case Opcode::Slice: {
+            case Opcode::ListSubscript:
+            case Opcode::ListLength:
+            case Opcode::ListSlice:
+            case Opcode::ListConcat: {
                 const TypeInfo& ti = get_type_info(v.func.module().module_manager(), arg);
                 os << " (" << ti << ")";
                 break;
