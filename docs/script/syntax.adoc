@@ -9,7 +9,7 @@ endif::[]
 
 = Fire Script
 
-*_Language description, v0.10_*
+*_Language description, v0.11_*
 
 toc::[]
 
@@ -332,14 +332,13 @@ Define a function with parameters:
 
 [source,fire]
 ----
-add2 = fun a b {a + b}   // generic function - works with any type supported by op+
-add2 = fun a:t b:t -> t {a + b}  // same as above, but with explicit type variable
-add2 = fun a:Int b:Int -> Int {a + b}   // specific, with type declarations
-add2 : Int Int -> Int = fun a b {a + b}   // type declaration on left side (i.e. disable type inference)
+add2 = fun a, b {a + b}   // generic function - works with any type supported by op+
+add2 = fun<T> a:T, b:T -> T {a + b}  // same as above, but with explicit type variable
+add2 = fun a:Int, b:Int -> Int {a + b}   // specific, with type declarations
+add2 : Int, Int -> Int = fun a b {a + b}   // type declaration on left side (i.e. disable type inference)
 
 // function definition can span multiple lines
-add2 = fun a:Int b:Int -> Int
-{
+add2 = fun a:Int, b:Int -> Int {
     a + b
 }
 
@@ -353,7 +352,7 @@ Function call can explicitly name the arguments:
 
 [source,fire]
 ----
-make_book = fun name:String author:String isbn:Int -> MyBook
+make_book = fun name:String, author:String, isbn:Int -> MyBook
     { MyBook(name, author, isbn) }
 make_book name="Title" author="Karel IV" isbn=12345
 ----
@@ -368,16 +367,16 @@ Pass a function as an argument:
 
 [source,fire]
 ----
-eval2 = fun f a b { f a b }
+eval2 = fun f, a, b { f a b }
 eval2 add2 1 2                   // calls `add2 1 2`
-eval2 fun a b {a + b} 1 2        // calls anonymous function
+eval2 fun a, b {a + b} 1 2        // calls anonymous function
 ----
 
 Return a function from a function:
 
 [source,fire]
 ----
-sub2 = fun a b { a - b }
+sub2 = fun a, b { a - b }
 choose = fun x { if (x == "add") then add2 else sub2 }
 choose "add" 1 2
 choose "sub" 1 2
@@ -820,7 +819,7 @@ type MyUnion = Int | String | Void   // tagged union
 type MyVariant = int Int | string String | none   // tagged union with explicit names
 type MyOptional T = some T | none   // generic type (a kind?)
 type MyOptionalInt = MyOptional Int   // instance of the generic type
-type MyFunction = [Int] Int -> Int
+type MyFunction = [Int], Int -> Int
 ----
 
 The `type` definition creates a new type known to a compiler.
@@ -833,7 +832,7 @@ For example:
 [source,fire]
 ----
 type Number = Int
-f = fun a:Number b:Number -> Number { a+b }  // `add` must be implemented for Number
+f = fun a:Number, b:Number -> Number { a+b }  // `add` must be implemented for Number
 f 11 22   // OK, literals coerce
 a = 11; b = 22:Number
 f a a   // Error: `f` expects Number, not Int
@@ -885,19 +884,27 @@ Function types:
 
 [source,fire]
 ----
-a:Int b:Int -> c:Int -> Int         // with parameter names
-Int Int -> Int -> Int               // without parameter names
-Int Int Int -> Int                  // compact form
-Int -> Int -> Int -> Int            // normalized form
-(Int, Int, Int) -> Int              // single tuple argument
-(Int, Int) Int -> Int               // two arguments, first is tuple
+a:Int, b:Int -> Int                 // with parameter names (only after `fun` keyword)
+Int, Int -> Int                     // without parameter names
+(Int, Int) -> Int                   // same, the parentheses are optional
+(Int, Int), Int -> Int              // two arguments, first is tuple
+Int, Int -> Int -> Int              // function returning another function
+Int -> Int -> Int -> Int            // curried function (this is different type than the previous one)
 ----
 
-* All the above types are equivalent - they all describe the same function.
-* The normalized form describes how the partial evaluation works.
-* But any of the above might describe what is really happening after compilation
- (it depends only on the compiler how many intermediate functions it creates).
+The currying is explicit. Partial function calls are not automatic, they need to be done explicitly via a lambda.
+The syntax for calling the curried function is different from normal call:
 
+[source,fire]
+----
+f1 = fun a:Int, b:Int -> Int = { a + b }
+f2 = fun a:Int -> Int -> Int { fun b:Int -> Int { a + b } }
+f1 (1, 2)
+f2 1 2
+----
+
+The space is a "function application operator". It can be chained (the last line).
+Multiple arguments of a single function needs to be passed as a tuple.
 
 === Forward declarations
 
@@ -917,7 +924,7 @@ Similarly, postpone a function definition:
 
 [source,fire]
 ----
-decl f:Int->Int     // declare function f
+decl f: Int->Int     // declare function f
 w = fun x {2 * f x} // reference f inside another function
 f = fun x {x + 1}   // define function f
 w 7                 // -> 16

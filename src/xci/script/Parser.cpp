@@ -125,7 +125,9 @@ struct Literal: sor< Char, RawString, String, Byte, RawBytes, Bytes, Number > {}
 
 // Types
 struct Parameter: sor< Type, seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > > {};
-struct DeclParams: seq< plus<Parameter, SC> > {};
+struct ParameterOrTuple: seq< Parameter, star<SC, one<','>, SC, must<Parameter> > > {};
+struct ParenthesizedParameter: seq< one<'('>, NSC, ParameterOrTuple, NSC, one<')'> > {};
+struct DeclParams: sor< ParenthesizedParameter, ParameterOrTuple > {};
 struct DeclResult: if_must< string<'-', '>'>, SC, Type > {};
 struct TypeParams: if_must< one<'<'>, TypeName, SC, star_must<one<','>, SC, TypeName, SC>, one<'>'> > {};
 struct TypeConstraint: seq<TypeName, RS, SC, TypeName> {};
