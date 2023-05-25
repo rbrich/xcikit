@@ -1,7 +1,7 @@
 // Options.cpp.c created on 2021-03-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021 Radek Brich
+// Copyright 2021–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Options.h"
@@ -30,6 +30,7 @@ using PassItem = std::pair<const char*, Flags>;
 static PassItem pass_names[] = {
         {"fold_tuple", Flags::PPTuple},
         {"fold_dot_call", Flags::PPDotCall},
+        {"fold_paren", Flags::PPParen},
         {"resolve_symbols", Flags::PPSymbols},
         {"resolve_decl", Flags::PPDecl},
         {"resolve_types", Flags::PPTypes},

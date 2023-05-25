@@ -1,7 +1,7 @@
 // Compiler.h created on 2019-05-30 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_COMPILER_H
@@ -24,11 +24,12 @@ public:
         //         Use PP* flags below.
         FoldTuple           = 0x0001,
         FoldDotCall         = 0x0002,
-        ResolveSymbols      = 0x0004,
-        ResolveDecl         = 0x0008,
-        ResolveTypes        = 0x0010,
-        ResolveSpec         = 0x0020,
-        ResolveNonlocals    = 0x0040,
+        FoldParen           = 0x0004,
+        ResolveSymbols      = 0x0010,
+        ResolveDecl         = 0x0020,
+        ResolveTypes        = 0x0040,
+        ResolveSpec         = 0x0080,
+        ResolveNonlocals    = 0x0100,
         FoldConstExpr       = 0x0001 << 16,
 
         // Bit masks
@@ -41,7 +42,8 @@ public:
         // - each flag may bring in other flags as its dependencies
         PPTuple         = FoldTuple,
         PPDotCall       = FoldDotCall,
-        PPSymbols       = ResolveSymbols | PPDotCall | PPTuple,
+        PPParen         = FoldParen,
+        PPSymbols       = ResolveSymbols | PPDotCall | PPTuple | PPParen,
         PPDecl          = ResolveDecl | PPSymbols,
         PPTypes         = ResolveTypes | PPDecl,
         PPSpec          = ResolveSpec | PPTypes,

@@ -14,6 +14,7 @@
 #include "ast/fold_const_expr.h"
 #include "ast/fold_dot_call.h"
 #include "ast/fold_tuple.h"
+#include "ast/fold_paren.h"
 #include "typing/type_index.h"
 #include "Stack.h"
 #include <xci/compat/macros.h>
@@ -723,6 +724,9 @@ bool Compiler::compile(Scope& scope, ast::Module& ast)
 
     if ((flags & Flags::FoldDotCall) == Flags::FoldDotCall)
         fold_dot_call(func, ast.body);
+
+    if ((flags & Flags::FoldParen) == Flags::FoldParen)
+        fold_paren(ast.body);
 
     if ((flags & Flags::ResolveSymbols) == Flags::ResolveSymbols)
         resolve_symbols(scope, ast.body);
