@@ -450,6 +450,7 @@ struct Operator {
         Exp,            // x ** y
         Subscript,      // x ! y
         DotCall,        // x .f y
+        Call,           // x y
         // unary
         LogicalNot,     // !x
         BitwiseNot,     // ~x
@@ -464,6 +465,7 @@ struct Operator {
     int precedence() const;
     bool is_right_associative() const;
     bool is_undefined() const { return op == Undefined; }
+    bool is_call() const { return op == Call; }
     bool is_dot_call() const { return op == DotCall; }
     bool is_comma() const { return op == Comma; }
     bool operator==(const Operator& rhs) const { return op == rhs.op; }

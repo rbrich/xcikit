@@ -321,11 +321,11 @@ public:
             for (const auto& sp : specified_type.signature().params) {
                 if (idx >= params.size())
                     params.emplace_back(sp);
-                else if (params[idx].is_unknown())
+                else if (params[idx].is_unknown_or_generic())
                     params[idx] = sp;
                 // specified param must match now
                 if (params[idx] != sp)
-                    throw DefinitionParamTypeMismatch(idx, sp, params[idx]);
+                    throw DefinitionParamTypeMismatch(idx, sp, params[idx], v.source_loc);
                 ++idx;
             }
         }
@@ -355,13 +355,16 @@ public:
     void visit(ast::FunctionType& t) final {
         m_type_def_index = no_index;
         auto signature = std::make_shared<Signature>();
+        std::vector<TypeInfo> parameters;
         for (const auto& p : t.params) {
             if (p.type)
                 p.type->apply(*this);
             else
                 m_type_info = ti_unknown();
-            signature->add_parameter(std::move(m_type_info));
+            parameters.push_back(std::move(m_type_info));
         }
+        if (!t.params.empty())
+            signature->set_parameters(std::move(parameters));
         if (t.result_type)
             t.result_type->apply(*this);
         else

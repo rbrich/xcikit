@@ -349,7 +349,7 @@ public:
             tc.type_class.apply(*this);
             symtab().add({tc.type_name.name, Symbol::TypeVar, ++type_idx});
         }*/
-        Index par_idx = 0;
+        Index par_idx = t.params.size() == 1 ? no_index : 0;
         for (auto& p : t.params) {
             if (!p.type) {
                 // '$T' is internal prefix for untyped function args

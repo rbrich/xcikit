@@ -1,7 +1,7 @@
 // fold_dot_call.cpp created on 2020-01-15 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "fold_dot_call.h"
@@ -37,22 +37,35 @@ public:
         for (auto& arg : v.args) {
             apply_and_fold(arg);
         }
-        apply_and_fold(v.callable);
+        if (v.callable)
+            apply_and_fold(v.callable);
     }
 
     void visit(ast::OpCall& v) override {
         for (auto& arg : v.args) {
             apply_and_fold(arg);
         }
-        assert(!v.callable);
+        assert(!v.right_tmp);
 
-        if (v.op.is_dot_call()) {
-            // collapse inner Call into outer OpCall (with op=DotCall)
-            assert(!v.right_tmp);
+        if (v.op.is_call()) {
+            // First arg is the callable, second arg is a Call (with args)
+            // Collapse inner Call into outer OpCall and move callable to it.
+            assert(!v.callable);
             assert(v.args.size() == 2);
             m_collapsed = std::move(v.args[1]);
             auto* call = dynamic_cast<ast::Call*>(m_collapsed.get());
             assert(call != nullptr);
+            assert(!call->callable);
+            call->callable = std::move(v.args[0]);
+        }
+        else if (v.op.is_dot_call()) {
+            // Collapse inner Call into outer OpCall (with op=DotCall)
+            assert(!v.callable);
+            assert(v.args.size() == 2);
+            m_collapsed = std::move(v.args[1]);
+            auto* call = dynamic_cast<ast::Call*>(m_collapsed.get());
+            assert(call != nullptr);
+            assert(call->callable);
             call->args.insert(call->args.begin(), std::move(v.args[0]));
         }
     }
@@ -83,13 +96,13 @@ public:
     void visit(ast::Literal&) override {}
 
     void visit(ast::Tuple& v) override {
-        for (const auto& expr : v.items)
-            expr->apply(*this);
+        for (auto& expr : v.items)
+            apply_and_fold(expr);
     }
 
     void visit(ast::List& v) override {
-        for (const auto& expr : v.items)
-            expr->apply(*this);
+        for (auto& expr : v.items)
+            apply_and_fold(expr);
     }
 
     void visit(ast::StructInit& v) override {
@@ -104,7 +117,11 @@ public:
     }
 
     void visit(ast::Class&) override {}
-    void visit(ast::Instance&) override {}
+
+    void visit(ast::Instance& v) override {
+        for (auto& dfn : v.defs)
+            dfn.apply(*this);
+    }
 
 private:
     Module& module() { return m_function.module(); }

@@ -16,6 +16,8 @@
 #include <xci/compat/macros.h>
 #include <xci/core/log.h>
 
+#include <range/v3/view/reverse.hpp>
+
 #include <sstream>
 #include <optional>
 
@@ -23,6 +25,7 @@ namespace xci::script {
 
 using std::stringstream;
 using namespace xci::core;
+using ranges::cpp20::views::reverse;
 
 
 class ResolveSpecVisitor final: public ast::VisitorExclTypes {
@@ -181,7 +184,8 @@ public:
             case Symbol::Method: {
                 if (v.definition) {
                     const Function& fn = v.definition->symbol().get_function(m_scope);
-                    m_call_sig.load_from(fn.signature(), v.source_loc);
+                    assert(m_call_sig.empty());
+                    m_call_sig.emplace_back().load_from(fn.signature(), v.source_loc);
                 }
 
                 // find instance using resolved T
@@ -233,7 +237,7 @@ public:
                         v.index = found->scope_index;
                     }
                     auto& fn = v.module->get_scope(v.index).function();
-                    m_value_type = TypeInfo{fn.signature_ptr()};
+                    v.ti = TypeInfo{fn.signature_ptr()};
                     break;
                 }
 
@@ -245,7 +249,7 @@ public:
                                  << fn.signature() << std::endl;
                 }
                 stringstream o_ftype;
-                o_ftype << v.identifier.name << ' ' << m_call_sig.signature();
+                o_ftype << v.identifier.name << ' ' << m_call_sig.back().signature();
                 if (conflict)
                     throw FunctionConflict(o_ftype.str(), o_candidates.str(), v.source_loc);
                 else
@@ -257,10 +261,10 @@ public:
                 if (sym.type() == Symbol::Function && v.definition && v.ti) {
                     assert(m_call_sig.empty());
                     if (v.ti.is_callable()) {
-                        m_call_sig.load_from(v.ti.signature(), v.source_loc);
+                        m_call_sig.emplace_back().load_from(v.ti.signature(), v.source_loc);
                     } else {
                         // A naked type, consider it a function return type
-                        m_call_sig.return_type = v.ti;
+                        m_call_sig.emplace_back().return_type = v.ti;
                     }
                 }
 
@@ -328,18 +332,24 @@ public:
         // resolve each argument
         std::vector<CallArg> call_args;
         auto orig_call_sig = std::move(m_call_sig);
-        for (auto& arg : v.args) {
+        auto* args = &v.args;
+        if (v.args.size() == 1) {
+            auto* tuple = dynamic_cast<ast::Tuple*>(v.args.front().get());
+            if (tuple && !tuple->items.empty())
+                args = &tuple->items;
+        }
+        for (auto& arg : *args) {
             m_call_sig.clear();
             m_literal_value = true;
             arg->apply(*this);
             assert(arg->source_loc);
             call_args.push_back({m_value_type.effective_type(), arg->source_loc, m_literal_value});
         }
-        // append args to m_call_args (note that m_call_args might be used
+        // move args to m_call_args (note that m_call_args might be used
         // when evaluating each argument, so we cannot push to them above)
         m_call_sig = std::move(orig_call_sig);
-        std::move(call_args.begin(), call_args.end(), std::back_inserter(m_call_sig.args));
-        m_call_sig.return_type = std::move(type_check.eval_type());
+        m_call_sig.emplace_back().args = std::move(call_args);
+        m_call_sig.back().return_type = std::move(type_check.eval_type());
         m_literal_value = false;
 
         // using resolved args, resolve the callable itself
@@ -350,19 +360,20 @@ public:
             // result is new signature with args removed (applied)
             const auto param_type_args = resolve_generic_args_to_signature(m_value_type.signature(), m_call_sig);
             store_resolved_param_type_vars(m_scope, param_type_args);
-            auto new_signature = consume_params_from_call_args(m_value_type.signature_ptr(), v);
-            if (new_signature->params.empty()) {
-                if (v.definition == nullptr) {
-                    // all args consumed, or a zero-arg function being called
-                    // -> effective type is the return type
-                    v.ti = new_signature->return_type;
-                } else {
-                    // Not really calling, just defining, e.g. `f = compose u v`
-                    // Keep the return type as is, making it `() -> <lambda type>`
-                    v.ti = TypeInfo{new_signature};
-                }
-                v.partial_args = 0;
+            auto return_type = resolve_return_type_from_call_args(m_value_type.signature_ptr(), v);
+            if (v.definition == nullptr) {
+                // all args consumed, or a zero-arg function being called
+                // -> effective type is the return type
+                v.ti = std::move(return_type);
             } else {
+                // Not really calling, just defining, e.g. `f = compose u v`
+                // Keep the return type as is, making it `() -> <lambda type>`
+                auto sig = std::make_shared<Signature>();
+                sig->return_type = std::move(return_type);
+                v.ti = TypeInfo{sig};
+            }
+            v.partial_args = 0;
+            /*} else {
                 if (v.partial_args != 0) {
                     // partial function call
                     if (v.definition != nullptr) {
@@ -385,19 +396,23 @@ public:
                     fn.set_compile();
                 }
                 v.ti = TypeInfo{new_signature};
-            }
+            }*/
         }
 
         // Second pass of args, now with resolved types
         // (if a generic function was passed in args, it can be specialized now)
-        call_args = std::move(m_call_sig.args);
+        if (m_call_sig.empty())
+            call_args.clear();
+        else
+            call_args = std::move(m_call_sig.back().args);
         unsigned i = 0;
-        for (auto& arg : v.args) {
+        for (auto& arg : *args) {
             if (i >= call_args.size())
                 break;
             auto call_ti = std::move(call_args[i++].type_info);
             if (call_ti.is_callable()) {
-                m_call_sig.load_from(call_ti.signature(), arg->source_loc);
+                m_call_sig.clear();
+                m_call_sig.emplace_back().load_from(call_ti.signature(), arg->source_loc);
                 arg->apply(*this);
             }
         }
@@ -426,10 +441,11 @@ public:
         m_literal_value = true;
         v.context->apply(*this);
         // lookup the enter function with the resolved context type
-        m_call_sig.add_arg({m_value_type, v.context->source_loc, m_literal_value});
-        m_call_sig.return_type = ti_unknown();
+        assert(m_call_sig.empty());
+        m_call_sig.emplace_back().add_arg({m_value_type, v.context->source_loc, m_literal_value});
+        m_call_sig.back().return_type = ti_unknown();
         v.enter_function.apply(*this);
-        m_call_sig.args.clear();
+        m_call_sig.clear();
         assert(m_value_type.is_callable());
         auto enter_sig = m_value_type.signature();
         // re-resolve type of context (match actual struct type as found by resolving `with` function)
@@ -439,8 +455,8 @@ public:
         assert(m_value_type == enter_sig.params[0]);
         // lookup the leave function, it's arg type is same as enter functions return type
         v.leave_type = enter_sig.return_type.effective_type();
-        m_call_sig.add_arg({v.leave_type, v.context->source_loc, m_literal_value});
-        m_call_sig.return_type = ti_void();
+        m_call_sig.emplace_back().add_arg({v.leave_type, v.context->source_loc, m_literal_value});
+        m_call_sig.back().return_type = ti_void();
         v.leave_function.apply(*this);
         m_call_sig.clear();
         // resolve type of expression - it's also the type of the whole "with" expression
@@ -537,11 +553,11 @@ public:
             return;
         }
         // lookup the cast function with the resolved arg/return types
-        m_call_sig.add_arg({m_value_type, v.expression->source_loc, m_literal_value});
-        m_call_sig.return_type = v.to_type;
+        m_call_sig.emplace_back().add_arg({m_value_type, v.expression->source_loc, m_literal_value});
+        m_call_sig.back().return_type = v.to_type;
         v.cast_function->apply(*this);
         // set the effective type of the Cast expression and clean the call types
-        m_value_type = std::move(m_call_sig.return_type);
+        m_value_type = std::move(m_call_sig.back().return_type);
         m_literal_value = false;
         m_call_sig.clear();
     }
@@ -574,47 +590,76 @@ private:
             throw UnexpectedReturnType(sig.return_type, deduced);
     }
 
-    // Consume params from `signature` according to `m_call_args`, creating new signature
-    SignaturePtr consume_params_from_call_args(const SignaturePtr& signature, ast::Call& v)
+    /// Resolve return type after applying call_args
+    TypeInfo resolve_return_type_from_call_args(const SignaturePtr& signature, ast::Call& v)
     {
-        auto res = std::make_shared<Signature>(*signature);  // a copy to work on (modified below)
+        SignaturePtr sig;
         const TypeArgs call_type_args = specialize_signature(signature, m_call_sig);
-        int i = 0;
-        v.partial_args = 0;
         v.wrapped_execs = 0;
-        for (const auto& arg : m_call_sig.args) {
-            ++i;
+        for (const CallSignature& call_sig : m_call_sig | reverse) {
+            if (!sig)
+                sig = std::make_shared<Signature>(*signature);
             // check there are more params to consume
-            while (res->params.empty()) {
-                assert(res->return_type.type() == Type::Function);  // checked by specialize_signature() above
+            else if (sig->return_type.type() == Type::Function) {
                 // collapse returned function, start consuming its params
-                res = std::make_shared<Signature>(res->return_type.signature());
+                sig = std::make_shared<Signature>(sig->return_type.signature());
                 ++v.wrapped_execs;
-                v.partial_args = 0;
+            } else {
+                // checked by specialize_signature() above
+                assert(!"unexpected return type");
             }
-            // check type of next param
-            const auto& sig_param = res->params.front();
-            const auto m = match_type(arg.type_info, sig_param);
-            if (!(m.is_exact() || m.is_generic() || (m.is_coerce() && arg.literal_value))) {
-                throw UnexpectedArgumentType(i, sig_param, arg.type_info, arg.source_loc);
+            v.partial_args = 0;
+            size_t i = 0;
+            // skip blocks / functions without params
+            while (sig->params.empty() && sig->return_type.type() == Type::Function) {
+                sig = sig->return_type.signature_ptr();
+                ++v.wrapped_execs;
+            };
+            const std::vector<TypeInfo>& params =
+                    (call_sig.args.size() > 1) ? sig->params[0].subtypes()
+                                               : sig->params;
+            for (const auto& arg : call_sig.args) {
+                // check there are more params to consume
+                assert(i < params.size());  // checked by specialize_signature() above
+                // check type of next param
+                const auto& sig_param = params[i];
+                const auto m = match_type(arg.type_info, sig_param);
+                if (!(m.is_exact() || m.is_generic() || (m.is_coerce() && arg.literal_value))) {
+                    throw UnexpectedArgumentType(i+1, sig_param, arg.type_info, arg.source_loc);
+                }
+                if (m.is_coerce()) {
+                    // Update type_info of the coerced literal argument
+                    m_cast_type = sig_param;
+                    auto* args = &v.args;
+                    if (v.args.size() == 1) {
+                        auto* tuple = dynamic_cast<ast::Tuple*>(v.args.front().get());
+                        if (tuple && !tuple->items.empty())
+                            args = &tuple->items;
+                    }
+                    (*args)[i]->apply(*this);
+                }
+                if (sig_param.is_callable()) {
+                    // resolve overload in case the arg is a function that was specialized
+                    auto orig_call_sig = std::move(m_call_sig);
+                    m_call_sig.clear();
+                    m_call_sig.emplace_back().load_from(sig_param.signature(), arg.source_loc);
+                    auto* args = &v.args;
+                    if (v.args.size() == 1) {
+                        auto* tuple = dynamic_cast<ast::Tuple*>(v.args.front().get());
+                        if (tuple && !tuple->items.empty())
+                            args = &tuple->items;
+                    }
+                    (*args)[i]->apply(*this);
+                    m_call_sig = std::move(orig_call_sig);
+                }
+                // consume next param
+                ++ v.partial_args;
+                ++i;
             }
-            if (m.is_coerce()) {
-                // Update type_info of the coerced literal argument
-                m_cast_type = sig_param;
-                v.args[i - 1]->apply(*this);
-            }
-            if (sig_param.is_callable()) {
-                // resolve overload in case the arg is a function that was specialized
-                auto orig_call_sig = std::move(m_call_sig);
-                m_call_sig.load_from(sig_param.signature(), arg.source_loc);
-                v.args[i - 1]->apply(*this);
-                m_call_sig = std::move(orig_call_sig);
-            }
-            // consume next param
-            ++ v.partial_args;
-            res->params.erase(res->params.begin());
+            assert(i <= params.size() && sig->params.size() == 1);
         }
-        resolve_type_vars(*res, call_type_args);
+        auto res = sig->return_type;
+        resolve_generic_type(res, call_type_args);
         return res;
     }
 
@@ -627,8 +672,12 @@ private:
     void specialize_to_call_args(Scope& scope, const ast::Block& body, const SourceLocation& loc,
                                  TypeArgs type_args = {})
     {
-        log::debug("Specialize '{}' to {}\nType args: {}",
-                   scope.function().name(), m_call_sig.signature(), scope.type_args());
+        if (m_call_sig.empty())
+            log::debug("Specialize '{}'\nType args: {}",
+                       scope.function().name(), scope.type_args());
+        else
+            log::debug("Specialize '{}' to {}\nType args: {}",
+                       scope.function().name(), m_call_sig.back().signature(), scope.type_args());
 
 //        if (scope.parent() != &m_scope)
 //            scope.type_args().add_from(m_scope.type_args());
@@ -722,16 +771,25 @@ private:
             return {};  // already specialized
         if (!generic_fn.is_generic() || !(generic_fn.has_any_generic() || generic_scope.has_unresolved_type_params()))
             return {};  // not generic, nothing to specialize
-        if (generic_fn.signature().params.size() > m_call_sig.n_args() && generic_fn.signature().has_nonvoid_params())
+        size_t n_call_args = m_call_sig.empty()? 0 : m_call_sig.back().n_args();
+        if (generic_fn.signature().params.size() > n_call_args && generic_fn.signature().has_nonvoid_params())
             return {};  // not enough call args
         if (!function().is_specialized() && type_args.empty()
             && (!scope.parent()->has_function() || !scope.parent()->function().is_specialized()))
         {
             // when not specializing the parent function...
-            if (std::all_of(m_call_sig.args.cbegin(), m_call_sig.args.cend(),
-                            [](const CallArg& arg) {
-                                return arg.type_info.is_generic();
-                            }))
+            if (std::all_of(m_call_sig.cbegin(), m_call_sig.cend(),
+                    [](const CallSignature& sig) {
+                        return std::all_of(sig.args.begin(), sig.args.end(), [](const CallArg& arg) {
+                                if (arg.type_info.is_tuple() && !arg.type_info.is_void())
+                                    return std::all_of(arg.type_info.subtypes().begin(), arg.type_info.subtypes().end(),
+                                                       [](const TypeInfo& ti) {
+                                                           return ti.is_generic();
+                                                       });
+                                else
+                                    return arg.type_info.is_generic();
+                           });
+                    }))
                 return {};  // do not specialize with generic args
         }
 
@@ -757,7 +815,7 @@ private:
             if (!match_type_args(explicit_type_args, spec_scope.type_args()))
                 continue;
             auto& spec_fn = spec_scope.function();
-            if (match_signature(spec_fn.signature()).is_exact())
+            if (match_signature(spec_fn.signature(), m_call_sig, m_cast_type).is_exact())
                 return {TypeInfo{spec_fn.signature_ptr()}, spec_scope_idx};
         }
 
@@ -847,102 +905,69 @@ private:
         return true;
     }
 
-    /// \returns total MatchScore of all parameters and return value, or mismatch
-    /// Partial match is possible when the signature has less parameters than call args.
-    MatchScore match_signature(const Signature& signature) const
-    {
-        Signature sig = signature;  // a copy to work on (modified below)
-        MatchScore res;
-        for (const auto& arg : m_call_sig.args) {
-            // check there are more params to consume
-            while (sig.params.empty()) {
-                if (sig.return_type.type() == Type::Function) {
-                    // collapse returned function, start consuming its params
-                    sig = sig.return_type.signature();
-                } else {
-                    // unexpected argument
-                    return MatchScore::mismatch();
-                }
-            }
-            // check type of next param
-            auto m = match_type(arg.type_info, sig.params[0]);
-            if (!m || (!arg.literal_value && m.is_coerce()))
-                return MatchScore::mismatch();
-            res += m;
-            // consume next param
-            sig.params.erase(sig.params.begin());
-        }
-        if (sig.params.empty()) {
-            // increase score for full match - whole signature matches the call args
-            res.add_exact();
-        }
-        // check return type
-        if (m_call_sig.return_type) {
-            auto m = match_type(m_call_sig.return_type, sig.return_type);
-            if (!m || m.is_coerce())
-                return MatchScore::mismatch();
-            res += m;
-        }
-        if (m_cast_type) {
-            // increase score if casting target type matches return type,
-            // but don't fail if it doesn't match
-            auto m = match_type(m_cast_type, sig.return_type);
-            if (m)
-                res += m;
-        }
-        return res;
-    }
-
     // Match call args with signature (which contains type vars T, U...)
     // Throw if unmatched, return resolved types for T, U... if matched
     // The result types are in the same order as the matched type vars in signature,
     // e.g. for `class MyClass T U V { my V U -> T }` it will return actual types [T, U, V].
+    // FIXME: share between type/spec resolver
     TypeArgs resolve_instance_types(const Signature& signature) const
     {
-        const auto* sig = &signature;
+        const Signature* sig = nullptr;
         size_t i_arg = 0;
-        size_t i_prm = 0;
         TypeArgs res;
-        // resolve args
-        for (const auto& arg : m_call_sig.args) {
-            i_arg += 1;
-            // check there are more params to consume
-            while (i_prm >= sig->params.size()) {
-                if (sig->return_type.type() == Type::Function) {
-                    // collapse returned function, start consuming its params
-                    sig = &sig->return_type.signature();
-                    i_prm = 0;
-                } else {
+        for (const CallSignature& call_sig : m_call_sig | reverse) {
+            if (sig == nullptr)
+                sig = &signature;
+            else if (sig->return_type.type() == Type::Function) {
+                // collapse returned function, start consuming its params
+                sig = &sig->return_type.signature();
+            } else {
+                throw UnexpectedArgument(i_arg, TypeInfo{std::make_shared<Signature>(signature)}, call_sig.args[0].source_loc);
+            }
+            size_t i_prm = 0;
+            // skip blocks / functions without params
+            while (sig->params.empty() && sig->return_type.type() == Type::Function) {
+                sig = &sig->return_type.signature();
+            };
+            // resolve args
+            const std::vector<TypeInfo>& params =
+                    (call_sig.args.size() > 1) ? sig->params[0].subtypes()
+                                               : sig->params;
+            for (const auto& arg : call_sig.args) {
+                i_arg += 1;
+                // check there are more params to consume
+                if (i_prm >= params.size()) {
                     // unexpected argument
                     throw UnexpectedArgument(i_arg, TypeInfo{std::make_shared<Signature>(signature)}, arg.source_loc);
                 }
+                // resolve T (only from original signature)
+                const auto& prm = params[i_prm];
+
+                // check type of next param
+                const auto m = match_type(arg.type_info, prm);
+                // FIXME: literal_value doesn't work inside tuple args
+                if (!(m.is_exact() || m.is_generic() || (m.is_coerce() && arg.literal_value))) {
+                    throw UnexpectedArgumentType(i_arg, prm,
+                            arg.type_info, arg.source_loc);
+                }
+
+                auto arg_type = arg.type_info.effective_type();
+                specialize_arg(prm, arg_type, res,
+                        [i_arg, &arg](const TypeInfo& exp, const TypeInfo& got) {
+                            throw UnexpectedArgumentType(i_arg, exp, got,
+                                arg.source_loc);
+                        });
+
+                // consume next param
+                ++i_prm;
             }
-            // resolve T (only from original signature)
-            const auto& prm = sig->params[i_prm];
-
-            // check type of next param
-            const auto m = match_type(arg.type_info, prm);
-            if (!(m.is_exact() || m.is_generic() || (m.is_coerce() && arg.literal_value))) {
-                throw UnexpectedArgumentType(i_arg, prm,
-                        arg.type_info, arg.source_loc);
-            }
-
-            auto arg_type = arg.type_info.effective_type();
-            specialize_arg(prm, arg_type, res,
-                    [i_arg, &arg](const TypeInfo& exp, const TypeInfo& got) {
-                        throw UnexpectedArgumentType(i_arg, exp, got,
-                            arg.source_loc);
-                    });
-
-            // consume next param
-            ++i_prm;
         }
         // use m_call_ret only as a hint - if return type var is still unknown
         if (signature.return_type.is_unknown()) {
             auto var = signature.return_type.generic_var();
             assert(var);
-            if (!m_call_sig.return_type.is_unknown())
-                res.set(var, m_call_sig.return_type);
+            if (!m_call_sig.empty() && !m_call_sig[0].return_type.is_unknown())
+                res.set(var, m_call_sig[0].return_type);
             if (!m_cast_type.is_unknown())
                 res.set(var, m_cast_type.effective_type());
             if (m_type_info)
@@ -959,7 +984,7 @@ private:
     bool m_literal_value = true;  // the m_value_type is a literal (for Call args, set false if not)
 
     // signature for resolving overloaded functions and templates
-    CallSignature m_call_sig;   // actual argument types + expected return type
+    std::vector<CallSignature> m_call_sig;   // actual argument types + expected return type
 };
 
 

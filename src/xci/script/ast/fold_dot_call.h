@@ -1,7 +1,7 @@
 // fold_dot_call.h created on 2020-01-15 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_AST_FOLD_DOT_CALL_H
@@ -12,6 +12,11 @@
 namespace xci::script {
 
 
+/// Call is parsed as ordinary infix operator (a space),
+/// with callable on left-hand side and arg on right-hand side.
+/// This AST pass moves the callable and argument into outer OpCall,
+/// folding one level in the tree.
+///
 /// Dot call is parsed as ordinary operator, with a normal call
 /// on right-hand side. This AST pass moves the arguments from
 /// the inner Call into outer OpCall, folding one level in the tree

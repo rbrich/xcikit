@@ -449,6 +449,7 @@ int Operator::precedence() const
         case BitwiseNot:    return 13;
         case UnaryPlus:     return 13;
         case UnaryMinus:    return 13;
+        case Call:          return 15;
     }
     XCI_UNREACHABLE;
 }
@@ -490,6 +491,7 @@ const char* Operator::to_cstr() const
         case Operator::UnaryMinus:  return "-";
         case Operator::Subscript:   return "!";
         case Operator::DotCall:     return ".";
+        case Operator::Call:        return " ";
     }
     XCI_UNREACHABLE;
 }

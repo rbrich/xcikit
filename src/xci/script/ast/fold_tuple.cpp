@@ -34,7 +34,8 @@ public:
         for (auto& arg : v.args) {
             apply_and_fold(arg);
         }
-        apply_and_fold(v.callable);
+        if (v.callable)
+            apply_and_fold(v.callable);
     }
 
     void visit(ast::OpCall& v) override {
@@ -47,6 +48,7 @@ public:
             // collapse comma operator to tuple items
             assert(!v.right_tmp);
             m_collapsed = std::make_unique<ast::Tuple>();
+            m_collapsed->source_loc = v.source_loc;
             for (auto& expr : v.args) {
                 auto* tuple = dynamic_cast<ast::Tuple*>(expr.get());
                 if (tuple == nullptr) {

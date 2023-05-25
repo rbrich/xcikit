@@ -1,7 +1,7 @@
 // Error.cpp created on 2022-05-07 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022 Radek Brich
+// Copyright 2022–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Error.h"
@@ -45,9 +45,10 @@ DefinitionTypeMismatch::DefinitionTypeMismatch(const TypeInfo& exp, const TypeIn
 {}
 
 
-DefinitionParamTypeMismatch::DefinitionParamTypeMismatch(size_t idx, const TypeInfo& exp, const TypeInfo& got)
+DefinitionParamTypeMismatch::DefinitionParamTypeMismatch(size_t idx, const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc)
         : ScriptError(fmt::format("definition type mismatch: specified {} for param #{}, inferred {}",
-                                  exp, idx, got))
+                                  exp, idx, got),
+                      loc)
 {}
 
 

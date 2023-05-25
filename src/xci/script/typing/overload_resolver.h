@@ -34,15 +34,24 @@ struct CallSignature {
 
     void load_from(const Signature& sig, const SourceLocation& source_loc) {
         args.clear();
-        for (const auto& p : sig.params)
-            args.push_back({p, source_loc, false});
+        if (!sig.has_nonvoid_params()) {
+            args.push_back({ti_void(), source_loc, false});
+        } else if (sig.params.size() == 1 && sig.params[0].is_tuple()) {
+            for (const auto& p : sig.params[0].subtypes())
+                args.push_back({p, source_loc, false});
+        } else {
+            for (const auto& p : sig.params)
+                args.push_back({p, source_loc, false});
+        }
         return_type = sig.return_type;
     }
 
     Signature signature() const noexcept {
         Signature sig;
+        std::vector<TypeInfo> params;
         for (const auto& p : args)
-            sig.params.push_back(p.type_info);
+            params.push_back(p.type_info);
+        sig.set_parameters(std::move(params));
         sig.return_type = return_type;
         return sig;
     }
@@ -64,10 +73,15 @@ struct Candidate {
 std::pair<const Candidate*, bool> find_best_candidate(const std::vector<Candidate>& candidates);
 
 /// Resolve type variables in `signature` according to `call_sig`
-TypeArgs specialize_signature(const SignaturePtr& signature, const CallSignature& call_sig, TypeArgs call_type_args = {});
+TypeArgs specialize_signature(const SignaturePtr& signature, const std::vector<CallSignature>& call_sig_stack, TypeArgs call_type_args = {});
 
 /// Resolve type variables in `call_args` that are concrete in `signature`
-TypeArgs resolve_generic_args_to_signature(const Signature& signature, const CallSignature& call_sig);
+TypeArgs resolve_generic_args_to_signature(const Signature& signature, const std::vector<CallSignature>& call_sig_stack);
+
+/// Match signature to call args.
+/// \returns total MatchScore of all parameters and return value, or mismatch
+/// Partial match is possible when the signature has less parameters than call args.
+MatchScore match_signature(const Signature& signature, const std::vector<CallSignature>& call_sig_stack, const TypeInfo& cast_type);
 
 }  // namespace xci::script
 

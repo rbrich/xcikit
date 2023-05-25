@@ -261,6 +261,7 @@ struct Signature {
     void add_nonlocal(TypeInfo&& ti) { nonlocals.emplace_back(ti); }
     void add_partial(TypeInfo&& ti) { partial.emplace_back(ti); }
     void add_parameter(TypeInfo&& ti) { params.emplace_back(ti); }
+    void set_parameters(std::vector<TypeInfo>&& p);
     void set_return_type(TypeInfo ti) { return_type = std::move(ti); }
 
     bool has_closure() const { return !nonlocals.empty() || !partial.empty(); }

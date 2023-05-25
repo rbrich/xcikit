@@ -459,15 +459,20 @@ std::ostream& operator<<(std::ostream& os, const Call& v)
         os << "Call(Expression)";
         if (v.ti)
             os << " [type_info=" << v.ti << ']';
-        os << endl << more_indent << put_indent << *v.callable;
+        os << endl << more_indent;
+        if (v.callable)
+            os << put_indent << "callable: " << *v.callable;
         for (const auto& arg : v.args) {
-            os << put_indent << *arg;
+            os << put_indent << "arg: " << *arg;
         }
         return os << less_indent;
     } else {
-        os << *v.callable;
+        if (v.callable)
+            os << *v.callable;
         for (const auto& arg : v.args) {
-            os << ' ' << *arg;
+            if (&arg != &v.args.front() || v.callable)
+                os << ' ';
+            os << *arg;
         }
         return os;
     }
@@ -479,19 +484,26 @@ std::ostream& operator<<(std::ostream& os, const OpCall& v)
         os << "OpCall(Expression)" << endl;
         os << more_indent << put_indent << v.op;
         if (v.callable)
-            os << put_indent << *v.callable;
+            os << put_indent << "callable: " << *v.callable;
         for (const auto& arg : v.args) {
-            os << put_indent << *arg;
+            os << put_indent << "arg: " << *arg;
         }
         return os << less_indent;
     } else {
         os << "(";
         for (const auto& arg : v.args) {
             if (&arg != &v.args.front()) {
-                if (v.op.is_comma())
-                    os << ", ";  // no leading space
-                else
-                    os << ' ' << v.op << ' ';
+                switch (v.op.op) {
+                    case Operator::Comma:
+                        os << ", ";  // no leading space
+                        break;
+                    case Operator::Call:
+                        os << ' ';
+                        break;
+                    default:
+                        os << ' ' << v.op << ' ';
+                        break;
+                }
             }
             os << *arg;
         }
@@ -540,8 +552,8 @@ std::ostream& operator<<(std::ostream& os, const WithContext& v)
 std::ostream& operator<<(std::ostream& os, const Operator& v)
 {
     if (stream_options(os).enable_tree) {
-        return os << "Operator " << v.to_cstr()
-                  << " [L" << v.precedence() << "]" << endl;
+        return os << "Operator '" << v.to_cstr()
+                  << "' [L" << v.precedence() << "]" << endl;
     } else {
         return os << v.to_cstr();
     }

@@ -116,7 +116,7 @@ instance Exp Float32 { exp = { __exp 0xCC } }
 instance Exp Float64 { exp = { __exp 0xDD } }
 
 // Add strings, lists => concatenate
-instance Add String { add = fun a, b { string_concat a b } }
+instance Add String { add = fun a, b { string_concat (a, b) } }
 instance<T> Add [T] { add = { __list_concat __type_index<T> } }
 
 // Comparison operators
@@ -180,8 +180,8 @@ instance Eq Float64 {
 }
 
 instance Eq String {
-    eq = fun a, b { string_equal a b }
-    ne = fun a, b { ! string_equal a b }
+    eq = fun a, b { string_equal (a, b) }
+    ne = fun a, b { ! string_equal (a, b) }
 }
 
 instance Eq TypeIndex {
@@ -260,10 +260,10 @@ instance Ord Float64 {
 }
 
 instance Ord String {
-    lt = fun a, b { string_compare a b < 0 }
-    gt = fun a, b { string_compare a b > 0 }
-    le = fun a, b { string_compare a b <= 0 }
-    ge = fun a, b { string_compare a b >= 0 }
+    lt = fun a, b { string_compare (a, b) < 0 }
+    gt = fun a, b { string_compare (a, b) > 0 }
+    le = fun a, b { string_compare (a, b) <= 0 }
+    ge = fun a, b { string_compare (a, b) >= 0 }
 }
 
 
@@ -400,10 +400,10 @@ class Parse T {
     parse : String, ParseSpec -> T
 }
 
-instance Parse Bool { parse = fun x, _f { x == "true" } }
+instance Parse Bool { parse = fun x, _spec { x == "true" } }
 
-to_string = fun<T> x:T -> String { format x () }
-from_string = fun<T> x:String -> T { parse x () }
+to_string = fun<T> x:T -> String { format (x, ()) }
+from_string = fun<T> x:String -> T { parse (x, ()) }
 
 
 // -----------------------------------------------------------------------------
@@ -450,12 +450,12 @@ sign = fun x:Int -> Int { if x < 0 then -1  if x > 0 then +1  else 0 }
 
 len = fun<T> [T] -> UInt { __list_length __type_index<T> }
 empty = fun<T> l:[T] -> Bool { l.len == 0u }
-slice = fun<T> l:[T], start:Int, stop:Int, step:Int -> [T] { __list_slice __type_index<T> }
+slice = fun<T> l:[T], (start:Int, stop:Int, step:Int) -> [T] { __list_slice __type_index<T> }
 
 head = fun<T> a:[T] -> T { a!0 }
-tail = fun<T> a:[T] -> [T] { a .slice 1 max:Int 1 }
+tail = fun<T> a:[T] -> [T] { a .slice (start=1, stop=max:Int, step=1) }
 
-map = fun<T,U> f:(T->U), l:[T] -> [U] { if l.empty then [] else [f (l!0)] + map f (l.slice 1 max:Int 1) }
+map = fun<T,U> f:(T->U), l:[T] -> [U] { if l.empty then [] else [f (l!0)] + map (f, l.slice (start=1, stop=max:Int, step=1)) }
 //filter = fun<Ord T> fn [T] -> [T] { }
 //reduce = fun<Ord T> fn [T] -> T { }
 //sum = reduce add

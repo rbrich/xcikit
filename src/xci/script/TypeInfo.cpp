@@ -293,6 +293,10 @@ bool TypeInfo::is_generic() const
             return ranges::any_of(subtypes(), [](const TypeInfo& type_info) {
                 return type_info.is_generic();
             });
+        case Type::Struct:
+            return ranges::any_of(struct_items(), [](const auto& item) {
+                return item.second.is_generic();
+            });
         default:
             return false;
     }
@@ -412,6 +416,17 @@ const TypeInfo& TypeInfo::underlying() const
 std::string TypeInfo::name() const
 {
     return named_type().name;
+}
+
+
+void Signature::set_parameters(std::vector<TypeInfo>&& p)
+{
+    if (p.empty())
+        params.emplace_back(ti_void());
+    else if (p.size() == 1)
+        params.emplace_back(std::move(p.front()));
+    else
+        params.emplace_back(TypeInfo(std::move(p)));
 }
 
 

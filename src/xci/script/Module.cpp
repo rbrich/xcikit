@@ -35,7 +35,7 @@ SymbolPointer Module::add_native_function(
         NativeDelegate native)
 {
     Function fn {*this, symtab().add_child(name)};
-    fn.signature().params = std::move(params);
+    fn.signature().set_parameters(std::move(params));
     fn.signature().return_type = std::move(retval);
     fn.set_native(native);
     auto fn_idx = add_function(std::move(fn)).index;

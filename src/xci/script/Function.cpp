@@ -1,7 +1,7 @@
 // Function.cpp created on 2019-05-30 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Function.h"
@@ -47,6 +47,15 @@ void Function::add_parameter(std::string name, TypeInfo&& type_info)
 }
 
 
+const TypeInfo& Function::parameter(Index idx) const
+{
+    if (idx == no_index)
+        return m_signature->params[0];
+    assert(m_signature->params[0].is_tuple());
+    return m_signature->params[0].subtypes()[idx];
+}
+
+
 size_t Function::raw_size_of_parameters() const
 {
     return std::accumulate(m_signature->params.begin(), m_signature->params.end(), size_t(0),
@@ -56,8 +65,11 @@ size_t Function::raw_size_of_parameters() const
 
 size_t Function::parameter_offset(Index idx) const
 {
+    if (idx == no_index)
+        return 0;
+    assert(m_signature->params[0].is_tuple());
     size_t ofs = 0;
-    for (const auto& ti : m_signature->params) {
+    for (const auto& ti : m_signature->params[0].subtypes()) {
         if (idx == 0)
             return ofs;
         ofs += ti.size();
