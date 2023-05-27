@@ -418,8 +418,6 @@ struct Call: public Expression {
     // resolved:
     TypeInfo ti;
     unsigned wrapped_execs = 0;
-    unsigned partial_args = 0;
-    Index partial_index = no_index;
 
     bool intrinsic = false;
 };

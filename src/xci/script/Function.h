@@ -92,20 +92,10 @@ public:
     bool is_ast_copied() const { return std::get<GenericBody>(m_body).ast_ref == nullptr; }
     void ensure_ast_copy() { std::get<GenericBody>(m_body).ensure_copy(); }
 
-    // non-locals
+    // non-locals (closure)
     bool has_nonlocals() const { return !m_signature->nonlocals.empty(); }
     const std::vector<TypeInfo>& nonlocals() const { return m_signature->nonlocals; }
     size_t raw_size_of_nonlocals() const;  // size of all nonlocals in bytes
-
-    // partial call (bound args)
-    void add_partial(TypeInfo&& type_info);
-    const std::vector<TypeInfo>& partial() const { return m_signature->partial; }
-    size_t raw_size_of_partial() const;
-
-    // whole closure = nonlocals + partial
-    size_t raw_size_of_closure() const { return raw_size_of_nonlocals() + raw_size_of_partial(); }
-    size_t closure_size() const { return nonlocals().size() + partial().size(); }
-    std::vector<TypeInfo> closure_types() const;
 
     // true if this function should be generic (i.e. signature contains a type variable)
     bool has_any_generic() const { return m_signature->has_any_generic(); }

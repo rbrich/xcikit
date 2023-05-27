@@ -714,7 +714,6 @@ private:
                 // checked by specialize_signature() above
                 assert(!"unexpected return type");
             }
-            v.partial_args = 0;
             size_t i = 0;
             // skip blocks / functions without params
             while (sig->params.empty() && sig->return_type.type() == Type::Function) {

@@ -731,16 +731,16 @@ void TupleV::foreach(const std::function<void(const Value&)>& cb) const
 ClosureV::ClosureV(const Function& fn)
         : slot(sizeof(Function*))
 {
-    assert(fn.closure_size() == 0);
+    assert(fn.nonlocals().size() == 0);
     const Function* fn_ptr = &fn;
     std::memcpy(slot.data(), &fn_ptr, sizeof(Function*));
 }
 
 
 ClosureV::ClosureV(const Function& fn, Values&& values)
-        : slot(fn.raw_size_of_closure() + sizeof(Function*))
+        : slot(fn.raw_size_of_nonlocals() + sizeof(Function*))
 {
-    assert(fn.closure_size() == values.size());
+    assert(fn.nonlocals().size() == values.size());
     value::Tuple closure(std::move(values));
     const Function* fn_ptr = &fn;
     std::memcpy(slot.data(), &fn_ptr, sizeof(Function*));
@@ -756,7 +756,7 @@ Function* ClosureV::function() const
 
 value::Tuple ClosureV::closure() const
 {
-    value::Tuple values{TypeInfo{function()->closure_types()}.subtypes()};
+    value::Tuple values{function()->nonlocals()};
     values.read(slot.data() + sizeof(Function*));
     return values;
 }
@@ -896,11 +896,10 @@ public:
         os << fn.name() << ' ' << fn.signature();
         const auto& nonlocals = v.closure();
         if (!nonlocals.empty()) {
-            auto closure_types = fn.closure_types();
-            auto ti_iter = closure_types.begin();
+            auto ti_iter = fn.nonlocals().begin();
             os << " (";
             nonlocals.tuple_foreach([&](const Value& item){
-                if (ti_iter != closure_types.begin())
+                if (ti_iter != fn.nonlocals().begin())
                     os << ", ";
                 os << TypedValue(item, *ti_iter++);
             });

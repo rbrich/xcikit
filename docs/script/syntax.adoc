@@ -147,8 +147,8 @@ x = 1; y = { x + 2 }
 
 [source,fire]
 ----
-add 1 2
-sub (1 + 2) 3   // => 0
+add (1, 2)
+sub (1 + 2, 3)   // => 0
 1 .add 2        // infix style
 ----
 
@@ -187,7 +187,7 @@ Putting the first argument on left-hand side improves readability in some cases:
 
 [source,fire]
 ----
-"{} {}" .format "hello" 91
+"{} {}" .format ("hello", 91)
 "string".len
 ----
 
@@ -211,11 +211,8 @@ a_list .sort .uniq          // implicit left-to-right evaluation
 ((a_list) .sort) .uniq      // the same, explicit
 
 // also equivalent, the general rule still applies
-list_1 .cat list_2 list_3 .sort .uniq
-cat list_1 list_2 list_3 .sort .uniq
-
-// might be more readable with explicit parentheses
-(cat list_1 list_2 list_3) .sort .uniq
+list_1 .cat (list_2, list_3) .sort .uniq
+cat (list_1, list_2, list_3) .sort .uniq
 ----
 
 Generally, the dot operator has weaker binding than a function call.
@@ -247,7 +244,7 @@ i = 1
 
 // right-hand side can be any expression
 j = 1 + 2
-k = add2 1 2
+k = add2 (1, 2)
 
 // error, redefinition of a name
 k = 1; k = 2
@@ -268,9 +265,9 @@ There are three basic ways of naming values:
 
 [source,fire]
 ----
-a = 1             // [1.] literal value
-b = add 1 2       // [2.] result of expression
-data c = add 1 2  // [3.] constant value initialized with a result of expression
+a = 1                // [1.] literal value
+b = add (1, 2)       // [2.] result of expression
+data c = add (1, 2)  // [3.] constant value initialized with a result of expression
 ----
 
 The first two cases create a function which takes no arguments and returns
@@ -313,7 +310,7 @@ i = 1
 
 // right-hand side can be any expression
 j = 1 + 2
-k = add2 1 2
+k = add2 (1, 2)
 
 // error, redefinition of a name
 k = 1; k = k + 1
@@ -354,7 +351,7 @@ Function call can explicitly name the arguments:
 ----
 make_book = fun name:String, author:String, isbn:Int -> MyBook
     { MyBook(name, author, isbn) }
-make_book name="Title" author="Karel IV" isbn=12345
+make_book (name="Title", author="Karel IV", isbn=12345)
 ----
 
 This allows rearranging the arguments, but it doesn't allow skipping arguments
@@ -367,9 +364,9 @@ Pass a function as an argument:
 
 [source,fire]
 ----
-eval2 = fun f, a, b { f a b }
-eval2 add2 1 2                   // calls `add2 1 2`
-eval2 fun a, b {a + b} 1 2        // calls anonymous function
+eval2 = fun f, a, b { f (a, b) }
+eval2 (add2, 1, 2)                  // calls `add2 (1, 2)`
+eval2 (fun a, b {a + b}, 1, 2)      // calls anonymous function
 ----
 
 Return a function from a function:
@@ -378,21 +375,17 @@ Return a function from a function:
 ----
 sub2 = fun a, b { a - b }
 choose = fun x { if (x == "add") then add2 else sub2 }
-choose "add" 1 2
-choose "sub" 1 2
+choose ("add", 1, 2)
+choose ("sub", 1, 2)
 ----
 
 Block is a function with zero arguments:
 
 [source,fire]
 ----
-block1 = { c = add2 a b; c }    // returns closure c
-block2 = { c = add2 a b }       // returns ()
+block1 = { c = add2 (a, b); c }    // returns closure c
+block2 = { c = add2 (a, b) }       // returns ()
 block1  // evaluate the block (actually, it might have been evaluated above - that's up to compiler)
-block3 = { a + b }      // block with free variables: a, b
-block3      // the value is still { a + b } - variables are not bound, cannot be evaluated
-block3_bound = bind a=1 b=2 block3
-block3_bound    // returns 3
 
 a = {f = fun x {5}}; f    // ERROR - block creates new scope - f is undefined outside
 a = (f = fun x {5}); f    // ok - f is declared in outer scope
@@ -526,10 +519,10 @@ if (
    x == "add2"
 )
 then {
-    fun a b { a + b }
+    fun a, b { a + b }
 }
 else {
-    fun a b { a - b }
+    fun a, b { a - b }
 }
 ----
 
@@ -544,8 +537,8 @@ A type class contains a set of functions for a type.
 [source,fire]
 ----
 class MyEq T {
-    my_eq : T T -> Bool
-    my_ne : T T -> Bool
+    my_eq : T, T -> Bool
+    my_ne : T, T -> Bool
 }
 ----
 
@@ -554,10 +547,10 @@ A type class can be specialized to create another, more specific, type class:
 [source,fire]
 ----
 class MyOrd T (MyEq T) {
-    my_lt : T T -> Bool
-    my_gt : T T -> Bool
-    my_le : T T -> Bool
-    my_ge : T T -> Bool
+    my_lt : T, T -> Bool
+    my_gt : T, T -> Bool
+    my_le : T, T -> Bool
+    my_ge : T, T -> Bool
 }
 ----
 
@@ -567,8 +560,8 @@ for a specific type:
 [source,fire]
 ----
 instance MyEq Int32 {
-    my_eq = fun a b { a == b }
-    my_ne = fun a b { a != b }
+    my_eq = fun a, b { a == b }
+    my_ne = fun a, b { a != b }
 }
 ----
 
@@ -576,7 +569,7 @@ The contained function can now be called directly on Int32:
 
 [source,fire]
 ----
-my_eq 3 4
+my_eq (3, 4)
 ----
 
 Similar classes are part of std module, but the actual implementation
@@ -833,11 +826,11 @@ For example:
 ----
 type Number = Int
 f = fun a:Number, b:Number -> Number { a+b }  // `add` must be implemented for Number
-f 11 22   // OK, literals coerce
+f (11, 22)   // OK, literals coerce
 a = 11; b = 22:Number
-f a a   // Error: `f` expects Number, not Int
-f b b   // OK
-f a:Number b   // OK, returns 33:Number
+f (a, a)   // Error: `f` expects Number, not Int
+f (b, b)   // OK
+f (a:Number, b)   // OK, returns 33:Number
 ----
 
 Tuples and structs have the same rules.
@@ -1026,9 +1019,9 @@ Concatenation:
 
 [source,fire]
 ----
-cat nums [6, 7]             // =>  [1, 2, 3, 4, 5, 6, 7]
-cat "hello" [' '] "world"   // =>  "hello world"
-cons 0 nums                 // =>  [0, 1, 2, 3, 4, 5]
+cat (nums, [6, 7])              // =>  [1, 2, 3, 4, 5, 6, 7]
+cat ("hello", [' '], "world")   // =>  "hello world"
+cons (0, nums)                  // =>  [0, 1, 2, 3, 4, 5]
 ----
 
 Ranges:

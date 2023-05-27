@@ -372,31 +372,6 @@ public:
                 sig->return_type = std::move(return_type);
                 v.ti = TypeInfo{sig};
             }
-            v.partial_args = 0;
-            /*} else {
-                if (v.partial_args != 0) {
-                    // partial function call
-                    if (v.definition != nullptr) {
-                        v.partial_index = v.definition->symbol().get_scope_index(m_scope);
-                    } else {
-                        SymbolTable& fn_symtab = function().symtab().add_child("?/partial");
-                        Function fn {module(), fn_symtab};
-                        auto fn_idx = module().add_function(std::move(fn)).index;
-                        v.partial_index = module().add_scope(Scope{module(), fn_idx, &m_scope});
-                        m_scope.add_subscope(v.partial_index);
-                    }
-                    auto& fn = module().get_scope(v.partial_index).function();
-                    fn.signature() = *new_signature;
-                    fn.signature().nonlocals.clear();
-                    fn.signature().partial.clear();
-                    for (const auto& arg : m_call_sig.args) {
-                        fn.add_partial(TypeInfo{arg.type_info});
-                    }
-                    assert(!fn.has_any_generic());
-                    fn.set_compile();
-                }
-                v.ti = TypeInfo{new_signature};
-            }*/
         }
 
         // Second pass of args, now with resolved types
@@ -608,7 +583,6 @@ private:
                 // checked by specialize_signature() above
                 assert(!"unexpected return type");
             }
-            v.partial_args = 0;
             size_t i = 0;
             // skip blocks / functions without params
             while (sig->params.empty() && sig->return_type.type() == Type::Function) {
@@ -653,7 +627,6 @@ private:
                     m_call_sig = std::move(orig_call_sig);
                 }
                 // consume next param
-                ++ v.partial_args;
                 ++i;
             }
             assert(i <= params.size() && sig->params.size() == 1);

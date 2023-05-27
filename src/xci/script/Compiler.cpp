@@ -81,20 +81,12 @@ public:
 
         auto skip = function().signature().return_type.effective_type().size();
         auto drop = function().raw_size_of_parameters()
-                  + function().raw_size_of_nonlocals()
-                  + function().raw_size_of_partial();
+                  + function().raw_size_of_nonlocals();
         if (drop > 0) {
             Stack::StackRel pos = skip;
             for (const auto& ti : function().nonlocals()) {
                 ti.foreach_heap_slot([this, pos](size_t offset) {
                     // DEC_REF <addr in nonlocals>
-                    function().code().add_L1(Opcode::DecRef, pos + offset);
-                });
-                pos += ti.size();
-            }
-            for (const auto& ti : reverse(function().partial())) {
-                ti.foreach_heap_slot([this, pos](size_t offset) {
-                    // DEC_REF <addr in partial>
                     function().code().add_L1(Opcode::DecRef, pos + offset);
                 });
                 pos += ti.size();
@@ -258,11 +250,6 @@ public:
                 break;
             }
             case Symbol::Nonlocal: {
-                bool is_nl_function = (sym.ref()->type() == Symbol::Function);
-
-                if (is_nl_function && !function().partial().empty())
-                    break;
-
                 // Non-locals are captured in closure - read from closure
                 auto ofs = m_scope.nonlocal_raw_offset(sym.index(), v.ti);
                 // COPY <frame_offset>
@@ -302,7 +289,7 @@ public:
             case Symbol::Parameter: {
                 assert(sym.depth() == 0 && &symtab == &function().symtab());
                 // COPY <frame_offset> <size>
-                auto closure_size = function().raw_size_of_closure();
+                auto closure_size = function().raw_size_of_nonlocals();
                 const auto& ti = function().parameter(sym.index());
                 code().add_L2(Opcode::Copy,
                         function().parameter_offset(sym.index()) + closure_size,
@@ -446,35 +433,7 @@ public:
         }
         m_callable = true;
 
-        if (v.partial_index != no_index) {
-            // partial function call
-            auto& scope = module().get_scope(v.partial_index);
-            auto& fn = scope.function();
-
-            // generate inner code
-            if (!fn.has_code())
-                fn.set_code();
-
-            compile_subroutine(scope, *v.callable);
-            for (const auto& nl : fn.nonlocals()) {
-                if (nl.is_callable() && nl.signature().has_closure()) {
-                    // EXECUTE
-                    fn.code().add_opcode(Opcode::Execute);
-                }
-            }
-
-            make_closure(scope);
-            if (!v.definition) {
-                // MAKE_CLOSURE <function_idx>
-                code().add_L1(Opcode::MakeClosure, scope.function_index());
-                if (!fn.has_nonvoid_parameters()) {
-                    // EXECUTE
-                    code().add_opcode(Opcode::Execute);
-                }
-            }
-        } else {
-            v.callable->apply(*this);
-        }
+        v.callable->apply(*this);
 
         // add executes for each call that results in function which consumes more args
         if (v.wrapped_execs > 1) {
@@ -620,7 +579,7 @@ private:
         assert(scope.parent() != nullptr);
         auto& parent_scope = *scope.parent();
         auto& parent_fn = parent_scope.function();
-        auto closure_size = parent_fn.raw_size_of_closure();
+        auto closure_size = parent_fn.raw_size_of_nonlocals();
         // make closure
         auto nl_i = scope.nonlocals().size();
         for (const auto& nl : reverse(scope.nonlocals())) {

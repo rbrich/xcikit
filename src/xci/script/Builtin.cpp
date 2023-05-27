@@ -127,7 +127,6 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__load_function", Symbol::Instruction, Index(Opcode::LoadFunction)});
     symtab().add({"__call0", Symbol::Instruction, Index(Opcode::Call0)});
     symtab().add({"__call1", Symbol::Instruction, Index(Opcode::Call1)});
-    symtab().add({"__partial_execute", Symbol::Instruction, Index(Opcode::PartialExecute)});
     symtab().add({"__make_closure", Symbol::Instruction, Index(Opcode::MakeClosure)});
     symtab().add({"__inc_ref", Symbol::Instruction, Index(Opcode::IncRef)});
     symtab().add({"__dec_ref", Symbol::Instruction, Index(Opcode::DecRef)});
@@ -135,10 +134,7 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__jump_if_not", Symbol::Instruction, Index(Opcode::JumpIfNot)});
     symtab().add({"__invoke", Symbol::Instruction, Index(Opcode::Invoke)});
     symtab().add({"__call", Symbol::Instruction, Index(Opcode::Call)});
-    symtab().add({"__partial0", Symbol::Instruction, Index(Opcode::Partial0)});
-    symtab().add({"__partial1", Symbol::Instruction, Index(Opcode::Partial1)});
     symtab().add({"__make_list", Symbol::Instruction, Index(Opcode::MakeList)});
-    symtab().add({"__partial", Symbol::Instruction, Index(Opcode::Partial)});
     */
 
     // `__module` is current Module, `__module 1` is imported module by index 1

@@ -208,6 +208,10 @@ TEST_CASE( "Raw strings", "[script][parser]" )
                 R"("\"\"\"\n\\\"\"\"\n\\\\\"\"\"")");
     CHECK_THROWS_AS(parse("\"\"\"\\\"\"\""), ParseError);
     PARSE("\"\"\"\n\\\n\"\"\"", R"("\\")");
+    // raw bytes
+    PARSE(R"(b"""Hello""")", R"(b"Hello")");
+    PARSE("b\"\"\"\nHello\n\"\"\"", R"(b"Hello")");
+    PARSE("b\"\"\"\n  \\\"\"\"Hello\\\"\"\"\n  \"\"\"", R"(b"\"\"\"Hello\"\"\"")");
 }
 
 
@@ -769,10 +773,14 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
 
 TEST_CASE( "Overloaded functions", "[script][interpreter]" )
 {
-    CHECK(interpret("f: <T> T -> T = fun a { a }\n"
+    CHECK(interpret("f: Float -> Float = fun a { a }\n"
                     "f: String -> String = fun a { a }\n"
                     "f: Int -> Int = fun a { a }\n"
                     "f 3.f; f 1; f \"abc\";") == "3.0f;1;\"abc\"");
+    CHECK(interpret("f: <T> T -> T = fun a { a }\n"
+                    "f: String -> String = fun a { \"xy\" }\n"
+                    "f: Int -> Int = fun a { 2 }\n"
+                    "f 3.f; f 1; f \"abc\";") == "3.0f;2;\"xy\"");
     CHECK_THROWS_AS(interpret("f = fun a:Int -> Int { a }\n"
                               "f = fun a:Float -> Float { a }"), RedefinedName);
 

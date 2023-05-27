@@ -209,8 +209,6 @@ void Call::copy_to(Call& r) const
     r.args = copy_ptr_vector(args);
     r.ti = ti;
     r.wrapped_execs = wrapped_execs;
-    r.partial_args = partial_args;
-    r.partial_index = partial_index;
     r.intrinsic = intrinsic;
 }
 

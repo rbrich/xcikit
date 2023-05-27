@@ -87,28 +87,6 @@ size_t Function::raw_size_of_nonlocals() const
 }
 
 
-void Function::add_partial(TypeInfo&& type_info)
-{
-    signature().add_partial(std::move(type_info));
-}
-
-
-size_t Function::raw_size_of_partial() const
-{
-    return std::accumulate(partial().begin(), partial().end(), size_t(0),
-            [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
-}
-
-
-std::vector<TypeInfo> Function::closure_types() const
-{
-    auto closure = nonlocals();
-    closure.reserve(closure.size() + partial().size());
-    std::copy(partial().cbegin(), partial().cend(), std::back_inserter(closure));
-    return closure;
-}
-
-
 size_t Function::num_type_params() const
 {
     return std::count_if(symtab().begin(), symtab().end(),

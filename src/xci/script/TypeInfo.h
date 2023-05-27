@@ -254,17 +254,15 @@ private:
 
 struct Signature {
     std::vector<TypeInfo> nonlocals;
-    std::vector<TypeInfo> partial;
     std::vector<TypeInfo> params;
     TypeInfo return_type;
 
     void add_nonlocal(TypeInfo&& ti) { nonlocals.emplace_back(ti); }
-    void add_partial(TypeInfo&& ti) { partial.emplace_back(ti); }
     void add_parameter(TypeInfo&& ti) { params.emplace_back(ti); }
     void set_parameters(std::vector<TypeInfo>&& p);
     void set_return_type(TypeInfo ti) { return_type = std::move(ti); }
 
-    bool has_closure() const { return !nonlocals.empty() || !partial.empty(); }
+    bool has_closure() const { return !nonlocals.empty(); }
 
     bool has_generic_params() const;
     bool has_generic_return_type() const;
@@ -281,8 +279,9 @@ struct Signature {
 
     template <class Archive>
     void serialize(Archive& ar) {
-        ar ("nonlocals", nonlocals) ("partial", partial)
-           ("params", params) ("return_type", return_type);
+        ar ("nonlocals", nonlocals)
+           ("params", params)
+           ("return_type", return_type);
     }
 };
 
