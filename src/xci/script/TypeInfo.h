@@ -127,6 +127,9 @@ public:
     bool is_unknown_or_generic() const { return is_unknown() || is_generic(); }
     void replace_var(SymbolPointer var, const TypeInfo& ti);
 
+    bool is_literal() const { return m_is_literal; }
+    void set_literal(bool literal) { m_is_literal = literal; }
+
     // If the type is function without args, get its return type.
     const TypeInfo& effective_type() const;
 
@@ -248,6 +251,7 @@ public:
 
 private:
     Type m_type { Type::Unknown };
+    bool m_is_literal = true;  // literal = any expression that doesn't reference functions/variables
     std::variant<Var, Subtypes, StructItems, SignaturePtr, NamedTypePtr> m_info;
 };
 
@@ -260,7 +264,7 @@ struct Signature {
     void add_nonlocal(TypeInfo&& ti) { nonlocals.emplace_back(ti); }
     void add_parameter(TypeInfo&& ti) { params.emplace_back(ti); }
     void set_parameters(std::vector<TypeInfo>&& p);
-    void set_return_type(TypeInfo ti) { return_type = std::move(ti); }
+    void set_return_type(TypeInfo ti) { return_type = std::move(ti); return_type.set_literal(false); }
 
     bool has_closure() const { return !nonlocals.empty(); }
 

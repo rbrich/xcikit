@@ -161,7 +161,7 @@ MatchScore match_signature(const Signature& signature,
             }
             // check type of next param
             auto m = match_type(arg.type_info, params[i]);
-            if (!m || (!arg.literal_value && m.is_coerce()))
+            if (!m || (!arg.type_info.is_literal() && m.is_coerce()))
                 return MatchScore::mismatch();
             res += m;
             // consume next param

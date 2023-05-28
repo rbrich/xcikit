@@ -187,9 +187,10 @@ TypeInfo::TypeInfo(std::string name, TypeInfo&& type_info)
 
 
 TypeInfo::TypeInfo(TypeInfo&& other) noexcept
-        : m_type(other.m_type), m_info(std::move(other.m_info))
+        : m_type(other.m_type), m_is_literal(other.m_is_literal), m_info(std::move(other.m_info))
 {
     other.m_type = Type::Unknown;
+    other.m_is_literal = true;
     other.m_info = Var{};
 }
 
@@ -197,8 +198,10 @@ TypeInfo::TypeInfo(TypeInfo&& other) noexcept
 TypeInfo& TypeInfo::operator=(TypeInfo&& other) noexcept
 {
     m_type = other.m_type;
+    m_is_literal = other.m_is_literal;
     m_info = std::move(other.m_info);
     other.m_type = Type::Unknown;
+    other.m_is_literal = true;
     other.m_info = Var{};
     return *this;
 }

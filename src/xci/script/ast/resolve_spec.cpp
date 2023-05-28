@@ -153,9 +153,6 @@ public:
         const auto& symtab = *v.identifier.symbol.symtab();
         const auto& sym = *v.identifier.symbol;
 
-        // referencing variable / function - not a literal value, in case this is Call arg
-        m_literal_value = false;
-
         switch (sym.type()) {
             case Symbol::Instruction:
                 m_call_sig.clear();
@@ -176,6 +173,7 @@ public:
                     }
                 }
                 m_value_type = ti_type_index();
+                m_value_type.set_literal(false);
                 return;  // do not overwrite m_value_type below
             }
             case Symbol::Class:
@@ -264,7 +262,7 @@ public:
                         m_call_sig.emplace_back().load_from(v.ti.signature(), v.source_loc);
                     } else {
                         // A naked type, consider it a function return type
-                        m_call_sig.emplace_back().return_type = v.ti;
+                        m_call_sig.emplace_back().set_return_type(v.ti);
                     }
                 }
 
@@ -314,6 +312,7 @@ public:
                 XCI_UNREACHABLE;
         }
         m_value_type = v.ti;
+        m_value_type.set_literal(false);
         if (m_value_type.is_generic())
             resolve_generic_type(m_value_type, m_scope);
     }
@@ -340,17 +339,15 @@ public:
         }
         for (auto& arg : *args) {
             m_call_sig.clear();
-            m_literal_value = true;
             arg->apply(*this);
             assert(arg->source_loc);
-            call_args.push_back({m_value_type.effective_type(), arg->source_loc, m_literal_value});
+            call_args.push_back({m_value_type.effective_type(), arg->source_loc});
         }
         // move args to m_call_args (note that m_call_args might be used
         // when evaluating each argument, so we cannot push to them above)
         m_call_sig = std::move(orig_call_sig);
         m_call_sig.emplace_back().args = std::move(call_args);
-        m_call_sig.back().return_type = std::move(type_check.eval_type());
-        m_literal_value = false;
+        m_call_sig.back().set_return_type(std::move(type_check.eval_type()));
 
         // using resolved args, resolve the callable itself
         // (it may use args types for overload resolution)
@@ -369,7 +366,7 @@ public:
                 // Not really calling, just defining, e.g. `f = compose u v`
                 // Keep the return type as is, making it `() -> <lambda type>`
                 auto sig = std::make_shared<Signature>();
-                sig->return_type = std::move(return_type);
+                sig->set_return_type(std::move(return_type));
                 v.ti = TypeInfo{sig};
             }
         }
@@ -403,40 +400,40 @@ public:
     }
 
     void visit(ast::Condition& v) override {
+        bool all_literal = true;
         for (auto& item : v.if_then_expr) {
             item.first->apply(*this);
             item.second->apply(*this);
+            all_literal = all_literal && m_value_type.is_literal();
         }
         v.else_expr->apply(*this);
-        m_literal_value = false;
+        m_value_type.set_literal(all_literal && m_value_type.is_literal());
     }
 
     void visit(ast::WithContext& v) override {
         // resolve type of context (StructInit leads to incomplete struct type)
-        m_literal_value = true;
         v.context->apply(*this);
         // lookup the enter function with the resolved context type
         assert(m_call_sig.empty());
-        m_call_sig.emplace_back().add_arg({m_value_type, v.context->source_loc, m_literal_value});
-        m_call_sig.back().return_type = ti_unknown();
+        m_call_sig.emplace_back().add_arg({m_value_type, v.context->source_loc});
+        m_call_sig.back().set_return_type(ti_unknown());
         v.enter_function.apply(*this);
         m_call_sig.clear();
         assert(m_value_type.is_callable());
         auto enter_sig = m_value_type.signature();
         // re-resolve type of context (match actual struct type as found by resolving `with` function)
         m_cast_type = enter_sig.params[0];
-        m_literal_value = true;
         v.context->apply(*this);
         assert(m_value_type == enter_sig.params[0]);
         // lookup the leave function, it's arg type is same as enter functions return type
         v.leave_type = enter_sig.return_type.effective_type();
-        m_call_sig.emplace_back().add_arg({v.leave_type, v.context->source_loc, m_literal_value});
-        m_call_sig.back().return_type = ti_void();
+        m_call_sig.emplace_back().add_arg({v.leave_type, v.context->source_loc});
+        m_call_sig.back().set_return_type(ti_void());
         v.leave_function.apply(*this);
         m_call_sig.clear();
         // resolve type of expression - it's also the type of the whole "with" expression
         v.expression->apply(*this);
-        m_literal_value = false;
+        m_value_type.set_literal(false);
     }
 
     void visit(ast::Function& v) override {
@@ -460,7 +457,6 @@ public:
         Function& fn = scope.function();
 
         m_value_type = TypeInfo{fn.signature_ptr()};
-        m_literal_value = false;
         m_value_type = v.ti;
 
         if (parent_is_specialized) {
@@ -507,6 +503,7 @@ public:
 
         if (m_value_type.is_generic())
             resolve_generic_type(m_value_type, m_scope);
+        m_value_type.set_literal(false);
         v.ti = m_value_type;
     }
 
@@ -517,7 +514,6 @@ public:
         // (the Expression might use the specified type from `m_cast_type`)
         resolve_generic_type(v.to_type, m_scope.type_args());
         m_cast_type = v.to_type;
-        m_literal_value = true;
         v.expression->apply(*this);
         m_cast_type = {};
         m_value_type = m_value_type.effective_type();
@@ -528,12 +524,12 @@ public:
             return;
         }
         // lookup the cast function with the resolved arg/return types
-        m_call_sig.emplace_back().add_arg({m_value_type, v.expression->source_loc, m_literal_value});
-        m_call_sig.back().return_type = v.to_type;
+        m_call_sig.emplace_back().add_arg({m_value_type, v.expression->source_loc});
+        m_call_sig.back().set_return_type(v.to_type);
         v.cast_function->apply(*this);
         // set the effective type of the Cast expression and clean the call types
         m_value_type = std::move(m_call_sig.back().return_type);
-        m_literal_value = false;
+        m_value_type.set_literal(false);
         m_call_sig.clear();
     }
 
@@ -558,7 +554,7 @@ private:
                         throw UnexpectedReturnType(exp, got);
                     });
             resolve_type_vars(sig, scope.type_args());  // fill in concrete types using new type var info
-            sig.return_type = deduced;  // Unknown/var=0 not handled by resolve_type_vars
+            sig.set_return_type(deduced);  // Unknown/var=0 not handled by resolve_type_vars
             return;
         }
         if (sig.return_type != deduced)
@@ -598,7 +594,7 @@ private:
                 // check type of next param
                 const auto& sig_param = params[i];
                 const auto m = match_type(arg.type_info, sig_param);
-                if (!(m.is_exact() || m.is_generic() || (m.is_coerce() && arg.literal_value))) {
+                if (!(m.is_exact() || m.is_generic() || (m.is_coerce() && arg.type_info.is_literal()))) {
                     throw UnexpectedArgumentType(i+1, sig_param, arg.type_info, arg.source_loc);
                 }
                 if (m.is_coerce()) {
@@ -918,8 +914,7 @@ private:
 
                 // check type of next param
                 const auto m = match_type(arg.type_info, prm);
-                // FIXME: literal_value doesn't work inside tuple args
-                if (!(m.is_exact() || m.is_generic() || (m.is_coerce() && arg.literal_value))) {
+                if (!(m.is_exact() || m.is_generic() || (m.is_coerce() && arg.type_info.is_literal()))) {
                     throw UnexpectedArgumentType(i_arg, prm,
                             arg.type_info, arg.source_loc);
                 }
@@ -954,7 +949,6 @@ private:
     TypeInfo m_type_info;   // resolved ast::Type
     TypeInfo m_value_type;  // inferred type of the value
     TypeInfo m_cast_type;   // target type of Cast
-    bool m_literal_value = true;  // the m_value_type is a literal (for Call args, set false if not)
 
     // signature for resolving overloaded functions and templates
     std::vector<CallSignature> m_call_sig;   // actual argument types + expected return type

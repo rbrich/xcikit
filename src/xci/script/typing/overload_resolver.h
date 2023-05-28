@@ -18,7 +18,6 @@ namespace xci::script {
 struct CallArg {
     TypeInfo type_info;
     SourceLocation source_loc;
-    bool literal_value;
 };
 
 
@@ -28,20 +27,21 @@ struct CallSignature {
     TypeInfo return_type;
 
     void add_arg(CallArg&& arg) { args.push_back(std::move(arg)); }
-    void clear() { args.clear(); return_type = {}; }
+    void set_return_type(TypeInfo ti) { return_type = std::move(ti); return_type.set_literal(false); }
+    void clear() { args.clear(); return_type = {}; return_type.set_literal(false); }
     bool empty() const noexcept { return args.empty(); }
     size_t n_args() const noexcept { return args.size(); }
 
     void load_from(const Signature& sig, const SourceLocation& source_loc) {
         args.clear();
         if (!sig.has_nonvoid_params()) {
-            args.push_back({ti_void(), source_loc, false});
+            args.push_back({ti_void(), source_loc});
         } else if (sig.params.size() == 1 && sig.params[0].is_tuple()) {
             for (const auto& p : sig.params[0].subtypes())
-                args.push_back({p, source_loc, false});
+                args.push_back({p, source_loc});
         } else {
             for (const auto& p : sig.params)
-                args.push_back({p, source_loc, false});
+                args.push_back({p, source_loc});
         }
         return_type = sig.return_type;
     }

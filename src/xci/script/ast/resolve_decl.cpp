@@ -71,7 +71,7 @@ public:
             if (m_type_info.is_callable())
                 fn.signature() = m_type_info.signature();
             else {
-                fn.signature().return_type = m_type_info;
+                fn.signature().set_return_type(m_type_info);
             }
         }
 
