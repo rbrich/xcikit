@@ -206,7 +206,8 @@ void Call::copy_to(Call& r) const
     Expression::copy_to(r);
     if (callable)
         r.callable = callable->make_copy();
-    r.args = copy_ptr_vector(args);
+    if (arg)
+        r.arg = arg->make_copy();
     r.ti = ti;
     r.wrapped_execs = wrapped_execs;
     r.intrinsic = intrinsic;

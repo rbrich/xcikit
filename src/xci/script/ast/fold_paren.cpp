@@ -29,17 +29,17 @@ public:
     }
 
     void visit(ast::Call& v) override {
-        for (auto& arg : v.args) {
-            apply_and_fold(arg);
-        }
+        if (v.arg)
+            apply_and_fold(v.arg);
         if (v.callable)
             apply_and_fold(v.callable);
     }
 
     void visit(ast::OpCall& v) override {
-        for (auto& arg : v.args) {
-            apply_and_fold(arg);
-        }
+        if (v.arg)
+            apply_and_fold(v.arg);
+        if (v.right_arg)
+            apply_and_fold(v.right_arg);
         if (v.callable)
             apply_and_fold(v.callable);
     }

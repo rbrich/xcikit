@@ -1191,11 +1191,11 @@ TEST_CASE( "Fold const expressions", "[script][optimizer]" )
 
     // partially fold if-expression (only some branches)
     CHECK(optimize("num = 16; if true then 10 if num>5 then 5 else 0;") == "num = 16; 10");
-    CHECK(optimize("num = 16; if false then 10 if num>5 then 5 else 0;") == "num = 16; if (num > 5) then 5\nelse 0;");
-    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 else 0;") == "num = 16; if (num > 10) then 10\nelse 5;");
-    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 else 0;") == "num = 16; if (num > 10) then 10\nelse 0;");
-    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 if num==3 then 3 else 0;") == "num = 16; if (num > 10) then 10\nelse 5;");
-    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 if num==3 then 3 else 0;") == "num = 16; if (num > 10) then 10\nif (num == 3) then 3\nelse 0;");
+    CHECK(optimize("num = 16; if false then 10 if num>5 then 5 else 0;") == "num = 16; if (>) (num, 5) then 5\nelse 0;");
+    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 else 0;") == "num = 16; if (>) (num, 10) then 10\nelse 5;");
+    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 else 0;") == "num = 16; if (>) (num, 10) then 10\nelse 0;");
+    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 if num==3 then 3 else 0;") == "num = 16; if (>) (num, 10) then 10\nelse 5;");
+    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 if num==3 then 3 else 0;") == "num = 16; if (>) (num, 10) then 10\nif (==) (num, 3) then 3\nelse 0;");
 
     // collapse block with single statement
     CHECK(optimize("{ 1 }") == "1");

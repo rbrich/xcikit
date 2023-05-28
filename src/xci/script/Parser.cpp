@@ -215,14 +215,14 @@ struct NumberHelper {
 struct RefCall {
     std::unique_ptr<ast::Reference> ref;  // callable
     std::unique_ptr<ast::TypeName> type;
-    std::vector<std::unique_ptr<ast::Expression>> args;
+    std::unique_ptr<ast::Expression> arg;
     SourceLocation source_loc;
 
     std::unique_ptr<ast::Call> to_ast() && {
         auto call = std::make_unique<ast::Call>();
         ref->type_args.insert(ref->type_args.begin(), std::move(type));
         call->callable = std::move(ref);
-        call->args = std::move(args);
+        call->arg = std::move(arg);
         call->source_loc = source_loc;
         return call;
     }
@@ -348,13 +348,15 @@ struct Action<ExprPrefix> : change_states< ast::OpCall > {
     template<typename Input>
     static void success(const Input &in, ast::OpCall& inner, ast::OpCall& outer) {
         auto expr = std::make_unique<ast::OpCall>(std::move(inner));
-        outer.args.push_back(std::move(expr));
+        assert(!outer.arg);
+        outer.arg = std::move(expr);
     }
 
     template<typename Input>
     static void success(const Input &in, ast::OpCall& inner, ast::Call& outer) {
         auto expr = std::make_unique<ast::OpCall>(std::move(inner));
-        outer.args.push_back(std::move(expr));
+        assert(!outer.arg);
+        outer.arg = std::move(expr);
     }
 
     template<typename Input>
@@ -385,35 +387,38 @@ struct Action<ExprInfixRight<S>> : change_states< ast::OpCall > {
         if (left.op.is_undefined()) {
             left.op = right.op;
             // append right args
-            left.args.insert(
-                left.args.end(),
-                std::make_move_iterator(right.args.begin()),
-                std::make_move_iterator(right.args.end())
-            );
+            assert(!left.right_arg);
+            left.right_arg = std::move(right.arg);
             left.right_tmp = std::move(right.right_tmp);
             left.source_loc = right.source_loc;
             while (left.right_tmp) {
                 auto expr_tmp = std::make_unique<ast::OpCall>(std::move(left));
                 left = std::move(*expr_tmp->right_tmp);
                 expr_tmp->right_tmp.reset();
-                left.args.insert(left.args.begin(), std::move(expr_tmp));
+                assert(!left.right_arg);
+                left.right_arg = std::move(left.arg);
+                left.arg = std::move(expr_tmp);
             }
         } else {
             if (left.op.precedence() - int(left.op.is_right_associative()) < right.op.precedence()) {
                 // Eg. 1+2*3 :: left='+(2)', right='*(3)'
                 //           => left='+(right), right='*(2 3)'
-                right.args.insert(right.args.begin(), std::move(left.args.back()));
+                assert(!right.right_arg);
+                right.right_arg = std::move(right.arg);
+                assert(!left.right_arg && left.arg);
+                right.arg = std::move(left.arg);
                 while (right.right_tmp && left.op.precedence() < right.right_tmp->op.precedence()) {
                     // Eg. 1 || 2*3-4 :: left='||(?right)', right='*(2 3), tmp='-(4)'
                     //                => left='||(?right)', right='-(*(2 3) 4)'
                     auto expr_tmp = std::make_unique<ast::OpCall>(std::move(right));
                     right = std::move(*expr_tmp->right_tmp);
                     expr_tmp->right_tmp.reset();
-                    right.args.insert(right.args.begin(), std::move(expr_tmp));
+                    assert(!right.right_arg && right.arg);
+                    right.right_arg = std::move(right.arg);
+                    right.arg = std::move(expr_tmp);
                 }
                 left.right_tmp = std::move(right.right_tmp);
-                auto expr_right = std::make_unique<ast::OpCall>(std::move(right));
-                left.args.back() = std::move(expr_right);
+                left.arg = std::make_unique<ast::OpCall>(std::move(right));
             } else {
                 // Eg. 1*2+3 :: left='*(2)', right='+(3)'
                 assert(!left.right_tmp);
@@ -451,10 +456,9 @@ private:
         // Collapse empty OpCall
         if (opc.op.is_undefined()) {
             assert(!opc.right_tmp);
-            assert(opc.args.size() == 1);
-            auto& expr = opc.args.front();
-            expr->source_loc = opc.source_loc;
-            return std::move(expr);
+            assert(opc.arg && !opc.right_arg);
+            opc.arg->source_loc = opc.source_loc;
+            return std::move(opc.arg);
         } else {
             return std::make_unique<ast::OpCall>(std::move(opc));
         }
@@ -573,17 +577,20 @@ struct Action<ExprArgSafe> : change_states< std::unique_ptr<ast::Expression> > {
 
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Call& call) {
-        call.args.push_back(std::move(expr));
+        assert(!call.arg);
+        call.arg = std::move(expr);
     }
 
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::OpCall& opc) {
-        opc.args.push_back(std::move(expr));
+        assert(!opc.arg);
+        opc.arg = std::move(expr);
     }
 
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, RefCall& rcall) {
-        rcall.args.push_back(std::move(expr));
+        assert(!rcall.arg);
+        rcall.arg = std::move(expr);
     }
 
     template<typename Input>
@@ -628,7 +635,8 @@ struct Action<CallRight<S>> : change_states< ast::Call > {
     template<typename Input>
     static void success(const Input &in, ast::Call& call, ast::OpCall& outer_opc) {
         auto expr = std::make_unique<ast::Call>(std::move(call));
-        outer_opc.args.push_back(std::move(expr));
+        assert(!outer_opc.arg);
+        outer_opc.arg = std::move(expr);
         outer_opc.op = ast::Operator::Call;
     }
 };
@@ -644,7 +652,8 @@ struct Action<Call<S>> : change_states< ast::Call > {
     template<typename Input>
     static void success(const Input &in, ast::Call& call, ast::OpCall& outer_opc) {
         auto expr = std::make_unique<ast::Call>(std::move(call));
-        outer_opc.args.push_back(std::move(expr));
+        assert(!outer_opc.arg);
+        outer_opc.arg = std::move(expr);
     }
 };
 
@@ -659,7 +668,8 @@ struct Action<DotCall<S>> : change_states< ast::Call > {
     template<typename Input>
     static void success(const Input &in, ast::Call& call, ast::OpCall& outer_opc) {
         auto expr = std::make_unique<ast::Call>(std::move(call));
-        outer_opc.args.push_back(std::move(expr));
+        assert(!outer_opc.arg);
+        outer_opc.arg = std::move(expr);
         outer_opc.op = ast::Operator::DotCall;
     }
 };
@@ -679,7 +689,8 @@ struct Action<ExprTypeDotCall<S>> : change_states< RefCall > {
 
     template<typename Input>
     static void success(const Input &in, RefCall& rcall, ast::OpCall& outer) {
-        outer.args.push_back(std::move(rcall).to_ast());
+        assert(!outer.arg);
+        outer.arg = std::move(rcall).to_ast();
     }
 };
 

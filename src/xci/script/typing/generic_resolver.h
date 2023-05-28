@@ -20,6 +20,11 @@ using UnexpectedTypeCallback = std::function<void(const TypeInfo& exp, const Typ
 void set_type_arg(SymbolPointer var, const TypeInfo& deduced, TypeArgs& type_args,
                   const UnexpectedTypeCallback& exc_cb);
 void get_type_arg(SymbolPointer var, TypeInfo& sig, const TypeArgs& type_args);
+inline TypeInfo get_type_arg(SymbolPointer var, const TypeArgs& type_args) {
+    TypeInfo res;
+    get_type_arg(var, res, type_args);
+    return res;
+}
 
 void resolve_generic_type(TypeInfo& sig, const TypeArgs& type_args);
 void resolve_generic_type(TypeInfo& sig, const Scope& scope);

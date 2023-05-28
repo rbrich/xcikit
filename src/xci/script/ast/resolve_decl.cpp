@@ -265,9 +265,9 @@ public:
 
     void visit(ast::Call& v) override {
         // resolve each argument
-        for (auto& arg : v.args) {
+        if (v.arg) {
             m_type_info = {};
-            arg->apply(*this);
+            v.arg->apply(*this);
         }
 
         // using resolved args, resolve the callable itself
@@ -279,6 +279,7 @@ public:
     }
 
     void visit(ast::OpCall& v) override {
+        assert(!v.right_arg);
         visit(*static_cast<ast::Call*>(&v));
     }
 

@@ -34,39 +34,55 @@ public:
     }
 
     void visit(ast::Call& v) override {
-        for (auto& arg : v.args) {
-            apply_and_fold(arg);
-        }
+        if (v.arg)
+            apply_and_fold(v.arg);
         if (v.callable)
             apply_and_fold(v.callable);
     }
 
     void visit(ast::OpCall& v) override {
-        for (auto& arg : v.args) {
-            apply_and_fold(arg);
-        }
+        if (v.arg)
+            apply_and_fold(v.arg);
+        if (v.right_arg)
+            apply_and_fold(v.right_arg);
         assert(!v.right_tmp);
 
         if (v.op.is_call()) {
-            // First arg is the callable, second arg is a Call (with args)
+            // First arg is the callable, second arg is a Call (with arg)
             // Collapse inner Call into outer OpCall and move callable to it.
             assert(!v.callable);
-            assert(v.args.size() == 2);
-            m_collapsed = std::move(v.args[1]);
+            assert(v.arg && v.right_arg);
+            m_collapsed = std::move(v.right_arg);
             auto* call = dynamic_cast<ast::Call*>(m_collapsed.get());
             assert(call != nullptr);
             assert(!call->callable);
-            call->callable = std::move(v.args[0]);
+            call->callable = std::move(v.arg);
         }
         else if (v.op.is_dot_call()) {
             // Collapse inner Call into outer OpCall (with op=DotCall)
             assert(!v.callable);
-            assert(v.args.size() == 2);
-            m_collapsed = std::move(v.args[1]);
+            assert(v.arg && v.right_arg);
+            m_collapsed = std::move(v.right_arg);
             auto* call = dynamic_cast<ast::Call*>(m_collapsed.get());
             assert(call != nullptr);
             assert(call->callable);
-            call->args.insert(call->args.begin(), std::move(v.args[0]));
+            if (call->arg) {
+                auto args = std::make_unique<ast::Tuple>();
+                args->items.reserve(2);
+                args->source_loc = v.arg->source_loc;
+                args->items.push_back(std::move(v.arg));
+                args->items.push_back(std::move(call->arg));
+                call->arg = std::move(args);
+            } else {
+                call->arg = std::move(v.arg);
+            }
+        } else if (v.right_arg) {
+            auto args = std::make_unique<ast::Tuple>();
+            args->source_loc = v.arg->source_loc;
+            args->items.reserve(2);
+            args->items.push_back(std::move(v.arg));
+            args->items.push_back(std::move(v.right_arg));
+            v.arg = std::move(args);
         }
     }
 

@@ -462,18 +462,17 @@ std::ostream& operator<<(std::ostream& os, const Call& v)
         os << endl << more_indent;
         if (v.callable)
             os << put_indent << "callable: " << *v.callable;
-        for (const auto& arg : v.args) {
-            os << put_indent << "arg: " << *arg;
+        if (v.arg) {
+            os << put_indent << "arg: " << *v.arg;
         }
         return os << less_indent;
     } else {
         if (v.callable)
             os << *v.callable;
-        for (const auto& arg : v.args) {
-            if (&arg != &v.args.front() || v.callable)
-                os << ' ';
-            os << *arg;
-        }
+        if (v.callable && v.arg)
+            os << ' ';
+        if (v.arg)
+            os << *v.arg;
         return os;
     }
 }
@@ -485,28 +484,34 @@ std::ostream& operator<<(std::ostream& os, const OpCall& v)
         os << more_indent << put_indent << v.op;
         if (v.callable)
             os << put_indent << "callable: " << *v.callable;
-        for (const auto& arg : v.args) {
-            os << put_indent << "arg: " << *arg;
-        }
+        if (v.arg)
+            os << put_indent << "arg: " << *v.arg;
+        if (v.right_arg)
+            os << put_indent << "right_arg: " << *v.right_arg;
         return os << less_indent;
     } else {
-        os << "(";
-        for (const auto& arg : v.args) {
-            if (&arg != &v.args.front()) {
-                switch (v.op.op) {
-                    case Operator::Comma:
-                        os << ", ";  // no leading space
-                        break;
-                    case Operator::Call:
-                        os << ' ';
-                        break;
-                    default:
-                        os << ' ' << v.op << ' ';
-                        break;
-                }
-            }
-            os << *arg;
+        if (!v.right_arg && v.op.op != Operator::Comma && v.op.op != Operator::Call) {
+            os << '(' << v.op << ") (" << *v.arg << ')';
+            return os;
         }
+        os << "(";
+        if (v.arg)
+            os << *v.arg;
+        if (v.arg && v.right_arg) {
+            switch (v.op.op) {
+                case Operator::Comma:
+                    os << ", ";  // no leading space
+                    break;
+                case Operator::Call:
+                    os << ' ';
+                    break;
+                default:
+                    os << ' ' << v.op << ' ';
+                    break;
+            }
+        }
+        if (v.right_arg)
+            os << *v.right_arg;
         return os << ")";
     }
 }
@@ -517,10 +522,10 @@ std::ostream& operator<<(std::ostream& os, const Condition& v)
         os << "Condition(Expression)" << endl;
         os << more_indent;
         for (auto& item : v.if_then_expr) {
-           os << put_indent << *item.first
-              << put_indent << *item.second;
+           os << put_indent << "if: " << *item.first
+              << put_indent << "then: " << *item.second;
         }
-        os << put_indent << *v.else_expr;
+        os << put_indent << "else: " << *v.else_expr;
         return os << less_indent;
     } else {
         for (auto& item : v.if_then_expr) {

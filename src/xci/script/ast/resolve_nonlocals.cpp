@@ -171,10 +171,8 @@ public:
     }
 
     void visit(ast::Call& v) override {
-        for (auto& arg : v.args) {
-            arg->apply(*this);
-        }
-
+        if (v.arg)
+            v.arg->apply(*this);
         v.callable->apply(*this);
     }
 

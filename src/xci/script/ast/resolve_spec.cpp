@@ -78,10 +78,15 @@ public:
     }
 
     void visit(ast::Tuple& v) override {
+        TypeChecker type_check(std::move(v.ti), std::move(m_cast_type));
+        std::vector<TypeInfo> subtypes;
+        subtypes.reserve(v.items.size());
         for (auto& item : v.items) {
             item->apply(*this);
+            subtypes.push_back(m_value_type.effective_type());
         }
-        m_value_type = v.ti;
+        m_value_type = type_check.resolve(TypeInfo(std::move(subtypes)), v.source_loc);
+        v.ti = m_value_type;
     }
 
     void visit(ast::List& v) override {
@@ -205,9 +210,7 @@ public:
                         resolved_types.clear();
                         for (Index i = 1; i <= cls.symtab().count(Symbol::TypeVar); ++i) {
                             auto var_psym = cls.symtab().find_by_index(Symbol::TypeVar, i);
-                            TypeInfo ti;
-                            get_type_arg(var_psym, ti, inst_type_args);
-                            resolved_types.push_back(ti);
+                            resolved_types.push_back(get_type_arg(var_psym, inst_type_args));
                         }
                         continue;
                     }
@@ -331,17 +334,24 @@ public:
         // resolve each argument
         std::vector<CallArg> call_args;
         auto orig_call_sig = std::move(m_call_sig);
-        auto* args = &v.args;
-        if (v.args.size() == 1) {
-            auto* tuple = dynamic_cast<ast::Tuple*>(v.args.front().get());
-            if (tuple && !tuple->items.empty())
-                args = &tuple->items;
-        }
-        for (auto& arg : *args) {
+        while (v.arg) {
             m_call_sig.clear();
-            arg->apply(*this);
-            assert(arg->source_loc);
-            call_args.push_back({m_value_type.effective_type(), arg->source_loc});
+            v.arg->apply(*this);
+            assert(v.arg->source_loc);
+            if (m_value_type.is_literal()) {
+                auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
+                if (tuple && !tuple->items.empty()) {
+                    assert(m_value_type.is_tuple());
+                    call_args.reserve(tuple->items.size());
+                    for (size_t i = 0; i != tuple->items.size(); ++i) {
+                        const auto& arg = tuple->items[i];
+                        call_args.push_back({m_value_type.subtypes()[i].effective_type(), arg->source_loc});
+                    }
+                    break;
+                }
+            }
+            call_args.push_back({m_value_type.effective_type(), v.arg->source_loc});
+            break;
         }
         // move args to m_call_args (note that m_call_args might be used
         // when evaluating each argument, so we cannot push to them above)
@@ -378,14 +388,25 @@ public:
         else
             call_args = std::move(m_call_sig.back().args);
         unsigned i = 0;
-        for (auto& arg : *args) {
-            if (i >= call_args.size())
-                break;
-            auto call_ti = std::move(call_args[i++].type_info);
-            if (call_ti.is_callable()) {
-                m_call_sig.clear();
-                m_call_sig.emplace_back().load_from(call_ti.signature(), arg->source_loc);
-                arg->apply(*this);
+        if (v.arg && !call_args.empty()) {
+            if (call_args.size() > 1) {
+                auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
+                assert(tuple && !tuple->items.empty());
+                for (auto& arg : tuple->items) {
+                    auto call_ti = std::move(call_args[i++].type_info);
+                    if (call_ti.is_callable()) {
+                        m_call_sig.clear();
+                        m_call_sig.emplace_back().load_from(call_ti.signature(), arg->source_loc);
+                        arg->apply(*this);
+                    }
+                }
+            } else {
+                auto call_ti = std::move(call_args[0].type_info);
+                if (call_ti.is_callable()) {
+                    m_call_sig.clear();
+                    m_call_sig.emplace_back().load_from(call_ti.signature(), v.arg->source_loc);
+                    v.arg->apply(*this);
+                }
             }
         }
 
@@ -514,6 +535,7 @@ public:
         // (the Expression might use the specified type from `m_cast_type`)
         resolve_generic_type(v.to_type, m_scope.type_args());
         m_cast_type = v.to_type;
+        m_call_sig.clear();
         v.expression->apply(*this);
         m_cast_type = {};
         m_value_type = m_value_type.effective_type();
@@ -600,26 +622,26 @@ private:
                 if (m.is_coerce()) {
                     // Update type_info of the coerced literal argument
                     m_cast_type = sig_param;
-                    auto* args = &v.args;
-                    if (v.args.size() == 1) {
-                        auto* tuple = dynamic_cast<ast::Tuple*>(v.args.front().get());
-                        if (tuple && !tuple->items.empty())
-                            args = &tuple->items;
+                    auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
+                    if (tuple && !tuple->items.empty())
+                        tuple->items[i]->apply(*this);
+                    else {
+                        assert(i == 0);
+                        v.arg->apply(*this);
                     }
-                    (*args)[i]->apply(*this);
                 }
                 if (sig_param.is_callable()) {
                     // resolve overload in case the arg is a function that was specialized
                     auto orig_call_sig = std::move(m_call_sig);
                     m_call_sig.clear();
                     m_call_sig.emplace_back().load_from(sig_param.signature(), arg.source_loc);
-                    auto* args = &v.args;
-                    if (v.args.size() == 1) {
-                        auto* tuple = dynamic_cast<ast::Tuple*>(v.args.front().get());
-                        if (tuple && !tuple->items.empty())
-                            args = &tuple->items;
+                    auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
+                    if (tuple && !tuple->items.empty())
+                        tuple->items[i]->apply(*this);
+                    else {
+                        assert(i == 0);
+                        v.arg->apply(*this);
                     }
-                    (*args)[i]->apply(*this);
                     m_call_sig = std::move(orig_call_sig);
                 }
                 // consume next param

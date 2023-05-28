@@ -31,17 +31,17 @@ public:
     }
 
     void visit(ast::Call& v) override {
-        for (auto& arg : v.args) {
-            apply_and_fold(arg);
-        }
+        if (v.arg)
+            apply_and_fold(v.arg);
         if (v.callable)
             apply_and_fold(v.callable);
     }
 
     void visit(ast::OpCall& v) override {
-        for (auto& arg : v.args) {
-            apply_and_fold(arg);
-        }
+        if (v.arg)
+            apply_and_fold(v.arg);
+        if (v.right_arg)
+            apply_and_fold(v.right_arg);
         assert(!v.callable);
 
         if (v.op.is_comma()) {
@@ -49,7 +49,7 @@ public:
             assert(!v.right_tmp);
             m_collapsed = std::make_unique<ast::Tuple>();
             m_collapsed->source_loc = v.source_loc;
-            for (auto& expr : v.args) {
+            auto fold = [this](std::unique_ptr<ast::Expression>& expr) {
                 auto* tuple = dynamic_cast<ast::Tuple*>(expr.get());
                 if (tuple == nullptr) {
                     // subexpr is not a tuple
@@ -59,7 +59,9 @@ public:
                     std::move(std::begin(tuple->items), std::end(tuple->items),
                             std::back_inserter(m_collapsed->items));
                 }
-            }
+            };
+            fold(v.arg);
+            fold(v.right_arg);
         }
     }
 

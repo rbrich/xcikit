@@ -84,20 +84,19 @@ public:
     }
 
     void visit(ast::Call& v) override {
-        TypedValues args;
-        bool all_const = true;
-        for (auto& arg : v.args) {
-            apply_and_fold(arg);
-            if (all_const && m_const_value) {
-                args.add(std::move(*m_const_value));
+        TypedValue arg;
+        bool const_arg = false;
+        if (v.arg) {
+            apply_and_fold(v.arg);
+            if (m_const_value) {
+                const_arg = true;
+                arg = std::move(*m_const_value);
                 m_const_value.reset();
-            } else {
-                all_const = false;
             }
         }
-        apply_and_fold(v.callable);
 
-        if (all_const && m_const_value) {
+        apply_and_fold(v.callable);
+        if (const_arg && m_const_value) {
             // prepare to run the function in compile-time
             // + sanity checks
             assert(m_const_value->type() == Type::Function);
@@ -105,10 +104,10 @@ public:
             assert(fnval.closure().empty());  // no values in closure
             auto& fn = *fnval.function();
             assert(!fn.has_nonlocals());
-            assert(fn.parameters().size() == args.size());
-            // push args on stack
-            for (const auto& arg : reverse(args))
-                m_machine.stack().push(arg);
+            assert(fn.parameters().size() == 1 ||
+                   (arg.type_info().is_tuple() && arg.type_info().subtypes().size() == fn.parameters().size()));
+            // push arg on stack
+            m_machine.stack().push(arg);
             // run it
             bool invoked = false;
             m_machine.call(fn, [&invoked](const TypedValue&){ invoked = true; });

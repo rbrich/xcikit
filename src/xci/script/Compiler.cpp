@@ -428,11 +428,10 @@ public:
         m_instruction_args.clear();
 
         m_callable = false;
-        for (auto& arg : reverse(v.args)) {
-            arg->apply(*this);
-        }
-        m_callable = true;
+        if (v.arg)
+            v.arg->apply(*this);
 
+        m_callable = true;
         v.callable->apply(*this);
 
         // add executes for each call that results in function which consumes more args

@@ -413,7 +413,7 @@ struct Call: public Expression {
     const TypeInfo& type_info() const override { return ti; }
 
     std::unique_ptr<Expression> callable;
-    std::vector<std::unique_ptr<Expression>> args;
+    std::unique_ptr<Expression> arg;
 
     // resolved:
     TypeInfo ti;
@@ -484,6 +484,7 @@ struct OpCall: public Call {
     std::unique_ptr<ast::Expression> make_copy() const override;
 
     Operator op;
+    std::unique_ptr<Expression> right_arg;
     std::unique_ptr<OpCall> right_tmp;  // used during parsing, cleared when finished
 };
 
