@@ -50,26 +50,24 @@ TypeArgs specialize_signature(const SignaturePtr& signature, const std::vector<C
         } else {
             throw UnexpectedArgument(arg_n, TypeInfo{signature}, call_sig.args[0].source_loc);
         }
-        size_t i = 0;
         // skip blocks / functions without params
         while (sig->params.empty() && sig->return_type.type() == Type::Function) {
             sig = sig->return_type.signature_ptr();
         };
-        const std::vector<TypeInfo>& params =
-                (call_sig.args.size() > 1) ? sig->params[0].subtypes()
-                                           : sig->params;
-        for (const auto& arg : call_sig.args) {
-            if (i >= params.size()) {
-                throw UnexpectedArgument(arg_n, TypeInfo{signature}, arg.source_loc);
+        assert(sig->params.size() <= 1);
+        const auto& c_sig = call_sig.signature();
+        const auto& source_loc = call_sig.args[0].source_loc;
+        {
+            if (sig->params.empty()) {
+                throw UnexpectedArgument(arg_n, TypeInfo{signature}, source_loc);
             }
-            const auto& sig_type = params[i++];
-            //            if (arg.type_info.is_unknown())
-            //                continue;
-            if (sig_type.is_generic()) {
-                specialize_arg(sig_type, arg.type_info,
+            const auto& sig_type = sig->params[0];
+            const auto& call_type = c_sig.params[0];
+            if (sig_type.is_generic() && !call_type.is_unknown()) {
+                specialize_arg(sig_type, call_type,
                                call_type_args,
-                               [arg_n, &arg](const TypeInfo& exp, const TypeInfo& got) {
-                                   throw UnexpectedArgumentType(arg_n, exp, got, arg.source_loc);
+                               [arg_n, &source_loc](const TypeInfo& exp, const TypeInfo& got) {
+                                   throw UnexpectedArgumentType(arg_n, exp, got, source_loc);
                                });
             }
             ++arg_n;
@@ -149,25 +147,26 @@ MatchScore match_signature(const Signature& signature,
         while (sig->params.empty() && sig->return_type.type() == Type::Function) {
             sig = &sig->return_type.signature();
         };
-        const std::vector<TypeInfo>& params =
-                (call_sig.args.size() > 1) ? sig->params[0].subtypes()
-                                           : sig->params;
+        assert(sig->params.size() <= 1);
+        const auto& c_sig = call_sig.signature();
         size_t i = 0;
-        for (const auto& arg : call_sig.args) {
+        if (!call_sig.args.empty()) {
             // check there are more params to consume
-            if (i >= params.size()) {
+            if (sig->params.empty()) {
                 // unexpected argument
                 return MatchScore::mismatch();
             }
             // check type of next param
-            auto m = match_type(arg.type_info, params[i]);
-            if (!m || (!arg.type_info.is_literal() && m.is_coerce()))
+            const auto& sig_type = sig->params[0];
+            assert(c_sig.params.size() == 1);
+            const auto& call_type = c_sig.params[0];
+            auto m = match_type(call_type, sig_type);
+            if (!m)
                 return MatchScore::mismatch();
             res += m;
-            // consume next param
             ++i;
         }
-        if (i == params.size()) {
+        if (sig->params.size() == i) {
             // increase score for full match - whole signature matches the call args
             res.add_exact();
         }

@@ -732,9 +732,8 @@ private:
                 // check type of next param
                 const auto& sig_param = params[i];
                 const auto m = match_type(arg.type_info, sig_param);
-                if (!(m.is_exact() || m.is_generic() || (m.is_coerce() && arg.type_info.is_literal()))) {
+                if (!m)
                     throw UnexpectedArgumentType(i+1, sig_param, arg.type_info, arg.source_loc);
-                }
                 if (m.is_coerce()) {
                     // Update type_info of the coerced literal argument
                     m_cast_type = sig_param;
@@ -813,10 +812,9 @@ private:
 
                 // check type of next param
                 const auto m = match_type(arg.type_info, prm);
-                if (!(m.is_exact() || m.is_generic() || (m.is_coerce() && arg.type_info.is_literal()))) {
+                if (!m)
                     throw UnexpectedArgumentType(i_arg, prm,
                             arg.type_info, arg.source_loc);
-                }
 
                 auto arg_type = arg.type_info.effective_type();
                 specialize_arg(prm, arg_type, res,

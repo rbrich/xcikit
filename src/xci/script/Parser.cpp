@@ -354,9 +354,8 @@ struct Action<ExprPrefix> : change_states< ast::OpCall > {
 
     template<typename Input>
     static void success(const Input &in, ast::OpCall& inner, ast::Call& outer) {
-        auto expr = std::make_unique<ast::OpCall>(std::move(inner));
         assert(!outer.arg);
-        outer.arg = std::move(expr);
+        outer.arg = std::make_unique<ast::OpCall>(std::move(inner));
     }
 
     template<typename Input>
@@ -651,9 +650,8 @@ struct Action<Call<S>> : change_states< ast::Call > {
 
     template<typename Input>
     static void success(const Input &in, ast::Call& call, ast::OpCall& outer_opc) {
-        auto expr = std::make_unique<ast::Call>(std::move(call));
         assert(!outer_opc.arg);
-        outer_opc.arg = std::move(expr);
+        outer_opc.arg = std::make_unique<ast::Call>(std::move(call));
     }
 };
 
@@ -667,9 +665,8 @@ struct Action<DotCall<S>> : change_states< ast::Call > {
 
     template<typename Input>
     static void success(const Input &in, ast::Call& call, ast::OpCall& outer_opc) {
-        auto expr = std::make_unique<ast::Call>(std::move(call));
         assert(!outer_opc.arg);
-        outer_opc.arg = std::move(expr);
+        outer_opc.arg = std::make_unique<ast::Call>(std::move(call));
         outer_opc.op = ast::Operator::DotCall;
     }
 };

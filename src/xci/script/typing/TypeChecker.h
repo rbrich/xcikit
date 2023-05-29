@@ -66,34 +66,35 @@ private:
 
 /// Match function parameters
 /// \param candidate    Candidate parameters (inferred types of the arguments)
-/// \param actual       Actual parameters (expected by signature)
-MatchScore match_params(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& actual);
+/// \param expected     Parameters expected by signature
+MatchScore match_params(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& expected);
 
 /// Match a single type
-/// \param candidate    Candidate type (inferred type)
-/// \param actual       Actual type (expected / specified type)
+/// \param candidate    Candidate / inferred type
+/// \param expected     Expected / specified type
 /// \returns MatchScore: mismatch/generic/exact or combination in case of complex types
-MatchScore match_type(const TypeInfo& candidate, const TypeInfo& actual);
+/// Candidate may coerce to expected, when candidate is literal.
+MatchScore match_type(const TypeInfo& candidate, const TypeInfo& expected);
 
 /// Match tuple to tuple
 /// \param candidate    Candidate tuple type
-/// \param actual       Actual resolved tuple type for the value
+/// \param expected     Expected tuple type
 /// \returns Total match score of all fields, or mismatch
-MatchScore match_tuple(const TypeInfo& candidate, const TypeInfo& actual);
+MatchScore match_tuple(const TypeInfo& candidate, const TypeInfo& expected);
 
-/// Match incomplete Struct type from ast::StructInit to resolved Struct type.
-/// All keys and types from inferred are checked against resolved.
-/// Partial match is possible when inferred has less keys than resolved.
+/// Match incomplete Struct type from ast::StructInit to resolved Struct type (expected).
+/// All keys and types from candidate are checked against expected.
+/// Partial match is possible when candidate has less keys than expected.
 /// \param candidate    Possibly incomplete Struct type as constructed from AST
-/// \param actual       Actual resolved type for the value
+/// \param expected     Expected / specified type
 /// \returns Total match score of all fields, or mismatch
-MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual);
+MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& expected);
 
-/// Match tuple to resolved Struct type, i.e. initialize struct with tuple literal
+/// Match tuple to specified Struct type, i.e. initialize struct with tuple literal
 /// \param candidate    Tuple with same number of fields
-/// \param actual       Actual resolved struct type for the value
+/// \param expected     Specified struct type
 /// \returns Total match score of all fields, or mismatch
-MatchScore match_tuple_to_struct(const TypeInfo& candidate, const TypeInfo& actual);
+MatchScore match_tuple_to_struct(const TypeInfo& candidate, const TypeInfo& expected);
 
 
 class TypeChecker {
