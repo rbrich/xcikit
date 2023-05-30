@@ -78,6 +78,10 @@ TypeArgs specialize_signature(const SignaturePtr& signature, const std::vector<C
 /// Resolve type variables in `call_args` that are concrete in `signature`
 TypeArgs resolve_generic_args_to_signature(const Signature& signature, const std::vector<CallSignature>& call_sig_stack);
 
+/// Match call args with signature (which contains type vars T, U...)
+/// Throw if unmatched, return resolved TypeArgs for T, U... if matched
+TypeArgs resolve_instance_types(const Signature& signature, const std::vector<CallSignature>& call_sig_stack, const TypeInfo& cast_type);
+
 /// Match signature to call args.
 /// \returns total MatchScore of all parameters and return value, or mismatch
 /// Partial match is possible when the signature has less parameters than call args.

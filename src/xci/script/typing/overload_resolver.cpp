@@ -127,6 +127,69 @@ TypeArgs resolve_generic_args_to_signature(const Signature& signature,
 }
 
 
+TypeArgs resolve_instance_types(const Signature& signature, const std::vector<CallSignature>& call_sig_stack, const TypeInfo& cast_type)
+{
+    const Signature* sig = nullptr;
+    size_t i_arg = 0;
+    TypeArgs res;
+    for (const CallSignature& call_sig : call_sig_stack | reverse) {
+        if (sig == nullptr)
+            sig = &signature;
+        else if (sig->return_type.type() == Type::Function) {
+            // collapse returned function, start consuming its params
+            sig = &sig->return_type.signature();
+        } else {
+            throw UnexpectedArgument(i_arg, TypeInfo{std::make_shared<Signature>(signature)}, call_sig.args[0].source_loc);
+        }
+        size_t i_prm = 0;
+        // skip blocks / functions without params
+        while (sig->params.empty() && sig->return_type.type() == Type::Function) {
+            sig = &sig->return_type.signature();
+        };
+        // resolve args
+        const std::vector<TypeInfo>& params =
+                (call_sig.args.size() > 1) ? sig->params[0].subtypes()
+                                           : sig->params;
+        for (const auto& arg : call_sig.args) {
+            i_arg += 1;
+            // check there are more params to consume
+            if (i_prm >= params.size()) {
+                // unexpected argument
+                throw UnexpectedArgument(i_arg, TypeInfo{std::make_shared<Signature>(signature)}, arg.source_loc);
+            }
+            // resolve T (only from original signature)
+            const auto& prm = params[i_prm];
+
+            // check type of next param
+            const auto m = match_type(arg.type_info, prm);
+            if (!m)
+                throw UnexpectedArgumentType(i_arg, prm,
+                        arg.type_info, arg.source_loc);
+
+            auto arg_type = arg.type_info.effective_type();
+            specialize_arg(prm, arg_type, res,
+                    [i_arg, &arg](const TypeInfo& exp, const TypeInfo& got) {
+                        throw UnexpectedArgumentType(i_arg, exp, got,
+                            arg.source_loc);
+                    });
+
+            // consume next param
+            ++i_prm;
+        }
+    }
+    // use m_call_ret only as a hint - if return type var is still unknown
+    if (signature.return_type.is_unknown()) {
+        auto var = signature.return_type.generic_var();
+        assert(var);
+        if (!call_sig_stack.empty() && !call_sig_stack[0].return_type.is_unknown())
+            res.set(var, call_sig_stack[0].return_type);
+        if (!cast_type.is_unknown())
+            res.set(var, cast_type.effective_type());
+    }
+    return res;
+}
+
+
 MatchScore match_signature(const Signature& signature,
                            const std::vector<CallSignature>& call_sig_stack,
                            const TypeInfo& cast_type)

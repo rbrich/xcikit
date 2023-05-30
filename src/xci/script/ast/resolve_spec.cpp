@@ -206,7 +206,7 @@ public:
                         auto& cls = inst_mod->get_class(psym->index());
                         cls_fn_idx = cls.get_index_of_function(psym->ref()->index());
                         const auto& cls_fn = psym->ref().get_generic_scope().function();
-                        inst_type_args = resolve_instance_types(cls_fn.signature());
+                        inst_type_args = resolve_instance_types(cls_fn.signature(), m_call_sig, m_cast_type);
                         resolved_types.clear();
                         for (Index i = 1; i <= cls.symtab().count(Symbol::TypeVar); ++i) {
                             auto var_psym = cls.symtab().find_by_index(Symbol::TypeVar, i);
@@ -854,7 +854,7 @@ private:
         // Resolve instance types using the m_call_args
         // and the called method (instance function with known Index)
         const auto& called_inst_fn = inst.get_function(cls_fn_idx).symptr.get_function(m_scope);
-        auto resolved_types = resolve_instance_types(called_inst_fn.signature());
+        auto resolved_types = resolve_instance_types(called_inst_fn.signature(), m_call_sig, m_cast_type);
         auto inst_types = inst.types();
         for (auto& it : inst_types)
             resolve_generic_type(it, resolved_types);
@@ -893,75 +893,6 @@ private:
                 return false;
         }
         return true;
-    }
-
-    // Match call args with signature (which contains type vars T, U...)
-    // Throw if unmatched, return resolved types for T, U... if matched
-    // The result types are in the same order as the matched type vars in signature,
-    // e.g. for `class MyClass T U V { my V U -> T }` it will return actual types [T, U, V].
-    // FIXME: share between type/spec resolver
-    TypeArgs resolve_instance_types(const Signature& signature) const
-    {
-        const Signature* sig = nullptr;
-        size_t i_arg = 0;
-        TypeArgs res;
-        for (const CallSignature& call_sig : m_call_sig | reverse) {
-            if (sig == nullptr)
-                sig = &signature;
-            else if (sig->return_type.type() == Type::Function) {
-                // collapse returned function, start consuming its params
-                sig = &sig->return_type.signature();
-            } else {
-                throw UnexpectedArgument(i_arg, TypeInfo{std::make_shared<Signature>(signature)}, call_sig.args[0].source_loc);
-            }
-            size_t i_prm = 0;
-            // skip blocks / functions without params
-            while (sig->params.empty() && sig->return_type.type() == Type::Function) {
-                sig = &sig->return_type.signature();
-            };
-            // resolve args
-            const std::vector<TypeInfo>& params =
-                    (call_sig.args.size() > 1) ? sig->params[0].subtypes()
-                                               : sig->params;
-            for (const auto& arg : call_sig.args) {
-                i_arg += 1;
-                // check there are more params to consume
-                if (i_prm >= params.size()) {
-                    // unexpected argument
-                    throw UnexpectedArgument(i_arg, TypeInfo{std::make_shared<Signature>(signature)}, arg.source_loc);
-                }
-                // resolve T (only from original signature)
-                const auto& prm = params[i_prm];
-
-                // check type of next param
-                const auto m = match_type(arg.type_info, prm);
-                if (!m)
-                    throw UnexpectedArgumentType(i_arg, prm,
-                            arg.type_info, arg.source_loc);
-
-                auto arg_type = arg.type_info.effective_type();
-                specialize_arg(prm, arg_type, res,
-                        [i_arg, &arg](const TypeInfo& exp, const TypeInfo& got) {
-                            throw UnexpectedArgumentType(i_arg, exp, got,
-                                arg.source_loc);
-                        });
-
-                // consume next param
-                ++i_prm;
-            }
-        }
-        // use m_call_ret only as a hint - if return type var is still unknown
-        if (signature.return_type.is_unknown()) {
-            auto var = signature.return_type.generic_var();
-            assert(var);
-            if (!m_call_sig.empty() && !m_call_sig[0].return_type.is_unknown())
-                res.set(var, m_call_sig[0].return_type);
-            if (!m_cast_type.is_unknown())
-                res.set(var, m_cast_type.effective_type());
-            if (m_type_info)
-                res.set(var, m_type_info);
-        }
-        return res;
     }
 
     Scope& m_scope;
