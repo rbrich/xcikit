@@ -16,6 +16,7 @@
 #include <xci/compat/macros.h>
 #include <xci/core/log.h>
 
+#include <range/v3/view/enumerate.hpp>
 #include <range/v3/view/reverse.hpp>
 
 #include <sstream>
@@ -25,6 +26,7 @@ namespace xci::script {
 
 using std::stringstream;
 using namespace xci::core;
+using ranges::views::enumerate;
 using ranges::cpp20::views::reverse;
 
 
@@ -78,10 +80,13 @@ public:
     }
 
     void visit(ast::Tuple& v) override {
-        TypeChecker type_check(std::move(v.ti), std::move(m_cast_type));
+        const TypeChecker type_check(std::move(v.ti), std::move(m_cast_type));
+        const auto& spec = type_check.eval_type();  // specified/cast type
+        const TypeInfo::Subtypes* cast_items = spec.is_tuple()? &spec.subtypes() : nullptr;
         std::vector<TypeInfo> subtypes;
         subtypes.reserve(v.items.size());
-        for (auto& item : v.items) {
+        for (auto&& [i, item] : v.items | enumerate) {
+            m_cast_type = cast_items ? (*cast_items)[i] : TypeInfo{};
             item->apply(*this);
             subtypes.push_back(m_value_type.effective_type());
         }
@@ -601,55 +606,56 @@ private:
                 // checked by specialize_signature() above
                 assert(!"unexpected return type");
             }
-            size_t i = 0;
             // skip blocks / functions without params
             while (sig->params.empty() && sig->return_type.type() == Type::Function) {
                 sig = sig->return_type.signature_ptr();
                 ++v.wrapped_execs;
             };
-            const std::vector<TypeInfo>& params =
-                    (call_sig.args.size() > 1) ? sig->params[0].subtypes()
-                                               : sig->params;
-            for (const auto& arg : call_sig.args) {
+            assert(sig->params.size() == 1);
+            const auto& c_sig = call_sig.signature();
+            const auto& source_loc = call_sig.args[0].source_loc;
+            {
                 // check there are more params to consume
-                assert(i < params.size());  // checked by specialize_signature() above
+                assert(!sig->params.empty());  // checked by specialize_signature() above
                 // check type of next param
-                const auto& sig_param = params[i];
-                const auto m = match_type(arg.type_info, sig_param);
+                const auto& sig_type = sig->params[0];
+                const auto& call_type = c_sig.params[0];
+                const auto m = match_type(call_type, sig_type);
                 if (!m)
-                    throw UnexpectedArgumentType(i+1, sig_param, arg.type_info, arg.source_loc);
+                    throw UnexpectedArgumentType(1, sig_type, call_type, source_loc);
                 if (m.is_coerce()) {
                     // Update type_info of the coerced literal argument
-                    m_cast_type = sig_param;
+                    m_cast_type = sig_type;
                     auto orig_call_sig = std::move(m_call_sig);
                     m_call_sig.clear();
-                    auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
-                    if (tuple && !tuple->items.empty())
-                        tuple->items[i]->apply(*this);
-                    else {
-                        assert(i == 0);
-                        v.arg->apply(*this);
-                    }
+                    v.arg->apply(*this);
                     m_call_sig = std::move(orig_call_sig);
                 }
-                if (sig_param.is_callable()) {
+                if (sig_type.is_callable()) {
                     // resolve overload in case the arg is a function that was specialized
                     auto orig_call_sig = std::move(m_call_sig);
                     m_call_sig.clear();
-                    m_call_sig.emplace_back().load_from(sig_param.signature(), arg.source_loc);
-                    auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
-                    if (tuple && !tuple->items.empty())
-                        tuple->items[i]->apply(*this);
-                    else {
-                        assert(i == 0);
-                        v.arg->apply(*this);
-                    }
+                    m_call_sig.emplace_back().load_from(sig_type.signature(), source_loc);
+                    v.arg->apply(*this);
                     m_call_sig = std::move(orig_call_sig);
                 }
-                // consume next param
-                ++i;
+                if (sig_type.is_tuple() && !sig_type.is_void()) {
+                    // resolve overload in case the arg tuple contains a function that was specialized
+                    auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
+                    if (tuple) {
+                        assert(tuple->items.size() == sig_type.subtypes().size());
+                        auto orig_call_sig = std::move(m_call_sig);
+                        for (auto&& [i, sig_item] : sig_type.subtypes() | enumerate) {
+                            if (sig_item.is_callable()) {
+                                m_call_sig.clear();
+                                m_call_sig.emplace_back().load_from(sig_item.signature(), source_loc);
+                                tuple->items[i]->apply(*this);
+                            }
+                        }
+                        m_call_sig = std::move(orig_call_sig);
+                    }
+                }
             }
-            assert(i <= params.size() && sig->params.size() == 1);
         }
         auto res = sig->return_type;
         resolve_generic_type(res, call_type_args);

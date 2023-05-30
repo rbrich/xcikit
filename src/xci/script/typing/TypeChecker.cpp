@@ -129,6 +129,13 @@ auto TypeChecker::resolve(const TypeInfo& inferred, const SourceLocation& loc) c
 {
     // struct - resolve to either specified or cast type
     const TypeInfo& ti = eval_type();
+    if (ti.is_tuple()) {
+        if (inferred.is_tuple()) {
+            if (!match_tuple(inferred, ti))
+                throw DefinitionTypeMismatch(ti, inferred, loc);
+            return ti;
+        }
+    }
     if (ti.is_struct()) {
         if (inferred.is_struct()) {
             if (!match_struct(inferred, ti))
