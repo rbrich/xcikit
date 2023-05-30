@@ -96,7 +96,6 @@ TypeArgs resolve_generic_args_to_signature(const Signature& signature,
         } else {
             throw UnexpectedArgument(0, TypeInfo{std::make_shared<Signature>(signature)}, call_sig.args[0].source_loc);
         }
-        size_t i = 0;
         // skip blocks / functions without params
         while (sig->params.empty() && sig->return_type.type() == Type::Function) {
             sig = &sig->return_type.signature();
@@ -140,40 +139,37 @@ TypeArgs resolve_instance_types(const Signature& signature, const std::vector<Ca
         } else {
             throw UnexpectedArgument(i_arg, TypeInfo{std::make_shared<Signature>(signature)}, call_sig.args[0].source_loc);
         }
-        size_t i_prm = 0;
         // skip blocks / functions without params
         while (sig->params.empty() && sig->return_type.type() == Type::Function) {
             sig = &sig->return_type.signature();
         };
         // resolve args
-        const std::vector<TypeInfo>& params =
-                (call_sig.args.size() > 1) ? sig->params[0].subtypes()
-                                           : sig->params;
-        for (const auto& arg : call_sig.args) {
+        assert(sig->params.size() <= 1);
+        const auto& c_sig = call_sig.signature();
+        const auto& source_loc = call_sig.args[0].source_loc;
+        {
             i_arg += 1;
             // check there are more params to consume
-            if (i_prm >= params.size()) {
+            if (sig->params.empty()) {
                 // unexpected argument
-                throw UnexpectedArgument(i_arg, TypeInfo{std::make_shared<Signature>(signature)}, arg.source_loc);
+                throw UnexpectedArgument(i_arg, TypeInfo{std::make_shared<Signature>(signature)}, source_loc);
             }
             // resolve T (only from original signature)
-            const auto& prm = params[i_prm];
+            const auto& sig_type = sig->params[0];
+            const auto& call_type = c_sig.params[0];
 
             // check type of next param
-            const auto m = match_type(arg.type_info, prm);
+            const auto m = match_type(call_type, sig_type);
             if (!m)
-                throw UnexpectedArgumentType(i_arg, prm,
-                        arg.type_info, arg.source_loc);
+                throw UnexpectedArgumentType(i_arg, sig_type,
+                        call_type, source_loc);
 
-            auto arg_type = arg.type_info.effective_type();
-            specialize_arg(prm, arg_type, res,
-                    [i_arg, &arg](const TypeInfo& exp, const TypeInfo& got) {
+            auto arg_type = call_type.effective_type();
+            specialize_arg(sig_type, arg_type, res,
+                    [i_arg, &source_loc](const TypeInfo& exp, const TypeInfo& got) {
                         throw UnexpectedArgumentType(i_arg, exp, got,
-                            arg.source_loc);
+                            source_loc);
                     });
-
-            // consume next param
-            ++i_prm;
         }
     }
     // use m_call_ret only as a hint - if return type var is still unknown
