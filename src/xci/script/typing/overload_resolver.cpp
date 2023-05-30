@@ -101,24 +101,23 @@ TypeArgs resolve_generic_args_to_signature(const Signature& signature,
         while (sig->params.empty() && sig->return_type.type() == Type::Function) {
             sig = &sig->return_type.signature();
         };
-        const std::vector<TypeInfo>& params =
-                (call_sig.args.size() > 1) ? sig->params[0].subtypes()
-                                           : sig->params;
-        for (const auto& arg : call_sig.args) {
+        assert(sig->params.size() <= 1);
+        const auto& c_sig = call_sig.signature();
+        const auto& source_loc = call_sig.args[0].source_loc;
+        {
             // check there are more params to consume
-            if (i >= params.size()) {
-                throw UnexpectedArgument(i+1, TypeInfo{std::make_shared<Signature>(signature)}, arg.source_loc);
+            if (sig->params.empty()) {
+                throw UnexpectedArgument(1, TypeInfo{std::make_shared<Signature>(signature)}, source_loc);
             }
             // next param
-            const auto& sig_type = params[i++];
+            const auto& sig_type = sig->params[0];
+            const auto& call_type = c_sig.params[0];
             if (!sig_type.is_generic()) {
                 // resolve arg if it's a type var and the signature has a known type in its place
-                if (arg.type_info.is_generic()) {
-                    specialize_arg(arg.type_info, sig_type,
+                if (call_type.is_generic()) {
+                    specialize_arg(call_type, sig_type,  // NOLINT, args swapped intentionally
                                    param_type_args,
-                                   [i, &arg](const TypeInfo& exp, const TypeInfo& got) {
-                                       throw UnexpectedArgumentType(i, exp, got, arg.source_loc);
-                                   });
+                                   [](const TypeInfo& exp, const TypeInfo& got) {});
                 }
             }
         }

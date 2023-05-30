@@ -705,6 +705,7 @@ private:
     {
         SignaturePtr sig;
         const TypeArgs call_type_args = specialize_signature(signature, m_call_sig);
+        v.wrapped_execs = 0;
         for (const CallSignature& call_sig : m_call_sig | reverse) {
             if (!sig)
                 sig = std::make_shared<Signature>(*signature);

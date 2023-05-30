@@ -621,6 +621,8 @@ private:
                 if (m.is_coerce()) {
                     // Update type_info of the coerced literal argument
                     m_cast_type = sig_param;
+                    auto orig_call_sig = std::move(m_call_sig);
+                    m_call_sig.clear();
                     auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
                     if (tuple && !tuple->items.empty())
                         tuple->items[i]->apply(*this);
@@ -628,6 +630,7 @@ private:
                         assert(i == 0);
                         v.arg->apply(*this);
                     }
+                    m_call_sig = std::move(orig_call_sig);
                 }
                 if (sig_param.is_callable()) {
                     // resolve overload in case the arg is a function that was specialized
