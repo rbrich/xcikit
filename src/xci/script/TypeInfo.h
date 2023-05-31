@@ -258,25 +258,25 @@ private:
 
 struct Signature {
     std::vector<TypeInfo> nonlocals;
-    std::vector<TypeInfo> params;
+    TypeInfo param_type;
     TypeInfo return_type;
 
     void add_nonlocal(TypeInfo&& ti) { nonlocals.emplace_back(ti); }
-    void add_parameter(TypeInfo&& ti) { params.emplace_back(ti); }
+    void set_parameter(TypeInfo ti) { param_type = std::move(ti); }
     void set_parameters(std::vector<TypeInfo>&& p);
     void set_return_type(TypeInfo ti) { return_type = std::move(ti); return_type.set_literal(false); }
 
+    size_t n_parameters() const;
+
     bool has_closure() const { return !nonlocals.empty(); }
 
-    bool has_generic_params() const;
-    bool has_generic_return_type() const;
+    bool has_generic_param() const { return param_type.is_generic(); }
+    bool has_generic_return_type() const { return return_type.is_generic(); }
     bool has_generic_nonlocals() const;
-    bool has_nonvoid_params() const;
-    bool has_any_generic() const { return has_generic_params() || has_generic_return_type() || has_generic_nonlocals(); }
+    bool has_nonvoid_param() const;
+    bool has_any_generic() const { return has_generic_param() || has_generic_return_type() || has_generic_nonlocals(); }
 
-    unsigned arity() const noexcept { return unsigned(params.size()); }
-
-    explicit operator bool() const { return !params.empty() || return_type; }
+    explicit operator bool() const { return param_type || return_type; }
 
     bool operator==(const Signature& rhs) const = default;
     bool operator!=(const Signature& rhs) const = default;
@@ -284,7 +284,7 @@ struct Signature {
     template <class Archive>
     void serialize(Archive& ar) {
         ar ("nonlocals", nonlocals)
-           ("params", params)
+           ("param_type", param_type)
            ("return_type", return_type);
     }
 };

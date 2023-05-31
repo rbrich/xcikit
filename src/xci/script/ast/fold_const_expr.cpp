@@ -104,8 +104,6 @@ public:
             assert(fnval.closure().empty());  // no values in closure
             auto& fn = *fnval.function();
             assert(!fn.has_nonlocals());
-            assert(fn.parameters().size() == 1 ||
-                   (arg.type_info().is_tuple() && arg.type_info().subtypes().size() == fn.parameters().size()));
             // push arg on stack
             m_machine.stack().push(arg);
             // run it
@@ -200,7 +198,7 @@ public:
         Function& func = module().get_scope(v.scope_index).function();
 
         // collapse block with single statement
-        if (!func.has_nonvoid_parameters() && v.body.statements.size() == 1) {
+        if (!func.has_nonvoid_parameter() && v.body.statements.size() == 1) {
             auto* ret = dynamic_cast<ast::Return*>(v.body.statements[0].get());
             assert(ret != nullptr);
             apply_and_fold(ret->expression);

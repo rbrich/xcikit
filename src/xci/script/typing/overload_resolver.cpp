@@ -51,18 +51,17 @@ TypeArgs specialize_signature(const SignaturePtr& signature, const std::vector<C
             throw UnexpectedArgument(arg_n, TypeInfo{signature}, call_sig.args[0].source_loc);
         }
         // skip blocks / functions without params
-        while (sig->params.empty() && sig->return_type.type() == Type::Function) {
+        while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
             sig = sig->return_type.signature_ptr();
         };
-        assert(sig->params.size() <= 1);
         const auto& c_sig = call_sig.signature();
         const auto& source_loc = call_sig.args[0].source_loc;
         {
-            if (sig->params.empty()) {
+            if (!sig->has_nonvoid_param() && c_sig.has_nonvoid_param()) {
                 throw UnexpectedArgument(arg_n, TypeInfo{signature}, source_loc);
             }
-            const auto& sig_type = sig->params[0];
-            const auto& call_type = c_sig.params[0];
+            const auto& sig_type = sig->param_type;
+            const auto& call_type = c_sig.param_type;
             if (sig_type.is_generic() && !call_type.is_unknown()) {
                 specialize_arg(sig_type, call_type,
                                call_type_args,
@@ -97,20 +96,19 @@ TypeArgs resolve_generic_args_to_signature(const Signature& signature,
             throw UnexpectedArgument(0, TypeInfo{std::make_shared<Signature>(signature)}, call_sig.args[0].source_loc);
         }
         // skip blocks / functions without params
-        while (sig->params.empty() && sig->return_type.type() == Type::Function) {
+        while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
             sig = &sig->return_type.signature();
         };
-        assert(sig->params.size() <= 1);
         const auto& c_sig = call_sig.signature();
         const auto& source_loc = call_sig.args[0].source_loc;
         {
             // check there are more params to consume
-            if (sig->params.empty()) {
+            if (!sig->has_nonvoid_param() && c_sig.has_nonvoid_param()) {
                 throw UnexpectedArgument(1, TypeInfo{std::make_shared<Signature>(signature)}, source_loc);
             }
             // next param
-            const auto& sig_type = sig->params[0];
-            const auto& call_type = c_sig.params[0];
+            const auto& sig_type = sig->param_type;
+            const auto& call_type = c_sig.param_type;
             if (!sig_type.is_generic()) {
                 // resolve arg if it's a type var and the signature has a known type in its place
                 if (call_type.is_generic()) {
@@ -140,35 +138,32 @@ TypeArgs resolve_instance_types(const Signature& signature, const std::vector<Ca
             throw UnexpectedArgument(i_arg, TypeInfo{std::make_shared<Signature>(signature)}, call_sig.args[0].source_loc);
         }
         // skip blocks / functions without params
-        while (sig->params.empty() && sig->return_type.type() == Type::Function) {
+        while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
             sig = &sig->return_type.signature();
         };
         // resolve args
-        assert(sig->params.size() <= 1);
         const auto& c_sig = call_sig.signature();
         const auto& source_loc = call_sig.args[0].source_loc;
         {
             i_arg += 1;
             // check there are more params to consume
-            if (sig->params.empty()) {
+            if (!sig->has_nonvoid_param() && c_sig.has_nonvoid_param()) {
                 // unexpected argument
                 throw UnexpectedArgument(i_arg, TypeInfo{std::make_shared<Signature>(signature)}, source_loc);
             }
             // resolve T (only from original signature)
-            const auto& sig_type = sig->params[0];
-            const auto& call_type = c_sig.params[0];
+            const auto& sig_type = sig->param_type;
+            const auto& call_type = c_sig.param_type;
 
             // check type of next param
             const auto m = match_type(call_type, sig_type);
             if (!m)
-                throw UnexpectedArgumentType(i_arg, sig_type,
-                        call_type, source_loc);
+                throw UnexpectedArgumentType(i_arg, sig_type, call_type, source_loc);
 
             auto arg_type = call_type.effective_type();
             specialize_arg(sig_type, arg_type, res,
                     [i_arg, &source_loc](const TypeInfo& exp, const TypeInfo& got) {
-                        throw UnexpectedArgumentType(i_arg, exp, got,
-                            source_loc);
+                        throw UnexpectedArgumentType(i_arg, exp, got, source_loc);
                     });
         }
     }
@@ -202,31 +197,18 @@ MatchScore match_signature(const Signature& signature,
             return MatchScore::mismatch();
         }
         // skip blocks / functions without params
-        while (sig->params.empty() && sig->return_type.type() == Type::Function) {
+        while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
             sig = &sig->return_type.signature();
         };
-        assert(sig->params.size() <= 1);
         const auto& c_sig = call_sig.signature();
-        size_t i = 0;
-        if (!call_sig.args.empty()) {
-            // check there are more params to consume
-            if (sig->params.empty()) {
-                // unexpected argument
-                return MatchScore::mismatch();
-            }
+        {
             // check type of next param
-            const auto& sig_type = sig->params[0];
-            assert(c_sig.params.size() == 1);
-            const auto& call_type = c_sig.params[0];
+            const auto& sig_type = sig->param_type;
+            const auto& call_type = c_sig.param_type;
             auto m = match_type(call_type, sig_type);
             if (!m)
                 return MatchScore::mismatch();
             res += m;
-            ++i;
-        }
-        if (sig->params.size() == i) {
-            // increase score for full match - whole signature matches the call args
-            res.add_exact();
         }
         // check return type
         if (call_sig.return_type) {
@@ -236,7 +218,7 @@ MatchScore match_signature(const Signature& signature,
             res += m;
         }
     }
-    if ((call_sig_stack.empty() || call_sig_stack.back().empty()) && signature.params.empty())
+    if ((call_sig_stack.empty() || call_sig_stack.back().empty()) && signature.param_type.is_void())
         res += MatchScore::exact();  // void param + no call args
     if (cast_type) {
         // increase score if casting target type matches return type,

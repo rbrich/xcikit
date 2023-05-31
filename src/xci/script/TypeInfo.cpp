@@ -124,18 +124,14 @@ void TypeInfo::replace_var(SymbolPointer var, const TypeInfo& ti)
             if (generic_var() == var)
                 *this = ti;
             break;
-        case Type::Function: {
-            SignaturePtr sig_ptr;
+        case Type::Function:
             if (signature_ptr().use_count() > 1) {
                 // multiple users - make copy of the signature
                 m_info = std::make_shared<Signature>(signature());
             }
-            for (auto& prm : signature().params) {
-                prm.replace_var(var, ti);
-            }
+            signature().param_type.replace_var(var, ti);
             signature().return_type.replace_var(var, ti);
             break;
-        }
         case Type::Tuple:
         case Type::List:
             assert(std::holds_alternative<Subtypes>(m_info));
@@ -209,7 +205,7 @@ TypeInfo& TypeInfo::operator=(TypeInfo&& other) noexcept
 
 const TypeInfo& TypeInfo::effective_type() const
 {
-    if (is_callable() && !signature().has_nonvoid_params())
+    if (is_callable() && !signature().has_nonvoid_param())
         return signature().return_type.effective_type();
     return *this;
 }
@@ -425,25 +421,23 @@ std::string TypeInfo::name() const
 void Signature::set_parameters(std::vector<TypeInfo>&& p)
 {
     if (p.empty())
-        params.emplace_back(ti_void());
+        param_type = ti_void();
     else if (p.size() == 1)
-        params.emplace_back(std::move(p.front()));
+        param_type = std::move(p.front());
     else
-        params.emplace_back(TypeInfo(std::move(p)));
+        param_type = TypeInfo(std::move(p));
 }
 
 
-bool Signature::has_generic_params() const
+size_t Signature::n_parameters() const
 {
-    return ranges::any_of(params, [](const TypeInfo& type_info) {
-        return type_info.is_generic();
-    });
-}
-
-
-bool Signature::has_generic_return_type() const
-{
-    return return_type.is_generic();
+    if (param_type.is_void())
+        return 0;
+    if (param_type.is_tuple())
+        return param_type.subtypes().size();
+    if (param_type.is_struct())
+        return param_type.struct_items().size();
+    return 1;
 }
 
 
@@ -455,11 +449,16 @@ bool Signature::has_generic_nonlocals() const
 }
 
 
-bool Signature::has_nonvoid_params() const
+bool Signature::has_nonvoid_param() const
 {
-    return ranges::any_of(params, [](const TypeInfo& type_info) {
-        return !type_info.is_void();
-    });
+    // Struct can have single Void item
+    if (param_type.is_struct()) {
+        const auto& items = param_type.struct_items();
+        if (items.size() == 1 && items.front().second.is_void())
+            return false;
+    }
+    // Otherwise, only empty Tuple is considered Void
+    return !param_type.is_void();
 }
 
 

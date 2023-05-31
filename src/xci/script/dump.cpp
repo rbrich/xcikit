@@ -1076,14 +1076,7 @@ std::ostream& operator<<(std::ostream& os, const Signature& v)
     }
     const bool orig_parenthesize_fun_types = stream_options(os).parenthesize_fun_types;
     stream_options(os).parenthesize_fun_types = true;
-    if (!v.params.empty()) {
-        for (const auto& ti : v.params) {
-            os << ti << ' ';
-        }
-    } else {
-        os << "() ";
-    }
-    os << "-> ";
+    os << v.param_type << ' ' << "-> ";
     stream_options(os).parenthesize_fun_types = orig_parenthesize_fun_types;
     return os << v.return_type;
 }

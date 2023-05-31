@@ -58,11 +58,11 @@ public:
     SymbolTable& symtab() const { return *m_symtab; }
 
     // parameters
-    void add_parameter(std::string name, TypeInfo&& type_info);
-    bool has_nonvoid_parameters() const { return m_signature->has_nonvoid_params(); }
+    void set_parameter(std::string name, TypeInfo&& type_info);
+    bool has_nonvoid_parameter() const { return m_signature->has_nonvoid_param(); }
+    const TypeInfo& parameter() const { return m_signature->param_type; }
     const TypeInfo& parameter(Index idx) const;
-    const std::vector<TypeInfo>& parameters() const { return m_signature->params; }
-    size_t raw_size_of_parameters() const;
+    size_t raw_size_of_parameter() const { return parameter().size(); }
     size_t parameter_offset(Index idx) const;
 
     // function signature
@@ -99,7 +99,7 @@ public:
 
     // true if this function should be generic (i.e. signature contains a type variable)
     bool has_any_generic() const { return m_signature->has_any_generic(); }
-    bool has_generic_params() const { return m_signature->has_generic_params(); }
+    bool has_generic_param() const { return m_signature->has_generic_param(); }
     bool has_generic_return_type() const { return m_signature->has_generic_return_type(); }
     size_t num_type_params() const;
 

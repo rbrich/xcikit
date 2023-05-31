@@ -328,7 +328,7 @@ public:
     void visit(ast::Call& v) override {
         if (v.definition) {
             Function& fn = v.definition->symbol().get_function(m_scope);
-            if (fn.signature().params.empty())
+            if (fn.signature().param_type.is_void())
                 m_type_info = fn.signature().return_type;
             else
                 m_type_info = TypeInfo{fn.signature_ptr()};
@@ -381,6 +381,7 @@ public:
                 // Not really calling, just defining, e.g. `f = compose u v`
                 // Keep the return type as is, making it `() -> <lambda type>`
                 auto sig = std::make_shared<Signature>();
+                sig->set_parameter(ti_void());
                 sig->set_return_type(std::move(return_type));
                 v.ti = TypeInfo{sig};
             }
@@ -448,9 +449,9 @@ public:
         assert(m_value_type.is_callable());
         auto enter_sig = m_value_type.signature();
         // re-resolve type of context (match actual struct type as found by resolving `with` function)
-        m_cast_type = enter_sig.params[0];
+        m_cast_type = enter_sig.param_type;
         v.context->apply(*this);
-        assert(m_value_type == enter_sig.params[0]);
+        assert(m_value_type == enter_sig.param_type);
         // lookup the leave function, it's arg type is same as enter functions return type
         v.leave_type = enter_sig.return_type.effective_type();
         m_call_sig.emplace_back().add_arg({v.leave_type, v.context->source_loc});
@@ -496,7 +497,7 @@ public:
                 }
                 m_value_type = TypeInfo{fn.signature_ptr()};
             }
-        } else if (fn.has_generic_params() || scope.has_unresolved_type_params()) {
+        } else if (fn.has_generic_param() || scope.has_unresolved_type_params()) {
             if (!v.definition) {
                 // immediately called or returned generic function
                 // -> try to instantiate the specialization
@@ -607,19 +608,16 @@ private:
                 assert(!"unexpected return type");
             }
             // skip blocks / functions without params
-            while (sig->params.empty() && sig->return_type.type() == Type::Function) {
+            while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
                 sig = sig->return_type.signature_ptr();
                 ++v.wrapped_execs;
             };
-            assert(sig->params.size() == 1);
             const auto& c_sig = call_sig.signature();
             const auto& source_loc = call_sig.args[0].source_loc;
             {
-                // check there are more params to consume
-                assert(!sig->params.empty());  // checked by specialize_signature() above
                 // check type of next param
-                const auto& sig_type = sig->params[0];
-                const auto& call_type = c_sig.params[0];
+                const auto& sig_type = sig->param_type;
+                const auto& call_type = c_sig.param_type;
                 const auto m = match_type(call_type, sig_type);
                 if (!m)
                     throw UnexpectedArgumentType(1, sig_type, call_type, source_loc);
@@ -656,6 +654,7 @@ private:
                     }
                 }
             }
+            assert(0 <= sig->n_parameters());
         }
         auto res = sig->return_type;
         resolve_generic_type(res, call_type_args);
@@ -771,7 +770,7 @@ private:
         if (!generic_fn.is_generic() || !(generic_fn.has_any_generic() || generic_scope.has_unresolved_type_params()))
             return {};  // not generic, nothing to specialize
         size_t n_call_args = m_call_sig.empty()? 0 : m_call_sig.back().n_args();
-        if (generic_fn.signature().params.size() > n_call_args && generic_fn.signature().has_nonvoid_params())
+        if (generic_fn.signature().n_parameters() > n_call_args && generic_fn.signature().has_nonvoid_param())
             return {};  // not enough call args
         if (!function().is_specialized() && type_args.empty()
             && (!scope.parent()->has_function() || !scope.parent()->function().is_specialized()))

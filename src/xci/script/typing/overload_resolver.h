@@ -34,14 +34,13 @@ struct CallSignature {
 
     void load_from(const Signature& sig, const SourceLocation& source_loc) {
         args.clear();
-        if (!sig.has_nonvoid_params()) {
+        if (!sig.has_nonvoid_param()) {
             args.push_back({ti_void(), source_loc});
-        } else if (sig.params.size() == 1 && sig.params[0].is_tuple()) {
-            for (const auto& p : sig.params[0].subtypes())
+        } else if (sig.param_type.is_tuple()) {
+            for (const auto& p : sig.param_type.subtypes())
                 args.push_back({p, source_loc});
         } else {
-            for (const auto& p : sig.params)
-                args.push_back({p, source_loc});
+            args.push_back({sig.param_type, source_loc});
         }
         return_type = sig.return_type;
     }

@@ -71,6 +71,7 @@ public:
             if (m_type_info.is_callable())
                 fn.signature() = m_type_info.signature();
             else {
+                fn.signature().set_parameter(ti_void());
                 fn.signature().set_return_type(m_type_info);
             }
         }
@@ -139,7 +140,7 @@ public:
     void visit(ast::Literal& v) override {
         TypeInfo declared {m_type_info};
         if (m_type_info.is_callable()) {
-            if (!m_type_info.signature().params.empty()) {
+            if (m_type_info.signature().has_nonvoid_param()) {
                 throw DefinitionTypeMismatch(m_type_info, v.value.type_info(), v.source_loc);
             }
             declared = m_type_info.signature().return_type;
@@ -317,18 +318,21 @@ public:
         if (specified_type.is_callable()) {
             if (m_type_info.signature().return_type.is_unknown() && specified_type.signature().return_type)
                 m_type_info.signature().set_return_type(specified_type.signature().return_type);
-            size_t idx = 0;
-            auto& params = m_type_info.signature().params;
-            for (const auto& sp : specified_type.signature().params) {
-                if (idx >= params.size())
-                    params.emplace_back(sp);
-                else if (params[idx].is_unknown_or_generic())
-                    params[idx] = sp;
-                // specified param must match now
-                if (params[idx] != sp)
-                    throw DefinitionParamTypeMismatch(idx, sp, params[idx], v.source_loc);
-                ++idx;
+            auto& param = m_type_info.signature().param_type;
+            const auto& spec = specified_type.signature().param_type;
+            if (param.is_unknown() || param.is_void())
+                param = spec;
+            if (param.is_tuple() && spec.is_tuple()) {
+                for (const auto& [i, sp] : spec.subtypes() | enumerate) {
+                    auto& item = param.subtypes()[i];
+                    if (item.is_unknown_or_generic())
+                        item = sp;
+                }
             }
+            // specified param must match now
+            auto m = match_type(param, spec);
+            if (!m)
+                throw DefinitionParamTypeMismatch(1, spec, param, v.source_loc);
         }
 
         fn.set_signature(m_type_info.signature_ptr());
@@ -364,8 +368,7 @@ public:
                 m_type_info = ti_unknown();
             parameters.push_back(std::move(m_type_info));
         }
-        if (!t.params.empty())
-            signature->set_parameters(std::move(parameters));
+        signature->set_parameters(std::move(parameters));
         if (t.result_type)
             t.result_type->apply(*this);
         else

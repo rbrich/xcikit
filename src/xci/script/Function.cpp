@@ -40,26 +40,21 @@ Function::Function(Function&& rhs) noexcept
 }
 
 
-void Function::add_parameter(std::string name, TypeInfo&& type_info)
+void Function::set_parameter(std::string name, TypeInfo&& type_info)
 {
-    m_symtab->add({std::move(name), Symbol::Parameter, Index(parameters().size())});
-    signature().add_parameter(std::move(type_info));
+    m_symtab->add({std::move(name), Symbol::Parameter, no_index});
+    signature().set_parameter(std::move(type_info));
 }
 
 
 const TypeInfo& Function::parameter(Index idx) const
 {
     if (idx == no_index)
-        return m_signature->params[0];
-    assert(m_signature->params[0].is_tuple());
-    return m_signature->params[0].subtypes()[idx];
-}
-
-
-size_t Function::raw_size_of_parameters() const
-{
-    return std::accumulate(m_signature->params.begin(), m_signature->params.end(), size_t(0),
-               [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
+        return m_signature->param_type;
+    if (m_signature->param_type.is_struct())
+        return m_signature->param_type.struct_items()[idx].second;
+    assert(m_signature->param_type.is_tuple());
+    return m_signature->param_type.subtypes()[idx];
 }
 
 
@@ -67,9 +62,9 @@ size_t Function::parameter_offset(Index idx) const
 {
     if (idx == no_index)
         return 0;
-    assert(m_signature->params[0].is_tuple());
+    assert(m_signature->param_type.is_tuple());
     size_t ofs = 0;
-    for (const auto& ti : m_signature->params[0].subtypes()) {
+    for (const auto& ti : m_signature->param_type.subtypes()) {
         if (idx == 0)
             return ofs;
         ofs += ti.size();

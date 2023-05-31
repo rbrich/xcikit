@@ -1096,6 +1096,17 @@ TEST_CASE( "Modules", "[script][module]" )
 }
 
 
+TEST_CASE( "Format", "[script][std]")
+{
+    CHECK(interpret_std("to_string false") == R"("false")");
+    CHECK(interpret_std("to_string true") == R"("true")");
+    CHECK_THROWS_AS(interpret_std("to_string 1"), FunctionNotFound);  // not implemented
+    CHECK(interpret_std(R"(from_string<Bool> "false")") == "false");
+    CHECK(interpret_std(R"(from_string<Bool> "true")") == "true");
+    CHECK_THROWS_AS(interpret_std(R"(from_string<Int> "1")"), FunctionNotFound);  // not implemented
+}
+
+
 TEST_CASE( "Native to TypeInfo mapping", "[script][native]" )
 {
     CHECK(native::make_type_info<void>().is_void());

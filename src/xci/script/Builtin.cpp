@@ -59,6 +59,7 @@ const char* builtin::op_to_function_name(ast::Operator::Op op)
 
 BuiltinModule::BuiltinModule(ModuleManager& module_manager) : Module(module_manager, "builtin")
 {
+    get_main_function().signature().set_parameter(ti_void());
     get_main_function().signature().set_return_type(ti_void());
     get_main_function().set_code();
     symtab().add({"void", Symbol::Value, add_value(TypedValue{ti_void()})});

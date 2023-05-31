@@ -80,7 +80,7 @@ public:
         }
 
         auto skip = function().signature().return_type.effective_type().size();
-        auto drop = function().raw_size_of_parameters()
+        auto drop = function().raw_size_of_parameter()
                   + function().raw_size_of_nonlocals();
         if (drop > 0) {
             Stack::StackRel pos = skip;
@@ -91,13 +91,11 @@ public:
                 });
                 pos += ti.size();
             }
-            for (const auto& ti : function().parameters()) {
-                ti.foreach_heap_slot([this, pos](size_t offset) {
-                    // DEC_REF <addr in params>
-                    function().code().add_L1(Opcode::DecRef, pos + offset);
-                });
-                pos += ti.size();
-            }
+
+            function().parameter().foreach_heap_slot([this, pos](size_t offset) {
+                // DEC_REF <addr in params>
+                function().code().add_L1(Opcode::DecRef, pos + offset);
+            });
             // DROP <ret_value> <params + nonlocals>
             function().code().add_L2(Opcode::Drop, skip, drop);
         }
@@ -354,7 +352,7 @@ public:
                         // EXECUTE
                         code().add_opcode(Opcode::Execute);
                     } else {
-                        if (!m_callable && fn.has_nonvoid_parameters()) {
+                        if (!m_callable && fn.has_nonvoid_parameter()) {
                             // LOAD_FUNCTION <function_idx>
                             code().add_L1(Opcode::LoadFunction, scope.function_index());
                         } else {
@@ -532,7 +530,7 @@ public:
                 make_closure(scope);
                 // MAKE_CLOSURE <function_idx>
                 code().add_L1(Opcode::MakeClosure, scope.function_index());
-                if (!func.has_nonvoid_parameters()) {
+                if (!func.has_nonvoid_parameter()) {
                     // parameterless closure is executed immediately
                     // EXECUTE
                     code().add_opcode(Opcode::Execute);
@@ -540,7 +538,7 @@ public:
             }
         } else if (!v.definition) {
             // call the function only if it's inside a Call which applies all required parameters (might be zero)
-            if (v.call_args >= func.parameters().size()) {
+            if (v.call_args >= (func.has_nonvoid_parameter() ? 1 : 0)) {
                 // CALL0 <function_idx>
                 code().add_L1(Opcode::Call0, scope.function_index());
             } else {
@@ -622,7 +620,7 @@ private:
                         make_closure(subscope);
                         // MAKE_CLOSURE <function_idx>
                         code().add_L1(Opcode::MakeClosure, fn_idx);
-                    } else if (fn.has_nonvoid_parameters()) {
+                    } else if (fn.has_nonvoid_parameter()) {
                         // LOAD_FUNCTION <function_idx>
                         code().add_L1(Opcode::LoadFunction, fn_idx);
                     } else {
@@ -660,6 +658,7 @@ bool Compiler::compile(Scope& scope, ast::Module& ast)
     auto& func = scope.function();
     func.set_code();
     func.set_compile();
+    func.signature().set_parameter(ti_void());
     func.signature().set_return_type(ti_unknown());
     ast.body.symtab = &func.symtab();
 
