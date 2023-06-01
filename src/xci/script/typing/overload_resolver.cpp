@@ -48,14 +48,14 @@ TypeArgs specialize_signature(const SignaturePtr& signature, const std::vector<C
             // continue with specializing args of a returned function
             sig = sig->return_type.signature_ptr();
         } else {
-            throw UnexpectedArgument(arg_n, TypeInfo{signature}, call_sig.args[0].source_loc);
+            throw UnexpectedArgument(arg_n, TypeInfo{signature}, call_sig.arg.source_loc);
         }
         // skip blocks / functions without params
         while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
             sig = sig->return_type.signature_ptr();
         };
         const auto& c_sig = call_sig.signature();
-        const auto& source_loc = call_sig.args[0].source_loc;
+        const auto& source_loc = call_sig.arg.source_loc;
         {
             if (!sig->has_nonvoid_param() && c_sig.has_nonvoid_param()) {
                 throw UnexpectedArgument(arg_n, TypeInfo{signature}, source_loc);
@@ -93,14 +93,14 @@ TypeArgs resolve_generic_args_to_signature(const Signature& signature,
             // continue resolving params of returned function
             sig = &sig->return_type.signature();
         } else {
-            throw UnexpectedArgument(0, TypeInfo{std::make_shared<Signature>(signature)}, call_sig.args[0].source_loc);
+            throw UnexpectedArgument(0, TypeInfo{std::make_shared<Signature>(signature)}, call_sig.arg.source_loc);
         }
         // skip blocks / functions without params
         while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
             sig = &sig->return_type.signature();
         };
         const auto& c_sig = call_sig.signature();
-        const auto& source_loc = call_sig.args[0].source_loc;
+        const auto& source_loc = call_sig.arg.source_loc;
         {
             // check there are more params to consume
             if (!sig->has_nonvoid_param() && c_sig.has_nonvoid_param()) {
@@ -135,7 +135,7 @@ TypeArgs resolve_instance_types(const Signature& signature, const std::vector<Ca
             // collapse returned function, start consuming its params
             sig = &sig->return_type.signature();
         } else {
-            throw UnexpectedArgument(i_arg, TypeInfo{std::make_shared<Signature>(signature)}, call_sig.args[0].source_loc);
+            throw UnexpectedArgument(i_arg, TypeInfo{std::make_shared<Signature>(signature)}, call_sig.arg.source_loc);
         }
         // skip blocks / functions without params
         while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
@@ -143,7 +143,7 @@ TypeArgs resolve_instance_types(const Signature& signature, const std::vector<Ca
         };
         // resolve args
         const auto& c_sig = call_sig.signature();
-        const auto& source_loc = call_sig.args[0].source_loc;
+        const auto& source_loc = call_sig.arg.source_loc;
         {
             i_arg += 1;
             // check there are more params to consume

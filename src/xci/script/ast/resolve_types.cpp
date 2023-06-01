@@ -165,30 +165,33 @@ public:
         switch (sym.type()) {
             case Symbol::Instruction: {
                 assert(m_call_sig.size() <= 1);
-                std::vector<CallArg> args;
+                CallArg arg;
                 if (!m_call_sig.empty())
-                    args = std::move(m_call_sig.back().args);
+                    arg = std::move(m_call_sig.back().arg);
+                else
+                    arg.type_info = ti_void();
                 // the instructions are low-level, untyped - set return type to Unknown
                 m_value_type = {};
-                // check number of args - it depends on Opcode
+                // check type of args (they must be Int, TypeIndex or Byte)
+                auto check_type = [&arg](int i, const TypeInfo& ti) {
+                    const Type t = ti.type();
+                    if (t != Type::Unknown && t != Type::Byte && t != Type::Int32 && t != Type::TypeIndex)
+                        throw UnexpectedArgumentType(i, ti_int32(), ti, arg.source_loc);
+                };
+                // check args - their number and type depends on Opcode
                 auto opcode = (Opcode) sym.index();
                 if (opcode <= Opcode::NoArgLast) {
-                    if (args.size() != 0)
-                        throw UnexpectedArgumentCount(0, args.size(), v.source_loc);
+                    if (!arg.type_info.is_void())
+                        throw UnexpectedArgumentType(0, ti_void(), arg.type_info, v.source_loc);
                 } else if (opcode <= Opcode::L1ArgLast) {
-                    if (args.size() != 1)
-                        throw UnexpectedArgumentCount(1, args.size(), v.source_loc);
+                    check_type(1, arg.type_info);
                 } else {
                     assert(opcode <= Opcode::L2ArgLast);
-                    if (args.size() != 2)
-                        throw UnexpectedArgumentCount(2, args.size(), v.source_loc);
-                }
-                // check type of args (they must be Int, TypeIndex or Byte)
-                for (const auto&& [i, arg] : args | enumerate) {
-                    const Type t = arg.type_info.type();
-                    if (t != Type::Unknown && t != Type::Byte && t != Type::Int32 && t != Type::TypeIndex)
-                        throw UnexpectedArgumentType(i+1, ti_int32(),
-                                                     arg.type_info, arg.source_loc);
+                    if (!arg.type_info.is_tuple())
+                        throw UnexpectedArgumentType(1, ti_tuple(ti_int32(), ti_int32()),
+                                                     arg.type_info, v.source_loc);
+                    for (const auto& [i, ti] : arg.type_info.subtypes() | enumerate)
+                        check_type(i+1, ti);
                 }
                 // cleanup - args are now fully processed
                 m_call_sig.clear();
@@ -285,17 +288,15 @@ public:
             case Symbol::Module:
                 if (sym.index() == no_index) {
                     assert(m_call_sig.size() <= 1);
-                    std::vector<CallArg> args;
+                    CallArg arg;
                     if (!m_call_sig.empty())
-                        args = std::move(m_call_sig.back().args);
+                        arg = std::move(m_call_sig.back().arg);
+                    else
+                        arg.type_info = ti_void();
                     // builtin __module
-                    if (args.size() > 1)
-                        throw UnexpectedArgumentCount(1, args.size(), v.source_loc);
-                    if (args.size() == 1) {
+                    if (!arg.type_info.is_void() && arg.type_info.type() != Type::Int32) {
                         // the arg must be Int32 (index of imported module)
-                        const auto& arg = args.front();
-                        if (arg.type_info.type() != Type::Int32)
-                            throw UnexpectedArgumentType(1, ti_int32(), arg.type_info, arg.source_loc);
+                        throw UnexpectedArgumentType(1, ti_int32(), arg.type_info, arg.source_loc);
                     }
                     // cleanup - args are now fully processed
                     m_call_sig.clear();
@@ -349,9 +350,16 @@ public:
                 if (sym.index() == no_index) {
                     assert(m_call_sig.size() == 1);
                     // Intrinsics
-                    // __value - expects a single parameter
-                    if (m_call_sig.back().n_args() != 1)
-                        throw UnexpectedArgumentCount(1, m_call_sig.back().n_args(), v.source_loc);
+                    // __value - expects a single Int32 parameter
+                    CallArg arg;
+                    if (!m_call_sig.empty())
+                        arg = std::move(m_call_sig.back().arg);
+                    else
+                        arg.type_info = ti_void();
+                    if (arg.type_info.type() != Type::Int32) {
+                        // the arg must be Int32 (index of imported module)
+                        throw UnexpectedArgumentType(1, ti_int32(), arg.type_info, arg.source_loc);
+                    }
                     // cleanup - args are now fully processed
                     m_call_sig.clear();
                     // __value returns index (Int32)
@@ -384,31 +392,20 @@ public:
         TypeChecker type_check(std::move(m_type_info), std::move(m_cast_type));
 
         // resolve each argument
-        std::vector<CallArg> call_args;
+        CallArg call_arg;
         auto orig_call_sig = std::move(m_call_sig);
-        while (v.arg) {
+        if (v.arg) {
             m_call_sig.clear();
             v.arg->apply(*this);
             assert(v.arg->source_loc);
-            if (m_value_type.is_literal()) {
-                auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
-                if (tuple && !tuple->items.empty()) {
-                    assert(m_value_type.is_tuple());
-                    call_args.reserve(tuple->items.size());
-                    for (size_t i = 0; i != tuple->items.size(); ++i) {
-                        const auto& arg = tuple->items[i];
-                        call_args.push_back({m_value_type.subtypes()[i].effective_type(), arg->source_loc});
-                    }
-                    break;
-                }
-            }
-            call_args.push_back({m_value_type.effective_type(), v.arg->source_loc});
-            break;
+            call_arg = {m_value_type.effective_type(), v.arg->source_loc};
+        } else {
+            call_arg.type_info = ti_void();
         }
         // move args to m_call_args (note that m_call_args might be used
         // when evaluating each argument, so we cannot push to them above)
         m_call_sig = std::move(orig_call_sig);
-        m_call_sig.emplace_back().args = std::move(call_args);
+        m_call_sig.emplace_back().set_arg(std::move(call_arg));
         m_call_sig.back().set_return_type(std::move(type_check.eval_type()));
 
         // using resolved args, resolve the callable itself
@@ -416,7 +413,7 @@ public:
         v.callable->apply(*this);
 
         if (!m_value_type.is_callable() && !m_value_type.is_unknown() && !m_call_sig.empty()) {
-            throw UnexpectedArgument(1, m_value_type, m_call_sig.back().args[0].source_loc);
+            throw UnexpectedArgument(1, m_value_type, m_call_sig.back().arg.source_loc);
         }
 
         if (m_value_type.is_callable()) {
@@ -479,7 +476,7 @@ public:
         v.context->apply(*this);
         // lookup the enter function with the resolved context type
         assert(m_call_sig.empty());
-        m_call_sig.emplace_back().add_arg({m_value_type, v.context->source_loc});
+        m_call_sig.emplace_back().set_arg({m_value_type, v.context->source_loc});
         m_call_sig.back().set_return_type(ti_unknown());
         v.enter_function.apply(*this);
         m_call_sig.clear();
@@ -491,7 +488,7 @@ public:
         assert(m_value_type == enter_sig.param_type);
         // lookup the leave function, it's arg type is same as enter functions return type
         v.leave_type = enter_sig.return_type.effective_type();
-        m_call_sig.emplace_back().add_arg({v.leave_type, v.context->source_loc});
+        m_call_sig.emplace_back().set_arg({v.leave_type, v.context->source_loc});
         m_call_sig.back().set_return_type(ti_void());
         v.leave_function.apply(*this);
         m_call_sig.clear();
@@ -509,7 +506,7 @@ public:
         Function& fn = scope.function();
 
         m_value_type = TypeInfo{fn.signature_ptr()};
-        v.call_args = m_call_sig.empty()? 0 : m_call_sig.back().n_args();
+        v.call_arg = !m_call_sig.empty();
 
         if (fn.has_generic_param()) {
             resolve_types(scope, v.body);
@@ -553,7 +550,7 @@ public:
             return;
         }
         // lookup the cast function with the resolved arg/return types
-        m_call_sig.emplace_back().add_arg({m_value_type, v.expression->source_loc});
+        m_call_sig.emplace_back().set_arg({m_value_type, v.expression->source_loc});
         m_call_sig.back().set_return_type(v.to_type);
         v.cast_function->apply(*this);
         // set the effective type of the Cast expression and clean the call types
@@ -704,7 +701,7 @@ private:
         }
     }
 
-    /// Resolve return type after applying call_args
+    /// Resolve return type after applying m_call_sig
     // FIXME: share with resolve_spec
     TypeInfo resolve_return_type_from_call_args(const SignaturePtr& signature, ast::Call& v)
     {
@@ -729,7 +726,7 @@ private:
                 ++v.wrapped_execs;
             };
             const auto& c_sig = call_sig.signature();
-            const auto& source_loc = call_sig.args[0].source_loc;
+            const auto& source_loc = call_sig.arg.source_loc;
             {
                 // check type of next param
                 const auto& sig_type = sig->param_type;
@@ -771,7 +768,6 @@ private:
                     }
                 }
             }
-            assert(0 <= sig->n_parameters());
         }
         auto res = sig->return_type;
         resolve_generic_type(res, call_type_args);

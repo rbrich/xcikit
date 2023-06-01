@@ -538,7 +538,7 @@ public:
             }
         } else if (!v.definition) {
             // call the function only if it's inside a Call which applies all required parameters (might be zero)
-            if (v.call_args >= (func.has_nonvoid_parameter() ? 1 : 0)) {
+            if (v.call_arg >= func.has_nonvoid_parameter()) {
                 // CALL0 <function_idx>
                 code().add_L1(Opcode::Call0, scope.function_index());
             } else {

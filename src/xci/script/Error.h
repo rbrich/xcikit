@@ -148,13 +148,6 @@ struct UnknownTypeName : public ScriptError {
 };
 
 
-struct UnexpectedArgumentCount : public ScriptError {
-    explicit UnexpectedArgumentCount(size_t exp, size_t got, const SourceLocation& loc)
-            : ScriptError(fmt::format("function expects {} args, called with {} args",
-                    exp, got), loc) {}
-};
-
-
 struct UnexpectedArgument : public ScriptError {
     explicit UnexpectedArgument(size_t num, const TypeInfo& ftype, const SourceLocation& loc);
 };

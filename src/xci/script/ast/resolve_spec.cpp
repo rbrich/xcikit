@@ -337,31 +337,20 @@ public:
         TypeChecker type_check(std::move(m_type_info), std::move(m_cast_type));
 
         // resolve each argument
-        std::vector<CallArg> call_args;
+        CallArg call_arg;
         auto orig_call_sig = std::move(m_call_sig);
-        while (v.arg) {
+        if (v.arg) {
             m_call_sig.clear();
             v.arg->apply(*this);
             assert(v.arg->source_loc);
-            if (m_value_type.is_literal()) {
-                auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
-                if (tuple && !tuple->items.empty()) {
-                    assert(m_value_type.is_tuple());
-                    call_args.reserve(tuple->items.size());
-                    for (size_t i = 0; i != tuple->items.size(); ++i) {
-                        const auto& arg = tuple->items[i];
-                        call_args.push_back({m_value_type.subtypes()[i].effective_type(), arg->source_loc});
-                    }
-                    break;
-                }
-            }
-            call_args.push_back({m_value_type.effective_type(), v.arg->source_loc});
-            break;
+            call_arg = {m_value_type.effective_type(), v.arg->source_loc};
+        } else {
+            call_arg.type_info = ti_void();
         }
         // move args to m_call_args (note that m_call_args might be used
         // when evaluating each argument, so we cannot push to them above)
         m_call_sig = std::move(orig_call_sig);
-        m_call_sig.emplace_back().args = std::move(call_args);
+        m_call_sig.emplace_back().set_arg(std::move(call_arg));
         m_call_sig.back().set_return_type(std::move(type_check.eval_type()));
 
         // using resolved args, resolve the callable itself
@@ -389,25 +378,21 @@ public:
 
         // Second pass of args, now with resolved types
         // (if a generic function was passed in args, it can be specialized now)
-        if (m_call_sig.empty())
-            call_args.clear();
-        else
-            call_args = std::move(m_call_sig.back().args);
-        unsigned i = 0;
-        if (v.arg && !call_args.empty()) {
-            if (call_args.size() > 1) {
+        const auto call_ti = m_call_sig.empty() ? ti_void() : std::move(m_call_sig.back().arg.type_info);
+        if (v.arg && !call_ti.is_void()) {
+            if (call_ti.is_tuple()) {
                 auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
                 assert(tuple && !tuple->items.empty());
+                unsigned i = 0;
                 for (auto& arg : tuple->items) {
-                    auto call_ti = std::move(call_args[i++].type_info);
-                    if (call_ti.is_callable()) {
+                    auto call_item = call_ti.subtypes()[i++];
+                    if (call_item.is_callable()) {
                         m_call_sig.clear();
-                        m_call_sig.emplace_back().load_from(call_ti.signature(), arg->source_loc);
+                        m_call_sig.emplace_back().load_from(call_item.signature(), arg->source_loc);
                         arg->apply(*this);
                     }
                 }
             } else {
-                auto call_ti = std::move(call_args[0].type_info);
                 if (call_ti.is_callable()) {
                     m_call_sig.clear();
                     m_call_sig.emplace_back().load_from(call_ti.signature(), v.arg->source_loc);
@@ -442,7 +427,7 @@ public:
         v.context->apply(*this);
         // lookup the enter function with the resolved context type
         assert(m_call_sig.empty());
-        m_call_sig.emplace_back().add_arg({m_value_type, v.context->source_loc});
+        m_call_sig.emplace_back().set_arg({m_value_type, v.context->source_loc});
         m_call_sig.back().set_return_type(ti_unknown());
         v.enter_function.apply(*this);
         m_call_sig.clear();
@@ -454,7 +439,7 @@ public:
         assert(m_value_type == enter_sig.param_type);
         // lookup the leave function, it's arg type is same as enter functions return type
         v.leave_type = enter_sig.return_type.effective_type();
-        m_call_sig.emplace_back().add_arg({v.leave_type, v.context->source_loc});
+        m_call_sig.emplace_back().set_arg({v.leave_type, v.context->source_loc});
         m_call_sig.back().set_return_type(ti_void());
         v.leave_function.apply(*this);
         m_call_sig.clear();
@@ -552,7 +537,7 @@ public:
             return;
         }
         // lookup the cast function with the resolved arg/return types
-        m_call_sig.emplace_back().add_arg({m_value_type, v.expression->source_loc});
+        m_call_sig.emplace_back().set_arg({m_value_type, v.expression->source_loc});
         m_call_sig.back().set_return_type(v.to_type);
         v.cast_function->apply(*this);
         // set the effective type of the Cast expression and clean the call types
@@ -589,7 +574,7 @@ private:
             throw UnexpectedReturnType(sig.return_type, deduced);
     }
 
-    /// Resolve return type after applying call_args
+    /// Resolve return type after applying m_call_sig
     TypeInfo resolve_return_type_from_call_args(const SignaturePtr& signature, ast::Call& v)
     {
         SignaturePtr sig;
@@ -613,7 +598,7 @@ private:
                 ++v.wrapped_execs;
             };
             const auto& c_sig = call_sig.signature();
-            const auto& source_loc = call_sig.args[0].source_loc;
+            const auto& source_loc = call_sig.arg.source_loc;
             {
                 // check type of next param
                 const auto& sig_type = sig->param_type;
@@ -654,7 +639,6 @@ private:
                     }
                 }
             }
-            assert(0 <= sig->n_parameters());
         }
         auto res = sig->return_type;
         resolve_generic_type(res, call_type_args);
@@ -769,8 +753,7 @@ private:
             return {};  // already specialized
         if (!generic_fn.is_generic() || !(generic_fn.has_any_generic() || generic_scope.has_unresolved_type_params()))
             return {};  // not generic, nothing to specialize
-        size_t n_call_args = m_call_sig.empty()? 0 : m_call_sig.back().n_args();
-        if (generic_fn.signature().n_parameters() > n_call_args && generic_fn.signature().has_nonvoid_param())
+        if (generic_fn.signature().has_nonvoid_param() > !m_call_sig.empty())
             return {};  // not enough call args
         if (!function().is_specialized() && type_args.empty()
             && (!scope.parent()->has_function() || !scope.parent()->function().is_specialized()))
@@ -778,15 +761,14 @@ private:
             // when not specializing the parent function...
             if (std::all_of(m_call_sig.cbegin(), m_call_sig.cend(),
                     [](const CallSignature& sig) {
-                        return std::all_of(sig.args.begin(), sig.args.end(), [](const CallArg& arg) {
-                                if (arg.type_info.is_tuple() && !arg.type_info.is_void())
-                                    return std::all_of(arg.type_info.subtypes().begin(), arg.type_info.subtypes().end(),
-                                                       [](const TypeInfo& ti) {
-                                                           return ti.is_generic();
-                                                       });
-                                else
-                                    return arg.type_info.is_generic();
-                           });
+                        const CallArg& arg = sig.arg;
+                        if (arg.type_info.is_tuple() && !arg.type_info.is_void())
+                            return std::all_of(arg.type_info.subtypes().begin(), arg.type_info.subtypes().end(),
+                                               [](const TypeInfo& ti) {
+                                                   return ti.is_generic();
+                                               });
+                        else
+                            return arg.type_info.is_generic();
                     }))
                 return {};  // do not specialize with generic args
         }

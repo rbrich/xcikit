@@ -266,8 +266,6 @@ struct Signature {
     void set_parameters(std::vector<TypeInfo>&& p);
     void set_return_type(TypeInfo ti) { return_type = std::move(ti); return_type.set_literal(false); }
 
-    size_t n_parameters() const;
-
     bool has_closure() const { return !nonlocals.empty(); }
 
     bool has_generic_param() const { return param_type.is_generic(); }

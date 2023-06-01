@@ -502,7 +502,7 @@ struct Function: public Expression {
     TypeInfo ti;
     SymbolPointer symbol;  // only for lambda
     Index scope_index = no_index;
-    size_t call_args = 0;  // number of args if the function is inside Call
+    bool call_arg = false;  // true if the function is inside Call with an arg
 };
 
 

@@ -1043,7 +1043,7 @@ TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
     CHECK(interpret("a=1; __module .__n_fn") == "2");  // `a` is counted as a function
     CHECK(interpret("__module 0 .__module_name") == R"("builtin")");  // module 0 is always builtin
     CHECK(interpret_std("__module 1 .name") == R"("std")");  // module 1 is usually std
-    CHECK_THROWS_AS(interpret("__module (1, 2)"), UnexpectedArgumentCount);
+    CHECK_THROWS_AS(interpret("__module (1, 2)"), UnexpectedArgumentType);
     CHECK_THROWS_AS(interpret("__module \"builtin\""), UnexpectedArgumentType); // see builtin __module_by_name
 }
 

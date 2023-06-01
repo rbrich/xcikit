@@ -59,7 +59,7 @@ std::unique_ptr<ast::Expression> Function::make_copy() const
     r->ti = ti;
     r->symbol = symbol;
     r->scope_index = scope_index;
-    r->call_args = call_args;
+    r->call_arg = call_arg;
     return r;
 }
 

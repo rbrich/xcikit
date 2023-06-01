@@ -429,18 +429,6 @@ void Signature::set_parameters(std::vector<TypeInfo>&& p)
 }
 
 
-size_t Signature::n_parameters() const
-{
-    if (param_type.is_void())
-        return 0;
-    if (param_type.is_tuple())
-        return param_type.subtypes().size();
-    if (param_type.is_struct())
-        return param_type.struct_items().size();
-    return 1;
-}
-
-
 bool Signature::has_generic_nonlocals() const
 {
     return ranges::any_of(nonlocals, [](const TypeInfo& type_info) {
