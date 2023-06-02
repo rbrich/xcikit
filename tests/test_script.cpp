@@ -669,6 +669,7 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret("call = fun<X,Y> f:(X->Y), x:X -> Y { f x }; ident = fun<A> a:A -> A { a }; call (ident, 42)") == "42");  // generic, explicitly-typed
     CHECK(interpret("call = fun<X,Y> f:(X->Y), x:X -> Y { f x }; ident = fun a { a }; call (ident, 42)") == "42");
     CHECK(interpret("call = fun f, x { f x }; ident = fun a { a }; call (ident, 42)") == "42");
+    CHECK_THROWS_AS(interpret_std("call = fun<X,Y> f:(X->Y), x:X -> Y { f x }; call (add, (1, 2))"), FunctionConflict);  // this could be resolved, but currently isn't
 
     // "Funarg problem" (upwards)
     auto def_succ = "succ = fun Int->Int { __value 1 .__load_static; __add 0x88 }; "s;

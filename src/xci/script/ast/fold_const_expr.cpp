@@ -9,14 +9,11 @@
 #include <xci/script/Module.h>
 #include <xci/script/Function.h>
 #include <xci/script/Machine.h>
-#include <range/v3/view/reverse.hpp>
 #include <optional>
 
 namespace xci::script {
 
-using ranges::cpp20::views::reverse;
 using std::unique_ptr;
-using std::make_unique;
 using std::optional;
 
 
@@ -114,7 +111,7 @@ public:
                 assert(m_machine.stack().size() == reti.size());
                 m_const_value->decref();  // fnval
                 m_const_value = m_machine.stack().pull_typed(reti);
-                m_collapsed = make_unique<ast::Literal>(*m_const_value);
+                m_collapsed = std::make_unique<ast::Literal>(*m_const_value);
             } else {
                 // backoff - can't process invocations in compile-time
                 m_const_value.reset();
@@ -233,14 +230,14 @@ public:
         // cast to Void?
         if (v.to_type.is_void()) {
             m_const_value = TypedValue(ti_void());
-            m_collapsed = make_unique<ast::Literal>(*m_const_value);
+            m_collapsed = std::make_unique<ast::Literal>(*m_const_value);
             return;
         }
         if (!m_const_value)
             return;
         // cast to the same type?
         if (m_const_value->type_info() == v.to_type) {
-            m_collapsed = make_unique<ast::Literal>(*m_const_value);
+            m_collapsed = std::make_unique<ast::Literal>(*m_const_value);
             return;
         }
         // FIXME: evaluate the actual (possibly user-defined) cast function
@@ -248,7 +245,7 @@ public:
         if (cast_result.cast_from(m_const_value->value())) {
             // fold the cast into value
             m_const_value = TypedValue(std::move(cast_result), v.to_type);
-            m_collapsed = make_unique<ast::Literal>(*m_const_value);
+            m_collapsed = std::make_unique<ast::Literal>(*m_const_value);
             return;
         }
         m_const_value.reset();

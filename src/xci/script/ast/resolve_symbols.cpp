@@ -17,7 +17,6 @@
 
 namespace xci::script {
 
-using std::make_unique;
 using ranges::views::enumerate;
 
 
@@ -265,7 +264,7 @@ public:
 
     void visit(ast::OpCall& v) override {
         assert(!v.right_tmp);
-        v.callable = make_unique<ast::Reference>(ast::Identifier{builtin::op_to_function_name(v.op.op), v.source_loc});
+        v.callable = std::make_unique<ast::Reference>(ast::Identifier{builtin::op_to_function_name(v.op.op), v.source_loc});
         visit(*static_cast<ast::Call*>(&v));
     }
 
@@ -324,7 +323,7 @@ public:
     void visit(ast::Cast& v) override {
         v.expression->apply(*this);
         v.type->apply(*this);
-        v.cast_function = make_unique<ast::Reference>(ast::Identifier{"cast"});
+        v.cast_function = std::make_unique<ast::Reference>(ast::Identifier{"cast"});
         v.cast_function->source_loc = v.source_loc;
         v.cast_function->apply(*this);
     }

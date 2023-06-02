@@ -279,7 +279,9 @@ public:
                                  << c.type.signature() << std::endl;
                 }
                 stringstream o_ftype;
-                o_ftype << v.identifier.name << ' ' << m_call_sig.back().signature();
+                o_ftype << v.identifier.name;
+                if (!m_call_sig.empty())
+                    o_ftype << ' ' << m_call_sig.back().signature();
                 if (conflict)
                     throw FunctionConflict(o_ftype.str(), o_candidates.str(), v.source_loc);
                 else
