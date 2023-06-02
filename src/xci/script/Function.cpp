@@ -40,13 +40,6 @@ Function::Function(Function&& rhs) noexcept
 }
 
 
-void Function::set_parameter(std::string name, TypeInfo&& type_info)
-{
-    m_symtab->add({std::move(name), Symbol::Parameter, no_index});
-    signature().set_parameter(std::move(type_info));
-}
-
-
 const TypeInfo& Function::parameter(Index idx) const
 {
     if (idx == no_index)

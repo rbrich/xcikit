@@ -58,7 +58,6 @@ public:
     SymbolTable& symtab() const { return *m_symtab; }
 
     // parameters
-    void set_parameter(std::string name, TypeInfo&& type_info);
     bool has_nonvoid_parameter() const { return m_signature->has_nonvoid_param(); }
     const TypeInfo& parameter() const { return m_signature->param_type; }
     const TypeInfo& parameter(Index idx) const;
@@ -322,12 +321,6 @@ public:
     bool has_nonlocals() const noexcept { return !m_nonlocals.empty(); }
     const std::vector<Nonlocal>& nonlocals() const { return m_nonlocals; }
     size_t nonlocal_raw_offset(Index index, const TypeInfo& ti) const;
-
-    struct SpecArg {
-        Index index;  // index from the respective Symbol::Parameter
-        SourceLocation source_loc;
-        SymbolPointer symptr;
-    };
 
     const TypeArgs& type_args() const { return m_type_args; }
     TypeArgs& type_args() { return m_type_args; }
