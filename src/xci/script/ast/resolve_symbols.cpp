@@ -358,10 +358,10 @@ public:
                 p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, par_idx});
             ++par_idx;
         }
-        if (!t.result_type && !m_instance)
-            t.result_type = std::make_unique<ast::TypeName>("$R");
-        if (t.result_type)
-            t.result_type->apply(*this);
+        if (!t.return_type && !m_instance)
+            t.return_type = std::make_unique<ast::TypeName>("$R");
+        if (t.return_type)
+            t.return_type->apply(*this);
     }
 
     void visit(ast::ListType& t) final {

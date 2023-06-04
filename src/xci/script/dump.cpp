@@ -317,8 +317,8 @@ std::ostream& operator<<(std::ostream& os, const FunctionType& v)
             os << put_indent << tp;
         for (const auto& prm : v.params)
             os << put_indent << prm;
-        if (v.result_type)
-            os << put_indent << "result: " << *v.result_type;
+        if (v.return_type)
+            os << put_indent << "result: " << *v.return_type;
         for (const auto& ctx : v.context) {
             os << put_indent << ctx;
         }
@@ -338,8 +338,8 @@ std::ostream& operator<<(std::ostream& os, const FunctionType& v)
                 os << prm << ' ';
             }
         }
-        if (v.result_type) {
-            os << "-> " << *v.result_type << " ";
+        if (v.return_type) {
+            os << "-> " << *v.return_type << " ";
         }
         if (!v.context.empty()) {
             os << "with (";
@@ -576,7 +576,7 @@ std::ostream& operator<<(std::ostream& os, const Function& v)
                   << put_indent << v.body
                   << less_indent;
     } else {
-        if (!v.type.params.empty() || v.type.result_type)
+        if (!v.type.params.empty() || v.type.return_type)
             os << "fun " << v.type;
         if (stream_options(os).multiline)
             return os << "{" << endl

@@ -278,7 +278,7 @@ struct FunctionType: public Type {
 
     std::vector<TypeName> type_params;  // declare type parameters of a generic function: <T,U>
     std::vector<Parameter> params;
-    std::unique_ptr<Type> result_type;
+    std::unique_ptr<Type> return_type;
     std::vector<TypeConstraint> context;
 };
 

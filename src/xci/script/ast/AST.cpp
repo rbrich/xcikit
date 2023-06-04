@@ -264,7 +264,7 @@ void FunctionType::copy_to(FunctionType& r) const
 {
     r.type_params = type_params;
     r.params = copy_vector(params);
-    r.result_type = copy(result_type);
+    r.return_type = copy(return_type);
     r.context = context;
 }
 

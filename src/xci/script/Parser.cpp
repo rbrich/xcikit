@@ -909,7 +909,7 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
 
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::FunctionType& ftype) {
-        ftype.result_type = std::move(type);
+        ftype.return_type = std::move(type);
     }
 
     template<typename Input>

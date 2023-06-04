@@ -369,8 +369,8 @@ public:
             parameters.push_back(std::move(m_type_info));
         }
         signature->set_parameters(std::move(parameters));
-        if (t.result_type)
-            t.result_type->apply(*this);
+        if (t.return_type)
+            t.return_type->apply(*this);
         else
             m_type_info = ti_unknown();
         signature->set_return_type(m_type_info);
