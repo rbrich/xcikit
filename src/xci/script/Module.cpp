@@ -150,6 +150,16 @@ Index Module::add_type(TypeInfo type_info)
 }
 
 
+void Module::update_type(Index index, TypeInfo type_info)
+{
+    // update possibly Unknown type with a concrete type
+    assert(!type_info.has_unknown());
+    assert(!type_info.has_generic());
+    assert(m_types[index] == type_info);  // it must differ only in Unknown fields
+    m_types[index] = type_info;
+}
+
+
 Index Module::find_type(const TypeInfo& type_info) const
 {
     assert(!type_info.has_generic());

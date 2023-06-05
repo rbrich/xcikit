@@ -383,7 +383,8 @@ public:
             if (!ok)
                 throw StructDuplicateKey(name, st.identifier.source_loc);
 
-            st.type->apply(*this);
+            if (st.type)
+                st.type->apply(*this);
             st.identifier.symbol = module().symtab().add({name, Symbol::StructItem, no_index});
         }
     }

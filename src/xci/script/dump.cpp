@@ -226,11 +226,15 @@ std::ostream& operator<<(std::ostream& os, const StructItem& v)
     if (stream_options(os).enable_tree) {
         os << "StructItem" << endl;
         os << more_indent
-           << put_indent << v.identifier
-           << put_indent << *v.type;
+           << put_indent << v.identifier;
+        if (v.type)
+           os << put_indent << *v.type;
         return os << less_indent;
     } else {
-        return os << v.identifier << ':' << *v.type;
+        os << v.identifier;
+        if (v.type)
+            os << ':' << *v.type;
+        return os;
     }
 }
 

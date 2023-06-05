@@ -398,12 +398,13 @@ public:
         m_type_def_index = no_index;
         TypeInfo::StructItems items;
         for (auto& st : t.subtypes) {
-            st.type->apply(*this);
+            if (st.type)
+                st.type->apply(*this);
             items.emplace_back(st.identifier.name, std::move(m_type_info));
         }
         m_type_info = TypeInfo{std::move(items)};
 
-        Index index = (type_def_index == no_index) ?
+        const Index index = (type_def_index == no_index) ?
                       module().add_type(m_type_info) : type_def_index;
         for (auto& st : t.subtypes) {
             st.identifier.symbol->set_index(index);

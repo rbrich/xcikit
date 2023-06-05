@@ -102,7 +102,7 @@ public:
     explicit TypeChecker(TypeInfo&& spec) : m_spec(std::move(spec)) {}
     TypeChecker(TypeInfo&& spec, TypeInfo&& cast) : m_spec(std::move(spec)), m_cast(std::move(cast)) {}
 
-    TypeInfo resolve(const TypeInfo& inferred, const SourceLocation& loc) const;
+    TypeInfo resolve(const TypeInfo& inferred, const SourceLocation& loc);
 
     void check_struct_item(const std::string& key, const TypeInfo& inferred, const SourceLocation& loc) const;
 

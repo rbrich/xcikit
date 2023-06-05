@@ -78,14 +78,14 @@ public:
     }
 
     void visit(ast::Tuple& v) override {
-        const TypeChecker type_check(TypeInfo(v.ti), std::move(m_cast_type));
+        TypeChecker type_check(TypeInfo(v.ti), std::move(m_cast_type));
         const auto& spec = type_check.eval_type();  // specified/cast type
-        const TypeInfo::Subtypes* cast_items = spec.is_tuple()? &spec.subtypes() : nullptr;
+        TypeInfo::Subtypes cast_items = spec.is_struct_or_tuple() ? spec.struct_or_tuple_subtypes() : TypeInfo::Subtypes{};
         // build TypeInfo from subtypes
         std::vector<TypeInfo> subtypes;
         subtypes.reserve(v.items.size());
         for (auto&& [i, item] : v.items | enumerate) {
-            m_cast_type = cast_items ? (*cast_items)[i] : TypeInfo{};
+            m_cast_type = !cast_items.empty() ? cast_items[i] : TypeInfo{};
             item->apply(*this);
             subtypes.push_back(m_value_type.effective_type());
         }

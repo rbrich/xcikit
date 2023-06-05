@@ -499,6 +499,11 @@ TEST_CASE( "Coercion", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret_std(struct_def + "get_age a"), FunctionNotFound);
     CHECK_THROWS_AS(interpret_std(struct_def + "get_age { (\"Luke\", 10) }"), FunctionNotFound);
     CHECK(interpret_std(struct_def + "get_age a:MyStruct") == "10");
+    // infer struct subtypes
+    CHECK(interpret("m:(a:Int, b:Int) = (1, 2); m") == "(a=1, b=2)");
+    CHECK(interpret("m:(a, b) = (1, 2); m") == "(a=1, b=2)");
+    CHECK(interpret("m:(a, b) = (1b, 2.0); m") == "(a=b'\\x01', b=2.0)");
+    CHECK_THROWS_AS(interpret("m:(a:Int, b:String) = (1.0, 2.0)"), DefinitionTypeMismatch);
 }
 
 

@@ -385,6 +385,16 @@ auto TypeInfo::struct_items() const -> const StructItems&
 }
 
 
+auto TypeInfo::struct_items() -> StructItems&
+{
+    if (m_type == Type::Named)
+        return named_type().type_info.struct_items();
+    assert(m_type == Type::Struct);
+    assert(std::holds_alternative<StructItems>(m_info));
+    return std::get<StructItems>(m_info);
+}
+
+
 const TypeInfo* TypeInfo::struct_item_by_name(const std::string& name) const
 {
     const auto& items = struct_items();
@@ -399,7 +409,7 @@ const TypeInfo* TypeInfo::struct_item_by_name(const std::string& name) const
 
 auto TypeInfo::struct_or_tuple_subtypes() const -> Subtypes
 {
-    if (m_type == Type::Tuple)
+    if (is_tuple())
         return subtypes();
     const auto& items = struct_items();
     Subtypes res;

@@ -48,6 +48,14 @@ public:
                                 dfn.expression->source_loc : dfn.variable.identifier.source_loc;
                 resolve_return_type(fn.signature(), m_value_type,
                                     dfn.symbol().get_scope(m_scope), source_loc);
+                // FIXME: another pass to save resolved types?
+                if (auto* t = dynamic_cast<ast::StructType*>(dfn.variable.type.get()); t) {
+                    // update struct type in module, which may contain Unknown subtypes
+                    if (!t->subtypes.empty()) {
+                        const Index index = t->subtypes.front().identifier.symbol->index();
+                        module().update_type(index, m_value_type);
+                    }
+                }
             }
         }
 
@@ -80,7 +88,7 @@ public:
     }
 
     void visit(ast::Tuple& v) override {
-        const TypeChecker type_check(std::move(v.ti), std::move(m_cast_type));
+        TypeChecker type_check(std::move(v.ti), std::move(m_cast_type));
         const auto& spec = type_check.eval_type();  // specified/cast type
         const TypeInfo::Subtypes* cast_items = spec.is_tuple()? &spec.subtypes() : nullptr;
         std::vector<TypeInfo> subtypes;

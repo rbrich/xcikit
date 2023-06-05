@@ -123,6 +123,7 @@ public:
     bool is_list() const { return underlying_type() == Type::List; }
     bool is_tuple() const { return underlying_type() == Type::Tuple; }
     bool is_struct() const { return underlying_type() == Type::Struct; }
+    bool is_struct_or_tuple() const { return is_struct() || is_tuple(); }
 
     bool has_unknown() const;  // deep check, e.g. ?, [?], Int->?
     bool has_generic() const;  // deep check, e.g. T, [T], Int->T
@@ -152,6 +153,7 @@ public:
     const Subtypes& subtypes() const;  // type = Tuple
     Subtypes& subtypes();              // type = Tuple
     const StructItems& struct_items() const;  // type = Struct
+    StructItems& struct_items();              // type = Struct
     const TypeInfo* struct_item_by_name(const std::string& name) const;  // type = Struct
     Subtypes struct_or_tuple_subtypes() const;  // type = Tuple | Struct
     const SignaturePtr& signature_ptr() const;  // type = Function
@@ -159,6 +161,7 @@ public:
     Signature& signature() { return *signature_ptr(); }
     const NamedTypePtr& named_type_ptr() const;   // type = Named
     const NamedType& named_type() const { return *named_type_ptr(); }
+    NamedType& named_type() { return *named_type_ptr(); }
     const TypeInfo& underlying() const;  // transparently get type_info of NamedType
     std::string name() const;
 

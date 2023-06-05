@@ -7,7 +7,11 @@
 #include "TypeChecker.h"
 #include <xci/script/Error.h>
 
+#include <range/v3/view/zip.hpp>
+
 namespace xci::script {
+
+using ranges::views::zip;
 
 
 MatchScore match_params(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& expected)
@@ -125,7 +129,7 @@ MatchScore match_tuple_to_struct(const TypeInfo& candidate, const TypeInfo& expe
 }
 
 
-auto TypeChecker::resolve(const TypeInfo& inferred, const SourceLocation& loc) const -> TypeInfo
+auto TypeChecker::resolve(const TypeInfo& inferred, const SourceLocation& loc) -> TypeInfo
 {
     // struct - resolve to either specified or cast type
     const TypeInfo& ti = eval_type();
@@ -145,7 +149,12 @@ auto TypeChecker::resolve(const TypeInfo& inferred, const SourceLocation& loc) c
         if (inferred.is_tuple()) {
             if (!match_tuple_to_struct(inferred, ti))
                 throw DefinitionTypeMismatch(ti, inferred, loc);
-            return ti;
+            TypeInfo res = std::move(eval_type());
+            for (auto&& [st_item, inf_subtype] : zip(res.struct_items(), inferred.subtypes())) {
+                if (st_item.second.is_unknown() && !st_item.second.is_generic())
+                    st_item.second = inf_subtype;
+            }
+            return res;
         }
         if (ti.struct_items().size() == 1) {
             // allow initializing a single-field struct with the value of first field (as there is no single-item tuple)

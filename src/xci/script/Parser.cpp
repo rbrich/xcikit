@@ -137,7 +137,7 @@ struct FunctionDecl: seq< opt<TypeParams>, SC, DeclParams, SC, opt<DeclResult>, 
 struct PlainTypeName: seq< TypeName, not_at<SC, one<','>> > {};  // not followed by comma (would be TupleType)
 struct ListType: if_must< one<'['>, SC, UnsafeType, SC, one<']'> > {};
 struct TupleType: seq< Type, plus<SC, one<','>, SC, Type> > {};
-struct StructItem: seq< Identifier, SC, one<':'>, SC, must<Type> > {};
+struct StructItem: seq< Identifier, opt<SC, one<':'>, SC, must<Type>> > {};
 struct StructType: seq< StructItem, star<SC, opt<one<','>>, NSC, StructItem>, opt<SC, one<','>> > {};
 struct ParenthesizedType: if_must< one<'('>, NSC, opt<UnsafeType, NSC>, one<')'> > {};
 struct UnsafeType: sor<FunctionType, PlainTypeName, TupleType, StructType, ParenthesizedType, ListType> {};   // usable in context where Type is already expected
