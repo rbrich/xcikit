@@ -279,7 +279,30 @@ Type TypeInfo::underlying_type() const
 }
 
 
-bool TypeInfo::is_generic() const
+bool TypeInfo::has_unknown() const
+{
+    switch (m_type) {
+        case Type::Unknown:
+            return true;
+        case Type::Function:
+            return signature_ptr()->has_any_unknown();
+        case Type::List:
+            return elem_type().has_unknown();
+        case Type::Tuple:
+            return ranges::any_of(subtypes(), [](const TypeInfo& type_info) {
+                return type_info.has_unknown();
+            });
+        case Type::Struct:
+            return ranges::any_of(struct_items(), [](const auto& item) {
+                return item.second.has_unknown();
+            });
+        default:
+            return false;
+    }
+}
+
+
+bool TypeInfo::has_generic() const
 {
     switch (m_type) {
         case Type::Unknown:
@@ -287,14 +310,14 @@ bool TypeInfo::is_generic() const
         case Type::Function:
             return signature_ptr()->has_any_generic();
         case Type::List:
-            return elem_type().is_generic();
+            return elem_type().has_generic();
         case Type::Tuple:
             return ranges::any_of(subtypes(), [](const TypeInfo& type_info) {
-                return type_info.is_generic();
+                return type_info.has_generic();
             });
         case Type::Struct:
             return ranges::any_of(struct_items(), [](const auto& item) {
-                return item.second.is_generic();
+                return item.second.has_generic();
             });
         default:
             return false;
@@ -432,7 +455,15 @@ void Signature::set_parameters(std::vector<TypeInfo>&& p)
 bool Signature::has_generic_nonlocals() const
 {
     return ranges::any_of(nonlocals, [](const TypeInfo& type_info) {
-        return type_info.is_generic();
+        return type_info.has_generic();
+    });
+}
+
+
+bool Signature::has_unknown_nonlocals() const
+{
+    return ranges::any_of(nonlocals, [](const TypeInfo& type_info) {
+        return type_info.has_unknown();
     });
 }
 

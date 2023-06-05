@@ -325,7 +325,7 @@ public:
             if (param.is_tuple() && spec.is_tuple()) {
                 for (const auto& [i, sp] : spec.subtypes() | enumerate) {
                     auto& item = param.subtypes()[i];
-                    if (item.is_unknown_or_generic())
+                    if (item.is_unknown())
                         item = sp;
                 }
             }

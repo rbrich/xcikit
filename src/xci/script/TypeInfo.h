@@ -114,6 +114,7 @@ public:
     Type type() const { return m_type; }
     Type underlying_type() const;
     bool is_unknown() const { return m_type == Type::Unknown; }
+    bool is_generic() const { return m_type == Type::Unknown && bool(generic_var()); }
     bool is_named() const { return m_type == Type::Named; }
     bool is_callable() const { return underlying_type() == Type::Function; }
     bool is_void() const { return is_tuple() && subtypes().empty(); }
@@ -123,8 +124,8 @@ public:
     bool is_tuple() const { return underlying_type() == Type::Tuple; }
     bool is_struct() const { return underlying_type() == Type::Struct; }
 
-    bool is_generic() const;  // deep check, e.g. T, [T], Int->T
-    bool is_unknown_or_generic() const { return is_unknown() || is_generic(); }
+    bool has_unknown() const;  // deep check, e.g. ?, [?], Int->?
+    bool has_generic() const;  // deep check, e.g. T, [T], Int->T
     void replace_var(SymbolPointer var, const TypeInfo& ti);
 
     bool is_literal() const { return m_is_literal; }
@@ -268,10 +269,12 @@ struct Signature {
 
     bool has_closure() const { return !nonlocals.empty(); }
 
-    bool has_generic_param() const { return param_type.is_generic(); }
-    bool has_generic_return_type() const { return return_type.is_generic(); }
+    bool has_generic_param() const { return param_type.has_generic(); }
+    bool has_generic_return_type() const { return return_type.has_generic(); }
     bool has_generic_nonlocals() const;
+    bool has_unknown_nonlocals() const;
     bool has_nonvoid_param() const;
+    bool has_any_unknown() const { return param_type.has_unknown() || return_type.has_unknown() || has_generic_nonlocals(); }
     bool has_any_generic() const { return has_generic_param() || has_generic_return_type() || has_generic_nonlocals(); }
 
     explicit operator bool() const { return param_type || return_type; }

@@ -113,9 +113,7 @@ public:
         }
         m_value_type = type_check.resolve(ti_list(std::move(elem_type)), v.source_loc);
         assert(m_value_type.is_list());
-        if (m_value_type.elem_type().is_unknown() && type_check.eval_type())
-            m_value_type = std::move(type_check.eval_type());
-        if (m_value_type.elem_type().is_unknown_or_generic())
+        if (m_value_type.elem_type().has_unknown())
             throw MissingExplicitType(v.source_loc);
         v.ti = m_value_type;
     }
@@ -286,7 +284,7 @@ public:
                             v.module = &module();
                             v.index = specialized.scope_index;
                             v.ti = std::move(specialized.type_info);
-                        } else if (v.ti.is_generic() && !fn.has_any_generic()) {
+                        } else if (v.ti.has_generic() && !fn.has_any_generic()) {
                             v.ti = TypeInfo(fn.signature_ptr());
                         }
                     }
@@ -306,7 +304,7 @@ public:
                 const auto* ref_scope = m_scope.find_parent_scope(&symtab);
                 if (ref_scope) {
                     const auto& sig_type = ref_scope->function().parameter(sym.index());
-                    if (sig_type.is_callable() && sig_type.is_generic()) {
+                    if (sig_type.is_callable() && sig_type.has_generic()) {
                         auto call_type_args = specialize_signature(sig_type.signature_ptr(), m_call_sig);
                         m_scope.type_args().add_from(call_type_args);
                     }
@@ -323,7 +321,7 @@ public:
         }
         m_value_type = v.ti;
         m_value_type.set_literal(false);
-        if (m_value_type.is_generic())
+        if (m_value_type.has_generic())
             resolve_generic_type(m_value_type, m_scope);
     }
 
@@ -405,7 +403,7 @@ public:
 
         m_call_sig.clear();
         m_value_type = v.ti;
-        if (m_value_type.is_generic())
+        if (m_value_type.has_generic())
             resolve_generic_type(m_value_type, m_scope);
     }
 
@@ -515,7 +513,7 @@ public:
             m_value_type = TypeInfo{fn.signature_ptr()};
         }
 
-        if (m_value_type.is_generic())
+        if (m_value_type.has_generic())
             resolve_generic_type(m_value_type, m_scope);
         m_value_type.set_literal(false);
         v.ti = m_value_type;
@@ -556,8 +554,8 @@ private:
     void resolve_return_type(Signature& sig, const TypeInfo& deduced,
                              Scope& scope, const SourceLocation& loc) const
     {
-        if (sig.return_type.is_unknown() || sig.return_type.is_generic()) {
-            if (deduced.is_unknown() && !deduced.is_generic()) {
+        if (sig.return_type.has_unknown()) {
+            if (deduced.is_unknown() && !deduced.has_generic()) {
                 if (!sig.has_any_generic())
                     throw MissingExplicitType(loc);
                 return;  // nothing to resolve
@@ -767,10 +765,10 @@ private:
                         if (arg.type_info.is_tuple() && !arg.type_info.is_void())
                             return std::all_of(arg.type_info.subtypes().begin(), arg.type_info.subtypes().end(),
                                                [](const TypeInfo& ti) {
-                                                   return ti.is_generic();
+                                                   return ti.has_generic();
                                                });
                         else
-                            return arg.type_info.is_generic();
+                            return arg.type_info.has_generic();
                     }))
                 return {};  // do not specialize with generic args
         }

@@ -131,7 +131,7 @@ Index Module::find_value(const TypedValue& value) const
 
 Index Module::add_type(TypeInfo type_info)
 {
-    assert(!type_info.is_generic());
+    assert(!type_info.has_generic());
 
     // lookup previous type
     auto idx = find_type(type_info);
@@ -152,7 +152,7 @@ Index Module::add_type(TypeInfo type_info)
 
 Index Module::find_type(const TypeInfo& type_info) const
 {
-    assert(!type_info.is_generic());
+    assert(!type_info.has_generic());
     auto it = std::find(m_types.begin(), m_types.end(), type_info);
     if (it == m_types.end())
         return no_index;

@@ -34,7 +34,7 @@ MatchScore match_type(const TypeInfo& candidate, const TypeInfo& expected)
     if (candidate.is_literal() && candidate.is_tuple() && expected.is_struct())
         return MatchScore::coerce() + match_tuple_to_struct(candidate, expected);
     if (candidate == expected) {
-        if (expected.is_unknown_or_generic() || candidate.is_unknown_or_generic())
+        if (expected.has_unknown() || candidate.has_unknown())
             return MatchScore::generic();
         else
             return MatchScore::exact();
@@ -158,7 +158,7 @@ auto TypeChecker::resolve(const TypeInfo& inferred, const SourceLocation& loc) c
         if (inferred.is_list()) {
             if (!match_type(inferred.elem_type(), ti.elem_type()))
                 throw DefinitionTypeMismatch(ti, inferred, loc);
-            if (ti.elem_type().is_unknown_or_generic() && !inferred.elem_type().is_unknown_or_generic())
+            if (ti.elem_type().has_unknown() && !inferred.elem_type().has_unknown())
                 return inferred;
             return ti;
         }

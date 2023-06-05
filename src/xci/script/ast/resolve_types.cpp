@@ -112,9 +112,7 @@ public:
         }
         m_value_type = type_check.resolve(ti_list(std::move(elem_type)), v.source_loc);
         assert(m_value_type.is_list());
-        if (m_value_type.elem_type().is_unknown() && type_check.eval_type())
-            m_value_type = std::move(type_check.eval_type());
-        if (m_value_type.elem_type().is_unknown() && !m_value_type.is_generic())
+        if (m_value_type.elem_type().has_unknown() && !m_value_type.has_generic())
             throw MissingExplicitType(v.source_loc);
         v.ti = m_value_type;
     }
@@ -569,8 +567,8 @@ private:
     void resolve_return_type(Signature& sig, const TypeInfo& deduced,
                              Scope& scope, const SourceLocation& loc) const
     {
-        if (sig.return_type.is_unknown() || sig.return_type.is_generic()) {
-            if (deduced.is_unknown() && !deduced.is_generic()) {
+        if (sig.return_type.has_unknown()) {
+            if (deduced.is_unknown() && !deduced.has_generic()) {
                 if (!sig.has_any_generic())
                     throw MissingExplicitType(loc);
                 return;  // nothing to resolve
@@ -656,7 +654,7 @@ private:
         auto [found, conflict] = find_best_candidate(candidates);
 
         if (found && !conflict) {
-            if (found->symptr->type() == Symbol::Function && found->type.is_generic()) {
+            if (found->symptr->type() == Symbol::Function && found->type.has_generic()) {
                 auto call_type_args = specialize_signature(found->type.signature_ptr(), m_call_sig, found->type_args);
                 if (!call_type_args.empty()) {
                     // resolve generic vars to received types

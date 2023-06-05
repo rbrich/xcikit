@@ -35,7 +35,7 @@ void get_type_arg(SymbolPointer var, TypeInfo& sig, const TypeArgs& type_args)
 {
     for (;;) {
         auto ti = type_args.get(var);
-        if (ti.is_unknown() && ti.generic_var()) {
+        if (ti.is_generic()) {
             sig = ti;
             var = ti.generic_var();
             continue;
@@ -86,7 +86,7 @@ void resolve_generic_type(TypeInfo& sig, const Scope& scope)
                 const Scope* scope_p = &scope;
                 for (;;) {
                     auto ti = scope_p->type_args().get(var);
-                    if (ti.is_unknown() && ti.generic_var()) {
+                    if (ti.is_generic()) {
                         sig = ti;
                         var = ti.generic_var();
                         scope_p = &scope;

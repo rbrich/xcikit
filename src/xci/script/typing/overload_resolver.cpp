@@ -62,7 +62,7 @@ TypeArgs specialize_signature(const SignaturePtr& signature, const std::vector<C
             }
             const auto& sig_type = sig->param_type;
             const auto& call_type = c_sig.param_type;
-            if (sig_type.is_generic() && !call_type.is_unknown()) {
+            if (sig_type.has_generic() && !call_type.is_unknown()) {
                 specialize_arg(sig_type, call_type,
                                call_type_args,
                                [arg_n, &source_loc](const TypeInfo& exp, const TypeInfo& got) {
@@ -71,7 +71,7 @@ TypeArgs specialize_signature(const SignaturePtr& signature, const std::vector<C
             }
             ++arg_n;
         }
-        if (sig->return_type.is_generic()) {
+        if (sig->return_type.has_generic()) {
             specialize_arg(sig->return_type, call_sig.return_type,
                            call_type_args,
                            [](const TypeInfo& exp, const TypeInfo& got) {});
@@ -109,9 +109,9 @@ TypeArgs resolve_generic_args_to_signature(const Signature& signature,
             // next param
             const auto& sig_type = sig->param_type;
             const auto& call_type = c_sig.param_type;
-            if (!sig_type.is_generic()) {
+            if (!sig_type.has_generic()) {
                 // resolve arg if it's a type var and the signature has a known type in its place
-                if (call_type.is_generic()) {
+                if (call_type.has_generic()) {
                     specialize_arg(call_type, sig_type,  // NOLINT, args swapped intentionally
                                    param_type_args,
                                    [](const TypeInfo& exp, const TypeInfo& got) {});
