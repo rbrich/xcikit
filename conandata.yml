@@ -45,7 +45,7 @@ requirements:
     public: True
   magic_enum:
     cmake: "magic_enum/0.7.3"
-    conan: "magic_enum/0.8.2"
+    conan: "magic_enum/0.9.2"
     public: True
     prereq:
       - data
