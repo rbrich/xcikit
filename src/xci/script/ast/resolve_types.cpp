@@ -90,7 +90,7 @@ public:
             subtypes.push_back(m_value_type.effective_type());
         }
         m_value_type = type_check.resolve(TypeInfo(std::move(subtypes)), v.source_loc);
-        //v.ti = m_value_type;
+        v.ti = m_value_type;
     }
 
     void visit(ast::List& v) override {
@@ -483,6 +483,7 @@ public:
         // re-resolve type of context (match actual struct type as found by resolving `with` function)
         m_cast_type = enter_sig.param_type;
         v.context->apply(*this);
+        m_cast_type = {};
         assert(m_value_type == enter_sig.param_type);
         // lookup the leave function, it's arg type is same as enter functions return type
         v.leave_type = enter_sig.return_type.effective_type();
@@ -663,7 +664,7 @@ private:
         auto [found, conflict] = find_best_candidate(candidates);
 
         if (found && !conflict) {
-            if (found->symptr->type() == Symbol::Function && found->type.has_generic()) {
+            if (found->type.has_generic()) {
                 auto call_type_args = specialize_signature(found->type.signature_ptr(), m_call_sig, found->type_args);
                 if (!call_type_args.empty()) {
                     // resolve generic vars to received types
@@ -705,6 +706,9 @@ private:
             // ERROR found multiple matching functions
             throw FunctionConflict(o_ftype.str(), o_candidates.str(), identifier.source_loc);
         } else {
+            // special case for StructItem, which is invisible in candidates - report as if the symbol wasn't resolved at all
+            if (sym_list.size() == 1 && sym_list.front()->type() == Symbol::StructItem)
+                throw UndefinedName(identifier.name, identifier.source_loc);
             // ERROR couldn't find matching function for `args`
             throw FunctionNotFound(o_ftype.str(), o_candidates.str(), identifier.source_loc);
         }
@@ -750,6 +754,7 @@ private:
                     m_call_sig.clear();
                     v.arg->apply(*this);
                     m_call_sig = std::move(orig_call_sig);
+                    m_cast_type = {};
                 }
                 // FIXME: move into second pass outside resolve_return_type_from_call_args()
                 if (sig_type.is_callable()) {
@@ -760,13 +765,14 @@ private:
                     v.arg->apply(*this);
                     m_call_sig = std::move(orig_call_sig);
                 }
-                if (sig_type.is_tuple() && !sig_type.is_void()) {
+                if (sig_type.is_struct_or_tuple() && !sig_type.is_void()) {
                     // resolve overload in case the arg tuple contains a function that was specialized
                     auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
-                    if (tuple) {
-                        assert(tuple->items.size() == sig_type.subtypes().size());
+                    if (tuple && !tuple->items.empty()) {
+                        auto sig_subtypes = sig_type.struct_or_tuple_subtypes();
+                        assert(tuple->items.size() == sig_subtypes.size());
                         auto orig_call_sig = std::move(m_call_sig);
-                        for (auto&& [i, sig_item] : sig_type.subtypes() | enumerate) {
+                        for (auto&& [i, sig_item] : sig_subtypes | enumerate) {
                             if (sig_item.is_callable()) {
                                 m_call_sig.clear();
                                 m_call_sig.emplace_back().load_from(sig_item.signature(), source_loc);

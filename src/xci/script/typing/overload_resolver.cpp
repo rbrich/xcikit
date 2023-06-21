@@ -126,7 +126,6 @@ TypeArgs resolve_generic_args_to_signature(const Signature& signature,
 TypeArgs resolve_instance_types(const Signature& signature, const std::vector<CallSignature>& call_sig_stack, const TypeInfo& cast_type)
 {
     const Signature* sig = nullptr;
-    size_t i_arg = 0;
     TypeArgs res;
     for (const CallSignature& call_sig : call_sig_stack | reverse) {
         if (sig == nullptr)
@@ -135,7 +134,7 @@ TypeArgs resolve_instance_types(const Signature& signature, const std::vector<Ca
             // collapse returned function, start consuming its params
             sig = &sig->return_type.signature();
         } else {
-            throw UnexpectedArgument(i_arg, TypeInfo{std::make_shared<Signature>(signature)}, call_sig.arg.source_loc);
+            throw UnexpectedArgument(1, TypeInfo{std::make_shared<Signature>(signature)}, call_sig.arg.source_loc);
         }
         // skip blocks / functions without params
         while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
@@ -145,25 +144,28 @@ TypeArgs resolve_instance_types(const Signature& signature, const std::vector<Ca
         const auto& c_sig = call_sig.signature();
         const auto& source_loc = call_sig.arg.source_loc;
         {
-            i_arg += 1;
             // check there are more params to consume
             if (!sig->has_nonvoid_param() && c_sig.has_nonvoid_param()) {
                 // unexpected argument
-                throw UnexpectedArgument(i_arg, TypeInfo{std::make_shared<Signature>(signature)}, source_loc);
+                throw UnexpectedArgument(1, TypeInfo{std::make_shared<Signature>(signature)}, source_loc);
             }
             // resolve T (only from original signature)
             const auto& sig_type = sig->param_type;
-            const auto& call_type = c_sig.param_type;
+            auto call_type = c_sig.param_type;
 
-            // check type of next param
+            if (call_type.is_struct() && sig_type.is_tuple()) {
+                // downgrade struct to tuple in call_type
+                call_type = TypeInfo(call_type.struct_or_tuple_subtypes());
+            }
+
             const auto m = match_type(call_type, sig_type);
             if (!m)
-                throw UnexpectedArgumentType(i_arg, sig_type, call_type, source_loc);
+                throw UnexpectedArgumentType(1, sig_type, call_type, source_loc);
 
             auto arg_type = call_type.effective_type();
             specialize_arg(sig_type, arg_type, res,
-                    [i_arg, &source_loc](const TypeInfo& exp, const TypeInfo& got) {
-                        throw UnexpectedArgumentType(i_arg, exp, got, source_loc);
+                    [&source_loc](const TypeInfo& exp, const TypeInfo& got) {
+                        throw UnexpectedArgumentType(1, exp, got, source_loc);
                     });
         }
     }

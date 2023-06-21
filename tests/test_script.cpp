@@ -468,11 +468,11 @@ TEST_CASE( "Types", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret("a = 42; b:String = a"), FunctionNotFound);
 
     // function type can be specified in lambda or specified explicitly
-    CHECK(interpret_std("f = fun a:Int, b:Int -> Int {a+b}; f (1, 2)") == "3");
-    CHECK(interpret_std("f : Int, Int -> Int = fun a, b {a+b}; f (1, 2)") == "3");
+    CHECK(interpret_std("f = fun (a:Int, b:Int) -> Int {a+b}; f (1, 2)") == "3");
+    CHECK(interpret_std("f : (Int, Int) -> Int = fun (a, b) {a+b}; f (1, 2)") == "3");
 
-    // TODO: narrowing type of polymorphic function (`f 1.0 2.0` would be error, while `add 1.0 2.0` still works)
-    // CHECK(interpret("f : Int Int -> Int = add ; f 1 2") == "3");
+    // TODO: narrowing type of polymorphic function (`f (1.0, 2.0)` would be error, while `add (1.0, 2.0)` still works)
+    // CHECK(interpret("f : (Int Int) -> Int = add ; f (1, 2)") == "3");
 }
 
 
@@ -482,12 +482,13 @@ TEST_CASE( "Coercion", "[script][interpreter]" )
     CHECK(interpret("a:(x:String,y:Int) = (); a") == "(x=\"\", y=0)");
     CHECK(interpret("a:(x:String, y:(y1:Int, y2:Float)) = (); a.y.y1") == "0");
     CHECK(interpret("f = fun a:(x:String,y:Int) {a.y}; f ()") == "0");
+    CHECK(interpret("f = fun (x:String,y:Int) {y}; f ()") == "0");
     CHECK(interpret_std("format (true, ())") == "\"true\"");  // second arg is FormatSpec
     // only literals may coerce, not functions/variables
     CHECK_THROWS_AS(interpret("t=(); a:(x:String,y:Int) = t"), FunctionNotFound);
     CHECK_THROWS_AS(interpret("f = fun a:(x:String,y:Int) {a.y}; t = (); f t"), FunctionNotFound);
     // named type - literal of underlying type coerces
-    const std::string num_def = "type Num = Int; f = fun a:Num, b:Num -> Num { (a:Int + b:Int):Num };";
+    const std::string num_def = "type Num = Int; f = fun (a:Num, b:Num) -> Num { (a:Int + b:Int):Num };";
     CHECK(interpret_std(num_def + "f (11, 22)") == "33");
     CHECK_THROWS_AS(interpret_std(num_def + "a = 11; f (a, a)"), FunctionNotFound);
     CHECK(interpret_std(num_def + "b = 22:Num; f (b, b)") == "44");
@@ -617,16 +618,16 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret_std("{{{ fun x:Int {x*2} }}} 3") == "6");  // lambda propagates through wrapped blocks and is then called
 
     // closure: inner function uses outer function's parameter
-    CHECK(interpret_std("f = fun a:Int, b:Int, c:Int { "
+    CHECK(interpret_std("f = fun (a:Int, b:Int, c:Int) { "
                         "w=fun c1:Int {a / b - c1}; w c }; f (10, 2, 3)") == "2");
     // closure: outer closure used by inner function
-    CHECK(interpret_std("f = fun a:Int, b:Int, c:Int { "
+    CHECK(interpret_std("f = fun (a:Int, b:Int, c:Int) { "
                         "g=fun c1:Int {a * b - c1}; "
                         "h=fun c1:Int {g c1}; "
                         "h c }; f (4, 2, 3)") == "5");
-    CHECK(interpret_std("f = fun a:Int, b:Int, c:Int { "
+    CHECK(interpret_std("f = fun (a:Int, b:Int, c:Int) { "
                         "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
-                        "w=fun b1:Int, c1:Int {a + u b1 + v c1}; "
+                        "w=fun (b1:Int, c1:Int) {a + u b1 + v c1}; "
                         "w (b, c) }; f (1, 2, 3)") == "9");
 
     CHECK(interpret_std("outer = fun y:Int {"
@@ -677,15 +678,15 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
                     " wrapped = fun x { l1b 'x'; l1 x }; wrapped a }; l0 2") == "2;'x';2;2;2;2;42L;2;2");
 
     // function as parameter
-    CHECK(interpret("call = fun f:(Int->Int), x:Int -> Int { f x }; ident = fun a:Int -> Int { a }; call (ident, 42)") == "42");  // non-generic
-    CHECK(interpret("call = fun<X,Y> f:(X->Y), x:X -> Y { f x }; ident = fun<A> a:A -> A { a }; call (ident, 42)") == "42");  // generic, explicitly-typed
-    CHECK(interpret("call = fun<X,Y> f:(X->Y), x:X -> Y { f x }; ident = fun a { a }; call (ident, 42)") == "42");
-    CHECK(interpret("call = fun f, x { f x }; ident = fun a { a }; call (ident, 42)") == "42");
-    CHECK_THROWS_AS(interpret_std("call = fun<X,Y> f:(X->Y), x:X -> Y { f x }; call (add, (1, 2))"), FunctionConflict);  // this could be resolved, but currently isn't
+    CHECK(interpret("call = fun (f:(Int->Int), x:Int) -> Int { f x }; ident = fun a:Int -> Int { a }; call (ident, 42)") == "42");  // non-generic
+    CHECK(interpret("call = fun<X,Y> (f:(X->Y), x:X) -> Y { f x }; ident = fun<A> a:A -> A { a }; call (ident, 42)") == "42");  // generic, explicitly-typed
+    CHECK(interpret("call = fun<X,Y> (f:(X->Y), x:X) -> Y { f x }; ident = fun a { a }; call (ident, 42)") == "42");
+    CHECK(interpret("call = fun (f, x) { f x }; ident = fun a { a }; call (ident, 42)") == "42");
+    CHECK_THROWS_AS(interpret_std("call = fun<X,Y> (f:(X->Y), x:X) -> Y { f x }; call (add, (1, 2))"), FunctionNotFound);  // this could be resolved, but currently isn't
 
     // "Funarg problem" (upwards)
     auto def_succ = "succ = fun Int->Int { __value 1 .__load_static; __add 0x88 }; "s;
-    auto def_compose = " compose = fun f, g { fun x { f (g x) } }; "s;
+    auto def_compose = " compose = fun (f, g) { fun x { f (g x) } }; "s;
     auto def_succ_compose = def_succ + def_compose;
     CHECK(interpret(def_succ_compose + "plustwo = compose (succ, succ); plustwo 42") == "44");
     CHECK(interpret(def_succ_compose + "plustwo = {compose (succ, succ)}; plustwo 42") == "44");
@@ -696,7 +697,7 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret("call = fun<X,Y> f:(X->Y) { fun x { f x } }; ident = fun y { y }; same={call ident}; same 42") == "42");
     //CHECK(interpret("call = fun f { fun x { f x } }; ident = fun y { y }; same={call ident}; same 42") == "42");
 
-    CHECK(interpret_std("compose = fun<X,Y,Z> f:(Y->Z), g:(X->Y) -> (X->Z) { fun x:X -> Z { f (g x) } }; same = {compose (pred, succ)}; same 42") == "42");
+    CHECK(interpret_std("compose = fun<X,Y,Z> (f:(Y->Z), g:(X->Y)) -> (X->Z) { fun x:X -> Z { f (g x) } }; same = {compose (pred, succ)}; same 42") == "42");
     //CHECK(interpret_std("compose = fun<X,Y,Z> f:(Y->Z) g:(X->Y) -> (X->Z) { fun x:X -> Z { f (g x) } }; same = compose pred succ; same 42") == "42");
     //CHECK(interpret_std(def_compose + "same = compose pred succ; same 42") == "42");
 }
@@ -709,10 +710,12 @@ TEST_CASE( "Function parameters", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret("f=fun (a,b) { a }; f 2"), FunctionNotFound);
     CHECK(interpret("a=1; f=fun b { a }; f 2") == "1");
     CHECK_THROWS_AS(interpret("f=fun (a,b) { a }; f 2,3"), FunctionNotFound);  // call has higher precedence than comma
-    CHECK(interpret("f=fun ((a:Int,b:Int),c) { c }; f ((2,3),4)") == "4");
-    //CHECK(interpret("f=fun ((a:Int,b:Int),c) { a }; f ((2,3),4)") == "2");
+    CHECK(interpret("f=fun (c:(a:Int,b:Int),d) { d }; f ((2,3),4)") == "4");
+    CHECK(interpret("f=fun (c:(a:Int,b:Int),d) { c.a }; f ((2,3),4)") == "2");
     CHECK(interpret("f=fun (c:(a:Int,b:Int),d) { c }; f ((2,3),4)") == "(a=2, b=3)");
-    //CHECK(interpret("f=fun (c:(a:Int,b:Int),d) { c.a }; f ((2,3),4)") == "2");
+    CHECK(interpret("f=fun a:((a:Int,b:Int),Int) { a }; f ((2,3),4)") == "((a=2, b=3), 4)");
+    CHECK(interpret("f=fun (c:(a,b),d) { d }; f ((2,3),4)") == "4");
+    CHECK(interpret("f=fun (c:(a,b),d) { c.a }; f ((2,3),4)") == "2");
 }
 
 
@@ -727,18 +730,18 @@ TEST_CASE( "Partial function call", "[script][interpreter]" )
     CHECK(interpret_std("f=fun a { a+1 }; f 2") == "3");
     CHECK(interpret_std("f={fun a { a+1 }}; f 2") == "3");
     CHECK(interpret_std("f:Int->Int = fun a { a+1 }; f 2") == "3");
-    CHECK(interpret_std("f=fun x:Int, y:Int, z:Int { (x - y) * z}; g=fun x1:Int { fun z1:Int { f (x1, 4, z1) } }; g 3 5") == "-5");
-    CHECK(interpret_std("f=fun x, y, z { (x - y) * z}; g=fun x1 { fun z1 { f (x1, 4, z1) } }; g 3 5") == "-5");
-    CHECK(interpret_std("f=fun x:Int, y:Int { g=fun x1:Int, z1:Int { (y - x1) / z1 }; fun z1 { g (x,z1) } }; f (1,10) 3") == "3");
-    CHECK(interpret_std("f = fun a:Int, b:Int { "
+    CHECK(interpret_std("f=fun (x:Int, y:Int, z:Int) { (x - y) * z}; g=fun x1:Int { fun z1:Int { f (x1, 4, z1) } }; g 3 5") == "-5");
+    CHECK(interpret_std("f=fun (x, y, z) { (x - y) * z}; g=fun x1 { fun z1 { f (x1, 4, z1) } }; g 3 5") == "-5");
+    CHECK(interpret_std("f=fun (x:Int, y:Int) { g=fun (x1:Int, z1:Int) { (y - x1) / z1 }; fun z1 { g (x,z1) } }; f (1,10) 3") == "3");
+    CHECK(interpret_std("f = fun (a:Int, b:Int) { "
                         "   u=fun b2:Int {a + b2}; v=fun c2:Int {c2 - b}; "
-                        "   w=fun b1:Int, c1:Int {a * u b1 / v c1}; "
+                        "   w=fun (b1:Int, c1:Int) {a * u b1 / v c1}; "
                         "   fun c { w (b,c) }"
                         "}; f (1, 2) 3") == "3");
     // [closure.fire] return closure with captured closures, propagate arguments into the closure
     CHECK(interpret_std("f = fun a:Int { "
                         "   u=fun b2:Int {a / b2}; v=fun c2:Int {c2 - a}; "
-                        "   fun b1:Int, c1:Int {a + u b1 + v c1} "
+                        "   fun (b1:Int, c1:Int) {a + u b1 + v c1} "
                         "}; f 4 (2, 3)") == "5");
 }
 
@@ -777,7 +780,7 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
     // generic functions can capture from outer scope
     CHECK(interpret_std("a=3; f=fun x {a + x}; f 4") == "7");
     // generic type declaration, type constraint
-    CHECK(interpret_std("f = fun<T> x:T, y:T -> Bool with (Eq T) { x == y }; f (1, 2)") == "false");
+    CHECK(interpret_std("f = fun<T> (x:T, y:T) -> Bool with (Eq T) { x == y }; f (1, 2)") == "false");
 
     // === Propagating and deducing function types ===
     // arg to ret via type parameter
@@ -836,9 +839,9 @@ TEST_CASE( "Lexical scope", "[script][interpreter]" )
     CHECK(interpret_std("f=fun x:Int->Int { if x < 2 then x else f (x-1) + f (x-2) }; f 7") == "13");   // Fibonacci number
 
     // iteration (with tail-recursive functions)
-    CHECK(interpret_std("fi=fun prod:Int, cnt:Int, max:Int -> Int { if cnt > max then prod else fi (cnt*prod, cnt+1, max) };\n"
+    CHECK(interpret_std("fi=fun (prod:Int, cnt:Int, max:Int) -> Int { if cnt > max then prod else fi (cnt*prod, cnt+1, max) };\n"
                         "f=fun n:Int->Int { fi (1, 1, n) }; f 7") == "5040");  // factorial
-    CHECK(interpret_std("fi=fun a:Int, b:Int, n:Int -> Int { if n==0 then b else fi (a+b, a, n-1) };\n"
+    CHECK(interpret_std("fi=fun (a:Int, b:Int, n:Int) -> Int { if n==0 then b else fi (a+b, a, n-1) };\n"
                         "f=fun n:Int->Int { fi (1, 0, n) }; f 7") == "13");    // Fibonacci number
 }
 
@@ -934,7 +937,7 @@ TEST_CASE( "List subscript", "[script][interpreter]" )
     // custom implementation (same as in std.fire)
     CHECK(interpret("__type_index<Void>") == "0");
     CHECK_THROWS_AS(interpret("__type_index<X>"), UndefinedTypeName);
-    CHECK(interpret("subscript = fun<T> [T], Int -> T { __list_subscript __type_index<T> }; subscript ([1,2,3], 1)") == "2");
+    CHECK(interpret("subscript = fun<T> ([T], Int) -> T { __list_subscript __type_index<T> }; subscript ([1,2,3], 1)") == "2");
     // std implementation
     CHECK(interpret_std("subscript ([1,2,3], 1)") == "2");
     CHECK(interpret_std("[1,2,3] .subscript 0") == "1");
@@ -950,7 +953,7 @@ TEST_CASE( "List subscript", "[script][interpreter]" )
 
 TEST_CASE( "List slice", "[script][interpreter]" )
 {
-    CHECK(interpret("slice = fun<T> [T], (start:Int, stop:Int, step:Int) -> [T] { __list_slice __type_index<T> }; [1,2,3,4,5] .slice (1, 4, 1)") == "[2, 3, 4]");
+    CHECK(interpret("slice = fun<T> ([T], (start:Int, stop:Int, step:Int)) -> [T] { __list_slice __type_index<T> }; [1,2,3,4,5] .slice (1, 4, 1)") == "[2, 3, 4]");
     // step=0 -- pick one element for a new list
     CHECK(interpret_std("[1,2,3,4,5] .slice (start=3, stop=max:Int, step=0)") == "[4]");
     CHECK(interpret_std("[1,2,3,4,5] .slice (3, max:Int, max:Int)") == "[4]");
@@ -986,7 +989,7 @@ TEST_CASE( "List slice", "[script][interpreter]" )
 TEST_CASE( "List concat", "[script][interpreter]" )
 {
     // custom implementation
-    CHECK(interpret("concat = fun<T> [T], [T] -> [T] { __list_concat __type_index<T> }; concat ([1,2,3], [4,5])") == "[1, 2, 3, 4, 5]");
+    CHECK(interpret("concat = fun<T> ([T], [T]) -> [T] { __list_concat __type_index<T> }; concat ([1,2,3], [4,5])") == "[1, 2, 3, 4, 5]");
     // std implementation uses operator `+`
     CHECK(interpret_std("[1,2,3] + [4,5]") == "[1, 2, 3, 4, 5]");
     CHECK(interpret_std("[] + []") == "[]");  // result type is [Void]
@@ -1008,13 +1011,13 @@ TEST_CASE( "List map", "[script][interpreter]" )
 
 TEST_CASE( "Type classes", "[script][interpreter]" )
 {
-    CHECK(interpret("class XEq T { xeq : T, T -> Bool }; "
+    CHECK(interpret("class XEq T { xeq : (T, T) -> Bool }; "
                     "instance XEq Int32 { xeq = { __equal 0x88 } }; "
                     "xeq (1, 2)") == "false");
     // Instance function may reference the method that is being instantiated
-    CHECK(interpret("class Ord T (Eq T) { lt : T, T -> Bool }; "
+    CHECK(interpret("class Ord T (Eq T) { lt : (T, T) -> Bool }; "
                     "instance Ord Int32 { lt = { __less_than 0x88 } }; "
-                    "instance Ord String { lt = fun a, b { string_compare (a, b) < 0 } }; "
+                    "instance Ord String { lt = fun (a, b) { string_compare (a, b) < 0 } }; "
                     "\"a\" < \"b\"") == "true");
     // Instantiate type class from another module
     CHECK(interpret_std("instance Ord Bool { lt = { __less_than 0x11 }; gt = {false}; le = {false}; ge = {false} }; "
@@ -1057,9 +1060,9 @@ TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
     // Function signature must be explicitly declared, it's never inferred from intrinsics.
     // Parameter names are not needed (and not used), intrinsics work directly with stack.
     // E.g. `__equal 0x88` pulls two Int32 values and pushes 8bit Bool value back.
-    CHECK(interpret_std("my_eq = fun Int32, Int32 -> Bool { __equal 0x88 }; my_eq (42, 2*21)") == "true");
+    CHECK(interpret_std("my_eq = fun (Int32, Int32) -> Bool { __equal 0x88 }; my_eq (42, 2*21)") == "true");
     // alternative style - essentially the same
-    CHECK(interpret("my_eq : Int32, Int32 -> Bool = { __equal 0x88 }; my_eq (42, 43)") == "false");
+    CHECK(interpret("my_eq : (Int32, Int32) -> Bool = { __equal 0x88 }; my_eq (42, 43)") == "false");
     // intrinsic with arguments
     CHECK(interpret("my_cast : Int32 -> Int64 = { __cast 0x89 }; my_cast 42") == "42L");
     // Static value

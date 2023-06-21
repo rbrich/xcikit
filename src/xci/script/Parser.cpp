@@ -124,16 +124,13 @@ struct RawBytes: seq< one<'b'>, RawString > {};
 struct Literal: sor< Char, RawString, String, Byte, RawBytes, Bytes, Number > {};
 
 // Types
-struct Parameter: sor< Type, seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > > {};
-struct ParameterTuple: seq< Parameter, star<SC, one<','>, SC, must<Parameter> > > {};
-struct ParenthesizedParameters: seq< one<'('>, NSC, ParameterTuple, NSC, one<')'> > {};
-struct DeclParams: sor< ParenthesizedParameters, ParameterTuple > {};
+struct DeclParam: sor< Type, seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > > {};
 struct DeclResult: if_must< string<'-', '>'>, SC, Type > {};
 struct TypeParams: if_must< one<'<'>, TypeName, SC, star_must<one<','>, SC, TypeName, SC>, one<'>'> > {};
 struct TypeConstraint: seq<TypeName, RS, SC, TypeName> {};
 struct TypeContext: if_must< one<'('>, SC, TypeConstraint, SC, star_must<one<','>, SC, TypeConstraint, SC>, one<')'> > {};
-struct FunctionType: seq< opt<TypeParams>, SC, DeclParams, SC, DeclResult > {};
-struct FunctionDecl: seq< opt<TypeParams>, SC, DeclParams, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
+struct FunctionType: seq< opt<TypeParams>, SC, DeclParam, SC, DeclResult > {};
+struct FunctionDecl: seq< opt<TypeParams>, SC, DeclParam, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
 struct PlainTypeName: seq< TypeName, not_at<SC, one<','>> > {};  // not followed by comma (would be TupleType)
 struct ListType: if_must< one<'['>, SC, UnsafeType, SC, one<']'> > {};
 struct TupleType: seq< Type, plus<SC, one<','>, SC, Type> > {};
@@ -1001,10 +998,10 @@ struct Action<Variable> : change_states< ast::Variable > {
 };
 
 template<>
-struct Action<Parameter> : change_states< ast::Parameter > {
+struct Action<DeclParam> : change_states< ast::Parameter > {
     template<typename Input>
     static void success(const Input &in, ast::Parameter& par, ast::FunctionType& ftype) {
-        ftype.params.push_back(std::move(par));
+        ftype.param = std::move(par);
     }
 };
 
@@ -1463,7 +1460,7 @@ template<> ErrMsg Control<NSC>::errmsg = {"expected a whitespace character", {}}
 template<> ErrMsg Control<until<eolf>>::errmsg = {"unterminated comment", {}};
 template<> ErrMsg Control<Expression<SC>>::errmsg = {"expected expression", {}};
 template<> ErrMsg Control<Expression<NSC>>::errmsg = {"expected expression", {}};
-template<> ErrMsg Control<DeclParams>::errmsg = {"expected function parameter declaration", {}};
+template<> ErrMsg Control<DeclParam>::errmsg = {"expected function parameter declaration", {}};
 template<> ErrMsg Control<DotCallRight<SC>>::errmsg = {"expected function name and args", {}};
 template<> ErrMsg Control<DotCallRight<NSC>>::errmsg = {"expected function name and args", {}};
 template<> ErrMsg Control<ExprInfixRight<SC>>::errmsg = {"expected infix operator", {}};

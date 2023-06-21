@@ -65,6 +65,10 @@ void resolve_generic_type(TypeInfo& sig, const TypeArgs& type_args)
             for (auto& sub : sig.subtypes())
                 resolve_generic_type(sub, type_args);
             break;
+        case Type::Struct:
+            for (auto& st : sig.struct_items())
+                resolve_generic_type(st.second, type_args);
+            break;
         case Type::Function:
             sig = TypeInfo(std::make_shared<Signature>(sig.signature()));  // copy
             resolve_generic_type(sig.signature().param_type, type_args);
@@ -109,6 +113,10 @@ void resolve_generic_type(TypeInfo& sig, const Scope& scope)
         case Type::Tuple:
             for (auto& sub : sig.subtypes())
                 resolve_generic_type(sub, scope);
+            break;
+        case Type::Struct:
+            for (auto& st : sig.struct_items())
+                resolve_generic_type(st.second, scope);
             break;
         case Type::Function:
             sig = TypeInfo(std::make_shared<Signature>(sig.signature()));  // copy
@@ -156,12 +164,45 @@ void specialize_arg(const TypeInfo& sig, const TypeInfo& deduced,
             specialize_arg(sig.elem_type(), deduced.elem_type(), type_args, exc_cb);
             break;
         case Type::Tuple:
-            if (deduced.type() != Type::Tuple || sig.subtypes().size() != deduced.subtypes().size()) {
+            if (deduced.type() == Type::Tuple) {
+                if (sig.subtypes().size() != deduced.subtypes().size()) {
+                    exc_cb(sig, deduced);
+                    break;
+                }
+                for (auto&& [sig_sub, deduced_sub] : zip(sig.subtypes(), deduced.subtypes())) {
+                    specialize_arg(sig_sub, deduced_sub, type_args, exc_cb);
+                }
+            } else if (deduced.type() == Type::Struct) {
+                if (sig.subtypes().size() != deduced.struct_items().size()) {
+                    exc_cb(sig, deduced);
+                    break;
+                }
+                for (auto&& [sig_sub, deduced_st] : zip(sig.subtypes(), deduced.struct_items())) {
+                    specialize_arg(sig_sub, deduced_st.second, type_args, exc_cb);
+                }
+            } else {
                 exc_cb(sig, deduced);
-                break;
             }
-            for (auto&& [sig_sub, deduced_sub] : zip(sig.subtypes(), deduced.subtypes())) {
-                specialize_arg(sig_sub, deduced_sub, type_args, exc_cb);
+            break;
+        case Type::Struct:
+            if (deduced.type() == Type::Struct) {
+                if (sig.struct_items().size() != deduced.struct_items().size()) {
+                    exc_cb(sig, deduced);
+                    break;
+                }
+                for (auto&& [sig_st, deduced_st] : zip(sig.struct_items(), deduced.struct_items())) {
+                    specialize_arg(sig_st.second, deduced_st.second, type_args, exc_cb);
+                }
+            } else if (deduced.type() == Type::Tuple) {
+                if (sig.struct_items().size() != deduced.subtypes().size()) {
+                    exc_cb(sig, deduced);
+                    break;
+                }
+                for (auto&& [sig_st, deduced_sub] : zip(sig.struct_items(), deduced.subtypes())) {
+                    specialize_arg(sig_st.second, deduced_sub, type_args, exc_cb);
+                }
+            } else {
+                exc_cb(sig, deduced);
             }
             break;
         case Type::Function:

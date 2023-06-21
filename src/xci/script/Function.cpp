@@ -55,9 +55,9 @@ size_t Function::parameter_offset(Index idx) const
 {
     if (idx == no_index)
         return 0;
-    assert(m_signature->param_type.is_tuple());
+    assert(m_signature->param_type.is_struct_or_tuple());
     size_t ofs = 0;
-    for (const auto& ti : m_signature->param_type.subtypes()) {
+    for (const auto& ti : m_signature->param_type.struct_or_tuple_subtypes()) {
         if (idx == 0)
             return ofs;
         ofs += ti.size();

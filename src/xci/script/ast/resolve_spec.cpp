@@ -90,10 +90,15 @@ public:
         subtypes.reserve(v.items.size());
         for (auto&& [i, item] : v.items | enumerate) {
             m_cast_type = cast_items ? (*cast_items)[i] : TypeInfo{};
+            resolve_generic_type(m_cast_type, m_scope);
             item->apply(*this);
             subtypes.push_back(m_value_type.effective_type());
         }
-        m_value_type = type_check.resolve(TypeInfo(std::move(subtypes)), v.source_loc);
+        TypeInfo inferred(std::move(subtypes));
+        m_value_type = type_check.resolve(inferred, v.source_loc);
+        specialize_arg(m_value_type, inferred, m_scope.type_args(),
+                       [](const TypeInfo& exp, const TypeInfo& got) {});
+        resolve_generic_type(m_value_type, m_scope);
         v.ti = m_value_type;
     }
 
@@ -211,6 +216,7 @@ public:
                         for (Index i = 1; i <= cls.symtab().count(Symbol::TypeVar); ++i) {
                             auto var_psym = cls.symtab().find_by_index(Symbol::TypeVar, i);
                             resolved_types.push_back(get_type_arg(var_psym, inst_type_args));
+                            resolve_generic_type(resolved_types.back(), m_scope);
                         }
                         continue;
                     }
@@ -290,12 +296,7 @@ public:
                     }
                 } else {
                     assert(sym.type() == Symbol::StructItem);
-                    m_call_sig.clear();
-                    if (v.ti.has_generic())
-                        resolve_generic_type(v.ti, m_scope);
-                    m_value_type = v.ti.signature().return_type;
-                    m_value_type.set_literal(false);
-                    return;
+                    resolve_generic_type(v.ti, m_scope);
                 }
                 break;
             }
@@ -338,7 +339,7 @@ public:
 
         TypeChecker type_check(std::move(m_type_info), std::move(m_cast_type));
 
-        // resolve each argument
+        // resolve call argument
         CallArg call_arg;
         auto orig_call_sig = std::move(m_call_sig);
         if (v.arg) {
@@ -382,12 +383,12 @@ public:
         // (if a generic function was passed in args, it can be specialized now)
         const auto call_ti = m_call_sig.empty() ? ti_void() : std::move(m_call_sig.back().arg.type_info);
         if (v.arg && !call_ti.is_void()) {
-            if (call_ti.is_tuple()) {
-                auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
-                assert(tuple && !tuple->items.empty());
+            auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
+            if (tuple && !tuple->items.empty() && call_ti.is_struct_or_tuple()) {
                 unsigned i = 0;
+                auto call_subtypes = call_ti.struct_or_tuple_subtypes();
                 for (auto& arg : tuple->items) {
-                    auto call_item = call_ti.subtypes()[i++];
+                    auto call_item = call_subtypes[i++];
                     if (call_item.is_callable()) {
                         m_call_sig.clear();
                         m_call_sig.emplace_back().load_from(call_item.signature(), arg->source_loc);
@@ -438,6 +439,7 @@ public:
         // re-resolve type of context (match actual struct type as found by resolving `with` function)
         m_cast_type = enter_sig.param_type;
         v.context->apply(*this);
+        m_cast_type = {};
         assert(m_value_type == enter_sig.param_type);
         // lookup the leave function, it's arg type is same as enter functions return type
         v.leave_type = enter_sig.return_type.effective_type();
@@ -605,6 +607,7 @@ private:
                     m_call_sig.clear();
                     v.arg->apply(*this);
                     m_call_sig = std::move(orig_call_sig);
+                    m_cast_type = {};
                 }
                 if (sig_type.is_callable()) {
                     // resolve overload in case the arg is a function that was specialized
@@ -614,13 +617,14 @@ private:
                     v.arg->apply(*this);
                     m_call_sig = std::move(orig_call_sig);
                 }
-                if (sig_type.is_tuple() && !sig_type.is_void()) {
+                if (sig_type.is_struct_or_tuple() && !sig_type.is_void()) {
                     // resolve overload in case the arg tuple contains a function that was specialized
                     auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
-                    if (tuple) {
-                        assert(tuple->items.size() == sig_type.subtypes().size());
+                    if (tuple && !tuple->items.empty()) {
+                        auto sig_subtypes = sig_type.struct_or_tuple_subtypes();
+                        assert(tuple->items.size() == sig_subtypes.size());
                         auto orig_call_sig = std::move(m_call_sig);
-                        for (auto&& [i, sig_item] : sig_type.subtypes() | enumerate) {
+                        for (auto&& [i, sig_item] : sig_subtypes | enumerate) {
                             if (sig_item.is_callable()) {
                                 m_call_sig.clear();
                                 m_call_sig.emplace_back().load_from(sig_item.signature(), source_loc);
@@ -775,12 +779,13 @@ private:
             if (std::all_of(m_call_sig.cbegin(), m_call_sig.cend(),
                     [](const CallSignature& sig) {
                         const CallArg& arg = sig.arg;
-                        if (arg.type_info.is_tuple() && !arg.type_info.is_void())
-                            return std::all_of(arg.type_info.subtypes().begin(), arg.type_info.subtypes().end(),
+                        if (arg.type_info.is_struct_or_tuple() && !arg.type_info.is_void()) {
+                            auto subtypes = arg.type_info.struct_or_tuple_subtypes();
+                            return std::all_of(subtypes.begin(), subtypes.end(),
                                                [](const TypeInfo& ti) {
                                                    return ti.has_generic();
                                                });
-                        else
+                        } else
                             return arg.type_info.has_generic();
                     }))
                 return {};  // do not specialize with generic args

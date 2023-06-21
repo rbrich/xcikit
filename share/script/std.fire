@@ -8,8 +8,8 @@
 // Logical operators
 
 class LogicalNot T  { not : T -> Bool }
-class LogicalOr  T  { or  : T, T -> Bool }
-class LogicalAnd T  { and : T, T -> Bool }
+class LogicalOr  T  { or  : (T, T) -> Bool }
+class LogicalAnd T  { and : (T, T) -> Bool }
 
 instance LogicalNot Bool { not = { __logical_not } }
 instance LogicalOr  Bool { or  = { __logical_or  } }
@@ -19,11 +19,11 @@ instance LogicalAnd Bool { and = { __logical_and } }
 // Bitwise operators
 
 class BitwiseNot T  { bit_not : T -> T }
-class BitwiseOr  T  { bit_or  : T, T -> T }
-class BitwiseAnd T  { bit_and : T, T -> T }
-class BitwiseXor T  { bit_xor : T, T -> T }
-class ShiftLeft  T  { shift_left  : T, T -> T }
-class ShiftRight T  { shift_right : T, T -> T }
+class BitwiseOr  T  { bit_or  : (T, T) -> T }
+class BitwiseAnd T  { bit_and : (T, T) -> T }
+class BitwiseXor T  { bit_xor : (T, T) -> T }
+class ShiftLeft  T  { shift_left  : (T, T) -> T }
+class ShiftRight T  { shift_right : (T, T) -> T }
 
 instance BitwiseNot Byte   { bit_not = { __bitwise_not_8  } }
 instance BitwiseNot UInt32 { bit_not = { __bitwise_not_32 } }
@@ -60,12 +60,12 @@ instance ShiftRight Int64  { shift_right = { __shift_right 0x99 } }
 // Arithmetic operators
 
 class Neg T  { neg : T -> T }
-class Add T  { add : T, T -> T }
-class Sub T  { sub : T, T -> T }
-class Mul T  { mul : T, T -> T }
-class Div T  { div : T, T -> T }
-class Mod T  { mod : T, T -> T }
-class Exp T  { exp : T, T -> T }
+class Add T  { add : (T, T) -> T }
+class Sub T  { sub : (T, T) -> T }
+class Mul T  { mul : (T, T) -> T }
+class Div T  { div : (T, T) -> T }
+class Mod T  { mod : (T, T) -> T }
+class Exp T  { exp : (T, T) -> T }
 
 instance Neg Byte  { neg = { __neg 0x11 } }
 instance Neg UInt32 { neg = { __neg 0x33 } }
@@ -116,21 +116,21 @@ instance Exp Float32 { exp = { __exp 0xCC } }
 instance Exp Float64 { exp = { __exp 0xDD } }
 
 // Add strings, lists => concatenate
-instance Add String { add = fun a, b { string_concat (a, b) } }
+instance Add String { add = fun (a, b) { string_concat (a, b) } }
 instance<T> Add [T] { add = { __list_concat __type_index<T> } }
 
 // Comparison operators
 
 class Eq T {
-    eq : T, T -> Bool
-    ne : T, T -> Bool // = fun x, y { not (eq x y) };
+    eq : (T, T) -> Bool
+    ne : (T, T) -> Bool // = fun x, y { not (eq x y) };
 }
 
 class Ord T (Eq T) {
-    lt : T, T -> Bool
-    gt : T, T -> Bool
-    le : T, T -> Bool
-    ge : T, T -> Bool
+    lt : (T, T) -> Bool
+    gt : (T, T) -> Bool
+    le : (T, T) -> Bool
+    ge : (T, T) -> Bool
 }
 
 
@@ -180,8 +180,8 @@ instance Eq Float64 {
 }
 
 instance Eq String {
-    eq = fun a, b { string_equal (a, b) }
-    ne = fun a, b { ! string_equal (a, b) }
+    eq = fun (a, b) { string_equal (a, b) }
+    ne = fun (a, b) { ! string_equal (a, b) }
 }
 
 instance Eq TypeIndex {
@@ -191,12 +191,12 @@ instance Eq TypeIndex {
 
 /*
 instance Eq [T] ( Eq T ) {
-    eq = fun x, y {
-        match x, y {
+    eq = fun (x, y) {
+        match (x, y) {
             [], [] -> true
             [], [...] -> false
             [...], [] -> false
-            [x1, xrest...], [y1, yrest...] -> (eq x1, y1) && (eq xrest, yrest)
+            [x1, xrest...], [y1, yrest...] -> eq (x1, y1) && eq (xrest, yrest)
         }
     }
 }
@@ -260,10 +260,10 @@ instance Ord Float64 {
 }
 
 instance Ord String {
-    lt = fun a, b { string_compare (a, b) < 0 }
-    gt = fun a, b { string_compare (a, b) > 0 }
-    le = fun a, b { string_compare (a, b) <= 0 }
-    ge = fun a, b { string_compare (a, b) >= 0 }
+    lt = fun (a, b) { string_compare (a, b) < 0 }
+    gt = fun (a, b) { string_compare (a, b) > 0 }
+    le = fun (a, b) { string_compare (a, b) <= 0 }
+    ge = fun (a, b) { string_compare (a, b) >= 0 }
 }
 
 
@@ -366,7 +366,7 @@ instance Bounded Int32 {
 
 
 class Subscript T U R {
-    subscript : T, U -> R
+    subscript : (T, U) -> R
 }
 
 instance<T> Subscript [T] Int T {
@@ -391,16 +391,17 @@ type ParseSpec = (
 )
 
 class Format T {
-    format : T, FormatSpec -> String
+    format : (T, FormatSpec) -> String
 }
 
-instance Format Bool { format = fun x, _f { if x then "true" else "false" } }
+instance Format String { format = fun (x, _f) { x } }
+instance Format Bool { format = fun (x, _f) { if x then "true" else "false" } }
 
 class Parse T {
-    parse : String, ParseSpec -> T
+    parse : (String, ParseSpec) -> T
 }
 
-instance Parse Bool { parse = fun x, _spec { x == "true" } }
+instance Parse Bool { parse = fun (x, _spec) { x == "true" } }
 
 to_string = fun<T> x:T -> String { format (x, ()) }
 from_string = fun<T> x:String -> T { parse (x, ()) }
@@ -444,18 +445,20 @@ instance ModuleInfo Module {
 
 succ = fun<T> x:T -> T { x + 1:T }
 pred = fun<T> x:T -> T { x - 1:T }
-larger = fun<T> x:T, y:T -> T { if x > y then x else y }
-smaller = fun<T> x:T, y:T -> T { if x < y then x else y }
+larger = fun<T> (x:T, y:T) -> T { if x > y then x else y }
+smaller = fun<T> (x:T, y:T) -> T { if x < y then x else y }
 sign = fun x:Int -> Int { if x < 0 then -1  if x > 0 then +1  else 0 }
 
 len = fun<T> [T] -> UInt { __list_length __type_index<T> }
 empty = fun<T> l:[T] -> Bool { l.len == 0u }
-slice = fun<T> l:[T], (start:Int, stop:Int, step:Int) -> [T] { __list_slice __type_index<T> }
+
+type Slice = (start:Int, stop:Int, step:Int)
+slice = fun<T> ([T], Slice) -> [T] { __list_slice __type_index<T> }
 
 head = fun<T> a:[T] -> T { a!0 }
 tail = fun<T> a:[T] -> [T] { a .slice (start=1, stop=max:Int, step=1) }
 
-map = fun<T,U> f:(T->U), l:[T] -> [U] { if l.empty then [] else [f (l!0)] + map (f, l.slice (start=1, stop=max:Int, step=1)) }
+map = fun<T,U> (f:(T->U), l:[T]) -> [U] { if l.empty then [] else [f (l!0)] + map (f, l.slice (start=1, stop=max:Int, step=1)) }
 //filter = fun<Ord T> fn [T] -> [T] { }
 //reduce = fun<Ord T> fn [T] -> T { }
 //sum = reduce add

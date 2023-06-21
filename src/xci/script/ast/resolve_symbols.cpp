@@ -303,7 +303,7 @@ public:
             // add new symbol table for the function
             auto num = symtab().count(Symbol::Function);
             std::string name;
-            if (v.type.params.empty())
+            if (!v.type.param)
                 name = fmt::format("<block_{}>", num);
             else
                 name = fmt::format("<lambda_{}>", num);
@@ -354,16 +354,24 @@ public:
             tc.type_class.apply(*this);
             symtab().add({tc.type_name.name, Symbol::TypeVar, ++type_idx});
         }*/
-        Index par_idx = t.params.size() == 1 ? no_index : 0;
-        for (auto& p : t.params) {
+        if (t.param) {
+            m_parameter = true;
+            auto& p = t.param;
             if (!p.type) {
-                // '$T' is internal prefix for untyped function args
-                p.type = std::make_unique<ast::TypeName>("$T" + p.identifier.name);
+                // '$P' is internal prefix for untyped function args
+                p.type = std::make_unique<ast::TypeName>("$P" + p.identifier.name);
             }
             p.type->apply(*this);
+            // Special case for unnamed struct parameter - create Parameter symbols for subtypes
+            auto* ps = dynamic_cast<ast::StructType*>(p.type.get());
+            if (p.identifier.name.empty() && ps) {
+                Index idx = 0;
+                for (auto& st : ps->subtypes)
+                    st.identifier.symbol = symtab().add({st.identifier.name, Symbol::Parameter, idx++});
+            }
             if (!p.identifier.name.empty())
-                p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, par_idx});
-            ++par_idx;
+                p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, no_index});
+            m_parameter = false;
         }
         if (!t.return_type && !m_instance)
             t.return_type = std::make_unique<ast::TypeName>("$R");
@@ -390,8 +398,12 @@ public:
             if (!ok)
                 throw StructDuplicateKey(name, st.identifier.source_loc);
 
-            if (st.type)
+            if (st.type) {
                 st.type->apply(*this);
+            } else if (m_parameter) {
+                st.type = std::make_unique<ast::TypeName>(std::string("$T") + name);
+                st.type->apply(*this);
+            }
             st.identifier.symbol = add_struct_item(name, no_index);
         }
     }
@@ -544,6 +556,7 @@ private:
     SymbolTable* m_symtab = &function().symtab();
     ast::Class* m_class = nullptr;
     Instance* m_instance = nullptr;
+    bool m_parameter = false;  // are we resolving parameter (FunctionType)?
 };
 
 

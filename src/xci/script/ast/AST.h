@@ -264,6 +264,8 @@ struct StructType: public Type {
 
 
 struct Parameter {
+    explicit operator bool() const noexcept { return identifier || type; }
+
     Identifier identifier;  // optional
     std::unique_ptr<Type> type;  // optional
 };
@@ -281,7 +283,7 @@ struct FunctionType: public Type {
     void copy_to(FunctionType& r) const;
 
     std::vector<TypeName> type_params;  // declare type parameters of a generic function: <T,U>
-    std::vector<Parameter> params;
+    Parameter param;
     std::unique_ptr<Type> return_type;
     std::vector<TypeConstraint> context;
 };

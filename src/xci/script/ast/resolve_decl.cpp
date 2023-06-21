@@ -303,12 +303,12 @@ public:
         // lambda type (right hand side of '=')
         v.type.apply(*this);
         assert(m_type_info);
-        if (!m_instance && specified_type && specified_type != m_type_info.effective_type())
-            throw DeclarationTypeMismatch(specified_type, m_type_info, v.source_loc);
         // fill in types from specified function type
-        if (specified_type.is_callable()) {
+        if (specified_type.is_callable() && m_type_info.is_callable()) {
             if (m_type_info.signature().return_type.is_unknown() && specified_type.signature().return_type)
                 m_type_info.signature().set_return_type(specified_type.signature().return_type);
+            if (!m_instance && specified_type.signature().return_type != m_type_info.signature().return_type)
+                throw DeclarationTypeMismatch(specified_type, m_type_info, v.source_loc);
             auto& param = m_type_info.signature().param_type;
             const auto& spec = specified_type.signature().param_type;
             if (param.is_unknown() || param.is_void())
@@ -320,11 +320,25 @@ public:
                         item = sp;
                 }
             }
-            // specified param must match now
-            auto m = match_type(param, spec);
-            if (!m)
-                throw DefinitionParamTypeMismatch(1, spec, param, v.source_loc);
-        }
+            if (param.is_struct() && spec.is_tuple()) {
+                for (const auto& [i, sp] : spec.subtypes() | enumerate) {
+                    auto& par = param.struct_items()[i].second;
+                    if (par.is_unknown())
+                        par = sp;
+                    else {
+                        auto m = match_type(par, sp);
+                        if (!m)
+                            throw DefinitionParamTypeMismatch(1+i, sp, par, v.source_loc);
+                    }
+                }
+            } else {
+                // specified param must match now
+                auto m = match_type(param, spec);
+                if (!m)
+                    throw DeclarationTypeMismatch(spec, param, v.source_loc);
+            }
+        } else if (!m_instance && specified_type && specified_type != m_type_info.effective_type())
+            throw DeclarationTypeMismatch(specified_type, m_type_info, v.source_loc);
 
         fn.set_signature(m_type_info.signature_ptr());
 
@@ -349,15 +363,14 @@ public:
 
     void visit(ast::FunctionType& t) final {
         auto signature = std::make_shared<Signature>();
-        std::vector<TypeInfo> parameters;
-        for (const auto& p : t.params) {
-            if (p.type)
-                p.type->apply(*this);
+        if (t.param) {
+            if (t.param.type)
+                t.param.type->apply(*this);
             else
                 m_type_info = ti_unknown();
-            parameters.push_back(std::move(m_type_info));
-        }
-        signature->set_parameters(std::move(parameters));
+            signature->set_parameter(std::move(m_type_info));
+        } else
+            signature->set_parameter(ti_void());
         if (t.return_type)
             t.return_type->apply(*this);
         else

@@ -198,8 +198,7 @@ void Block::copy_to(Block& r) const
 std::unique_ptr<ast::Expression> Block::make_copy() const
 {
     auto r = std::make_unique<Block>();
-    Expression::copy_to(*r);
-    r->statements = copy_ptr_vector(statements);
+    Block::copy_to(*r);
     return r;
 }
 
@@ -293,7 +292,7 @@ std::unique_ptr<ast::Type> FunctionType::make_copy() const
 void FunctionType::copy_to(FunctionType& r) const
 {
     r.type_params = type_params;
-    r.params = copy_vector(params);
+    r.param = copy(param);
     r.return_type = copy(return_type);
     r.context = context;
 }
