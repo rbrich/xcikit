@@ -24,18 +24,15 @@
         {
             "matchManagers": ["github-actions"],
             "groupName": "github-actions",
-            "separateMajorMinor": false,
-            "dependencyDashboardApproval": true
+            "separateMajorMinor": false
         },
         {
             "matchManagers": ["npm"],
             "groupName": "npm",
-            "separateMajorMinor": false,
-            "dependencyDashboardApproval": true
+            "separateMajorMinor": false
         },
         {
-            "matchManagers": ["dockerfile"],
-            "dependencyDashboardApproval": true
+            "matchManagers": ["dockerfile"]
         },
         {
             "matchManagers": ["regex"],
@@ -45,11 +42,10 @@
         },
         {
             "matchManagers": ["regex"],
-            "matchPackageNames": ["spirv-cross"],
-            "dependencyDashboardApproval": true
+            "matchPackageNames": ["spirv-cross"]
         }
     ],
-    "prConcurrentLimit": 2,
+    "dependencyDashboardApproval": true,
     "semanticCommits": "disabled",
     "labels": ["deps"]
 }
