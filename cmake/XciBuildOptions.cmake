@@ -24,9 +24,11 @@ endif()
 option(ENABLE_LTO "Enable link-time, whole-program optimizations." ${MINSIZE})
 option(ENABLE_OZ "Only MinSizeRel: replace default -Os flag by -Oz." OFF)
 option(ENABLE_CCACHE "Use ccache as compiler launcher, when available." ON)
+set(USE_LD "" CACHE STRING "Use alternative linker command (-fuse-ld).")
 
 # cosmetics
 option(FORCE_COLORS "Force colored compiler output." OFF)
+
 
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)  # override to "default" for shared libs
@@ -43,6 +45,10 @@ if (BUILD_WITH_DEBUG_INFO)
         set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Z7")
         set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /Z7")
     endif()
+endif()
+
+if (USE_LD)
+    add_link_options("-fuse-ld=${USE_LD}")
 endif()
 
 if (ENABLE_LTO)
