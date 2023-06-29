@@ -48,14 +48,7 @@ public:
             fn.ensure_ast_copy();
             return;
         }
-        if (fn.is_undefined()) {
-            fn.set_code();
-            auto* orig_code = m_code;
-            m_code = &fn.code();
-            dfn.expression->apply(*this);
-            m_code = orig_code;
-            // compile_subroutine(func, *dfn.expression);*/
-        }
+        assert(!fn.is_undefined());
     }
 
     void visit(ast::Invocation& inv) override {
@@ -69,37 +62,6 @@ public:
 
     void visit(ast::Return& ret) override {
         ret.expression->apply(*this);
-
-        if (function().has_intrinsics()) {
-            if (function().intrinsics() != function().code().size())
-                throw IntrinsicsFunctionError(
-                        "cannot mix compiled code with intrinsics",
-                        ret.expression->source_loc);
-            // no DROP for intrinsics function
-            return;
-        }
-
-        auto skip = function().signature().return_type.effective_type().size();
-        auto drop = function().raw_size_of_parameter()
-                  + function().raw_size_of_nonlocals();
-        if (drop > 0) {
-            Stack::StackRel pos = skip;
-            for (const auto& ti : function().nonlocals()) {
-                ti.foreach_heap_slot([this, pos](size_t offset) {
-                    // DEC_REF <addr in nonlocals>
-                    function().code().add_L1(Opcode::DecRef, pos + offset);
-                });
-                pos += ti.size();
-            }
-
-            function().parameter().foreach_heap_slot([this, pos](size_t offset) {
-                // DEC_REF <addr in params>
-                function().code().add_L1(Opcode::DecRef, pos + offset);
-            });
-            // DROP <ret_value> <params + nonlocals>
-            function().code().add_L2(Opcode::Drop, skip, drop);
-        }
-        // return value left on stack
     }
 
     void visit(ast::Literal& v) override {
@@ -310,7 +272,7 @@ public:
                     Function& fn = scope.function();
                     if (fn.is_generic()) {
                         assert(!fn.has_any_generic());  // fully specialized
-                        const auto body = fn.yank_generic_body();
+                        auto body = fn.yank_generic_body();
                         fn.set_code();  // this would release AST copy
                         m_compiler.compile_function(scope, body.ast());
                     }
@@ -340,7 +302,7 @@ public:
                     Function& fn = scope.function();
                     if (fn.is_generic()) {
                         assert(!fn.has_any_generic());  // fully specialized
-                        const auto body = fn.yank_generic_body();
+                        auto body = fn.yank_generic_body();
                         fn.set_code();  // this would release AST copy
                         m_compiler.compile_function(scope, body.ast());
                     }
@@ -635,11 +597,6 @@ private:
         }
     }
 
-    void compile_subroutine(Scope& scope, ast::Expression& expression) {
-        CompilerVisitor visitor(m_compiler, scope);
-        expression.apply(visitor);
-    }
-
 private:
     Compiler& m_compiler;
     Scope& m_scope;
@@ -713,13 +670,53 @@ bool Compiler::compile(Scope& scope, ast::Module& ast)
 }
 
 
-void Compiler::compile_function(Scope& scope, const ast::Block& body)
+void Compiler::compile_function(Scope& scope, ast::Expression& body)
 {
+    Function& fn = scope.function();
+    const auto parameter_size = fn.raw_size_of_parameter();
+    const auto closure_size = fn.raw_size_of_nonlocals();
+
+    if (fn.is_expression() && fn.has_nonvoid_parameter()) {
+        // Copy parameter to be passed to a function contained inside the expression
+        fn.code().add_L2(Opcode::Copy, closure_size, parameter_size);
+        fn.parameter().foreach_heap_slot([&fn](size_t offset) {
+            fn.code().add_L1(Opcode::IncRef, offset);
+        });
+    }
+
     // Compile AST into bytecode
     CompilerVisitor visitor(*this, scope);
-    for (const auto& stmt : body.statements) {
-        stmt->apply(visitor);
+    body.apply(visitor);
+
+    if (fn.has_intrinsics()) {
+        if (fn.intrinsics() != fn.code().size())
+            throw IntrinsicsFunctionError(
+                    "cannot mix compiled code with intrinsics",
+                    body.source_loc);
+        // no DROP for intrinsics function
+        return;
     }
+
+    auto skip = fn.signature().return_type.effective_type().size();
+    auto drop = parameter_size + closure_size;
+    if (drop > 0) {
+        Stack::StackRel pos = skip;
+        for (const auto& ti : fn.nonlocals()) {
+            ti.foreach_heap_slot([&fn, pos](size_t offset) {
+                // DEC_REF <addr in nonlocals>
+                fn.code().add_L1(Opcode::DecRef, pos + offset);
+            });
+            pos += ti.size();
+        }
+
+        fn.parameter().foreach_heap_slot([&fn, pos](size_t offset) {
+            // DEC_REF <addr in params>
+            fn.code().add_L1(Opcode::DecRef, pos + offset);
+        });
+        // DROP <ret_value> <params + nonlocals>
+        fn.code().add_L2(Opcode::Drop, skip, drop);
+    }
+    // return value left on stack
 }
 
 
@@ -741,7 +738,7 @@ void Compiler::compile_all_functions(Scope& main)
         }
 
         assert(!fn.has_any_generic());
-        const auto body = fn.yank_generic_body();
+        auto body = fn.yank_generic_body();
         fn.set_code();  // this removes AST from the function
         compile_function(scope, body.ast());
     }

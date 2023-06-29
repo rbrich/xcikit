@@ -102,6 +102,7 @@ namespace ast {
 class DumpVisitor: public ConstVisitor {
 public:
     explicit DumpVisitor(std::ostream& os) : m_os(os) {}
+    void visit(const Block& v) override { m_os << v; }
     void visit(const Definition& v) override { m_os << v; }
     void visit(const Invocation& v) override { m_os << v; }
     void visit(const Return& v) override { m_os << v; }
@@ -810,10 +811,10 @@ std::ostream& operator<<(std::ostream& os, const Function& f)
 std::ostream& operator<<(std::ostream& os, Function::Kind v)
 {
     switch (v) {
-        case Function::Kind::Undefined:  return os << "undefined";
-        case Function::Kind::Compiled:    return os << "compiled";
-        case Function::Kind::Generic: return os << "generic";
-        case Function::Kind::Native:  return os << "native";
+        case Function::Kind::Undefined: return os << "undefined";
+        case Function::Kind::Compiled:  return os << "compiled";
+        case Function::Kind::Generic:   return os << "generic";
+        case Function::Kind::Native:    return os << "native";
     }
     XCI_UNREACHABLE;
 }
@@ -914,6 +915,8 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
         os << put_indent << '[' << i << "] ";
         if (f.kind() != Function::Kind::Compiled) {
             os << '(' << f.kind();
+            if (f.is_expression())
+                os << ", expr";
             if (f.has_compile())
                 os << ", compile";
             if (f.is_specialized())

@@ -105,8 +105,7 @@ void Function::copy_body(const Function& src)
     return std::visit([this](const auto& v) {
         using T = std::decay_t<decltype(v)>;
         if constexpr (std::is_same_v<T, GenericBody>) {
-            set_ast(v.ast());
-            ensure_ast_copy();
+            m_body = GenericBody{nullptr, v.ast().make_copy()};
         } else {
             m_body = v;
         }
@@ -117,12 +116,6 @@ void Function::copy_body(const Function& src)
 bool Function::CompiledBody::operator==(const Function::CompiledBody& rhs) const
 {
     return code == rhs.code;
-}
-
-
-bool Function::GenericBody::operator==(const Function::GenericBody& rhs) const
-{
-    return false;
 }
 
 

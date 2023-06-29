@@ -68,6 +68,7 @@ public:
     virtual void visit(const TypeDef&) = 0;
     virtual void visit(const TypeAlias&) = 0;
     // expression
+    virtual void visit(const Block&) = 0;
     virtual void visit(const Literal&) = 0;
     virtual void visit(const Parenthesized&) = 0;
     virtual void visit(const Tuple&) = 0;
@@ -99,6 +100,7 @@ public:
     virtual void visit(TypeDef&) = 0;
     virtual void visit(TypeAlias&) = 0;
     // expression
+    virtual void visit(Block& blk);
     virtual void visit(Literal&) = 0;
     virtual void visit(Parenthesized& v);
     virtual void visit(Tuple&) = 0;
@@ -124,6 +126,7 @@ public:
 class StatementVisitor: public Visitor {
 public:
     // skip expression visits
+    void visit(Block&) final {}
     void visit(Literal&) final {}
     void visit(Parenthesized&) final {}
     void visit(Tuple&) final {}
@@ -157,6 +160,7 @@ public:
     void visit(TypeDef&) final {}
     void visit(TypeAlias&) final {}
     // skip expression visits
+    void visit(Block&) final {}
     void visit(Literal&) final {}
     void visit(Parenthesized&) final {}
     void visit(Tuple&) final {}
@@ -289,18 +293,6 @@ struct Variable {
 };
 
 
-struct Block {
-    // finish block - convert last Invocation into ReturnStatement
-    // (no Invocation -> throw error)
-    void finish();
-
-    std::vector<std::unique_ptr<ast::Statement>> statements;
-
-    // resolved:
-    SymbolTable* symtab = nullptr;
-};
-
-
 struct Expression {
     Expression() = default;
     Expression(Expression&&) = default;
@@ -316,6 +308,24 @@ struct Expression {
 
     // set when this expression is direct child of a Definition
     Definition* definition = nullptr;
+};
+
+
+struct Block: public Expression {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    void copy_to(Block& r) const;
+    std::unique_ptr<ast::Expression> make_copy() const override;
+    const TypeInfo& type_info() const override;
+
+    // finish block - convert last Invocation into ReturnStatement
+    // (no Invocation -> throw error)
+    void finish();
+
+    std::vector<std::unique_ptr<ast::Statement>> statements;
+
+    // resolved:
+    SymbolTable* symtab = nullptr;
 };
 
 struct Literal: public Expression {
@@ -500,7 +510,7 @@ struct Function: public Expression {
 
     // resolved:
     TypeInfo ti;
-    SymbolPointer symbol;  // only for lambda
+    SymbolPointer symbol;
     Index scope_index = no_index;
     bool call_arg = false;  // true if the function is inside Call with an arg
 };
@@ -663,7 +673,6 @@ std::unique_ptr<Type> copy(const std::unique_ptr<Type>& v);
 inline StructItem copy(const StructItem& v) { return {v.identifier, copy(v.type)}; }
 inline Variable copy(const Variable& v) { return {v.identifier, copy(v.type)}; }
 inline Parameter copy(const Parameter& v) { return {v.identifier, copy(v.type)}; }
-Block copy(const Block& v);
 
 
 } // namespace ast

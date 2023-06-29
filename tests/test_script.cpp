@@ -480,6 +480,7 @@ TEST_CASE( "Coercion", "[script][interpreter]" )
 {
     // coerce empty tuple (literal) to a struct
     CHECK(interpret("a:(x:String,y:Int) = (); a") == "(x=\"\", y=0)");
+    CHECK(interpret("a:(x:String, y:(y1:Int, y2:Float)) = (); a.y.y1") == "0");
     CHECK(interpret("f = fun a:(x:String,y:Int) {a.y}; f ()") == "0");
     CHECK(interpret_std("format (true, ())") == "\"true\"");  // second arg is FormatSpec
     // only literals may coerce, not functions/variables
@@ -630,9 +631,14 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret_std("outer = fun y:Int {"
                         "inner = fun x:Int { x + y }; inner y "
                         "}; outer 2") == "4");
+    CHECK(interpret_std("outer = fun y:Int { alias = y; alias }; outer 2") == "2");
     CHECK(interpret_std("outer = fun y:Int {"
                         "  inner = fun x:Int { x + y };"
                         "  alias = inner; alias y "
+                        "}; outer 2") == "4");
+    CHECK(interpret_std("outer = fun y:Int {"
+                        "  inner = fun x:Int { x + y };"
+                        "  alias = inner y; alias "
                         "}; outer 2") == "4");
     CHECK(interpret_std("outer = fun y {"
                         "  inner = fun x:Int { x + y };"

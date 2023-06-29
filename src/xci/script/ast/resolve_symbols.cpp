@@ -66,6 +66,9 @@ public:
         if (dfn.variable.type)
             dfn.variable.type->apply(*this);
         if (dfn.expression) {
+            Function& fn = symptr.get_function(m_scope);
+            fn.set_ast(*dfn.expression);
+            fn.set_expression();
             symptr->set_defined(true);
             dfn.expression->definition = &dfn;
             dfn.expression->apply(*this);
@@ -306,6 +309,7 @@ public:
         auto& scope = module().get_scope(v.scope_index);
         Function& fn = scope.function();
         fn.set_ast(v.body);
+        fn.set_expression(false);
 
         v.body.symtab = &fn.symtab();
         m_symtab = v.body.symtab;

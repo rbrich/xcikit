@@ -22,6 +22,14 @@ namespace xci::script::ast {
 using ranges::cpp20::views::reverse;
 
 
+void Visitor::visit(Block& blk)
+{
+    for (const auto& stmt : blk.statements) {
+        stmt->apply(*this);
+    }
+}
+
+
 void Visitor::visit(Parenthesized& v)
 {
     v.expression->apply(*this);
@@ -55,7 +63,7 @@ std::unique_ptr<ast::Expression> Function::make_copy() const
     auto r = std::make_unique<Function>();
     Expression::copy_to(*r);
     type.copy_to(r->type);
-    r->body = copy(body);
+    body.copy_to(r->body);
     r->ti = ti;
     r->symbol = symbol;
     r->scope_index = scope_index;
@@ -177,6 +185,28 @@ void Expression::copy_to(Expression& r) const
 {
     r.source_loc = source_loc;
     r.definition = definition;
+}
+
+
+void Block::copy_to(Block& r) const
+{
+    Expression::copy_to(r);
+    r.statements = copy_ptr_vector(statements);
+}
+
+
+std::unique_ptr<ast::Expression> Block::make_copy() const
+{
+    auto r = std::make_unique<Block>();
+    Expression::copy_to(*r);
+    r->statements = copy_ptr_vector(statements);
+    return r;
+}
+
+
+const TypeInfo& Block::type_info() const
+{
+    return dynamic_cast<Return*>(statements.back().get())->expression->type_info();
 }
 
 
@@ -501,12 +531,6 @@ std::unique_ptr<Type> copy(const std::unique_ptr<Type>& v)
     if (v)
         return v->make_copy();
     return {};
-}
-
-
-Block copy(const Block& v)
-{
-    return {copy_ptr_vector(v.statements)};
 }
 
 

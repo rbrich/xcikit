@@ -14,7 +14,7 @@ namespace xci::script {
 
 /// Resolve generic functions and methods to concrete instances
 
-void resolve_spec(Scope& scope, const ast::Block& block);
+void resolve_spec(Scope& scope, ast::Expression& body);
 
 
 } // namespace xci::script

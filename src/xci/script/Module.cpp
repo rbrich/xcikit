@@ -257,7 +257,7 @@ bool Module::operator==(const Module& rhs) const
 // Module serialization
 
 // Following static asserts help with development - error message readability
-static_assert(xci::data::TypeWithSerializeFunction<ast::Block, xci::data::BinaryReader>);
+static_assert(xci::data::TypeWithSaveFunction<ast::Expression, xci::data::BinaryWriter>);
 
 
 bool Module::save_to_file(const std::string& filename)

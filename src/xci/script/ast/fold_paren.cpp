@@ -58,9 +58,7 @@ public:
     }
 
     void visit(ast::Function& v) override {
-        for (const auto& stmt : v.body.statements) {
-            stmt->apply(*this);
-        }
+        v.body.apply(*this);
     }
 
     void visit(ast::Parenthesized& v) override {
@@ -110,12 +108,10 @@ private:
 };
 
 
-void fold_paren(const ast::Block& block)
+void fold_paren(ast::Expression& expr)
 {
     FoldParenVisitor visitor;
-    for (const auto& stmt : block.statements) {
-        stmt->apply(visitor);
-    }
+    expr.apply(visitor);
 }
 
 

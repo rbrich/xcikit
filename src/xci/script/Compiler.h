@@ -74,7 +74,7 @@ public:
 
     /// Compile single function that has fully prepared AST
     /// (all other phases were run on it)
-    void compile_function(Scope& scope, const ast::Block& body);
+    void compile_function(Scope& scope, ast::Expression& body);
 
     /// Compile all functions in a module except `main`
     /// that are marked with compile flag but not yet compiled

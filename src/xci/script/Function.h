@@ -86,8 +86,9 @@ public:
     // Generic function: AST of function body
     struct GenericBody;
     GenericBody yank_generic_body() { return std::move(std::get<GenericBody>(m_body)); }
-    const ast::Block& ast() const { return std::get<GenericBody>(m_body).ast(); }
-    void set_ast(const ast::Block& body) { m_body = GenericBody{&body}; }
+    const ast::Expression& ast() const { return std::get<GenericBody>(m_body).ast(); }
+    ast::Expression& ast() { return std::get<GenericBody>(m_body).ast(); }
+    void set_ast(ast::Expression& expr) { m_body = GenericBody{&expr}; }
     bool is_ast_copied() const { return std::get<GenericBody>(m_body).ast_ref == nullptr; }
     void ensure_ast_copy() { std::get<GenericBody>(m_body).ensure_copy(); }
 
@@ -119,23 +120,24 @@ public:
         unsigned intrinsics = 0;
     };
 
-    // function is a template, signature contains type variables
+    // function is not yet compiled or generic
     struct GenericBody {
-        bool operator==(const GenericBody& rhs) const;
+        bool operator==(const GenericBody& rhs) const { return false; }
 
-        // AST of function body - reference
-        const ast::Block* ast_ref = nullptr;
+        // AST of function body - as a reference
+        ast::Expression* ast_ref = nullptr;
 
         // frozen copy of AST (when ast_ref == nullptr)
-        ast::Block ast_copy;
+        std::unique_ptr<ast::Expression> ast_copy;
 
         // obtain read-only AST
-        const ast::Block& ast() const { return ast_ref ? *ast_ref : ast_copy; }
+        const ast::Expression& ast() const { return ast_ref ? *ast_ref : *ast_copy; }
+        ast::Expression& ast() { return ast_ref ? *ast_ref : *ast_copy; }
 
         // copy AST if referenced
         void ensure_copy() {
             if (ast_ref) {
-                ast_copy = ast::copy(*ast_ref);
+                ast_copy = ast_ref->make_copy();
                 ast_ref = nullptr;
             }
         }
@@ -147,7 +149,7 @@ public:
 
         template<class Archive>
         void load(Archive& ar) {
-            ar(ast_copy);
+            //ar(ast_copy);
         }
     };
 
@@ -180,6 +182,9 @@ public:
     bool is_native() const { return std::holds_alternative<NativeBody>(m_body); }
 
     void copy_body(const Function& src);
+
+    void set_expression(bool is_expr = true) { m_expression = is_expr; }
+    bool is_expression() const { return m_expression; }
 
     void set_specialized() { m_specialized = true; }
     bool is_specialized() const { return m_specialized; }
@@ -225,6 +230,7 @@ private:
     // function body (depending on kind of function)
     std::variant<std::monostate, CompiledBody, GenericBody, NativeBody> m_body;
     // flags
+    bool m_expression : 1 = false;  // doesn't have its own parameters, but can alias something with parameters
     bool m_specialized : 1 = false;
     bool m_compile : 1 = false;
     bool m_nonlocals_resolved : 1 = false;

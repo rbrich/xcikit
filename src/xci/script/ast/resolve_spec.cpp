@@ -38,16 +38,17 @@ public:
 
     void visit(ast::Definition& dfn) override {
         if (dfn.expression) {
-            dfn.expression->apply(*this);
+            auto& scope = dfn.symbol().get_scope(m_scope);
+            clone_if_parent_is_specialized(scope);
 
-            Function& fn = dfn.symbol().get_function(m_scope);
-            if (m_value_type.is_callable())
+            dfn.expression->apply(*this);
+            Function& fn = scope.function();
+            if (m_value_type.is_callable()) {
                 fn.signature() = m_value_type.signature();
-            else {
+            } else {
                 const auto& source_loc = dfn.expression ?
                                 dfn.expression->source_loc : dfn.variable.identifier.source_loc;
-                resolve_return_type(fn.signature(), m_value_type,
-                                    dfn.symbol().get_scope(m_scope), source_loc);
+                resolve_return_type(fn.signature(), m_value_type, scope, source_loc);
                 // FIXME: another pass to save resolved types?
                 if (auto* t = dynamic_cast<ast::StructType*>(dfn.variable.type.get()); t) {
                     // update struct type in module, which may contain Unknown subtypes
@@ -57,6 +58,8 @@ public:
                     }
                 }
             }
+            if (!fn.has_any_generic() && !scope.has_unresolved_type_params())
+                fn.set_compile();
         }
 
         m_value_type = {};
@@ -461,19 +464,9 @@ public:
             v.scope_index = v.symbol.get_scope_index(m_scope);
         }
         auto& scope = module().get_scope(v.scope_index);
-
-        // This is a nested function in a function we're currently specializing.
-        // Make sure we work on specialized nested function, not original (generic) one.
-        const bool parent_is_specialized = scope.parent()->has_function() &&
-                                           scope.parent()->function().is_specialized();
-        if (parent_is_specialized) {
-            assert(!scope.function().is_specialized());
-            auto clone_fn_idx = clone_function(scope);
-            auto& clone_fn = module().get_function(clone_fn_idx);
-            clone_fn.ensure_ast_copy();
-            scope.set_function_index(clone_fn_idx);
-        }
-
+        const bool parent_is_specialized =
+                v.definition ? is_parent_specialized(scope)  // already cloned in Definition
+                             : clone_if_parent_is_specialized(scope);
         Function& fn = scope.function();
 
         m_value_type = TypeInfo{fn.signature_ptr()};
@@ -659,7 +652,7 @@ private:
     // * use the deduced return type to resolve type variables in generic return type
     // Modifies `fn` in place - it should be already copied.
     // Throw when the signature doesn't match the call args or deduced return type.
-    void specialize_to_call_args(Scope& scope, const ast::Block& body, const SourceLocation& loc,
+    void specialize_to_call_args(Scope& scope, ast::Expression& body, const SourceLocation& loc,
                                  TypeArgs type_args = {})
     {
         if (m_call_sig.empty())
@@ -704,7 +697,7 @@ private:
 
     Index clone_function(const Scope& scope) const
     {
-        const auto& fn = scope.function();
+        auto& fn = scope.function();
         auto clone_fn_idx = module().add_function(Function(module(), fn.symtab())).index;
         auto& clone_fn = module().get_function(clone_fn_idx);
         auto clone_sig = std::make_shared<Signature>(fn.signature());  // copy, not ref
@@ -721,6 +714,27 @@ private:
         auto& fscope = module().get_scope(fscope_idx);
         fscope.copy_subscopes(scope);
         return fscope_idx;
+    }
+
+    bool is_parent_specialized(const Scope& scope)
+    {
+        return scope.parent()->has_function() &&
+               scope.parent()->function().is_specialized();
+    }
+
+    // If this is a nested function in a function we're currently specializing,
+    // make sure we work on specialized nested function, not original (generic) one.
+    bool clone_if_parent_is_specialized(Scope& scope)
+    {
+        const bool parent_is_specialized = is_parent_specialized(scope);
+        if (parent_is_specialized) {
+            assert(!scope.function().is_specialized());
+            auto clone_fn_idx = clone_function(scope);
+            auto& clone_fn = module().get_function(clone_fn_idx);
+            clone_fn.ensure_ast_copy();
+            scope.set_function_index(clone_fn_idx);
+        }
+        return parent_is_specialized;
     }
 
     /// Given a generic function, create a copy and specialize it to call args.
@@ -904,12 +918,10 @@ private:
 };
 
 
-void resolve_spec(Scope& scope, const ast::Block& block)
+void resolve_spec(Scope& scope, ast::Expression& body)
 {
     ResolveSpecVisitor visitor {scope};
-    for (const auto& stmt : block.statements) {
-        stmt->apply(visitor);
-    }
+    body.apply(visitor);
     auto& fn = scope.function();
     if (fn.has_any_generic()) {
         // the resolved function is generic - not allowed in main scope

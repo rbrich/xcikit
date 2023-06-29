@@ -171,7 +171,7 @@ public:
                 // the instructions are low-level, untyped - set return type to Unknown
                 m_value_type = {};
                 // check type of args (they must be Int, TypeIndex or Byte)
-                auto check_type = [&arg](int i, const TypeInfo& ti) {
+                auto check_type = [&arg](unsigned i, const TypeInfo& ti) {
                     const Type t = ti.type();
                     if (t != Type::Unknown && t != Type::Byte && t != Type::Int32 && t != Type::TypeIndex)
                         throw UnexpectedArgumentType(i, ti_int32(), ti, arg.source_loc);

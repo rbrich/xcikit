@@ -1,7 +1,7 @@
 // resolve_nonlocals.h created on 2020-01-05 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_AST_RESOLVE_NONLOCALS_H
@@ -20,7 +20,7 @@ namespace xci::script {
 /// - add the same non-local symbol also to the parent scope
 /// - reference the non-local in parent scope instead of the target symbol directly
 
-void resolve_nonlocals(Scope& main, const ast::Block& block);
+void resolve_nonlocals(Scope& main, ast::Expression& body);
 
 
 } // namespace xci::script

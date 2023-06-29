@@ -11,7 +11,7 @@
 namespace xci::script {
 
 
-static void resolve_nonlocals_for_scope(Scope& scope, const ast::Block& block);
+static void resolve_nonlocals_for_scope(Scope& scope, ast::Expression& body);
 
 
 void resolve_nonlocals_in_symtab(Scope& scope)
@@ -240,19 +240,17 @@ private:
 };
 
 
-static void resolve_nonlocals_for_scope(Scope& scope, const ast::Block& block)
+static void resolve_nonlocals_for_scope(Scope& scope, ast::Expression& body)
 {
     ResolveNonlocalsVisitor visitor {scope};
-    for (const auto& stmt : block.statements) {
-        stmt->apply(visitor);
-    }
+    body.apply(visitor);
     resolve_nonlocals_in_symtab(scope);
 }
 
 
-void resolve_nonlocals(Scope& main, const ast::Block& block)
+void resolve_nonlocals(Scope& main, ast::Expression& body)
 {
-    resolve_nonlocals_for_scope(main, block);
+    resolve_nonlocals_for_scope(main, body);
 
     // Resolve other scopes (not referenced directly via main scope or AST)
     Module& module = main.module();

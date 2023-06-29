@@ -336,7 +336,6 @@ public:
         }
 
         fn.set_signature(m_type_info.signature_ptr());
-        fn.set_ast(v.body);
 
         resolve_decl(scope, v.body);
 

@@ -29,7 +29,7 @@ namespace xci::script {
 ///           String(Expression) "three"
 ///
 /// Mandatory AST pass (unfolded parentheses won't compile)
-void fold_paren(const ast::Block& block);
+void fold_paren(ast::Expression& expr);
 
 
 } // namespace xci::script
