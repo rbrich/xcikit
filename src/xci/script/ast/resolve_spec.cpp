@@ -49,14 +49,6 @@ public:
                 const auto& source_loc = dfn.expression ?
                                 dfn.expression->source_loc : dfn.variable.identifier.source_loc;
                 resolve_return_type(fn.signature(), m_value_type, scope, source_loc);
-                // FIXME: another pass to save resolved types?
-                if (auto* t = dynamic_cast<ast::StructType*>(dfn.variable.type.get()); t) {
-                    // update struct type in module, which may contain Unknown subtypes
-                    if (!t->subtypes.empty()) {
-                        const Index index = t->subtypes.front().identifier.symbol->index();
-                        module().update_type(index, m_value_type);
-                    }
-                }
             }
             if (!fn.has_any_generic() && !scope.has_unresolved_type_params())
                 fn.set_compile();
@@ -159,12 +151,6 @@ public:
             v.ti = std::move(type_check.eval_type());
         }
         m_value_type = v.ti;
-
-        // Add the inferred struct type to module, point StructItem symbols to it
-        const Index index = module().add_type(v.ti);
-        for (auto& item : v.items) {
-            item.first.symbol->set_index(index);
-        }
     }
 
     void visit(ast::Reference& v) override {
@@ -305,6 +291,11 @@ public:
                 } else {
                     assert(sym.type() == Symbol::StructItem);
                     m_call_sig.clear();
+                    if (v.ti.has_generic())
+                        resolve_generic_type(v.ti, m_scope);
+                    m_value_type = v.ti.signature().return_type;
+                    m_value_type.set_literal(false);
+                    return;
                 }
                 break;
             }

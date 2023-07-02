@@ -115,17 +115,10 @@ public:
     }
 
     void visit(ast::TypeDef& v) override {
-        // `add_type` deduplicates by comparing the TypeInfos. Unknown equals to any type.
-        // The second add_type below overwrites the placeholder.
-        auto placeholder_index = module().add_type(TypeInfo{v.type_name.name, ti_unknown()});
-
-        m_type_def_index = placeholder_index;
         v.type->apply(*this);
-        m_type_def_index = no_index;
 
         // create new Named type
         auto index = module().add_type(TypeInfo{v.type_name.name, std::move(m_type_info)});
-        assert(index == placeholder_index);
         v.type_name.symbol->set_index(index);
     }
 
@@ -222,7 +215,8 @@ public:
                 v.ti = TypeInfo{cls_fn.signature_ptr()};
                 break;
             }
-            case Symbol::Function: {
+            case Symbol::Function:
+            case Symbol::StructItem: {
                 // specified type in declaration
                 v.ti = std::move(m_type_info);
                 break;
@@ -255,9 +249,6 @@ public:
             case Symbol::TypeName:
             case Symbol::TypeVar:
                 return;
-            case Symbol::StructItem:
-                v.ti = std::move(m_type_info);
-                break;
             case Symbol::Nonlocal:
             case Symbol::Unresolved:
                 XCI_UNREACHABLE;
@@ -357,7 +348,6 @@ public:
     }
 
     void visit(ast::FunctionType& t) final {
-        m_type_def_index = no_index;
         auto signature = std::make_shared<Signature>();
         std::vector<TypeInfo> parameters;
         for (const auto& p : t.params) {
@@ -377,13 +367,11 @@ public:
     }
 
     void visit(ast::ListType& t) final {
-        m_type_def_index = no_index;
         t.elem_type->apply(*this);
         m_type_info = ti_list(std::move(m_type_info));
     }
 
     void visit(ast::TupleType& t) final {
-        m_type_def_index = no_index;
         std::vector<TypeInfo> subtypes;
         for (auto& st : t.subtypes) {
             st->apply(*this);
@@ -393,8 +381,6 @@ public:
     }
 
     void visit(ast::StructType& t) final {
-        auto type_def_index = m_type_def_index;
-        m_type_def_index = no_index;
         TypeInfo::StructItems items;
         for (auto& st : t.subtypes) {
             if (st.type)
@@ -402,12 +388,6 @@ public:
             items.emplace_back(st.identifier.name, std::move(m_type_info));
         }
         m_type_info = TypeInfo{std::move(items)};
-
-        const Index index = (type_def_index == no_index) ?
-                      module().add_type(m_type_info) : type_def_index;
-        for (auto& st : t.subtypes) {
-            st.identifier.symbol->set_index(index);
-        }
     }
 
 private:
@@ -428,8 +408,6 @@ private:
     Scope& m_scope;
 
     TypeInfo m_type_info;   // resolved ast::Type
-
-    Index m_type_def_index = no_index;  // placeholder for module type being defined in TypeDef
 
     Class* m_class = nullptr;
     Instance* m_instance = nullptr;

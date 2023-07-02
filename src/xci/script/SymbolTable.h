@@ -104,7 +104,7 @@ public:
         TypeVar,            // type variable in generic function (index = var ID)
 
         // struct type
-        StructItem,         // name = item name, index = struct type index in module
+        StructItem,         // name = item name (index = unused)
 
         // special
         TypeIndex,          // translate type name to TypeIndex (index = (type index in module << 7) + module_index)

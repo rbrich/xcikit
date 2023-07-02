@@ -131,18 +131,11 @@ Index Module::find_value(const TypedValue& value) const
 
 Index Module::add_type(TypeInfo type_info)
 {
-    assert(!type_info.has_generic());
-
-    // lookup previous type
-    auto idx = find_type(type_info);
-    if (idx != no_index) {
-        // Replace the placeholder used for named type (contains Unknown ti).
-        if (type_info.is_named()) {
-            assert(m_types[idx].named_type().type_info.is_unknown()
-                || m_types[idx] == type_info);
-            m_types[idx] = std::move(type_info);
-        }
-        return idx;
+    // lookup previous type (deduplicate)
+    if (!type_info.has_unknown()) {
+        auto idx = find_type(type_info);
+        if (idx != no_index)
+            return idx;
     }
 
     m_types.push_back(std::move(type_info));
@@ -154,7 +147,6 @@ void Module::update_type(Index index, TypeInfo type_info)
 {
     // update possibly Unknown type with a concrete type
     assert(!type_info.has_unknown());
-    assert(!type_info.has_generic());
     assert(m_types[index] == type_info);  // it must differ only in Unknown fields
     m_types[index] = type_info;
 }

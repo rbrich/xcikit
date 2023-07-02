@@ -213,7 +213,7 @@ public:
                 throw StructDuplicateKey(item.first.name, item.first.source_loc);
 
             item.second->apply(*this);
-            item.first.symbol = module().symtab().add({item.first.name, Symbol::StructItem, no_index});
+            item.first.symbol = add_struct_item(item.first.name, no_index);
         }
     }
 
@@ -248,9 +248,12 @@ public:
         if (symptr->type() == Symbol::Function || symptr->type() == Symbol::StructItem) {
             // find all visible function overloads (in the nearest scope)
             v.sym_list = find_function_overloads(v.identifier.name);
-            // find all StructItem symbols, in all scopes
+            // find all StructItem symbols, in any modules
             auto struct_syms = find_all_symbols_of_type(v.identifier.name, Symbol::StructItem);
-            v.sym_list.insert(v.sym_list.end(), struct_syms.begin(), struct_syms.end());
+            if (!struct_syms.empty()) {
+                // Always insert only a single StructItem symbol.
+                v.sym_list.emplace_back(struct_syms.front());
+            }
         }
         if (symptr->type() == Symbol::Module) {
             // add module to overload set (only if it's actual module symbol, not builtin __module)
@@ -389,7 +392,7 @@ public:
 
             if (st.type)
                 st.type->apply(*this);
-            st.identifier.symbol = module().symtab().add({name, Symbol::StructItem, no_index});
+            st.identifier.symbol = add_struct_item(name, no_index);
         }
     }
 
@@ -406,6 +409,18 @@ private:
         assert(symtab().module() == &module());
         auto symptr = symtab().add({name, Symbol::Function, subscope_i});
         return {symptr, scope_idx};
+    }
+
+    SymbolPointer add_struct_item(const std::string& name, Index idx) {
+        auto& symtab = module().symtab();
+        // Deduplicate StructItem symbols - they don't carry any information
+        // other than the name may be a struct member
+        auto sym_ptr = symtab.find_last_of(name, Symbol::StructItem);
+        if (sym_ptr) {
+            assert(sym_ptr.symtab() == &symtab);
+            return sym_ptr;
+        }
+        return symtab.add({name, Symbol::StructItem, idx});
     }
 
     SymbolPointer allocate_type_var(const std::string& name = "") {

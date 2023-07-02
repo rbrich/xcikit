@@ -347,7 +347,9 @@ public:
                 break;
             case Symbol::StructItem: {
                 // arg = struct (pushed on stack)
-                const TypeInfo& struct_type = symtab.module()->get_type(sym.index());
+                assert(v.ti.is_callable());
+                assert(v.ti.signature().param_type.is_struct());
+                const TypeInfo& struct_type = v.ti.signature().param_type;
 
                 // return the item -> drop all other items from stack, leaving only the selected one
                 size_t drop_before = 0;  // first DROP 0 <size>

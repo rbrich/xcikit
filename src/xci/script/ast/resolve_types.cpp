@@ -147,12 +147,6 @@ public:
             v.ti = std::move(type_check.eval_type());
         }
         m_value_type = v.ti;
-
-        // Add the inferred struct type to module, point StructItem symbols to it
-        const Index index = module().add_type(v.ti);
-        for (auto& item : v.items) {
-            item.first.symbol->set_index(index);
-        }
     }
 
     void visit(ast::Reference& v) override {
@@ -323,6 +317,7 @@ public:
                 if (!res.type.effective_type())
                     throw MissingExplicitType(v.identifier.name, v.identifier.source_loc);
 
+                v.identifier.symbol = res.symptr;
                 if (res.symptr->type() == Symbol::Function) {
                     v.module = res.module;
                     v.index = res.scope_index;
@@ -331,13 +326,16 @@ public:
                         m_call_sig.clear();
                     }
                 } else if (res.symptr->type() == Symbol::StructItem) {
+                    // remember full function (Struct -> Item) in v.ti
+                    v.ti = res.type;
                     m_value_type = res.type.signature().return_type;
+                    m_value_type.set_literal(false);
                     m_call_sig.clear();
+                    return;  // do not overwrite v.ti below
                 } else {
                     assert(res.symptr->type() == Symbol::Module);
                     m_value_type = res.type;
                 }
-                v.identifier.symbol = res.symptr;
                 break;
             }
             case Symbol::Parameter: {
@@ -634,13 +632,24 @@ private:
                     sig_ptr = fn.signature_ptr();
                 }
             } else if (symptr->type() == Symbol::StructItem) {
-                scope_idx = no_index;
-                sig_ptr = std::make_shared<Signature>();
-                const auto& struct_type = symptr.get_type();
-                sig_ptr->set_parameter(TypeInfo{struct_type});
-                const auto* item_type = struct_type.struct_item_by_name(symptr->name());
-                assert(item_type != nullptr);
-                sig_ptr->set_return_type(*item_type);
+                // Special symbol that says the name may be a struct member.
+                // In that case the arg has to be a struct with the referenced member name.
+                // If it isn't, skip the candidate.
+                if (!m_call_sig.empty() && m_call_sig.back().arg.type_info.is_struct()) {
+                    const auto& struct_type = m_call_sig.back().arg.type_info;
+                    const auto* item_type = struct_type.struct_item_by_name(symptr->name());
+                    if (item_type == nullptr) {
+                        // skip - struct doesn't have the referenced member
+                        continue;
+                    }
+                    scope_idx = no_index;
+                    sig_ptr = std::make_shared<Signature>();
+                    sig_ptr->set_parameter(TypeInfo{struct_type});
+                    sig_ptr->set_return_type(*item_type);
+                } else {
+                    // skip - not a struct
+                    continue;
+                }
             } else {
                 assert(symptr->type() == Symbol::Module);
                 scope_idx = no_index;

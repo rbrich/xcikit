@@ -504,6 +504,7 @@ TEST_CASE( "Coercion", "[script][interpreter]" )
     CHECK(interpret("m:(a:Int, b:Int) = (1, 2); m") == "(a=1, b=2)");
     CHECK(interpret("m:(a, b) = (1, 2); m") == "(a=1, b=2)");
     CHECK(interpret("m:(a, b) = (1b, 2.0); m") == "(a=b'\\x01', b=2.0)");
+    CHECK(interpret("x = { m:(a, b) = (1, 2); m.a }; x") == "1");
     CHECK_THROWS_AS(interpret("m:(a:Int, b:String) = (1.0, 2.0)"), DefinitionTypeMismatch);
 }
 
@@ -562,7 +563,7 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
 
     // struct as member of a struct
     CHECK(interpret_std("type Rec2=(x:String, y:Int, z:(a:Int32, b:Int32)); "
-                        "r:Rec2 = (x=\"x\",y=2,z=(a=3,b=4)); __module.__n_types; r.y; r.z.a") == "2;2;3");
+                        "r:Rec2 = (x=\"x\",y=2,z=(a=3,b=4)); __module.__n_types; r.y; r.z.a") == "1;2;3");
     CHECK(interpret_std("type Rec1=(a:Int32, b:Int32); type Rec2=(x:String, y:Int, z:Rec1); "
                         "r:Rec2 = (x=\"x\",y=2,z=(a=3,b=4)); __module.__n_types; r.y; r.z.a") == "2;2;3");
 }
