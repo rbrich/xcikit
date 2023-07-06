@@ -612,7 +612,7 @@ private:
 };
 
 
-bool Compiler::compile(Scope& scope, ast::Module& ast)
+void Compiler::compile(Scope& scope, ast::Module& ast)
 {
     auto& func = scope.function();
     func.set_code();
@@ -627,48 +627,38 @@ bool Compiler::compile(Scope& scope, ast::Module& ast)
     // - apply optimizations - const fold etc. (Optimizer)
     // See documentation on each function.
 
-    // If these flags are not Default, don't compile, only preprocess
-    auto flags = m_flags;
-    bool default_compile = (flags & Flags::MandatoryMask) == Flags::Default;
-    if (default_compile) {
-        // Enable all mandatory passes for default compilation
-        flags |= Flags::MandatoryMask;
-    }
-
-    if ((flags & Flags::FoldTuple) == Flags::FoldTuple)
+    if ((m_flags & Flags::FoldTuple) == Flags::FoldTuple)
         fold_tuple(ast.body);
 
-    if ((flags & Flags::FoldDotCall) == Flags::FoldDotCall)
+    if ((m_flags & Flags::FoldDotCall) == Flags::FoldDotCall)
         fold_dot_call(func, ast.body);
 
-    if ((flags & Flags::FoldParen) == Flags::FoldParen)
+    if ((m_flags & Flags::FoldParen) == Flags::FoldParen)
         fold_paren(ast.body);
 
-    if ((flags & Flags::ResolveSymbols) == Flags::ResolveSymbols)
+    if ((m_flags & Flags::ResolveSymbols) == Flags::ResolveSymbols)
         resolve_symbols(scope, ast.body);
 
-    if ((flags & Flags::ResolveDecl) == Flags::ResolveDecl)
+    if ((m_flags & Flags::ResolveDecl) == Flags::ResolveDecl)
         resolve_decl(scope, ast.body);
 
-    if ((flags & Flags::ResolveTypes) == Flags::ResolveTypes)
+    if ((m_flags & Flags::ResolveTypes) == Flags::ResolveTypes)
         resolve_types(scope, ast.body);
 
-    if ((flags & Flags::ResolveSpec) == Flags::ResolveSpec)
+    if ((m_flags & Flags::ResolveSpec) == Flags::ResolveSpec)
         resolve_spec(scope, ast.body);
 
-    if ((flags & Flags::ResolveNonlocals) == Flags::ResolveNonlocals)
+    if ((m_flags & Flags::ResolveNonlocals) == Flags::ResolveNonlocals)
         resolve_nonlocals(scope, ast.body);
 
-    if (default_compile)
+    if ((m_flags & Flags::CompileFunctions) == Flags::CompileFunctions)
         compile_all_functions(scope);
 
-    if ((flags & Flags::FoldConstExpr) == Flags::FoldConstExpr)
+    if ((m_flags & Flags::FoldConstExpr) == Flags::FoldConstExpr)
         fold_const_expr(func, ast.body);
 
-    if (default_compile)
+    if ((m_flags & Flags::CompileFunctions) == Flags::CompileFunctions)
         compile_function(scope, ast.body);
-
-    return default_compile;
 }
 
 

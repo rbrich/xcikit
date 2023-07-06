@@ -30,8 +30,10 @@ std::shared_ptr<Module> Interpreter::build_module(const std::string& name, Sourc
     m_parser.parse(source_id, ast);
 
     // compile
-    if (!m_compiler.compile(module->get_main_scope(), ast))
-        return module;  // requested to only preprocess AST
+    const auto configured_flags = m_compiler.flags();
+    m_compiler.set_flags(configured_flags | Compiler::Flags::Default);
+    m_compiler.compile(module->get_main_scope(), ast);
+    m_compiler.set_flags(configured_flags);
 
     // sanity check (no AST references)
     for (Index idx = 0; idx != module->num_functions(); ++idx) {

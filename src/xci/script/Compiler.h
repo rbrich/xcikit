@@ -30,6 +30,7 @@ public:
         ResolveTypes        = 0x0040,
         ResolveSpec         = 0x0080,
         ResolveNonlocals    = 0x0100,
+        CompileFunctions    = 0x1000,
         FoldConstExpr       = 0x0001 << 16,
 
         // Bit masks
@@ -37,9 +38,7 @@ public:
         OptimizationMask    = 0xffff << 16,
 
         // Mandatory AST passes
-        // - if none of the flags are set, all passes will be enabled
-        // - if one or more of these flags is set, the Compiler won't compile, only preprocess
-        // - each flag may bring in other flags as its dependencies
+        // SAFE: these flags bring in also their dependencies
         PPTuple         = FoldTuple,
         PPDotCall       = FoldDotCall,
         PPParen         = FoldParen,
@@ -49,11 +48,14 @@ public:
         PPSpec          = ResolveSpec | PPTypes,
         PPNonlocals     = ResolveNonlocals | PPSpec,
 
-        // Optimization
-        O0 = 0,
-        O1 = FoldConstExpr,
+        // All mandatory passes, no optimization
+        Default         = CompileFunctions | PPNonlocals,
 
-        Default = 0,
+        // Optimization passes
+        OP1             = FoldConstExpr,
+
+        // All mandatory passes + optimizations
+        O1              = Default | OP1,
     };
 
     // Allow basic arithmetic on OpCode
@@ -69,8 +71,8 @@ public:
 
     /// Compile AST into Function object, which contains objects in scope + code
     /// (module is a special kind of function, with predefined parameters)
-    /// \returns true if actually compiled (depends on Flags)
-    bool compile(Scope& scope, ast::Module& ast);
+    /// Compiles only partially unless flags contain complete Default set.
+    void compile(Scope& scope, ast::Module& ast);
 
     /// Compile single function that has fully prepared AST
     /// (all other phases were run on it)

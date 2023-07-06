@@ -57,9 +57,9 @@ bool Repl::evaluate(const std::string& module_name, std::string module_source, E
 
         // compile
         rusage.start_if(m_opts.print_rusage, "compiled");
-        bool is_compiled = compiler.compile(module->get_main_scope(), ast);
+        compiler.compile(module->get_main_scope(), ast);
         rusage.stop();
-        if (!is_compiled) {
+        if ((m_opts.compiler_flags & Compiler::Flags::Default) != Compiler::Flags::Default) {
             // We're only processing the AST, without actual compilation
             mode = EvalMode::Preprocess;
         }
@@ -69,7 +69,7 @@ bool Repl::evaluate(const std::string& module_name, std::string module_source, E
             t.stream() << "Processed AST:" << endl << dump_tree << ast << endl;
         }
 
-        bool res = evaluate_module(*module, mode);
+        const bool res = evaluate_module(*module, mode);
 
         if (mode == EvalMode::Compile || mode == EvalMode::Repl)
             m_ctx.input_modules.push_back(std::move(module));

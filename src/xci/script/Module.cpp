@@ -148,7 +148,7 @@ void Module::update_type(Index index, TypeInfo type_info)
     // update possibly Unknown type with a concrete type
     assert(!type_info.has_unknown());
     assert(m_types[index] == type_info);  // it must differ only in Unknown fields
-    m_types[index] = type_info;
+    m_types[index] = std::move(type_info);
 }
 
 
