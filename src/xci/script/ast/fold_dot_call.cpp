@@ -17,9 +17,6 @@ class FoldDotCallVisitor final: public ast::VisitorExclTypes {
 public:
     using VisitorExclTypes::visit;
 
-    explicit FoldDotCallVisitor(Function& func)
-        : m_function(func) {}
-
     void visit(ast::Definition& dfn) override {
         if (dfn.expression)
             apply_and_fold(dfn.expression);
@@ -62,8 +59,16 @@ public:
             // Collapse inner Call into outer OpCall (with op=DotCall)
             assert(!v.callable);
             assert(v.arg && v.right_arg);
-            m_collapsed = std::move(v.right_arg);
-            auto* call = dynamic_cast<ast::Call*>(m_collapsed.get());
+            auto* call = dynamic_cast<ast::Call*>(v.right_arg.get());
+            if (call) {
+                m_collapsed = std::move(v.right_arg);
+            } else {
+                // wrap in Call
+                m_collapsed = std::make_unique<ast::Call>();
+                call = dynamic_cast<ast::Call*>(m_collapsed.get());
+                call->source_loc = v.right_arg->source_loc;
+                call->callable =  std::move(v.right_arg);
+            }
             assert(call != nullptr);
             assert(call->callable);
             if (call->arg) {
@@ -140,9 +145,6 @@ public:
     }
 
 private:
-    Module& module() { return m_function.module(); }
-
-private:
     void apply_and_fold(unique_ptr<ast::Expression>& expr) {
         expr->apply(*this);
         if (m_collapsed) {
@@ -151,14 +153,13 @@ private:
     }
 
 private:
-    Function& m_function;
     unique_ptr<ast::Expression> m_collapsed;
 };
 
 
-void fold_dot_call(Function& func, const ast::Block& block)
+void fold_dot_call(const ast::Block& block)
 {
-    FoldDotCallVisitor visitor {func};
+    FoldDotCallVisitor visitor;
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }

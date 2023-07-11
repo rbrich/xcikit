@@ -168,8 +168,8 @@ foo .push bar
 ----
 
 The evaluation rule is simple:
-The left-hand side expression is passed as the first argument and
-zero or more right-hand side expressions are passed as the following arguments.
+The left-hand side expression is combined with the right-hand side into a tuple,
+which is passed as the function argument. The right-hand side is optional.
 
 Spaces around the dot are optional, but numbers might need parenthesizing
 if the dot is not preceded by a space:
@@ -1324,16 +1324,18 @@ with
 | 9    |  multiply, divide  |  *  /  %
 | 10   |  power             |  **
 | 11   |  subscript         |  x ! y
-| 12   |  dot function call |  <arg1> . name [<arg2> ...]
-| (13) |  unary ops         |  -  +  !  ~
-| (14) |  cast              |  <val> : Type
-| (15) |  function call     |  name [<arg> ...]
+| (12) |  function call     |  <callable> <arg>
+| 13   |  dot function call |  <arg> . <callable>
+| (14) |  unary ops         |  -  +  !  ~
+| (15) |  cast              |  <val> : Type
 |===
 
 Higher precedence means tighter binding.
 
 Infix operators have numbered precedence, which can be easily changed in compiler implementation.
 The other precedences are hard-coded in parser grammar.
+Function call is a hybrid - it's partially hard-coded but also uses the precedence parser
+with priority lower than dot-call, so in a combined expression dot-call takes precedence.
 
 === Terminology
 

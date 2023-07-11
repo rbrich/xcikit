@@ -69,8 +69,9 @@ struct RS: at<space> {};  // require space
 template<class T> struct SepList: list_tail<T, seq<SC, SemicolonOrNewline, NSC> > {};  // list separated by either semicolon or newline
 
 // Basic tokens
-//                 underscore* (lower identifier_other* | digit+)
-struct Identifier: seq< not_at<Keyword>, star<one<'_'>>, sor<seq<lower, star<identifier_other>>, plus<digit>> > {};
+//                 (underscore* lower identifier_other* | underscore+ digit+)
+struct Identifier: seq< not_at<Keyword>, sor< seq<star<one<'_'>>, lower, star<identifier_other>>,
+                                              seq<plus<one<'_'>>, plus<digit>> > > {};
 struct TypeName: seq< upper, star< identifier_other > > {};
 struct PrefixOperator: sor< one<'-'>, one<'+'>, one<'!'>, one<'~'> > {};
 struct InfixOperator: sor< one<','>, two<'&'>, two<'|'>, two<'='>, string<'!','='>,
@@ -146,13 +147,12 @@ struct Type: sor< ParenthesizedType, ListType, TypeName > {};
 // * this allows leaving out semicolons but still support multiline expressions
 template<class S> struct CallRight: seq< RS, S, ExprArgSafe > {};
 template<class S> struct Call: seq< ExprCallable, RS, S, ExprArgSafe > {};
-template<class S> struct DotCallRight: seq< ExprCallable, opt<RS, S, ExprArgSafe> > {};
-template<class S> struct DotCall: seq< NSC, one<'.'>, SC, must<DotCallRight<S>> > {};
 template<class S> struct TypeDotCallRight: seq< Reference, opt<RS, S, ExprArgSafe> > {};
 template<class S> struct TypeDotCall: if_must< one<'.'>, SC, TypeDotCallRight<S> > {};
 template<class S> struct ExprTypeDotCall: seq< TypeName, TypeDotCall<S> > {};
 template<class S> struct ExprOperand: sor<Call<S>, ExprArgSafe, ExprPrefix, ExprTypeDotCall<S>> {};
-template<class S> struct ExprInfixRight: seq< sor< CallRight<S>, DotCall<S>, seq<S, InfixOperator, NSC, ExprOperand<S>> >, opt< ExprInfixRight<S> > > {};
+template<class S> struct DotCallRight: seq< NSC, one<'.'>, SC, must<ExprOperand<S>> > {};
+template<class S> struct ExprInfixRight: seq< sor< CallRight<S>, DotCallRight<S>, seq<S, InfixOperator, NSC, ExprOperand<S>> >, opt< ExprInfixRight<S> > > {};
 template<class S> struct TrailingComma: opt<S, one<','>> {};
 template<class S> struct ExprInfix: seq< ExprOperand<S>, opt<ExprInfixRight<S>>, TrailingComma<S> > {};
 template<class S> struct Expression: sor< ExprCond, ExprWith, ExprTypeDotCall<S>, ExprStruct, ExprInfix<S> > {};
@@ -654,17 +654,10 @@ struct Action<Call<S>> : change_states< ast::Call > {
 
 
 template<class S>
-struct Action<DotCall<S>> : change_states< ast::Call > {
+struct Action<DotCallRight<S>> {
     template<typename Input>
-    static void apply(const Input &in, ast::Call& call) {
-        call.source_loc.load(in.input(), in.position());
-    }
-
-    template<typename Input>
-    static void success(const Input &in, ast::Call& call, ast::OpCall& outer_opc) {
-        assert(!outer_opc.arg);
-        outer_opc.arg = std::make_unique<ast::Call>(std::move(call));
-        outer_opc.op = ast::Operator::DotCall;
+    static void apply(const Input &in, ast::OpCall& opc) {
+        opc.op = ast::Operator::DotCall;
     }
 };
 
@@ -1461,8 +1454,7 @@ template<> ErrMsg Control<until<eolf>>::errmsg = {"unterminated comment", {}};
 template<> ErrMsg Control<Expression<SC>>::errmsg = {"expected expression", {}};
 template<> ErrMsg Control<Expression<NSC>>::errmsg = {"expected expression", {}};
 template<> ErrMsg Control<DeclParam>::errmsg = {"expected function parameter declaration", {}};
-template<> ErrMsg Control<DotCallRight<SC>>::errmsg = {"expected function name and args", {}};
-template<> ErrMsg Control<DotCallRight<NSC>>::errmsg = {"expected function name and args", {}};
+template<> ErrMsg Control<ExprCallable>::errmsg = {"expected callable", {}};
 template<> ErrMsg Control<ExprInfixRight<SC>>::errmsg = {"expected infix operator", {}};
 template<> ErrMsg Control<ExprInfixRight<NSC>>::errmsg = {"expected infix operator", {}};
 template<> ErrMsg Control<Variable>::errmsg = {"expected variable name", {}};

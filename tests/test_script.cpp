@@ -13,6 +13,8 @@
 #include <xci/script/SymbolTable.h>
 #include <xci/script/NativeDelegate.h>
 #include <xci/script/ast/fold_tuple.h>
+#include <xci/script/ast/fold_dot_call.h>
+#include <xci/script/ast/fold_paren.h>
 #include <xci/script/dump.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/log.h>
@@ -48,17 +50,27 @@ static Context& context()
 
 
 // Check parsing into AST and dumping back to code
-std::string parse(const std::string& input)
+static std::string parse(const std::string& input, bool fold = false)
 {
     SourceManager src_man;
     auto src_id = src_man.add_source("<input>", input);
     Parser parser {src_man};
     ast::Module ast;
     parser.parse(src_id, ast);
-    fold_tuple(ast.body);
+    if (fold) {
+        fold_tuple(ast.body);
+        fold_dot_call(ast.body);
+        fold_paren(ast.body);
+    }
     std::ostringstream os;
     os << ast;
     return os.str();
+}
+
+
+static std::string parse_fold(const std::string& input)
+{
+    return parse(input, true);
 }
 
 
@@ -67,9 +79,9 @@ std::string parse(const std::string& input)
 //    CHECK(parse(R"("escape sequences: \"\n\0\x12 ")", R"("escape sequences: \"\n\0\x12 ")"));
 //    > error C2017: illegal escape sequence
 //    > error C2146: syntax error: missing ')' before identifier 'n'
-#define PARSE(input, expected)                          \
+#define PARSE(input, expected, ...)                     \
     do {                                                \
-        auto output = parse(input);                     \
+        auto output = parse(input, ##__VA_ARGS__);      \
         INFO("Input:    " << indent((input), 12));      \
         INFO("Output:   " << indent((output), 12));     \
         INFO("Expected: " << indent((expected), 12));   \
@@ -81,7 +93,7 @@ std::string parse(const std::string& input)
 
 
 // Check parsing into AST, optimizing the AST, and dumping back to code
-std::string optimize(const std::string& input)
+static std::string optimize(const std::string& input)
 {
     SourceManager src_man;
     auto src_id = src_man.add_source("<input>", input);
@@ -104,7 +116,7 @@ std::string optimize(const std::string& input)
 }
 
 
-std::string interpret(const std::string& input, bool import_std=false)
+static std::string interpret(const std::string& input, bool import_std=false)
 {
     Context& ctx = context();
     UNSCOPED_INFO(input);
@@ -129,7 +141,7 @@ std::string interpret(const std::string& input, bool import_std=false)
 }
 
 
-std::string interpret_std(const std::string& input)
+static std::string interpret_std(const std::string& input)
 {
     return interpret(input, true);
 }
@@ -183,11 +195,11 @@ TEST_CASE( "Values", "[script][parser]" )
     CHECK(parse("'c'") == "'c'");
     PARSE(R"("string literal")", R"("string literal")");
     PARSE(R"("escape sequences: \"\n\0\x12 ")", R"("escape sequences: \"\n\x00\x12 ")");
-    CHECK(parse("1,2,3") == "1, 2, 3");  // naked tuple
-    PARSE(R"((1,2,"str"))", R"((1, 2, "str"))");  // bracketed tuple
-    CHECK(parse("[1,2,3]") == "[1, 2, 3]");  // list
-    CHECK(parse("[(1,2,3,4)]") == "[(1, 2, 3, 4)]");  // list with a tuple item
-    CHECK(parse("[(1,2,3,4), 5]") == "[(1, 2, 3, 4), 5]");
+    CHECK(parse_fold("1,2,3") == "(1, 2, 3)");  // naked tuple
+    PARSE(R"((1,2,"str"))", R"((1, 2, "str"))", true);  // bracketed tuple
+    CHECK(parse_fold("[1,2,3]") == "[1, 2, 3]");  // list
+    CHECK(parse_fold("[(1,2,3,4)]") == "[(1, 2, 3, 4)]");  // list with a tuple item
+    CHECK(parse_fold("[(1,2,3,4), 5]") == "[(1, 2, 3, 4), 5]");
 }
 
 
@@ -230,21 +242,21 @@ TEST_CASE( "Parsing types", "[script][parser]")
 
 TEST_CASE( "Trailing comma", "[script][parser]" )
 {
-    CHECK(parse("1,2,3,") == "1, 2, 3");
-    CHECK(parse("[1,2,3,]") == "[1, 2, 3]");
-    CHECK(parse("(1,2,3,)") == "(1, 2, 3)");
-    CHECK_THROWS_AS(parse("1,2,3,,"), ParseError);  // two commas not allowed
-    CHECK_THROWS_AS(parse("1,2,,3"), ParseError);
-    CHECK_THROWS_AS(parse("(1,2,3,,)"), ParseError);
-    CHECK_THROWS_AS(parse("[1,2,3,,]"), ParseError);
-    CHECK_THROWS_AS(parse("[,]"), ParseError);
-    CHECK(parse("([1,],[2,],[1,2,],)") == "([1], [2], [1, 2])");
+    CHECK(parse_fold("1,2,3,") == "(1, 2, 3)");
+    CHECK(parse_fold("[1,2,3,]") == "[1, 2, 3]");
+    CHECK(parse_fold("(1,2,3,)") == "(1, 2, 3)");
+    CHECK_THROWS_AS(parse_fold("1,2,3,,"), ParseError);  // two commas not allowed
+    CHECK_THROWS_AS(parse_fold("1,2,,3"), ParseError);
+    CHECK_THROWS_AS(parse_fold("(1,2,3,,)"), ParseError);
+    CHECK_THROWS_AS(parse_fold("[1,2,3,,]"), ParseError);
+    CHECK_THROWS_AS(parse_fold("[,]"), ParseError);
+    CHECK(parse_fold("([1,],[2,],[1,2,],)") == "([1], [2], [1, 2])");
     // multiline
-    CHECK(parse("1,\n2,\n3,\n") == "1, 2, 3");  // expression continues on next line after operator
-    CHECK(parse("1,;\n2,\n3,\n") == "1; 2, 3");  // semicolon splits the multiline expression
-    CHECK(parse("(\n1,\n2,\n3,\n)") == "(1, 2, 3)");
-    CHECK(parse("[\n1,\n2,\n3,\n]") == "[1, 2, 3]");
-    CHECK(parse("[\n1\n,\n2\n,\n3\n,\n]") == "[1, 2, 3]");
+    CHECK(parse_fold("1,\n2,\n3,\n") == "(1, 2, 3)");  // expression continues on next line after operator
+    CHECK(parse_fold("1,;\n2,\n3,\n") == "1; (2, 3)");  // semicolon splits the multiline expression
+    CHECK(parse_fold("(\n1,\n2,\n3,\n)") == "(1, 2, 3)");
+    CHECK(parse_fold("[\n1,\n2,\n3,\n]") == "[1, 2, 3]");
+    CHECK(parse_fold("[\n1\n,\n2\n,\n3\n,\n]") == "[1, 2, 3]");
 }
 
 
@@ -265,16 +277,9 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
     // functions
     CHECK(parse("a fun b {} c") == "(a fun b {()} c)");
     CHECK(parse("a (fun b {}) c") == "(a (fun b {()}) c)");
-    // function calls
-    CHECK(interpret_std("succ 9 + larger (5, 4) + 1") == "16");
-    CHECK(interpret_std("(succ 9) + (larger (5, 4)) + 1") == "16");
-    CHECK(interpret_std("succ 9 + 5 .larger 4 + 1") == "16");
-    CHECK(interpret_std("1 .add 2 .mul 3") == "9");
-    CHECK(interpret_std("(1 .add 2).mul 3") == "9");
-    CHECK(interpret_std("1 .add (2 .mul 3)") == "7");
-    CHECK(interpret_std("pred (neg (succ (14)))") == "-16");
-    CHECK(interpret_std("14 .succ .neg .pred") == "-16");
-    CHECK(interpret_std("(((14) .succ) .neg) .pred") == "-16");
+    CHECK(parse_fold("1 .add 2") == "add (1, 2)");
+    CHECK(parse_fold("1 .add 2 3") == "add (1, 2) 3");
+    CHECK(parse_fold("sub 1 .add 2 3") == "add (sub 1, 2) 3");
 }
 
 
@@ -455,6 +460,16 @@ TEST_CASE( "Expressions", "[script][interpreter]" )
 
     CHECK(interpret_std("sign -32") == "-1");
     CHECK(interpret_std("32 .sign") == "1");
+
+    CHECK(interpret_std("succ 9 + larger (5, 4) + 1") == "16");
+    CHECK(interpret_std("(succ 9) + (larger (5, 4)) + 1") == "16");
+    CHECK(interpret_std("succ 9 + 5 .larger 4 + 1") == "16");
+    CHECK(interpret_std("1 .add 2 .mul 3") == "9");
+    CHECK(interpret_std("(1 .add 2).mul 3") == "9");
+    CHECK(interpret_std("1 .add (2 .mul 3)") == "7");
+    CHECK(interpret_std("pred (neg (succ (14)))") == "-16");
+    CHECK(interpret_std("14 .succ .neg .pred") == "-16");
+    CHECK(interpret_std("(((14) .succ) .neg) .pred") == "-16");
 }
 
 

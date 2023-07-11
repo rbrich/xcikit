@@ -25,7 +25,7 @@ namespace xci::script {
 ///
 /// Mandatory AST pass (unfolded dot calls won't compile)
 
-void fold_dot_call(Function& func, const ast::Block& block);
+void fold_dot_call(const ast::Block& block);
 
 
 } // namespace xci::script

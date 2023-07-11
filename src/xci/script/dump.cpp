@@ -167,12 +167,13 @@ std::ostream& operator<<(std::ostream& os, const Tuple& v)
             os << put_indent << *item;
         return os << less_indent;
     } else {
+        os << '(';
         for (const auto& item : v.items) {
             os << *item;
             if (&item != &v.items.back())
                 os << ", ";
         }
-        return os;
+        return os << ')';
     }
 }
 
@@ -491,7 +492,7 @@ std::ostream& operator<<(std::ostream& os, const OpCall& v)
         return os << less_indent;
     } else {
         if (!v.right_arg && v.op.op != Operator::Comma && v.op.op != Operator::Call) {
-            os << '(' << v.op << ") (" << *v.arg << ')';
+            os << '(' << v.op << ") " << *v.arg;
             return os;
         }
         os << "(";

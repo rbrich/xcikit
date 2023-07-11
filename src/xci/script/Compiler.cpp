@@ -631,7 +631,7 @@ void Compiler::compile(Scope& scope, ast::Module& ast)
         fold_tuple(ast.body);
 
     if ((m_flags & Flags::FoldDotCall) == Flags::FoldDotCall)
-        fold_dot_call(func, ast.body);
+        fold_dot_call(ast.body);
 
     if ((m_flags & Flags::FoldParen) == Flags::FoldParen)
         fold_paren(ast.body);
