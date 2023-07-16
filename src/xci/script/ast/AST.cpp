@@ -473,11 +473,11 @@ int Operator::precedence() const
         case Exp:           return 10;
         case Subscript:     return 11;
         case Call:          return 12;
-        case DotCall:       return 13;
-        case LogicalNot:    return 14;
-        case BitwiseNot:    return 14;
-        case UnaryPlus:     return 14;
-        case UnaryMinus:    return 14;
+        case DotCall:       return 12;
+        case LogicalNot:    return 13;
+        case BitwiseNot:    return 13;
+        case UnaryPlus:     return 13;
+        case UnaryMinus:    return 13;
     }
     XCI_UNREACHABLE;
 }

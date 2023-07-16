@@ -177,7 +177,7 @@ if the dot is not preceded by a space:
 [source,fire]
 ----
 one = 1; one.add 2    // ok, but bad style
-1.add 2               // wrong and misleading, parsed as `(1.) add (2)`
+1.add 2               // parse error, "add" might be float suffix
 (1).add 2             // ok, but better add a space before the dot
 one. add 2            // ok, but bad style
 1 . add 2             // ok, but bad style
@@ -201,7 +201,7 @@ evaluated from left to right:
 1 .add (2 .mul 3)  // => 7
 ----
 
-The dot operator breaks the argument list. Single argument calls can be chained:
+The dot operator inverts the calling order. Calls can be chained:
 
 [source,fire]
 ----
@@ -215,7 +215,16 @@ list_1 .cat (list_2, list_3) .sort .uniq
 cat (list_1, list_2, list_3) .sort .uniq
 ----
 
-Generally, the dot operator has weaker binding than a function call.
+The dot operator has same precedence as a function call:
+
+[source,fire]
+----
+neg 1 .add 2  // => 1
+(neg 1) .add 2  // equivalent
+f 1 .combine 2 3  // evaluated left-to-right
+((f 1).combine 2) 3  // equivalent
+----
+
 
 === Operators
 
@@ -244,7 +253,7 @@ i = 1
 
 // right-hand side can be any expression
 j = 1 + 2
-k = add2 (1, 2)
+k = add (1, 2)
 
 // error, redefinition of a name
 k = 1; k = 2
@@ -267,7 +276,7 @@ There are three basic ways of naming values:
 ----
 a = 1                // [1.] literal value
 b = add (1, 2)       // [2.] result of expression
-data c = add (1, 2)  // [3.] constant value initialized with a result of expression
+data c = add (1, 2)  // [3.] constant value initialized with a result of a (constant) expression
 ----
 
 The first two cases create a function which takes no arguments and returns
@@ -279,7 +288,7 @@ to `consteval` in C++20. The compiler emits error if the expression does not
 lead to compile-time value.
 
 A function (object) can't be assigned to `data` value, because that's precisely
-what the keyword does -- it prevents creating a function and forces creating
+what the keyword does -- it prevents creating a function and enforces creating
 a data value in the compiled module.
 
 The picture gets a little more complicated when we start to consider side effects.
@@ -292,6 +301,7 @@ the compiler switches to eager evaluation.
 a = write "hello\n"      // eager: prints "hello" immediately
 a = { write "hello\n" }  // lazy: `a` becomes a function that prints "hello" when called
 ----
+Note: Currently not implemented. Both are lazy. To be reconsidered.
 
 On module-level, all statements are evaluated eagerly. Code like this works as expected:
 
@@ -303,45 +313,28 @@ write "World!\n"
 ----
 
 
-[source,fire]
-----
-// type is inferred
-i = 1
-
-// right-hand side can be any expression
-j = 1 + 2
-k = add2 (1, 2)
-
-// error, redefinition of a name
-k = 1; k = k + 1
-
-// ok, inner `m` has value `2`
-m = 1; { m = m + 1 }
-
-// variable type can be explicitly declared
-l:Int32 = k
-s:String = "XCI"
-----
-
 === Function definition
 
 Define a function with parameters:
 
 [source,fire]
 ----
-add2 = fun a, b {a + b}   // generic function - works with any type supported by op+
-add2 = fun<T> a:T, b:T -> T {a + b}  // same as above, but with explicit type variable
-add2 = fun a:Int, b:Int -> Int {a + b}   // specific, with type declarations
-add2 : Int, Int -> Int = fun a b {a + b}   // type declaration on left side (i.e. disable type inference)
+add2 = fun (a, b) {a + b}   // generic function - works with any type supported by op+
+add2 (1, 2)
+add2 (1.0, 2.0)
+
+add2b = fun<T> (a:T, b:T) -> T {a + b}      // same as above, but with explicit type variable
+add2c = fun (a:Int, b:Int) -> Int {a + b}   // specific, with type declarations
+add2d : (Int, Int) -> Int = fun (a, b) {a + b}  // type declaration on left side (i.e. disable type inference)
 
 // function definition can span multiple lines
-add2 = fun a:Int, b:Int -> Int {
+add2e = fun (a:Int, b:Int) -> Int {
     a + b
 }
 
 // possible program main function
 main = fun args:[String] -> Void {
-    print "Hello World!"
+    write "Hello World!\n"
 }
 ----
 
@@ -349,8 +342,8 @@ Function call can explicitly name the arguments:
 
 [source,fire]
 ----
-make_book = fun name:String, author:String, isbn:Int -> MyBook
-    { MyBook(name, author, isbn) }
+type MyBook = (name: String, author: String, isbn: Int)
+make_book = fun (name:String, author:String, isbn:Int) -> MyBook { (name, author, isbn):MyBook }
 make_book (name="Title", author="Karel IV", isbn=12345)
 ----
 
@@ -364,27 +357,27 @@ Pass a function as an argument:
 
 [source,fire]
 ----
-eval2 = fun f, a, b { f (a, b) }
+eval2 = fun (f, a, b) { f (a, b) }
 eval2 (add2, 1, 2)                  // calls `add2 (1, 2)`
-eval2 (fun a, b {a + b}, 1, 2)      // calls anonymous function
+eval2 (fun (a, b) {a + b}, 1, 2)    // calls anonymous function
 ----
 
 Return a function from a function:
 
 [source,fire]
 ----
-sub2 = fun a, b { a - b }
+sub2 = fun (a, b) { a - b }
 choose = fun x { if (x == "add") then add2 else sub2 }
-choose ("add", 1, 2)
-choose ("sub", 1, 2)
+choose "add" (1, 2)
+choose "sub" (1, 2)
 ----
 
 Block is a function with zero arguments:
 
 [source,fire]
 ----
-block1 = { c = add2 (a, b); c }    // returns closure c
-block2 = { c = add2 (a, b) }       // returns ()
+block1 = { c = add2 (1, 2); c }    // returns closure c
+block2 = { c = add2 (1, 2) }       // returns ()
 block1  // evaluate the block (actually, it might have been evaluated above - that's up to compiler)
 
 a = {f = fun x {5}}; f    // ERROR - block creates new scope - f is undefined outside
@@ -407,7 +400,7 @@ Record field lookup:
 [source,fire]
 ----
 type MyRecord = (name: String, age: Int)
-rec = MyRecord("A name", 42)
+rec = ("A name", 42):MyRecord
 rec.name    // dot operator
 ----
 
@@ -537,8 +530,8 @@ A type class contains a set of functions for a type.
 [source,fire]
 ----
 class MyEq T {
-    my_eq : T, T -> Bool
-    my_ne : T, T -> Bool
+    my_eq : (T, T) -> Bool
+    my_ne : (T, T) -> Bool
 }
 ----
 
@@ -547,10 +540,10 @@ A type class can be specialized to create another, more specific, type class:
 [source,fire]
 ----
 class MyOrd T (MyEq T) {
-    my_lt : T, T -> Bool
-    my_gt : T, T -> Bool
-    my_le : T, T -> Bool
-    my_ge : T, T -> Bool
+    my_lt : (T, T) -> Bool
+    my_gt : (T, T) -> Bool
+    my_le : (T, T) -> Bool
+    my_ge : (T, T) -> Bool
 }
 ----
 
@@ -560,8 +553,8 @@ for a specific type:
 [source,fire]
 ----
 instance MyEq Int32 {
-    my_eq = fun a, b { a == b }
-    my_ne = fun a, b { a != b }
+    my_eq = fun (a, b) { a == b }
+    my_ne = fun (a, b) { a != b }
 }
 ----
 
@@ -1325,7 +1318,7 @@ with
 | 10   |  power             |  **
 | 11   |  subscript         |  x ! y
 | (12) |  function call     |  <callable> <arg>
-| 13   |  dot function call |  <arg> . <callable>
+| 12   |  dot function call |  <arg> . <callable>
 | (14) |  unary ops         |  -  +  !  ~
 | (15) |  cast              |  <val> : Type
 |===
@@ -1335,7 +1328,7 @@ Higher precedence means tighter binding.
 Infix operators have numbered precedence, which can be easily changed in compiler implementation.
 The other precedences are hard-coded in parser grammar.
 Function call is a hybrid - it's partially hard-coded but also uses the precedence parser
-with priority lower than dot-call, so in a combined expression dot-call takes precedence.
+with priority same as dot-call, so in a combined expression, evaluation goes from left to right.
 
 === Terminology
 

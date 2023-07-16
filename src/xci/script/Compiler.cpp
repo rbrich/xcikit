@@ -307,14 +307,16 @@ public:
                         m_compiler.compile_function(scope, body.ast());
                     }
 
+                    const bool execute = m_callable || !fn.has_nonvoid_parameter();
                     if (scope.has_nonlocals()) {
                         make_closure(scope);
                         // MAKE_CLOSURE <function_idx>
                         code().add_L1(Opcode::MakeClosure, scope.function_index());
                         // EXECUTE
-                        code().add_opcode(Opcode::Execute);
+                        if (execute)
+                            code().add_opcode(Opcode::Execute);
                     } else {
-                        if (!m_callable && fn.has_nonvoid_parameter()) {
+                        if (!execute) {
                             // LOAD_FUNCTION <function_idx>
                             code().add_L1(Opcode::LoadFunction, scope.function_index());
                         } else {
@@ -604,7 +606,7 @@ private:
     Scope& m_scope;
     Code* m_code = nullptr;
 
-    bool m_callable = true;
+    bool m_callable = false;
 
     // intrinsics
     bool m_intrinsic = false;

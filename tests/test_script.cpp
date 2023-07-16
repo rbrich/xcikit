@@ -279,7 +279,8 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
     CHECK(parse("a (fun b {}) c") == "(a (fun b {()}) c)");
     CHECK(parse_fold("1 .add 2") == "add (1, 2)");
     CHECK(parse_fold("1 .add 2 3") == "add (1, 2) 3");
-    CHECK(parse_fold("sub 1 .add 2 3") == "add (sub 1, 2) 3");
+    CHECK(parse_fold("neg 1 .add 2") == "add (neg 1, 2)");
+    CHECK(parse_fold("f 1 .combine 2 3") == "combine (f 1, 2) 3");
 }
 
 
@@ -610,6 +611,10 @@ TEST_CASE( "Blocks", "[script][interpreter]" )
 TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
 {
     CHECK(parse("fun Int -> Int {}") == "fun Int -> Int {()}");
+
+    const auto def_main ="main = fun args:[String] -> Void {}; "s;
+    CHECK(interpret_std(def_main + "main [\"arg\"]") == "()");
+    CHECK(interpret_std(def_main + "main") == "main [String] -> ()");  // returns the function
 
     // returned lambda
     CHECK(interpret_std("fun x:Int->Int { x + 1 }") == "<lambda_0> Int32 -> Int32");  // non-generic is fine

@@ -1,7 +1,7 @@
 // Highlighter.cpp.cc created on 2021-03-03 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2022 Radek Brich
+// Copyright 2021–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Highlighter.h"
@@ -59,7 +59,7 @@ template<class T> struct SepList: list_tail<T, seq<SC, SemicolonOrNewline, NSC> 
 //                 underscore* (lower identifier_other* | digit+)
 struct Identifier: seq< star<one<'_'>>, sor<seq<lower, star<identifier_other>>, plus<digit>> > {};
 struct TypeName: seq< upper, star< identifier_other > > {};
-struct Operator: sor< one<',', ':'>, two<'&'>, two<'|'>, two<'='>, string<'!','='>,
+struct Operator: sor< one<'.', ',', ':'>, two<'&'>, two<'|'>, two<'='>, string<'!','='>,
         string<'<','='>, string<'>','='>, one<'='>,
         two<'<'>, two<'>'>, one<'<', '>'>,
         one<'+', '-'>, two<'*'>, one<'*'>,
