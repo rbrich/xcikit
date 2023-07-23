@@ -805,7 +805,7 @@ type MyUnion = Int | String | Void   // tagged union
 type MyVariant = int Int | string String | none   // tagged union with explicit names
 type MyOptional T = some T | none   // generic type (a kind?)
 type MyOptionalInt = MyOptional Int   // instance of the generic type
-type MyFunction = [Int], Int -> Int
+type MyFunction = ([Int], Int) -> Int
 ----
 
 The `type` definition creates a new type known to a compiler.
@@ -818,7 +818,7 @@ For example:
 [source,fire]
 ----
 type Number = Int
-f = fun a:Number, b:Number -> Number { a+b }  // `add` must be implemented for Number
+f = fun (a:Number, b:Number) -> Number { a+b }  // `add` must be implemented for Number
 f (11, 22)   // OK, literals coerce
 a = 11; b = 22:Number
 f (a, a)   // Error: `f` expects Number, not Int
@@ -870,11 +870,10 @@ Function types:
 
 [source,fire]
 ----
-a:Int, b:Int -> Int                 // with parameter names (only after `fun` keyword)
-Int, Int -> Int                     // without parameter names
-(Int, Int) -> Int                   // same, the parentheses are optional
-(Int, Int), Int -> Int              // two arguments, first is tuple
-Int, Int -> Int -> Int              // function returning another function
+(a:Int, b:Int) -> Int               // with parameter names
+(Int, Int) -> Int                   // without parameter names
+((Int, Int), Int) -> Int            // two arguments, first is tuple
+(Int, Int) -> Int -> Int            // function returning another function
 Int -> Int -> Int -> Int            // curried function (this is different type than the previous one)
 ----
 
@@ -883,7 +882,7 @@ The syntax for calling the curried function is different from normal call:
 
 [source,fire]
 ----
-f1 = fun a:Int, b:Int -> Int = { a + b }
+f1 = fun (a:Int, b:Int) -> Int = { a + b }
 f2 = fun a:Int -> Int -> Int { fun b:Int -> Int { a + b } }
 f1 (1, 2)
 f2 1 2

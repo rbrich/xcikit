@@ -126,7 +126,7 @@ struct Literal: sor< Char, RawString, String, Byte, RawBytes, Bytes, Number > {}
 
 // Types
 struct DeclParam: sor< Type, seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > > {};
-struct DeclResult: if_must< string<'-', '>'>, SC, Type > {};
+struct DeclResult: if_must< string<'-', '>'>, SC, Type, opt<SC, DeclResult> > {};
 struct TypeParams: if_must< one<'<'>, TypeName, SC, star_must<one<','>, SC, TypeName, SC>, one<'>'> > {};
 struct TypeConstraint: seq<TypeName, RS, SC, TypeName> {};
 struct TypeContext: if_must< one<'('>, SC, TypeConstraint, SC, star_must<one<','>, SC, TypeConstraint, SC>, one<')'> > {};
@@ -897,9 +897,10 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
         type->source_loc.load(in.input(), in.position());
     }
 
-    template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::FunctionType& ftype) {
-        ftype.return_type = std::move(type);
+    template<typename Input>                                               // DeclResult
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, std::unique_ptr<ast::Type>& outer_type) {
+        assert(!outer_type);
+        outer_type = std::move(type);
     }
 
     template<typename Input>
@@ -995,6 +996,29 @@ struct Action<DeclParam> : change_states< ast::Parameter > {
     template<typename Input>
     static void success(const Input &in, ast::Parameter& par, ast::FunctionType& ftype) {
         ftype.param = std::move(par);
+    }
+};
+
+template<>
+struct Action<DeclResult> : change_states< std::unique_ptr<ast::Type> > {
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::FunctionType& ftype) {
+        ftype.return_type = std::move(type);
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, std::unique_ptr<ast::Type>& outer_type) {
+        if (outer_type) {
+            // cascading function type: A -> B -> C   =>  A -> (B -> C))
+            // `outer_type` is original return type, which becomes parameter (B)
+            // `type` becomes tailing return type (C)
+            auto r = std::make_unique<ast::FunctionType>();
+            r->param.type = std::move(outer_type);
+            r->return_type = std::move(type);
+            outer_type = std::move(r);
+        } else {
+            outer_type = std::move(type);
+        }
     }
 };
 

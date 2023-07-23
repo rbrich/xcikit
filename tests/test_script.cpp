@@ -237,6 +237,8 @@ TEST_CASE( "Parsing types", "[script][parser]")
     CHECK(parse("type MyListOfTuples2 = [(String, Int), Int]") == "type MyListOfTuples2 = [((String, Int), Int)]; ()");
     CHECK(parse("MyAlias = Int") == "MyAlias = Int; ()");
     CHECK(parse("MyAlias2 = [Int]") == "MyAlias2 = [Int]; ()");
+    CHECK(parse("type MyFunction = (String, Int) -> String -> Int") == "type MyFunction = (String, Int) -> String -> Int; ()");
+    CHECK(parse("type MyFunction = Int -> String -> Float -> Bool") == "type MyFunction = Int -> String -> Float -> Bool; ()");
 }
 
 
@@ -354,7 +356,7 @@ TEST_CASE( "Stack push/pull", "[script][machine]" )
     CHECK(stack.size() == 1);
     stack.push(value::Int32{73});
     CHECK(stack.size() == 1+4);
-    value::String str{"hello"};
+    const value::String str{"hello"};
     stack.push(str);
     CHECK(stack.size() == 1+4 + sizeof(void*));
     CHECK(stack.n_values() == 3);
@@ -583,6 +585,9 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
                         "r:Rec2 = (x=\"x\",y=2,z=(a=3,b=4)); __module.__n_types; r.y; r.z.a") == "1;2;3");
     CHECK(interpret_std("type Rec1=(a:Int32, b:Int32); type Rec2=(x:String, y:Int, z:Rec1); "
                         "r:Rec2 = (x=\"x\",y=2,z=(a=3,b=4)); __module.__n_types; r.y; r.z.a") == "2;2;3");
+
+    // function
+    CHECK(interpret_std("type F = Int -> Int -> Int; f: F = fun x { fun y { x+y } }; f 1 2") == "3");
 }
 
 

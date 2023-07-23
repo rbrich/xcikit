@@ -281,6 +281,7 @@ struct FunctionType: public Type {
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Type> make_copy() const override;
     void copy_to(FunctionType& r) const;
+    explicit operator bool() const { return !type_params.empty() || param || return_type || !context.empty(); }
 
     std::vector<TypeName> type_params;  // declare type parameters of a generic function: <T,U>
     Parameter param;
