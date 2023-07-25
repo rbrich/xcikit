@@ -31,12 +31,12 @@ Module::~Module()
 
 
 SymbolPointer Module::add_native_function(
-        std::string&& name, std::vector<TypeInfo>&& params, TypeInfo&& retval,
+        std::string&& name, TypeInfo&& param, TypeInfo&& retval,
         NativeDelegate native)
 {
     Function fn {*this, symtab().add_child(name)};
-    fn.signature().set_parameters(std::move(params));
-    fn.signature().set_return_type(std::move(retval));
+    fn.signature().set_parameter(ti_normalize(std::move(param)));
+    fn.signature().set_return_type(ti_normalize(std::move(retval)));
     fn.set_native(native);
     auto fn_idx = add_function(std::move(fn)).index;
     auto scope_idx = add_scope(Scope{*this, fn_idx, symtab().scope()});

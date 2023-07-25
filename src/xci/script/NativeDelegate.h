@@ -1,7 +1,7 @@
 // NativeDelegate.h created on 2020-01-11 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2022 Radek Brich
+// Copyright 2020–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_NATIVE_DELEGATE_H
@@ -210,7 +210,7 @@ struct AutoWrap<FPtr, Ret(*)(Args...), void> {
             : _fun_ptr(reinterpret_cast<void*>(f.ptr)) {}
 
     TypeInfo return_type() { return make_type_info<Ret>(); }
-    std::vector<TypeInfo> param_types() { return {make_type_info<Args>()...}; }
+    TypeInfo param_type() { return ti_tuple(make_type_info<Args>()...); }
 
     /// Build wrapper function which reads args from stack,
     /// converts them to C types and calls original function.
@@ -260,7 +260,7 @@ struct AutoWrap<FPtr, Ret(*)(Arg0, Args...), Arg0> {
           _arg0(static_cast<void*>(arg0)) {}
 
     TypeInfo return_type() { return make_type_info<Ret>(); }
-    std::vector<TypeInfo> param_types() { return {make_type_info<Args>()...}; }
+    TypeInfo param_type() { return ti_tuple(make_type_info<Args>()...); }
 
     /// Build wrapper function which reads args from stack,
     /// converts them to C types and calls original function.

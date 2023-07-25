@@ -267,7 +267,6 @@ struct Signature {
 
     void add_nonlocal(TypeInfo&& ti) { nonlocals.emplace_back(ti); }
     void set_parameter(TypeInfo ti) { param_type = std::move(ti); }
-    void set_parameters(std::vector<TypeInfo>&& p);
     void set_return_type(TypeInfo ti) { return_type = std::move(ti); return_type.set_literal(false); }
 
     bool has_closure() const { return !nonlocals.empty(); }
@@ -344,6 +343,9 @@ inline TypeInfo ti_tuple(Args&&... args) { return TypeInfo(TypeInfo::tuple_of, {
 inline TypeInfo ti_struct(std::initializer_list<TypeInfo::StructItem> items)
 { return TypeInfo(TypeInfo::struct_of, std::forward<std::initializer_list<TypeInfo::StructItem>>(items)); }
 
+// Normalize: unwrap tuple of one item
+inline TypeInfo ti_normalize(TypeInfo&& ti)
+{ return ti.is_tuple() && ti.subtypes().size() == 1 ? ti.subtypes().front() : ti; }
 
 } // namespace xci::script
 

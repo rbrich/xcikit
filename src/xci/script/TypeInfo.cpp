@@ -451,17 +451,6 @@ std::string TypeInfo::name() const
 }
 
 
-void Signature::set_parameters(std::vector<TypeInfo>&& p)
-{
-    if (p.empty())
-        param_type = ti_void();
-    else if (p.size() == 1)
-        param_type = std::move(p.front());
-    else
-        param_type = TypeInfo(std::move(p));
-}
-
-
 bool Signature::has_generic_nonlocals() const
 {
     return ranges::any_of(nonlocals, [](const TypeInfo& type_info) {
