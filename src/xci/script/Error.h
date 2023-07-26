@@ -149,13 +149,16 @@ struct UnknownTypeName : public ScriptError {
 
 
 struct UnexpectedArgument : public ScriptError {
-    explicit UnexpectedArgument(size_t num, const TypeInfo& ftype, const SourceLocation& loc);
+    explicit UnexpectedArgument(const TypeInfo& ftype, const SourceLocation& loc);
 };
 
 
 struct UnexpectedArgumentType : public ScriptError {
-    // num is 1-based
-    explicit UnexpectedArgumentType(size_t num, const TypeInfo& exp, const TypeInfo& got,
+    explicit UnexpectedArgumentType(const TypeInfo& exp, const TypeInfo& got,
+                                    const SourceLocation& loc);
+
+    explicit UnexpectedArgumentType(const TypeInfo& exp, const TypeInfo& got,
+                                    const TypeInfo& exp_arg, const TypeInfo& got_arg,
                                     const SourceLocation& loc);
 };
 

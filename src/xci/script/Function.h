@@ -99,8 +99,8 @@ public:
 
     // true if this function should be generic (i.e. signature contains a type variable)
     bool has_any_generic() const { return m_signature->has_any_generic(); }
-    bool has_generic_param() const { return m_signature->has_generic_param(); }
-    bool has_generic_return_type() const { return m_signature->has_generic_return_type(); }
+    bool has_generic_param() const { return m_signature->param_type.has_generic(); }
+    bool has_generic_return_type() const { return m_signature->return_type.has_generic(); }
     size_t num_type_params() const;
 
     // Kind of function body

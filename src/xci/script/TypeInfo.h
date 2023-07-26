@@ -271,13 +271,11 @@ struct Signature {
 
     bool has_closure() const { return !nonlocals.empty(); }
 
-    bool has_generic_param() const { return param_type.has_generic(); }
-    bool has_generic_return_type() const { return return_type.has_generic(); }
     bool has_generic_nonlocals() const;
     bool has_unknown_nonlocals() const;
     bool has_nonvoid_param() const;
-    bool has_any_unknown() const { return param_type.has_unknown() || return_type.has_unknown() || has_generic_nonlocals(); }
-    bool has_any_generic() const { return has_generic_param() || has_generic_return_type() || has_generic_nonlocals(); }
+    bool has_any_unknown() const { return param_type.has_unknown() || return_type.has_unknown() || has_unknown_nonlocals(); }
+    bool has_any_generic() const { return param_type.has_generic() || return_type.has_generic() || has_generic_nonlocals(); }
 
     explicit operator bool() const { return param_type || return_type; }
 

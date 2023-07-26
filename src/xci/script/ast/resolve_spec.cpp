@@ -599,7 +599,7 @@ private:
                 const auto& call_type = c_sig.param_type;
                 const auto m = match_type(call_type, sig_type);
                 if (!m)
-                    throw UnexpectedArgumentType(1, sig_type, call_type, source_loc);
+                    throw UnexpectedArgumentType(sig_type, call_type, source_loc);
                 if (m.is_coerce()) {
                     // Update type_info of the coerced literal argument
                     m_cast_type = sig_type;
@@ -798,8 +798,8 @@ private:
                 if (var->name().front() == '$')
                     continue;
                 set_type_arg(var, type_args[i], explicit_type_args,
-                             [i, &loc](const TypeInfo& exp, const TypeInfo& got)
-                             { throw UnexpectedArgumentType(i, exp, got, loc); });
+                             [](const TypeInfo& exp, const TypeInfo& got)
+                             { assert(!"unexpected argument type"); });
                 if (++i >= type_args.size())
                     break;
             }

@@ -165,25 +165,28 @@ public:
                 // the instructions are low-level, untyped - set return type to Unknown
                 m_value_type = {};
                 // check type of args (they must be Int, TypeIndex or Byte)
-                auto check_type = [&arg](unsigned i, const TypeInfo& ti) {
+                auto check_type = [](const TypeInfo& ti) -> bool {
                     const Type t = ti.type();
-                    if (t != Type::Unknown && t != Type::Byte && t != Type::Int32 && t != Type::TypeIndex)
-                        throw UnexpectedArgumentType(i, ti_int32(), ti, arg.source_loc);
+                    return t == Type::Unknown || t == Type::Byte || t == Type::Int32 || t == Type::TypeIndex;
                 };
                 // check args - their number and type depends on Opcode
                 auto opcode = (Opcode) sym.index();
                 if (opcode <= Opcode::NoArgLast) {
                     if (!arg.type_info.is_void())
-                        throw UnexpectedArgumentType(0, ti_void(), arg.type_info, v.source_loc);
+                        throw UnexpectedArgumentType(ti_void(), arg.type_info, v.source_loc);
                 } else if (opcode <= Opcode::L1ArgLast) {
-                    check_type(1, arg.type_info);
+                    if (!check_type(arg.type_info))
+                        throw UnexpectedArgumentType(ti_int32(), arg.type_info, arg.source_loc);
                 } else {
                     assert(opcode <= Opcode::L2ArgLast);
-                    if (!arg.type_info.is_tuple())
-                        throw UnexpectedArgumentType(1, ti_tuple(ti_int32(), ti_int32()),
+                    if (!arg.type_info.is_tuple() || arg.type_info.subtypes().size() != 2)
+                        throw UnexpectedArgumentType(ti_tuple(ti_int32(), ti_int32()),
                                                      arg.type_info, v.source_loc);
                     for (const auto& [i, ti] : arg.type_info.subtypes() | enumerate)
-                        check_type(i+1, ti);
+                        if (!check_type(ti))
+                            throw UnexpectedArgumentType(ti_int32(), ti,
+                                                         ti_tuple(ti_int32(), ti_int32()), arg.type_info,
+                                                         arg.source_loc);
                 }
                 // cleanup - args are now fully processed
                 m_call_sig.clear();
@@ -290,7 +293,7 @@ public:
                     // builtin __module
                     if (!arg.type_info.is_void() && arg.type_info.type() != Type::Int32) {
                         // the arg must be Int32 (index of imported module)
-                        throw UnexpectedArgumentType(1, ti_int32(), arg.type_info, arg.source_loc);
+                        throw UnexpectedArgumentType(ti_int32(), arg.type_info, arg.source_loc);
                     }
                     // cleanup - args are now fully processed
                     m_call_sig.clear();
@@ -356,7 +359,7 @@ public:
                         arg.type_info = ti_void();
                     if (arg.type_info.type() != Type::Int32) {
                         // the arg must be Int32 (index of imported module)
-                        throw UnexpectedArgumentType(1, ti_int32(), arg.type_info, arg.source_loc);
+                        throw UnexpectedArgumentType(ti_int32(), arg.type_info, arg.source_loc);
                     }
                     // cleanup - args are now fully processed
                     m_call_sig.clear();
@@ -411,7 +414,7 @@ public:
         v.callable->apply(*this);
 
         if (!m_value_type.is_callable() && !m_value_type.is_unknown() && !m_call_sig.empty()) {
-            throw UnexpectedArgument(1, m_value_type, m_call_sig.back().arg.source_loc);
+            throw UnexpectedArgument(m_value_type, m_call_sig.back().arg.source_loc);
         }
 
         if (m_value_type.is_callable()) {
@@ -746,7 +749,7 @@ private:
                 const auto& call_type = c_sig.param_type;
                 const auto m = match_type(call_type, sig_type);
                 if (!m)
-                    throw UnexpectedArgumentType(1, sig_type, sig_type, source_loc);
+                    throw UnexpectedArgumentType(sig_type, sig_type, source_loc);
                 if (m.is_coerce()) {
                     // Update type_info of the coerced literal argument
                     m_cast_type = sig_type;
