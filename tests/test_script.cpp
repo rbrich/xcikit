@@ -280,6 +280,7 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
     CHECK(parse("a fun b {} c") == "(a fun b {()} c)");
     CHECK(parse("a (fun b {}) c") == "(a (fun b {()}) c)");
     CHECK(parse_fold("1 .add 2") == "add (1, 2)");
+    CHECK(parse_fold("(1,2) .add") == "add (1, 2)");
     CHECK(parse_fold("1 .add 2 3") == "add (1, 2) 3");
     CHECK(parse_fold("neg 1 .add 2") == "add (neg 1, 2)");
     CHECK(parse_fold("f 1 .combine 2 3") == "combine (f 1, 2) 3");
@@ -441,6 +442,8 @@ TEST_CASE( "Variables", "[script][interpreter]" )
 TEST_CASE( "Expressions", "[script][interpreter]" )
 {
     CHECK(interpret_std("add (1, 2)") == "3");
+    CHECK(interpret_std("(1, 2) .add") == "3");
+    CHECK(interpret_std("1 .add 2") == "3");
     CHECK(interpret_std("sub (add (1, 2), 3)") == "0");
     CHECK(interpret_std("sub (1 + 2, 3)") == "0");
     CHECK(interpret_std("(1 + 2) - 3") == "0");
@@ -816,8 +819,8 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
     CHECK(interpret("f = fun<T> T->T { __noop }; same = fun<T> x:T -> T { f (f x) }; same 5") == "5");
     // deducing tuple type
     CHECK(interpret("fun () -> () { __noop } ()") == "()");
-    //CHECK(interpret("fun<T> (T,T) -> (T,T) { __noop } (1,2)") == "(1, 2)");
-    //CHECK(interpret("f = fun<T> (T,T) -> (T,T) { __noop }; f (1,2)") == "(1, 2)");
+    CHECK(interpret("fun<T> (T,T) -> (T,T) { __noop } (1,2)") == "(1, 2)");
+    CHECK(interpret("f = fun<T> (T,T) -> (T,T) { __noop }; f (1,2)") == "(1, 2)");
     //CHECK(interpret("f = fun<Add T> (T,T) -> T { add }; f (1,2)") == "3");
     // deducing list type
     CHECK(interpret("fun<T> [T] -> [T] { __noop } [1,2]") == "[1, 2]");

@@ -147,14 +147,16 @@ x = 1; y = { x + 2 }
 
 [source,fire]
 ----
-add (1, 2)
+neg 42           // => -42
+add (1, 2)       // => 3
 sub (1 + 2, 3)   // => 0
-1 .add 2        // infix style
+(1, 2) .add      // dot-call
+1 .add 2         // infix style dot-call
 ----
 
-* Function call syntax is minimalistic - there are no commas or parentheses.
-* Parentheses can be used around each single argument.
-* Infix operators and other function calls require parentheses around them.
+* Function call syntax is minimalistic - function name, space, argument.
+* Parentheses are optional in case of a single argument.
+* Multiple arguments are passed as a tuple.
 
 === Infix function call
 
@@ -168,7 +170,7 @@ foo .push bar
 ----
 
 The evaluation rule is simple:
-The left-hand side expression is combined with the right-hand side into a tuple,
+The left-hand side expression is combined with the right-hand side in a tuple,
 which is passed as the function argument. The right-hand side is optional.
 
 Spaces around the dot are optional, but numbers might need parenthesizing
