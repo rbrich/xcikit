@@ -35,7 +35,7 @@ void get_type_arg(SymbolPointer var, TypeInfo& sig, const TypeArgs& type_args)
 {
     for (;;) {
         auto ti = type_args.get(var);
-        if (ti.is_unknown() && ti.generic_var()) {
+        if (ti.is_generic()) {
             sig = ti;
             var = ti.generic_var();
             continue;
@@ -65,10 +65,13 @@ void resolve_generic_type(TypeInfo& sig, const TypeArgs& type_args)
             for (auto& sub : sig.subtypes())
                 resolve_generic_type(sub, type_args);
             break;
+        case Type::Struct:
+            for (auto& st : sig.struct_items())
+                resolve_generic_type(st.second, type_args);
+            break;
         case Type::Function:
             sig = TypeInfo(std::make_shared<Signature>(sig.signature()));  // copy
-            for (auto& prm : sig.signature().params)
-                resolve_generic_type(prm, type_args);
+            resolve_generic_type(sig.signature().param_type, type_args);
             resolve_generic_type(sig.signature().return_type, type_args);
             break;
         default:
@@ -87,7 +90,7 @@ void resolve_generic_type(TypeInfo& sig, const Scope& scope)
                 const Scope* scope_p = &scope;
                 for (;;) {
                     auto ti = scope_p->type_args().get(var);
-                    if (ti.is_unknown() && ti.generic_var()) {
+                    if (ti.is_generic()) {
                         sig = ti;
                         var = ti.generic_var();
                         scope_p = &scope;
@@ -111,10 +114,13 @@ void resolve_generic_type(TypeInfo& sig, const Scope& scope)
             for (auto& sub : sig.subtypes())
                 resolve_generic_type(sub, scope);
             break;
+        case Type::Struct:
+            for (auto& st : sig.struct_items())
+                resolve_generic_type(st.second, scope);
+            break;
         case Type::Function:
             sig = TypeInfo(std::make_shared<Signature>(sig.signature()));  // copy
-            for (auto& prm : sig.signature().params)
-                resolve_generic_type(prm, scope);
+            resolve_generic_type(sig.signature().param_type, scope);
             resolve_generic_type(sig.signature().return_type, scope);
             break;
         default:
@@ -126,18 +132,14 @@ void resolve_generic_type(TypeInfo& sig, const Scope& scope)
 
 void resolve_type_vars(Signature& signature, const TypeArgs& type_args)
 {
-    for (auto& arg_type : signature.params) {
-        resolve_generic_type(arg_type, type_args);
-    }
+    resolve_generic_type(signature.param_type, type_args);
     resolve_generic_type(signature.return_type, type_args);
 }
 
 
 void resolve_type_vars(Signature& signature, const Scope& scope)
 {
-    for (auto& arg_type : signature.params) {
-        resolve_generic_type(arg_type, scope);
-    }
+    resolve_generic_type(signature.param_type, scope);
     resolve_generic_type(signature.return_type, scope);
 }
 
@@ -162,22 +164,53 @@ void specialize_arg(const TypeInfo& sig, const TypeInfo& deduced,
             specialize_arg(sig.elem_type(), deduced.elem_type(), type_args, exc_cb);
             break;
         case Type::Tuple:
-            if (deduced.type() != Type::Tuple || sig.subtypes().size() != deduced.subtypes().size()) {
+            if (deduced.type() == Type::Tuple) {
+                if (sig.subtypes().size() != deduced.subtypes().size()) {
+                    exc_cb(sig, deduced);
+                    break;
+                }
+                for (auto&& [sig_sub, deduced_sub] : zip(sig.subtypes(), deduced.subtypes())) {
+                    specialize_arg(sig_sub, deduced_sub, type_args, exc_cb);
+                }
+            } else if (deduced.type() == Type::Struct) {
+                if (sig.subtypes().size() != deduced.struct_items().size()) {
+                    exc_cb(sig, deduced);
+                    break;
+                }
+                for (auto&& [sig_sub, deduced_st] : zip(sig.subtypes(), deduced.struct_items())) {
+                    specialize_arg(sig_sub, deduced_st.second, type_args, exc_cb);
+                }
+            } else {
                 exc_cb(sig, deduced);
-                break;
             }
-            for (auto&& [sig_sub, deduced_sub] : zip(sig.subtypes(), deduced.subtypes())) {
-                specialize_arg(sig_sub, deduced_sub, type_args, exc_cb);
+            break;
+        case Type::Struct:
+            if (deduced.type() == Type::Struct) {
+                if (sig.struct_items().size() != deduced.struct_items().size()) {
+                    exc_cb(sig, deduced);
+                    break;
+                }
+                for (auto&& [sig_st, deduced_st] : zip(sig.struct_items(), deduced.struct_items())) {
+                    specialize_arg(sig_st.second, deduced_st.second, type_args, exc_cb);
+                }
+            } else if (deduced.type() == Type::Tuple) {
+                if (sig.struct_items().size() != deduced.subtypes().size()) {
+                    exc_cb(sig, deduced);
+                    break;
+                }
+                for (auto&& [sig_st, deduced_sub] : zip(sig.struct_items(), deduced.subtypes())) {
+                    specialize_arg(sig_st.second, deduced_sub, type_args, exc_cb);
+                }
+            } else {
+                exc_cb(sig, deduced);
             }
             break;
         case Type::Function:
-            if (deduced.type() != Type::Function || sig.signature().arity() != deduced.signature().arity()) {
+            if (deduced.type() != Type::Function) {
                 exc_cb(sig, deduced);
                 break;
             }
-            for (auto&& [sig_arg, deduced_arg] : zip(sig.signature().params, deduced.signature().params)) {
-                specialize_arg(sig_arg, deduced_arg, type_args, exc_cb);
-            }
+            specialize_arg(sig.signature().param_type, deduced.signature().param_type, type_args, exc_cb);
             specialize_arg(sig.signature().return_type, deduced.signature().return_type, type_args, exc_cb);
             break;
         default:

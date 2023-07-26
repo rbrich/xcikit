@@ -102,6 +102,7 @@ namespace ast {
 class DumpVisitor: public ConstVisitor {
 public:
     explicit DumpVisitor(std::ostream& os) : m_os(os) {}
+    void visit(const Block& v) override { m_os << v; }
     void visit(const Definition& v) override { m_os << v; }
     void visit(const Invocation& v) override { m_os << v; }
     void visit(const Return& v) override { m_os << v; }
@@ -166,12 +167,13 @@ std::ostream& operator<<(std::ostream& os, const Tuple& v)
             os << put_indent << *item;
         return os << less_indent;
     } else {
+        os << '(';
         for (const auto& item : v.items) {
             os << *item;
             if (&item != &v.items.back())
                 os << ", ";
         }
-        return os;
+        return os << ')';
     }
 }
 
@@ -226,11 +228,15 @@ std::ostream& operator<<(std::ostream& os, const StructItem& v)
     if (stream_options(os).enable_tree) {
         os << "StructItem" << endl;
         os << more_indent
-           << put_indent << v.identifier
-           << put_indent << *v.type;
+           << put_indent << v.identifier;
+        if (v.type)
+           os << put_indent << *v.type;
         return os << less_indent;
     } else {
-        return os << v.identifier << ':' << *v.type;
+        os << v.identifier;
+        if (v.type)
+            os << ':' << *v.type;
+        return os;
     }
 }
 
@@ -315,10 +321,9 @@ std::ostream& operator<<(std::ostream& os, const FunctionType& v)
         os << more_indent;
         for (const auto& tp : v.type_params)
             os << put_indent << tp;
-        for (const auto& prm : v.params)
-            os << put_indent << prm;
-        if (v.result_type)
-            os << put_indent << "result: " << *v.result_type;
+        os << put_indent << v.param;
+        if (v.return_type)
+            os << put_indent << "result: " << *v.return_type;
         for (const auto& ctx : v.context) {
             os << put_indent << ctx;
         }
@@ -333,22 +338,18 @@ std::ostream& operator<<(std::ostream& os, const FunctionType& v)
             }
             os << "> ";
         }
-        if (!v.params.empty()) {
-            for (const auto& prm : v.params) {
-                os << prm << ' ';
-            }
-        }
-        if (v.result_type) {
-            os << "-> " << *v.result_type << " ";
+        os << v.param;
+        if (v.return_type) {
+            os << " -> " << *v.return_type;
         }
         if (!v.context.empty()) {
-            os << "with (";
+            os << " with (";
             for (const auto& ctx : v.context) {
                 os << ctx;
                 if (&ctx != &v.context.back())
                     os << ", ";
             }
-            os << ") ";
+            os << ")";
         }
         return os;
     }
@@ -459,16 +460,20 @@ std::ostream& operator<<(std::ostream& os, const Call& v)
         os << "Call(Expression)";
         if (v.ti)
             os << " [type_info=" << v.ti << ']';
-        os << endl << more_indent << put_indent << *v.callable;
-        for (const auto& arg : v.args) {
-            os << put_indent << *arg;
+        os << endl << more_indent;
+        if (v.callable)
+            os << put_indent << "callable: " << *v.callable;
+        if (v.arg) {
+            os << put_indent << "arg: " << *v.arg;
         }
         return os << less_indent;
     } else {
-        os << *v.callable;
-        for (const auto& arg : v.args) {
-            os << ' ' << *arg;
-        }
+        if (v.callable)
+            os << *v.callable;
+        if (v.callable && v.arg)
+            os << ' ';
+        if (v.arg)
+            os << *v.arg;
         return os;
     }
 }
@@ -479,22 +484,35 @@ std::ostream& operator<<(std::ostream& os, const OpCall& v)
         os << "OpCall(Expression)" << endl;
         os << more_indent << put_indent << v.op;
         if (v.callable)
-            os << put_indent << *v.callable;
-        for (const auto& arg : v.args) {
-            os << put_indent << *arg;
-        }
+            os << put_indent << "callable: " << *v.callable;
+        if (v.arg)
+            os << put_indent << "arg: " << *v.arg;
+        if (v.right_arg)
+            os << put_indent << "right_arg: " << *v.right_arg;
         return os << less_indent;
     } else {
-        os << "(";
-        for (const auto& arg : v.args) {
-            if (&arg != &v.args.front()) {
-                if (v.op.is_comma())
-                    os << ", ";  // no leading space
-                else
-                    os << ' ' << v.op << ' ';
-            }
-            os << *arg;
+        if (!v.right_arg && v.op.op != Operator::Comma && v.op.op != Operator::Call) {
+            os << '(' << v.op << ") " << *v.arg;
+            return os;
         }
+        os << "(";
+        if (v.arg)
+            os << *v.arg;
+        if (v.arg && v.right_arg) {
+            switch (v.op.op) {
+                case Operator::Comma:
+                    os << ", ";  // no leading space
+                    break;
+                case Operator::Call:
+                    os << ' ';
+                    break;
+                default:
+                    os << ' ' << v.op << ' ';
+                    break;
+            }
+        }
+        if (v.right_arg)
+            os << *v.right_arg;
         return os << ")";
     }
 }
@@ -505,10 +523,10 @@ std::ostream& operator<<(std::ostream& os, const Condition& v)
         os << "Condition(Expression)" << endl;
         os << more_indent;
         for (auto& item : v.if_then_expr) {
-           os << put_indent << *item.first
-              << put_indent << *item.second;
+           os << put_indent << "if: " << *item.first
+              << put_indent << "then: " << *item.second;
         }
-        os << put_indent << *v.else_expr;
+        os << put_indent << "else: " << *v.else_expr;
         return os << less_indent;
     } else {
         for (auto& item : v.if_then_expr) {
@@ -540,8 +558,8 @@ std::ostream& operator<<(std::ostream& os, const WithContext& v)
 std::ostream& operator<<(std::ostream& os, const Operator& v)
 {
     if (stream_options(os).enable_tree) {
-        return os << "Operator " << v.to_cstr()
-                  << " [L" << v.precedence() << "]" << endl;
+        return os << "Operator '" << v.to_cstr()
+                  << "' [L" << v.precedence() << "]" << endl;
     } else {
         return os << v.to_cstr();
     }
@@ -559,8 +577,8 @@ std::ostream& operator<<(std::ostream& os, const Function& v)
                   << put_indent << v.body
                   << less_indent;
     } else {
-        if (!v.type.params.empty() || v.type.result_type)
-            os << "fun " << v.type;
+        if (v.type)
+            os << "fun " << v.type << ' ';
         if (stream_options(os).multiline)
             return os << "{" << endl
                       << more_indent << put_indent << v.body << endl
@@ -789,10 +807,10 @@ std::ostream& operator<<(std::ostream& os, const Function& f)
 std::ostream& operator<<(std::ostream& os, Function::Kind v)
 {
     switch (v) {
-        case Function::Kind::Undefined:  return os << "undefined";
-        case Function::Kind::Compiled:    return os << "compiled";
-        case Function::Kind::Generic: return os << "generic";
-        case Function::Kind::Native:  return os << "native";
+        case Function::Kind::Undefined: return os << "undefined";
+        case Function::Kind::Compiled:  return os << "compiled";
+        case Function::Kind::Generic:   return os << "generic";
+        case Function::Kind::Native:    return os << "native";
     }
     XCI_UNREACHABLE;
 }
@@ -893,6 +911,8 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
         os << put_indent << '[' << i << "] ";
         if (f.kind() != Function::Kind::Compiled) {
             os << '(' << f.kind();
+            if (f.is_expression())
+                os << ", expr";
             if (f.has_compile())
                 os << ", compile";
             if (f.is_specialized())
@@ -1057,25 +1077,9 @@ std::ostream& operator<<(std::ostream& os, const Signature& v)
         }
         os << " } ";
     }
-    if (!v.partial.empty()) {
-        os << "| ";
-        for (const auto& ti : v.partial) {
-            os << ti;
-            if (&ti != &v.partial.back())
-                os << ", ";
-        }
-        os << " | ";
-    }
     const bool orig_parenthesize_fun_types = stream_options(os).parenthesize_fun_types;
     stream_options(os).parenthesize_fun_types = true;
-    if (!v.params.empty()) {
-        for (const auto& ti : v.params) {
-            os << ti << ' ';
-        }
-    } else {
-        os << "() ";
-    }
-    os << "-> ";
+    os << v.param_type << ' ' << "-> ";
     stream_options(os).parenthesize_fun_types = orig_parenthesize_fun_types;
     return os << v.return_type;
 }

@@ -1,7 +1,7 @@
 // Error.h created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_ERROR_H
@@ -148,21 +148,17 @@ struct UnknownTypeName : public ScriptError {
 };
 
 
-struct UnexpectedArgumentCount : public ScriptError {
-    explicit UnexpectedArgumentCount(size_t exp, size_t got, const SourceLocation& loc)
-            : ScriptError(fmt::format("function expects {} args, called with {} args",
-                    exp, got), loc) {}
-};
-
-
 struct UnexpectedArgument : public ScriptError {
-    explicit UnexpectedArgument(size_t num, const TypeInfo& ftype, const SourceLocation& loc);
+    explicit UnexpectedArgument(const TypeInfo& ftype, const SourceLocation& loc);
 };
 
 
 struct UnexpectedArgumentType : public ScriptError {
-    // num is 1-based
-    explicit UnexpectedArgumentType(size_t num, const TypeInfo& exp, const TypeInfo& got,
+    explicit UnexpectedArgumentType(const TypeInfo& exp, const TypeInfo& got,
+                                    const SourceLocation& loc);
+
+    explicit UnexpectedArgumentType(const TypeInfo& exp, const TypeInfo& got,
+                                    const TypeInfo& exp_arg, const TypeInfo& got_arg,
                                     const SourceLocation& loc);
 };
 
@@ -242,7 +238,7 @@ struct DefinitionTypeMismatch : public ScriptError {
 
 
 struct DefinitionParamTypeMismatch : public ScriptError {
-    explicit DefinitionParamTypeMismatch(size_t idx, const TypeInfo& exp, const TypeInfo& got);
+    explicit DefinitionParamTypeMismatch(size_t idx, const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc);
 };
 
 

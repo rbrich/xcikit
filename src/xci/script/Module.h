@@ -46,21 +46,21 @@ public:
     const ModuleManager& module_manager() const { return *m_module_manager; }
 
     SymbolPointer add_native_function(std::string&& name,
-            std::vector<TypeInfo>&& params, TypeInfo&& retval,
+            TypeInfo&& param, TypeInfo&& retval,
             NativeDelegate native);
 
     template<class F>
     SymbolPointer add_native_function(std::string&& name, F&& fun) {
         auto w = native::AutoWrap{core::ToFunctionPtr(std::forward<F>(fun))};
         return add_native_function(std::move(name),
-                w.param_types(), w.return_type(), w.native_wrapper());
+                w.param_type(), w.return_type(), w.native_wrapper());
     }
 
     template<class F>
     SymbolPointer add_native_function(std::string&& name, F&& fun, void* arg0) {
         auto w = native::AutoWrap(core::ToFunctionPtr(std::forward<F>(fun)), arg0);
         return add_native_function(std::move(name),
-                w.param_types(), w.return_type(), w.native_wrapper());
+                w.param_type(), w.return_type(), w.native_wrapper());
     }
 
     // Imported modules
@@ -97,6 +97,7 @@ public:
 
     // Type information
     Index add_type(TypeInfo type_info);
+    void update_type(Index index, TypeInfo type_info);
     const TypeInfo& get_type(Index idx) const { return m_types[idx]; }
     Index find_type(const TypeInfo& type_info) const;
     Size num_types() const { return Size(m_types.size()); }

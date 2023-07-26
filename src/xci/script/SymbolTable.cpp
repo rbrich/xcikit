@@ -104,7 +104,7 @@ Function& SymbolPointer::get_function(const Scope& hier) const
 const TypeInfo& SymbolPointer::get_type() const
 {
     auto& sym = m_symtab->get(m_symidx);
-    assert(sym.type() == Symbol::TypeName || sym.type() == Symbol::StructItem);
+    assert(sym.type() == Symbol::TypeName);
     assert(m_symtab->module() != nullptr);
     return m_symtab->module()->get_type(sym.index());
 }
@@ -159,15 +159,6 @@ std::string SymbolTable::qualified_name() const
 
 SymbolPointer SymbolTable::add(Symbol&& symbol)
 {
-    // deduplicate StructItem symbols
-    if (symbol.type() == Symbol::StructItem) {
-        auto sym_ptr = find(symbol);
-        if (sym_ptr) {
-            assert(sym_ptr.symtab() == this);
-            return sym_ptr;
-        }
-    }
-
     m_symbols.emplace_back(std::move(symbol));
     return {*this, Index(m_symbols.size() - 1)};
 }

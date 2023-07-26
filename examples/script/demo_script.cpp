@@ -81,14 +81,14 @@ int main()
             // symbolic name
             "hello",
             // signature: String -> Int32
-            {ti_string()}, ti_int32(),
+            ti_string(), ti_int32(),
             // native function to be called
             hello_fun);
 
     // still low level interface
     module->add_native_function(
             "toupper_at_wrapped",
-            {ti_string(), ti_int32()},
+            ti_tuple(ti_string(), ti_int32()),
             ti_string(),
             toupper_at_wrapped);
     // the same function with auto-generated wrapper function
@@ -109,7 +109,7 @@ int main()
     interpreter.eval(module, R"(hello "Demo")");
 
     // capture the result
-    auto result = interpreter.eval(module, R"(hello (toupper_at "world" 0))");
+    auto result = interpreter.eval(module, R"(hello (toupper_at ("world", 0)))");
 
     // result contains value of the last expression in the script
     assert(result.type() == Type::Int32);

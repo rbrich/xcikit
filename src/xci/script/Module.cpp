@@ -31,12 +31,12 @@ Module::~Module()
 
 
 SymbolPointer Module::add_native_function(
-        std::string&& name, std::vector<TypeInfo>&& params, TypeInfo&& retval,
+        std::string&& name, TypeInfo&& param, TypeInfo&& retval,
         NativeDelegate native)
 {
     Function fn {*this, symtab().add_child(name)};
-    fn.signature().params = std::move(params);
-    fn.signature().return_type = std::move(retval);
+    fn.signature().set_parameter(ti_normalize(std::move(param)));
+    fn.signature().set_return_type(ti_normalize(std::move(retval)));
     fn.set_native(native);
     auto fn_idx = add_function(std::move(fn)).index;
     auto scope_idx = add_scope(Scope{*this, fn_idx, symtab().scope()});
@@ -131,18 +131,11 @@ Index Module::find_value(const TypedValue& value) const
 
 Index Module::add_type(TypeInfo type_info)
 {
-    assert(!type_info.is_generic());
-
-    // lookup previous type
-    auto idx = find_type(type_info);
-    if (idx != no_index) {
-        // Replace the placeholder used for named type (contains Unknown ti).
-        if (type_info.is_named()) {
-            assert(m_types[idx].named_type().type_info.is_unknown()
-                || m_types[idx] == type_info);
-            m_types[idx] = std::move(type_info);
-        }
-        return idx;
+    // lookup previous type (deduplicate)
+    if (!type_info.has_unknown()) {
+        auto idx = find_type(type_info);
+        if (idx != no_index)
+            return idx;
     }
 
     m_types.push_back(std::move(type_info));
@@ -150,9 +143,18 @@ Index Module::add_type(TypeInfo type_info)
 }
 
 
+void Module::update_type(Index index, TypeInfo type_info)
+{
+    // update possibly Unknown type with a concrete type
+    assert(!type_info.has_unknown());
+    assert(m_types[index] == type_info);  // it must differ only in Unknown fields
+    m_types[index] = std::move(type_info);
+}
+
+
 Index Module::find_type(const TypeInfo& type_info) const
 {
-    assert(!type_info.is_generic());
+    assert(!type_info.has_generic());
     auto it = std::find(m_types.begin(), m_types.end(), type_info);
     if (it == m_types.end())
         return no_index;
@@ -247,7 +249,7 @@ bool Module::operator==(const Module& rhs) const
 // Module serialization
 
 // Following static asserts help with development - error message readability
-static_assert(xci::data::TypeWithSerializeFunction<ast::Block, xci::data::BinaryReader>);
+static_assert(xci::data::TypeWithSaveFunction<ast::Expression, xci::data::BinaryWriter>);
 
 
 bool Module::save_to_file(const std::string& filename)

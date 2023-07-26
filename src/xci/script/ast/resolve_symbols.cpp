@@ -17,7 +17,6 @@
 
 namespace xci::script {
 
-using std::make_unique;
 using ranges::views::enumerate;
 
 
@@ -67,6 +66,9 @@ public:
         if (dfn.variable.type)
             dfn.variable.type->apply(*this);
         if (dfn.expression) {
+            Function& fn = symptr.get_function(m_scope);
+            fn.set_ast(*dfn.expression);
+            fn.set_expression();
             symptr->set_defined(true);
             dfn.expression->definition = &dfn;
             dfn.expression->apply(*this);
@@ -211,7 +213,7 @@ public:
                 throw StructDuplicateKey(item.first.name, item.first.source_loc);
 
             item.second->apply(*this);
-            item.first.symbol = module().symtab().add({item.first.name, Symbol::StructItem, no_index});
+            item.first.symbol = add_struct_item(item.first.name, no_index);
         }
     }
 
@@ -246,9 +248,12 @@ public:
         if (symptr->type() == Symbol::Function || symptr->type() == Symbol::StructItem) {
             // find all visible function overloads (in the nearest scope)
             v.sym_list = find_function_overloads(v.identifier.name);
-            // find all StructItem symbols, in all scopes
+            // find all StructItem symbols, in any modules
             auto struct_syms = find_all_symbols_of_type(v.identifier.name, Symbol::StructItem);
-            v.sym_list.insert(v.sym_list.end(), struct_syms.begin(), struct_syms.end());
+            if (!struct_syms.empty()) {
+                // Always insert only a single StructItem symbol.
+                v.sym_list.emplace_back(struct_syms.front());
+            }
         }
         if (symptr->type() == Symbol::Module) {
             // add module to overload set (only if it's actual module symbol, not builtin __module)
@@ -258,15 +263,14 @@ public:
     }
 
     void visit(ast::Call& v) override {
-        for (auto& arg : v.args) {
-            arg->apply(*this);
-        }
+        if (v.arg)
+            v.arg->apply(*this);
         v.callable->apply(*this);
     }
 
     void visit(ast::OpCall& v) override {
         assert(!v.right_tmp);
-        v.callable = make_unique<ast::Reference>(ast::Identifier{builtin::op_to_function_name(v.op.op), v.source_loc});
+        v.callable = std::make_unique<ast::Reference>(ast::Identifier{builtin::op_to_function_name(v.op.op), v.source_loc});
         visit(*static_cast<ast::Call*>(&v));
     }
 
@@ -299,7 +303,7 @@ public:
             // add new symbol table for the function
             auto num = symtab().count(Symbol::Function);
             std::string name;
-            if (v.type.params.empty())
+            if (!v.type.param)
                 name = fmt::format("<block_{}>", num);
             else
                 name = fmt::format("<lambda_{}>", num);
@@ -308,6 +312,7 @@ public:
         auto& scope = module().get_scope(v.scope_index);
         Function& fn = scope.function();
         fn.set_ast(v.body);
+        fn.set_expression(false);
 
         v.body.symtab = &fn.symtab();
         m_symtab = v.body.symtab;
@@ -325,7 +330,7 @@ public:
     void visit(ast::Cast& v) override {
         v.expression->apply(*this);
         v.type->apply(*this);
-        v.cast_function = make_unique<ast::Reference>(ast::Identifier{"cast"});
+        v.cast_function = std::make_unique<ast::Reference>(ast::Identifier{"cast"});
         v.cast_function->source_loc = v.source_loc;
         v.cast_function->apply(*this);
     }
@@ -349,20 +354,29 @@ public:
             tc.type_class.apply(*this);
             symtab().add({tc.type_name.name, Symbol::TypeVar, ++type_idx});
         }*/
-        Index par_idx = 0;
-        for (auto& p : t.params) {
+        if (t.param) {
+            m_parameter = true;
+            auto& p = t.param;
             if (!p.type) {
-                // '$T' is internal prefix for untyped function args
-                p.type = std::make_unique<ast::TypeName>("$T" + p.identifier.name);
+                // '$P' is internal prefix for untyped function args
+                p.type = std::make_unique<ast::TypeName>("$P" + p.identifier.name);
             }
             p.type->apply(*this);
+            // Special case for unnamed struct parameter - create Parameter symbols for subtypes
+            auto* ps = dynamic_cast<ast::StructType*>(p.type.get());
+            if (p.identifier.name.empty() && ps) {
+                Index idx = 0;
+                for (auto& st : ps->subtypes)
+                    st.identifier.symbol = symtab().add({st.identifier.name, Symbol::Parameter, idx++});
+            }
             if (!p.identifier.name.empty())
-                p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, par_idx++});
+                p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, no_index});
+            m_parameter = false;
         }
-        if (!t.result_type && !m_instance)
-            t.result_type = std::make_unique<ast::TypeName>("$R");
-        if (t.result_type)
-            t.result_type->apply(*this);
+        if (!t.return_type && !m_instance)
+            t.return_type = std::make_unique<ast::TypeName>("$R");
+        if (t.return_type)
+            t.return_type->apply(*this);
     }
 
     void visit(ast::ListType& t) final {
@@ -384,8 +398,13 @@ public:
             if (!ok)
                 throw StructDuplicateKey(name, st.identifier.source_loc);
 
-            st.type->apply(*this);
-            st.identifier.symbol = module().symtab().add({name, Symbol::StructItem, no_index});
+            if (st.type) {
+                st.type->apply(*this);
+            } else if (m_parameter) {
+                st.type = std::make_unique<ast::TypeName>(std::string("$T") + name);
+                st.type->apply(*this);
+            }
+            st.identifier.symbol = add_struct_item(name, no_index);
         }
     }
 
@@ -402,6 +421,18 @@ private:
         assert(symtab().module() == &module());
         auto symptr = symtab().add({name, Symbol::Function, subscope_i});
         return {symptr, scope_idx};
+    }
+
+    SymbolPointer add_struct_item(const std::string& name, Index idx) {
+        auto& symtab = module().symtab();
+        // Deduplicate StructItem symbols - they don't carry any information
+        // other than the name may be a struct member
+        auto sym_ptr = symtab.find_last_of(name, Symbol::StructItem);
+        if (sym_ptr) {
+            assert(sym_ptr.symtab() == &symtab);
+            return sym_ptr;
+        }
+        return symtab.add({name, Symbol::StructItem, idx});
     }
 
     SymbolPointer allocate_type_var(const std::string& name = "") {
@@ -525,6 +556,7 @@ private:
     SymbolTable* m_symtab = &function().symtab();
     ast::Class* m_class = nullptr;
     Instance* m_instance = nullptr;
+    bool m_parameter = false;  // are we resolving parameter (FunctionType)?
 };
 
 

@@ -1,7 +1,7 @@
 // Options.cpp.c created on 2021-03-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021 Radek Brich
+// Copyright 2021–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Options.h"
@@ -30,6 +30,7 @@ using PassItem = std::pair<const char*, Flags>;
 static PassItem pass_names[] = {
         {"fold_tuple", Flags::PPTuple},
         {"fold_dot_call", Flags::PPDotCall},
+        {"fold_paren", Flags::PPParen},
         {"resolve_symbols", Flags::PPSymbols},
         {"resolve_decl", Flags::PPDecl},
         {"resolve_types", Flags::PPTypes},
@@ -67,7 +68,7 @@ static Flags pass_name_to_flag(std::string_view name)
 static bool parse_pass_list(ReplOptions& ro, const char* list_str)
 {
     auto items = split(list_str, ',');
-    ro.compiler_flags |= accumulate(items | transform(pass_name_to_flag), Flags(0),
+    ro.compiler_flags = accumulate(items | transform(pass_name_to_flag), Flags(0),
                [](Flags a, Flags b) -> Flags { return a | b; });
     return ro.compiler_flags != Flags(~0);
 }
@@ -83,7 +84,7 @@ void Options::parse(char* argv[])
             Option("-c, --compile", "Compile a module (don't run anything)", po.compile),
             Option("-o, --output FILE", "Output file for compiled module (default is <source basename>.firm)", po.output_file),
             Option("-e, --eval EXPR", "Execute EXPR as main input", po.expr),
-            Option("-O, --optimize", "Allow optimizations", [&ro]{ ro.compiler_flags |= Flags::O1; }),
+            Option("-O, --optimize", "Allow optimizations", [&ro]{ ro.compiler_flags |= Flags::OP1; }),
             Option("-r, --raw-ast", "Print raw AST", ro.print_raw_ast),
             Option("-t, --ast", "Print processed AST", ro.print_ast),
             Option("-b, --bytecode", "Print bytecode being run", ro.print_bytecode),

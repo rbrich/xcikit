@@ -22,6 +22,14 @@ namespace xci::script::ast {
 using ranges::cpp20::views::reverse;
 
 
+void Visitor::visit(Block& blk)
+{
+    for (const auto& stmt : blk.statements) {
+        stmt->apply(*this);
+    }
+}
+
+
 void Visitor::visit(Parenthesized& v)
 {
     v.expression->apply(*this);
@@ -55,11 +63,11 @@ std::unique_ptr<ast::Expression> Function::make_copy() const
     auto r = std::make_unique<Function>();
     Expression::copy_to(*r);
     type.copy_to(r->type);
-    r->body = copy(body);
+    body.copy_to(r->body);
     r->ti = ti;
     r->symbol = symbol;
     r->scope_index = scope_index;
-    r->call_args = call_args;
+    r->call_arg = call_arg;
     return r;
 }
 
@@ -180,6 +188,27 @@ void Expression::copy_to(Expression& r) const
 }
 
 
+void Block::copy_to(Block& r) const
+{
+    Expression::copy_to(r);
+    r.statements = copy_ptr_vector(statements);
+}
+
+
+std::unique_ptr<ast::Expression> Block::make_copy() const
+{
+    auto r = std::make_unique<Block>();
+    Block::copy_to(*r);
+    return r;
+}
+
+
+const TypeInfo& Block::type_info() const
+{
+    return dynamic_cast<Return*>(statements.back().get())->expression->type_info();
+}
+
+
 std::unique_ptr<ast::Expression> Reference::make_copy() const
 {
     auto r = std::make_unique<Reference>();
@@ -206,11 +235,10 @@ void Call::copy_to(Call& r) const
     Expression::copy_to(r);
     if (callable)
         r.callable = callable->make_copy();
-    r.args = copy_ptr_vector(args);
+    if (arg)
+        r.arg = arg->make_copy();
     r.ti = ti;
     r.wrapped_execs = wrapped_execs;
-    r.partial_args = partial_args;
-    r.partial_index = partial_index;
     r.intrinsic = intrinsic;
 }
 
@@ -264,8 +292,8 @@ std::unique_ptr<ast::Type> FunctionType::make_copy() const
 void FunctionType::copy_to(FunctionType& r) const
 {
     r.type_params = type_params;
-    r.params = copy_vector(params);
-    r.result_type = copy(result_type);
+    r.param = copy(param);
+    r.return_type = copy(return_type);
     r.context = context;
 }
 
@@ -444,6 +472,7 @@ int Operator::precedence() const
         case Mod:           return 9;
         case Exp:           return 10;
         case Subscript:     return 11;
+        case Call:          return 12;
         case DotCall:       return 12;
         case LogicalNot:    return 13;
         case BitwiseNot:    return 13;
@@ -490,6 +519,7 @@ const char* Operator::to_cstr() const
         case Operator::UnaryMinus:  return "-";
         case Operator::Subscript:   return "!";
         case Operator::DotCall:     return ".";
+        case Operator::Call:        return " ";
     }
     XCI_UNREACHABLE;
 }
@@ -500,12 +530,6 @@ std::unique_ptr<Type> copy(const std::unique_ptr<Type>& v)
     if (v)
         return v->make_copy();
     return {};
-}
-
-
-Block copy(const Block& v)
-{
-    return {copy_ptr_vector(v.statements)};
 }
 
 

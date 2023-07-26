@@ -1,19 +1,17 @@
-// fold_tuple.cpp created on 2021-02-20 as part of xcikit project
+// fold_paren.cpp created on 2023-05-25 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2023 Radek Brich
+// Copyright 2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include "fold_tuple.h"
+#include "fold_paren.h"
 #include <xci/script/Function.h>
 #include <xci/script/Module.h>
 
 namespace xci::script {
 
-using std::unique_ptr;
 
-
-class FoldTupleVisitor final: public ast::VisitorExclTypes {
+class FoldParenVisitor final: public ast::VisitorExclTypes {
 public:
     using VisitorExclTypes::visit;
 
@@ -42,27 +40,8 @@ public:
             apply_and_fold(v.arg);
         if (v.right_arg)
             apply_and_fold(v.right_arg);
-        assert(!v.callable);
-
-        if (v.op.is_comma()) {
-            // collapse comma operator to tuple items
-            assert(!v.right_tmp);
-            m_collapsed = std::make_unique<ast::Tuple>();
-            m_collapsed->source_loc = v.source_loc;
-            auto fold = [this](std::unique_ptr<ast::Expression>& expr) {
-                auto* tuple = dynamic_cast<ast::Tuple*>(expr.get());
-                if (tuple == nullptr) {
-                    // subexpr is not a tuple
-                    m_collapsed->items.push_back(std::move(expr));
-                } else {
-                    // it is a tuple, fold it
-                    std::move(std::begin(tuple->items), std::end(tuple->items),
-                            std::back_inserter(m_collapsed->items));
-                }
-            };
-            fold(v.arg);
-            fold(v.right_arg);
-        }
+        if (v.callable)
+            apply_and_fold(v.callable);
     }
 
     void visit(ast::Condition& v) override {
@@ -79,33 +58,30 @@ public:
     }
 
     void visit(ast::Function& v) override {
-        for (const auto& stmt : v.body.statements) {
-            stmt->apply(*this);
-        }
+        v.body.apply(*this);
     }
 
     void visit(ast::Parenthesized& v) override {
         apply_and_fold(v.expression);
+        m_collapsed = std::move(v.expression);
+    }
+
+    void visit(ast::Tuple& v) override {
+        for (auto& expr : v.items)
+            apply_and_fold(expr);
     }
 
     void visit(ast::List& v) override {
-        assert(v.items.size() <= 1);
-        for (auto& item : v.items) {
-            item->apply(*this);
-            if (m_collapsed) {
-                v.items = std::move(m_collapsed->items);
-                m_collapsed.reset();
-            }
-        }
+        for (auto& expr : v.items)
+            apply_and_fold(expr);
     }
 
     void visit(ast::StructInit& v) override {
-        for (const auto& item : v.items)
-            item.second->apply(*this);
+        for (auto& item : v.items)
+            apply_and_fold(item.second);
     }
 
     void visit(ast::Literal&) override {}
-    void visit(ast::Tuple&) override {}
     void visit(ast::Reference&) override {}
 
     void visit(ast::Cast& v) override {
@@ -120,7 +96,7 @@ public:
     }
 
 private:
-    void apply_and_fold(unique_ptr<ast::Expression>& expr) {
+    void apply_and_fold(std::unique_ptr<ast::Expression>& expr) {
         expr->apply(*this);
         if (m_collapsed) {
             expr = std::move(m_collapsed);
@@ -128,16 +104,14 @@ private:
     }
 
 private:
-    unique_ptr<ast::Tuple> m_collapsed;
+    std::unique_ptr<ast::Expression> m_collapsed;
 };
 
 
-void fold_tuple(const ast::Block& block)
+void fold_paren(ast::Expression& expr)
 {
-    FoldTupleVisitor visitor;
-    for (const auto& stmt : block.statements) {
-        stmt->apply(visitor);
-    }
+    FoldParenVisitor visitor;
+    expr.apply(visitor);
 }
 
 

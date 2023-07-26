@@ -14,6 +14,7 @@
 #include "ast/fold_const_expr.h"
 #include "ast/fold_dot_call.h"
 #include "ast/fold_tuple.h"
+#include "ast/fold_paren.h"
 #include "typing/type_index.h"
 #include "Stack.h"
 #include <xci/compat/macros.h>
@@ -47,14 +48,7 @@ public:
             fn.ensure_ast_copy();
             return;
         }
-        if (fn.is_undefined()) {
-            fn.set_code();
-            auto* orig_code = m_code;
-            m_code = &fn.code();
-            dfn.expression->apply(*this);
-            m_code = orig_code;
-            // compile_subroutine(func, *dfn.expression);*/
-        }
+        assert(!fn.is_undefined());
     }
 
     void visit(ast::Invocation& inv) override {
@@ -68,47 +62,6 @@ public:
 
     void visit(ast::Return& ret) override {
         ret.expression->apply(*this);
-
-        if (function().has_intrinsics()) {
-            if (function().intrinsics() != function().code().size())
-                throw IntrinsicsFunctionError(
-                        "cannot mix compiled code with intrinsics",
-                        ret.expression->source_loc);
-            // no DROP for intrinsics function
-            return;
-        }
-
-        auto skip = function().signature().return_type.effective_type().size();
-        auto drop = function().raw_size_of_parameters()
-                  + function().raw_size_of_nonlocals()
-                  + function().raw_size_of_partial();
-        if (drop > 0) {
-            Stack::StackRel pos = skip;
-            for (const auto& ti : function().nonlocals()) {
-                ti.foreach_heap_slot([this, pos](size_t offset) {
-                    // DEC_REF <addr in nonlocals>
-                    function().code().add_L1(Opcode::DecRef, pos + offset);
-                });
-                pos += ti.size();
-            }
-            for (const auto& ti : reverse(function().partial())) {
-                ti.foreach_heap_slot([this, pos](size_t offset) {
-                    // DEC_REF <addr in partial>
-                    function().code().add_L1(Opcode::DecRef, pos + offset);
-                });
-                pos += ti.size();
-            }
-            for (const auto& ti : function().parameters()) {
-                ti.foreach_heap_slot([this, pos](size_t offset) {
-                    // DEC_REF <addr in params>
-                    function().code().add_L1(Opcode::DecRef, pos + offset);
-                });
-                pos += ti.size();
-            }
-            // DROP <ret_value> <params + nonlocals>
-            function().code().add_L2(Opcode::Drop, skip, drop);
-        }
-        // return value left on stack
     }
 
     void visit(ast::Literal& v) override {
@@ -257,11 +210,6 @@ public:
                 break;
             }
             case Symbol::Nonlocal: {
-                bool is_nl_function = (sym.ref()->type() == Symbol::Function);
-
-                if (is_nl_function && !function().partial().empty())
-                    break;
-
                 // Non-locals are captured in closure - read from closure
                 auto ofs = m_scope.nonlocal_raw_offset(sym.index(), v.ti);
                 // COPY <frame_offset>
@@ -301,7 +249,7 @@ public:
             case Symbol::Parameter: {
                 assert(sym.depth() == 0 && &symtab == &function().symtab());
                 // COPY <frame_offset> <size>
-                auto closure_size = function().raw_size_of_closure();
+                auto closure_size = function().raw_size_of_nonlocals();
                 const auto& ti = function().parameter(sym.index());
                 code().add_L2(Opcode::Copy,
                         function().parameter_offset(sym.index()) + closure_size,
@@ -324,7 +272,7 @@ public:
                     Function& fn = scope.function();
                     if (fn.is_generic()) {
                         assert(!fn.has_any_generic());  // fully specialized
-                        const auto body = fn.yank_generic_body();
+                        auto body = fn.yank_generic_body();
                         fn.set_code();  // this would release AST copy
                         m_compiler.compile_function(scope, body.ast());
                     }
@@ -354,19 +302,21 @@ public:
                     Function& fn = scope.function();
                     if (fn.is_generic()) {
                         assert(!fn.has_any_generic());  // fully specialized
-                        const auto body = fn.yank_generic_body();
+                        auto body = fn.yank_generic_body();
                         fn.set_code();  // this would release AST copy
                         m_compiler.compile_function(scope, body.ast());
                     }
 
+                    const bool execute = m_callable || !fn.has_nonvoid_parameter();
                     if (scope.has_nonlocals()) {
                         make_closure(scope);
                         // MAKE_CLOSURE <function_idx>
                         code().add_L1(Opcode::MakeClosure, scope.function_index());
                         // EXECUTE
-                        code().add_opcode(Opcode::Execute);
+                        if (execute)
+                            code().add_opcode(Opcode::Execute);
                     } else {
-                        if (!m_callable && fn.has_nonvoid_parameters()) {
+                        if (!execute) {
                             // LOAD_FUNCTION <function_idx>
                             code().add_L1(Opcode::LoadFunction, scope.function_index());
                         } else {
@@ -399,7 +349,9 @@ public:
                 break;
             case Symbol::StructItem: {
                 // arg = struct (pushed on stack)
-                const TypeInfo& struct_type = symtab.module()->get_type(sym.index());
+                assert(v.ti.is_callable());
+                assert(v.ti.signature().param_type.is_struct());
+                const TypeInfo& struct_type = v.ti.signature().param_type;
 
                 // return the item -> drop all other items from stack, leaving only the selected one
                 size_t drop_before = 0;  // first DROP 0 <size>
@@ -440,40 +392,11 @@ public:
         m_instruction_args.clear();
 
         m_callable = false;
-        for (auto& arg : reverse(v.args)) {
-            arg->apply(*this);
-        }
+        if (v.arg)
+            v.arg->apply(*this);
+
         m_callable = true;
-
-        if (v.partial_index != no_index) {
-            // partial function call
-            auto& scope = module().get_scope(v.partial_index);
-            auto& fn = scope.function();
-
-            // generate inner code
-            if (!fn.has_code())
-                fn.set_code();
-
-            compile_subroutine(scope, *v.callable);
-            for (const auto& nl : fn.nonlocals()) {
-                if (nl.is_callable() && nl.signature().has_closure()) {
-                    // EXECUTE
-                    fn.code().add_opcode(Opcode::Execute);
-                }
-            }
-
-            make_closure(scope);
-            if (!v.definition) {
-                // MAKE_CLOSURE <function_idx>
-                code().add_L1(Opcode::MakeClosure, scope.function_index());
-                if (!fn.has_nonvoid_parameters()) {
-                    // EXECUTE
-                    code().add_opcode(Opcode::Execute);
-                }
-            }
-        } else {
-            v.callable->apply(*this);
-        }
+        v.callable->apply(*this);
 
         // add executes for each call that results in function which consumes more args
         if (v.wrapped_execs > 1) {
@@ -573,7 +496,7 @@ public:
                 make_closure(scope);
                 // MAKE_CLOSURE <function_idx>
                 code().add_L1(Opcode::MakeClosure, scope.function_index());
-                if (!func.has_nonvoid_parameters()) {
+                if (!func.has_nonvoid_parameter()) {
                     // parameterless closure is executed immediately
                     // EXECUTE
                     code().add_opcode(Opcode::Execute);
@@ -581,7 +504,7 @@ public:
             }
         } else if (!v.definition) {
             // call the function only if it's inside a Call which applies all required parameters (might be zero)
-            if (v.call_args >= func.parameters().size()) {
+            if (v.call_arg >= func.has_nonvoid_parameter()) {
                 // CALL0 <function_idx>
                 code().add_L1(Opcode::Call0, scope.function_index());
             } else {
@@ -619,7 +542,7 @@ private:
         assert(scope.parent() != nullptr);
         auto& parent_scope = *scope.parent();
         auto& parent_fn = parent_scope.function();
-        auto closure_size = parent_fn.raw_size_of_closure();
+        auto closure_size = parent_fn.raw_size_of_nonlocals();
         // make closure
         auto nl_i = scope.nonlocals().size();
         for (const auto& nl : reverse(scope.nonlocals())) {
@@ -663,7 +586,7 @@ private:
                         make_closure(subscope);
                         // MAKE_CLOSURE <function_idx>
                         code().add_L1(Opcode::MakeClosure, fn_idx);
-                    } else if (fn.has_nonvoid_parameters()) {
+                    } else if (fn.has_nonvoid_parameter()) {
                         // LOAD_FUNCTION <function_idx>
                         code().add_L1(Opcode::LoadFunction, fn_idx);
                     } else {
@@ -678,17 +601,12 @@ private:
         }
     }
 
-    void compile_subroutine(Scope& scope, ast::Expression& expression) {
-        CompilerVisitor visitor(m_compiler, scope);
-        expression.apply(visitor);
-    }
-
 private:
     Compiler& m_compiler;
     Scope& m_scope;
     Code* m_code = nullptr;
 
-    bool m_callable = true;
+    bool m_callable = false;
 
     // intrinsics
     bool m_intrinsic = false;
@@ -696,11 +614,12 @@ private:
 };
 
 
-bool Compiler::compile(Scope& scope, ast::Module& ast)
+void Compiler::compile(Scope& scope, ast::Module& ast)
 {
     auto& func = scope.function();
     func.set_code();
     func.set_compile();
+    func.signature().set_parameter(ti_void());
     func.signature().set_return_type(ti_unknown());
     ast.body.symtab = &func.symtab();
 
@@ -710,55 +629,88 @@ bool Compiler::compile(Scope& scope, ast::Module& ast)
     // - apply optimizations - const fold etc. (Optimizer)
     // See documentation on each function.
 
-    // If these flags are not Default, don't compile, only preprocess
-    auto flags = m_flags;
-    bool default_compile = (flags & Flags::MandatoryMask) == Flags::Default;
-    if (default_compile) {
-        // Enable all mandatory passes for default compilation
-        flags |= Flags::MandatoryMask;
-    }
-
-    if ((flags & Flags::FoldTuple) == Flags::FoldTuple)
+    if ((m_flags & Flags::FoldTuple) == Flags::FoldTuple)
         fold_tuple(ast.body);
 
-    if ((flags & Flags::FoldDotCall) == Flags::FoldDotCall)
-        fold_dot_call(func, ast.body);
+    if ((m_flags & Flags::FoldDotCall) == Flags::FoldDotCall)
+        fold_dot_call(ast.body);
 
-    if ((flags & Flags::ResolveSymbols) == Flags::ResolveSymbols)
+    if ((m_flags & Flags::FoldParen) == Flags::FoldParen)
+        fold_paren(ast.body);
+
+    if ((m_flags & Flags::ResolveSymbols) == Flags::ResolveSymbols)
         resolve_symbols(scope, ast.body);
 
-    if ((flags & Flags::ResolveDecl) == Flags::ResolveDecl)
+    if ((m_flags & Flags::ResolveDecl) == Flags::ResolveDecl)
         resolve_decl(scope, ast.body);
 
-    if ((flags & Flags::ResolveTypes) == Flags::ResolveTypes)
+    if ((m_flags & Flags::ResolveTypes) == Flags::ResolveTypes)
         resolve_types(scope, ast.body);
 
-    if ((flags & Flags::ResolveSpec) == Flags::ResolveSpec)
+    if ((m_flags & Flags::ResolveSpec) == Flags::ResolveSpec)
         resolve_spec(scope, ast.body);
 
-    if ((flags & Flags::ResolveNonlocals) == Flags::ResolveNonlocals)
+    if ((m_flags & Flags::ResolveNonlocals) == Flags::ResolveNonlocals)
         resolve_nonlocals(scope, ast.body);
 
-    if (default_compile)
+    if ((m_flags & Flags::CompileFunctions) == Flags::CompileFunctions)
         compile_all_functions(scope);
 
-    if ((flags & Flags::FoldConstExpr) == Flags::FoldConstExpr)
+    if ((m_flags & Flags::FoldConstExpr) == Flags::FoldConstExpr)
         fold_const_expr(func, ast.body);
 
-    if (default_compile)
+    if ((m_flags & Flags::CompileFunctions) == Flags::CompileFunctions)
         compile_function(scope, ast.body);
-
-    return default_compile;
 }
 
 
-void Compiler::compile_function(Scope& scope, const ast::Block& body)
+void Compiler::compile_function(Scope& scope, ast::Expression& body)
 {
+    Function& fn = scope.function();
+    const auto parameter_size = fn.raw_size_of_parameter();
+    const auto closure_size = fn.raw_size_of_nonlocals();
+
+    if (fn.is_expression() && fn.has_nonvoid_parameter()) {
+        // Copy parameter to be passed to a function contained inside the expression
+        fn.code().add_L2(Opcode::Copy, closure_size, parameter_size);
+        fn.parameter().foreach_heap_slot([&fn](size_t offset) {
+            fn.code().add_L1(Opcode::IncRef, offset);
+        });
+    }
+
     // Compile AST into bytecode
     CompilerVisitor visitor(*this, scope);
-    for (const auto& stmt : body.statements) {
-        stmt->apply(visitor);
+    body.apply(visitor);
+
+    if (fn.has_intrinsics()) {
+        if (fn.intrinsics() != fn.code().size())
+            throw IntrinsicsFunctionError(
+                    "cannot mix compiled code with intrinsics",
+                    body.source_loc);
+        // no DROP for intrinsics function
+        return;
     }
+
+    auto skip = fn.signature().return_type.effective_type().size();
+    auto drop = parameter_size + closure_size;
+    if (drop > 0) {
+        Stack::StackRel pos = skip;
+        for (const auto& ti : fn.nonlocals()) {
+            ti.foreach_heap_slot([&fn, pos](size_t offset) {
+                // DEC_REF <addr in nonlocals>
+                fn.code().add_L1(Opcode::DecRef, pos + offset);
+            });
+            pos += ti.size();
+        }
+
+        fn.parameter().foreach_heap_slot([&fn, pos](size_t offset) {
+            // DEC_REF <addr in params>
+            fn.code().add_L1(Opcode::DecRef, pos + offset);
+        });
+        // DROP <ret_value> <params + nonlocals>
+        fn.code().add_L2(Opcode::Drop, skip, drop);
+    }
+    // return value left on stack
 }
 
 
@@ -780,7 +732,7 @@ void Compiler::compile_all_functions(Scope& main)
         }
 
         assert(!fn.has_any_generic());
-        const auto body = fn.yank_generic_body();
+        auto body = fn.yank_generic_body();
         fn.set_code();  // this removes AST from the function
         compile_function(scope, body.ast());
     }

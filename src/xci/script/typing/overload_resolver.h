@@ -18,31 +18,27 @@ namespace xci::script {
 struct CallArg {
     TypeInfo type_info;
     SourceLocation source_loc;
-    bool literal_value;
 };
 
 
 /// Given arguments and expected return type for a called function
 struct CallSignature {
-    std::vector<CallArg> args;
+    CallArg arg;
     TypeInfo return_type;
 
-    void add_arg(CallArg&& arg) { args.push_back(std::move(arg)); }
-    void clear() { args.clear(); return_type = {}; }
-    bool empty() const noexcept { return args.empty(); }
-    size_t n_args() const noexcept { return args.size(); }
+    void set_arg(CallArg&& a) { arg = std::move(a); }
+    void set_return_type(TypeInfo ti) { return_type = std::move(ti); return_type.set_literal(false); }
+    void clear() { arg = {}; return_type = {}; return_type.set_literal(false); }
+    bool empty() const noexcept { return !arg.type_info; }
 
     void load_from(const Signature& sig, const SourceLocation& source_loc) {
-        args.clear();
-        for (const auto& p : sig.params)
-            args.push_back({p, source_loc, false});
+        arg = {sig.param_type, source_loc};
         return_type = sig.return_type;
     }
 
     Signature signature() const noexcept {
         Signature sig;
-        for (const auto& p : args)
-            sig.params.push_back(p.type_info);
+        sig.param_type = arg.type_info;
         sig.return_type = return_type;
         return sig;
     }
@@ -64,10 +60,19 @@ struct Candidate {
 std::pair<const Candidate*, bool> find_best_candidate(const std::vector<Candidate>& candidates);
 
 /// Resolve type variables in `signature` according to `call_sig`
-TypeArgs specialize_signature(const SignaturePtr& signature, const CallSignature& call_sig, TypeArgs call_type_args = {});
+TypeArgs specialize_signature(const SignaturePtr& signature, const std::vector<CallSignature>& call_sig_stack, TypeArgs call_type_args = {});
 
-/// Resolve type variables in `call_args` that are concrete in `signature`
-TypeArgs resolve_generic_args_to_signature(const Signature& signature, const CallSignature& call_sig);
+/// Resolve type variables in `call_sig_stack` that are concrete in `signature`
+TypeArgs resolve_generic_args_to_signature(const Signature& signature, const std::vector<CallSignature>& call_sig_stack);
+
+/// Match call args with signature (which contains type vars T, U...)
+/// Throw if unmatched, return resolved TypeArgs for T, U... if matched
+TypeArgs resolve_instance_types(const Signature& signature, const std::vector<CallSignature>& call_sig_stack, const TypeInfo& cast_type);
+
+/// Match signature to call args.
+/// \returns total MatchScore of all parameters and return value, or mismatch
+/// Partial match is possible when the signature has less parameters than call args.
+MatchScore match_signature(const Signature& signature, const std::vector<CallSignature>& call_sig_stack, const TypeInfo& cast_type);
 
 }  // namespace xci::script
 

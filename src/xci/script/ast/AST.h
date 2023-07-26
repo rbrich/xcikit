@@ -68,6 +68,7 @@ public:
     virtual void visit(const TypeDef&) = 0;
     virtual void visit(const TypeAlias&) = 0;
     // expression
+    virtual void visit(const Block&) = 0;
     virtual void visit(const Literal&) = 0;
     virtual void visit(const Parenthesized&) = 0;
     virtual void visit(const Tuple&) = 0;
@@ -99,6 +100,7 @@ public:
     virtual void visit(TypeDef&) = 0;
     virtual void visit(TypeAlias&) = 0;
     // expression
+    virtual void visit(Block& blk);
     virtual void visit(Literal&) = 0;
     virtual void visit(Parenthesized& v);
     virtual void visit(Tuple&) = 0;
@@ -124,6 +126,7 @@ public:
 class StatementVisitor: public Visitor {
 public:
     // skip expression visits
+    void visit(Block&) final {}
     void visit(Literal&) final {}
     void visit(Parenthesized&) final {}
     void visit(Tuple&) final {}
@@ -157,6 +160,7 @@ public:
     void visit(TypeDef&) final {}
     void visit(TypeAlias&) final {}
     // skip expression visits
+    void visit(Block&) final {}
     void visit(Literal&) final {}
     void visit(Parenthesized&) final {}
     void visit(Tuple&) final {}
@@ -260,6 +264,8 @@ struct StructType: public Type {
 
 
 struct Parameter {
+    explicit operator bool() const noexcept { return identifier || type; }
+
     Identifier identifier;  // optional
     std::unique_ptr<Type> type;  // optional
 };
@@ -275,10 +281,11 @@ struct FunctionType: public Type {
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Type> make_copy() const override;
     void copy_to(FunctionType& r) const;
+    explicit operator bool() const { return !type_params.empty() || param || return_type || !context.empty(); }
 
     std::vector<TypeName> type_params;  // declare type parameters of a generic function: <T,U>
-    std::vector<Parameter> params;
-    std::unique_ptr<Type> result_type;
+    Parameter param;
+    std::unique_ptr<Type> return_type;
     std::vector<TypeConstraint> context;
 };
 
@@ -286,18 +293,6 @@ struct FunctionType: public Type {
 struct Variable {
     Identifier identifier;  // required
     std::unique_ptr<Type> type;  // optional
-};
-
-
-struct Block {
-    // finish block - convert last Invocation into ReturnStatement
-    // (no Invocation -> throw error)
-    void finish();
-
-    std::vector<std::unique_ptr<ast::Statement>> statements;
-
-    // resolved:
-    SymbolTable* symtab = nullptr;
 };
 
 
@@ -316,6 +311,24 @@ struct Expression {
 
     // set when this expression is direct child of a Definition
     Definition* definition = nullptr;
+};
+
+
+struct Block: public Expression {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    void copy_to(Block& r) const;
+    std::unique_ptr<ast::Expression> make_copy() const override;
+    const TypeInfo& type_info() const override;
+
+    // finish block - convert last Invocation into ReturnStatement
+    // (no Invocation -> throw error)
+    void finish();
+
+    std::vector<std::unique_ptr<ast::Statement>> statements;
+
+    // resolved:
+    SymbolTable* symtab = nullptr;
 };
 
 struct Literal: public Expression {
@@ -413,13 +426,11 @@ struct Call: public Expression {
     const TypeInfo& type_info() const override { return ti; }
 
     std::unique_ptr<Expression> callable;
-    std::vector<std::unique_ptr<Expression>> args;
+    std::unique_ptr<Expression> arg;
 
     // resolved:
     TypeInfo ti;
     unsigned wrapped_execs = 0;
-    unsigned partial_args = 0;
-    Index partial_index = no_index;
 
     bool intrinsic = false;
 };
@@ -450,6 +461,7 @@ struct Operator {
         Exp,            // x ** y
         Subscript,      // x ! y
         DotCall,        // x .f y
+        Call,           // x y
         // unary
         LogicalNot,     // !x
         BitwiseNot,     // ~x
@@ -464,6 +476,7 @@ struct Operator {
     int precedence() const;
     bool is_right_associative() const;
     bool is_undefined() const { return op == Undefined; }
+    bool is_call() const { return op == Call; }
     bool is_dot_call() const { return op == DotCall; }
     bool is_comma() const { return op == Comma; }
     bool operator==(const Operator& rhs) const { return op == rhs.op; }
@@ -484,6 +497,7 @@ struct OpCall: public Call {
     std::unique_ptr<ast::Expression> make_copy() const override;
 
     Operator op;
+    std::unique_ptr<Expression> right_arg;
     std::unique_ptr<OpCall> right_tmp;  // used during parsing, cleared when finished
 };
 
@@ -499,9 +513,9 @@ struct Function: public Expression {
 
     // resolved:
     TypeInfo ti;
-    SymbolPointer symbol;  // only for lambda
+    SymbolPointer symbol;
     Index scope_index = no_index;
-    size_t call_args = 0;  // number of args if the function is inside Call
+    bool call_arg = false;  // true if the function is inside Call with an arg
 };
 
 
@@ -662,7 +676,6 @@ std::unique_ptr<Type> copy(const std::unique_ptr<Type>& v);
 inline StructItem copy(const StructItem& v) { return {v.identifier, copy(v.type)}; }
 inline Variable copy(const Variable& v) { return {v.identifier, copy(v.type)}; }
 inline Parameter copy(const Parameter& v) { return {v.identifier, copy(v.type)}; }
-Block copy(const Block& v);
 
 
 } // namespace ast

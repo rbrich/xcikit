@@ -13,6 +13,8 @@
 #include <xci/script/SymbolTable.h>
 #include <xci/script/NativeDelegate.h>
 #include <xci/script/ast/fold_tuple.h>
+#include <xci/script/ast/fold_dot_call.h>
+#include <xci/script/ast/fold_paren.h>
 #include <xci/script/dump.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/log.h>
@@ -48,17 +50,27 @@ static Context& context()
 
 
 // Check parsing into AST and dumping back to code
-std::string parse(const std::string& input)
+static std::string parse(const std::string& input, bool fold = false)
 {
     SourceManager src_man;
     auto src_id = src_man.add_source("<input>", input);
     Parser parser {src_man};
     ast::Module ast;
     parser.parse(src_id, ast);
-    fold_tuple(ast.body);
+    if (fold) {
+        fold_tuple(ast.body);
+        fold_dot_call(ast.body);
+        fold_paren(ast.body);
+    }
     std::ostringstream os;
     os << ast;
     return os.str();
+}
+
+
+static std::string parse_fold(const std::string& input)
+{
+    return parse(input, true);
 }
 
 
@@ -67,9 +79,9 @@ std::string parse(const std::string& input)
 //    CHECK(parse(R"("escape sequences: \"\n\0\x12 ")", R"("escape sequences: \"\n\0\x12 ")"));
 //    > error C2017: illegal escape sequence
 //    > error C2146: syntax error: missing ')' before identifier 'n'
-#define PARSE(input, expected)                          \
+#define PARSE(input, expected, ...)                     \
     do {                                                \
-        auto output = parse(input);                     \
+        auto output = parse(input, ##__VA_ARGS__);      \
         INFO("Input:    " << indent((input), 12));      \
         INFO("Output:   " << indent((output), 12));     \
         INFO("Expected: " << indent((expected), 12));   \
@@ -81,7 +93,7 @@ std::string parse(const std::string& input)
 
 
 // Check parsing into AST, optimizing the AST, and dumping back to code
-std::string optimize(const std::string& input)
+static std::string optimize(const std::string& input)
 {
     SourceManager src_man;
     auto src_id = src_man.add_source("<input>", input);
@@ -104,7 +116,7 @@ std::string optimize(const std::string& input)
 }
 
 
-std::string interpret(const std::string& input, bool import_std=false)
+static std::string interpret(const std::string& input, bool import_std=false)
 {
     Context& ctx = context();
     UNSCOPED_INFO(input);
@@ -129,7 +141,7 @@ std::string interpret(const std::string& input, bool import_std=false)
 }
 
 
-std::string interpret_std(const std::string& input)
+static std::string interpret_std(const std::string& input)
 {
     return interpret(input, true);
 }
@@ -183,11 +195,11 @@ TEST_CASE( "Values", "[script][parser]" )
     CHECK(parse("'c'") == "'c'");
     PARSE(R"("string literal")", R"("string literal")");
     PARSE(R"("escape sequences: \"\n\0\x12 ")", R"("escape sequences: \"\n\x00\x12 ")");
-    CHECK(parse("1,2,3") == "1, 2, 3");  // naked tuple
-    PARSE(R"((1,2,"str"))", R"((1, 2, "str"))");  // bracketed tuple
-    CHECK(parse("[1,2,3]") == "[1, 2, 3]");  // list
-    CHECK(parse("[(1,2,3,4)]") == "[(1, 2, 3, 4)]");  // list with a tuple item
-    CHECK(parse("[(1,2,3,4), 5]") == "[(1, 2, 3, 4), 5]");
+    CHECK(parse_fold("1,2,3") == "(1, 2, 3)");  // naked tuple
+    PARSE(R"((1,2,"str"))", R"((1, 2, "str"))", true);  // bracketed tuple
+    CHECK(parse_fold("[1,2,3]") == "[1, 2, 3]");  // list
+    CHECK(parse_fold("[(1,2,3,4)]") == "[(1, 2, 3, 4)]");  // list with a tuple item
+    CHECK(parse_fold("[(1,2,3,4), 5]") == "[(1, 2, 3, 4), 5]");
 }
 
 
@@ -208,6 +220,10 @@ TEST_CASE( "Raw strings", "[script][parser]" )
                 R"("\"\"\"\n\\\"\"\"\n\\\\\"\"\"")");
     CHECK_THROWS_AS(parse("\"\"\"\\\"\"\""), ParseError);
     PARSE("\"\"\"\n\\\n\"\"\"", R"("\\")");
+    // raw bytes
+    PARSE(R"(b"""Hello""")", R"(b"Hello")");
+    PARSE("b\"\"\"\nHello\n\"\"\"", R"(b"Hello")");
+    PARSE("b\"\"\"\n  \\\"\"\"Hello\\\"\"\"\n  \"\"\"", R"(b"\"\"\"Hello\"\"\"")");
 }
 
 
@@ -221,26 +237,28 @@ TEST_CASE( "Parsing types", "[script][parser]")
     CHECK(parse("type MyListOfTuples2 = [(String, Int), Int]") == "type MyListOfTuples2 = [((String, Int), Int)]; ()");
     CHECK(parse("MyAlias = Int") == "MyAlias = Int; ()");
     CHECK(parse("MyAlias2 = [Int]") == "MyAlias2 = [Int]; ()");
+    CHECK(parse("type MyFunction = (String, Int) -> String -> Int") == "type MyFunction = (String, Int) -> String -> Int; ()");
+    CHECK(parse("type MyFunction = Int -> String -> Float -> Bool") == "type MyFunction = Int -> String -> Float -> Bool; ()");
 }
 
 
 TEST_CASE( "Trailing comma", "[script][parser]" )
 {
-    CHECK(parse("1,2,3,") == "1, 2, 3");
-    CHECK(parse("[1,2,3,]") == "[1, 2, 3]");
-    CHECK(parse("(1,2,3,)") == "(1, 2, 3)");
-    CHECK_THROWS_AS(parse("1,2,3,,"), ParseError);  // two commas not allowed
-    CHECK_THROWS_AS(parse("1,2,,3"), ParseError);
-    CHECK_THROWS_AS(parse("(1,2,3,,)"), ParseError);
-    CHECK_THROWS_AS(parse("[1,2,3,,]"), ParseError);
-    CHECK_THROWS_AS(parse("[,]"), ParseError);
-    CHECK(parse("([1,],[2,],[1,2,],)") == "([1], [2], [1, 2])");
+    CHECK(parse_fold("1,2,3,") == "(1, 2, 3)");
+    CHECK(parse_fold("[1,2,3,]") == "[1, 2, 3]");
+    CHECK(parse_fold("(1,2,3,)") == "(1, 2, 3)");
+    CHECK_THROWS_AS(parse_fold("1,2,3,,"), ParseError);  // two commas not allowed
+    CHECK_THROWS_AS(parse_fold("1,2,,3"), ParseError);
+    CHECK_THROWS_AS(parse_fold("(1,2,3,,)"), ParseError);
+    CHECK_THROWS_AS(parse_fold("[1,2,3,,]"), ParseError);
+    CHECK_THROWS_AS(parse_fold("[,]"), ParseError);
+    CHECK(parse_fold("([1,],[2,],[1,2,],)") == "([1], [2], [1, 2])");
     // multiline
-    CHECK(parse("1,\n2,\n3,\n") == "1, 2, 3");  // expression continues on next line after operator
-    CHECK(parse("1,;\n2,\n3,\n") == "1; 2, 3");  // semicolon splits the multiline expression
-    CHECK(parse("(\n1,\n2,\n3,\n)") == "(1, 2, 3)");
-    CHECK(parse("[\n1,\n2,\n3,\n]") == "[1, 2, 3]");
-    CHECK(parse("[\n1\n,\n2\n,\n3\n,\n]") == "[1, 2, 3]");
+    CHECK(parse_fold("1,\n2,\n3,\n") == "(1, 2, 3)");  // expression continues on next line after operator
+    CHECK(parse_fold("1,;\n2,\n3,\n") == "1; (2, 3)");  // semicolon splits the multiline expression
+    CHECK(parse_fold("(\n1,\n2,\n3,\n)") == "(1, 2, 3)");
+    CHECK(parse_fold("[\n1,\n2,\n3,\n]") == "[1, 2, 3]");
+    CHECK(parse_fold("[\n1\n,\n2\n,\n3\n,\n]") == "[1, 2, 3]");
 }
 
 
@@ -259,18 +277,13 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
     // right associative:
     CHECK(parse("a ** b ** c ** d") == "(a ** (b ** (c ** d)))");
     // functions
-    CHECK(parse("a fun b {} c") == "a fun b {()} c");
-    CHECK(parse("a (fun b {}) c") == "a (fun b {()}) c");
-    // function calls
-    CHECK(interpret_std("succ 9 + larger 5 4 + 1") == "16");
-    CHECK(interpret_std("(succ 9) + (larger 5 4) + 1") == "16");
-    CHECK(interpret_std("succ 9 + 5 .larger 4 + 1") == "16");
-    CHECK(interpret_std("1 .add 2 .mul 3") == "9");
-    CHECK(interpret_std("(1 .add 2).mul 3") == "9");
-    CHECK(interpret_std("1 .add (2 .mul 3)") == "7");
-    CHECK(interpret_std("pred (neg (succ (14)))") == "-16");
-    CHECK(interpret_std("14 .succ .neg .pred") == "-16");
-    CHECK(interpret_std("(((14) .succ) .neg) .pred") == "-16");
+    CHECK(parse("a fun b {} c") == "(a fun b {()} c)");
+    CHECK(parse("a (fun b {}) c") == "(a (fun b {()}) c)");
+    CHECK(parse_fold("1 .add 2") == "add (1, 2)");
+    CHECK(parse_fold("(1,2) .add") == "add (1, 2)");
+    CHECK(parse_fold("1 .add 2 3") == "add (1, 2) 3");
+    CHECK(parse_fold("neg 1 .add 2") == "add (neg 1, 2)");
+    CHECK(parse_fold("f 1 .combine 2 3") == "combine (f 1, 2) 3");
 }
 
 
@@ -278,7 +291,7 @@ TEST_CASE( "Dot call", "[script][parser]")
 {
     CHECK(parse("12 . sign") == "(12 . sign)");
     CHECK(parse("12 .sign") == "(12 . sign)");
-    CHECK_THROWS_AS(parse("12. sign"), ParseError);  // parses as 12. + ref name sign, which is not allowed
+    CHECK(parse("12. sign") == "(12.0 sign)");  // parses a call of "12.0" with arg "sign"
     CHECK_THROWS_AS(parse("12.sign"), ParseError);  // parses as 12. + type specifier "sign", which is not known
     CHECK(parse("(12).sign") == "((12) . sign)");  // use parentheses to disambiguate
 }
@@ -344,7 +357,7 @@ TEST_CASE( "Stack push/pull", "[script][machine]" )
     CHECK(stack.size() == 1);
     stack.push(value::Int32{73});
     CHECK(stack.size() == 1+4);
-    value::String str{"hello"};
+    const value::String str{"hello"};
     stack.push(str);
     CHECK(stack.size() == 1+4 + sizeof(void*));
     CHECK(stack.n_values() == 3);
@@ -428,9 +441,11 @@ TEST_CASE( "Variables", "[script][interpreter]" )
 
 TEST_CASE( "Expressions", "[script][interpreter]" )
 {
-    CHECK(interpret_std("add 1 2") == "3");
-    CHECK(interpret_std("sub (add 1 2) 3") == "0");
-    CHECK(interpret_std("sub (1 + 2) 3") == "0");
+    CHECK(interpret_std("add (1, 2)") == "3");
+    CHECK(interpret_std("(1, 2) .add") == "3");
+    CHECK(interpret_std("1 .add 2") == "3");
+    CHECK(interpret_std("sub (add (1, 2), 3)") == "0");
+    CHECK(interpret_std("sub (1 + 2, 3)") == "0");
     CHECK(interpret_std("(1 + 2) - 3") == "0");
     CHECK(interpret_std("1 + 2 - 3") == "0");
 
@@ -451,6 +466,16 @@ TEST_CASE( "Expressions", "[script][interpreter]" )
 
     CHECK(interpret_std("sign -32") == "-1");
     CHECK(interpret_std("32 .sign") == "1");
+
+    CHECK(interpret_std("succ 9 + larger (5, 4) + 1") == "16");
+    CHECK(interpret_std("(succ 9) + (larger (5, 4)) + 1") == "16");
+    CHECK(interpret_std("succ 9 + 5 .larger 4 + 1") == "16");
+    CHECK(interpret_std("1 .add 2 .mul 3") == "9");
+    CHECK(interpret_std("(1 .add 2).mul 3") == "9");
+    CHECK(interpret_std("1 .add (2 .mul 3)") == "7");
+    CHECK(interpret_std("pred (neg (succ (14)))") == "-16");
+    CHECK(interpret_std("14 .succ .neg .pred") == "-16");
+    CHECK(interpret_std("(((14) .succ) .neg) .pred") == "-16");
 }
 
 
@@ -464,11 +489,11 @@ TEST_CASE( "Types", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret("a = 42; b:String = a"), FunctionNotFound);
 
     // function type can be specified in lambda or specified explicitly
-    CHECK(interpret_std("f = fun a:Int b:Int -> Int {a+b}; f 1 2") == "3");
-    CHECK(interpret_std("f : Int Int -> Int = fun a b {a+b}; f 1 2") == "3");
+    CHECK(interpret_std("f = fun (a:Int, b:Int) -> Int {a+b}; f (1, 2)") == "3");
+    CHECK(interpret_std("f : (Int, Int) -> Int = fun (a, b) {a+b}; f (1, 2)") == "3");
 
-    // TODO: narrowing type of polymorphic function (`f 1.0 2.0` would be error, while `add 1.0 2.0` still works)
-    // CHECK(interpret("f : Int Int -> Int = add ; f 1 2") == "3");
+    // TODO: narrowing type of polymorphic function (`f (1.0, 2.0)` would be error, while `add (1.0, 2.0)` still works)
+    // CHECK(interpret("f : (Int Int) -> Int = add ; f (1, 2)") == "3");
 }
 
 
@@ -476,17 +501,19 @@ TEST_CASE( "Coercion", "[script][interpreter]" )
 {
     // coerce empty tuple (literal) to a struct
     CHECK(interpret("a:(x:String,y:Int) = (); a") == "(x=\"\", y=0)");
+    CHECK(interpret("a:(x:String, y:(y1:Int, y2:Float)) = (); a.y.y1") == "0");
     CHECK(interpret("f = fun a:(x:String,y:Int) {a.y}; f ()") == "0");
-    CHECK(interpret_std("format true ()") == "\"true\"");  // second arg is FormatSpec
+    CHECK(interpret("f = fun (x:String,y:Int) {y}; f ()") == "0");
+    CHECK(interpret_std("format (true, ())") == "\"true\"");  // second arg is FormatSpec
     // only literals may coerce, not functions/variables
     CHECK_THROWS_AS(interpret("t=(); a:(x:String,y:Int) = t"), FunctionNotFound);
     CHECK_THROWS_AS(interpret("f = fun a:(x:String,y:Int) {a.y}; t = (); f t"), FunctionNotFound);
     // named type - literal of underlying type coerces
-    const std::string num_def = "type Num = Int; f = fun a:Num b:Num -> Num { (a:Int + b:Int):Num };";
-    CHECK(interpret_std(num_def + "f 11 22") == "33");
-    CHECK_THROWS_AS(interpret_std(num_def + "a = 11; f a a"), FunctionNotFound);
-    CHECK(interpret_std(num_def + "b = 22:Num; f b b") == "44");
-    CHECK(interpret_std(num_def + "a = 11; b = 22:Num; f a:Num b") == "33");
+    const std::string num_def = "type Num = Int; f = fun (a:Num, b:Num) -> Num { (a:Int + b:Int):Num };";
+    CHECK(interpret_std(num_def + "f (11, 22)") == "33");
+    CHECK_THROWS_AS(interpret_std(num_def + "a = 11; f (a, a)"), FunctionNotFound);
+    CHECK(interpret_std(num_def + "b = 22:Num; f (b, b)") == "44");
+    CHECK(interpret_std(num_def + "a = 11; b = 22:Num; f (a:Num, b)") == "33");
     // same with a struct
     const std::string struct_def =
             "type MyStruct = (name:String, age:Int); "
@@ -495,6 +522,12 @@ TEST_CASE( "Coercion", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret_std(struct_def + "get_age a"), FunctionNotFound);
     CHECK_THROWS_AS(interpret_std(struct_def + "get_age { (\"Luke\", 10) }"), FunctionNotFound);
     CHECK(interpret_std(struct_def + "get_age a:MyStruct") == "10");
+    // infer struct subtypes
+    CHECK(interpret("m:(a:Int, b:Int) = (1, 2); m") == "(a=1, b=2)");
+    CHECK(interpret("m:(a, b) = (1, 2); m") == "(a=1, b=2)");
+    CHECK(interpret("m:(a, b) = (1b, 2.0); m") == "(a=b'\\x01', b=2.0)");
+    CHECK(interpret("x = { m:(a, b) = (1, 2); m.a }; x") == "1");
+    CHECK_THROWS_AS(interpret("m:(a:Int, b:String) = (1.0, 2.0)"), DefinitionTypeMismatch);
 }
 
 
@@ -533,7 +566,7 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret_std(my_struct + R"(a = ("Luke", 10); b: MyStruct = a: MyStruct; b)") == R"((name="Luke", age=10))");
     CHECK(interpret_std(my_struct + R"(a = ("Luke", 10); b = a: MyStruct; b)") == R"((name="Luke", age=10))");
     CHECK(interpret_std(my_tuple + R"(a = ("hello", 42):MyTuple; a)") == R"(("hello", 42))");
-    CHECK_THROWS_AS(interpret_std(my_tuple + "(1, 2):MyTuple"), FunctionNotFound);  // bad cast
+    CHECK_THROWS_AS(interpret_std(my_tuple + "(1, 2):MyTuple"), DefinitionTypeMismatch);  // bad cast
     // struct member access
     CHECK(interpret(R"( (name="hello", age=42, valid=true).age )") == "42");
     CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a.name; a.age)") == R"("hello";42)");
@@ -552,9 +585,12 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
 
     // struct as member of a struct
     CHECK(interpret_std("type Rec2=(x:String, y:Int, z:(a:Int32, b:Int32)); "
-                        "r:Rec2 = (x=\"x\",y=2,z=(a=3,b=4)); __module.__n_types; r.y; r.z.a") == "2;2;3");
+                        "r:Rec2 = (x=\"x\",y=2,z=(a=3,b=4)); __module.__n_types; r.y; r.z.a") == "1;2;3");
     CHECK(interpret_std("type Rec1=(a:Int32, b:Int32); type Rec2=(x:String, y:Int, z:Rec1); "
                         "r:Rec2 = (x=\"x\",y=2,z=(a=3,b=4)); __module.__n_types; r.y; r.z.a") == "2;2;3");
+
+    // function
+    CHECK(interpret_std("type F = Int -> Int -> Int; f: F = fun x { fun y { x+y } }; f 1 2") == "3");
 }
 
 
@@ -584,10 +620,15 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
 {
     CHECK(parse("fun Int -> Int {}") == "fun Int -> Int {()}");
 
+    const auto def_main ="main = fun args:[String] -> Void {}; "s;
+    CHECK(interpret_std(def_main + "main [\"arg\"]") == "()");
+    CHECK(interpret_std(def_main + "main") == "main [String] -> ()");  // returns the function
+
     // returned lambda
     CHECK(interpret_std("fun x:Int->Int { x + 1 }") == "<lambda_0> Int32 -> Int32");  // non-generic is fine
     CHECK(interpret_std("fun x { x + 1 }") == "<lambda_0> Int32 -> Int32");   // also fine, function type deduced from `1` (Int) and `add: Int Int -> Int`
     CHECK_THROWS_AS(interpret_std("fun x { x }"), UnexpectedGenericFunction);  // generic lambda must be either assigned or resolved by calling
+    CHECK(interpret("f=fun a { fun b {a,b} }; f 2 4") == "(2, 4)");
 
     // immediately called lambda
     CHECK(interpret_std("fun x:Int {x+1} 2") == "3");
@@ -605,24 +646,29 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret_std("{{{ fun x:Int {x*2} }}} 3") == "6");  // lambda propagates through wrapped blocks and is then called
 
     // closure: inner function uses outer function's parameter
-    CHECK(interpret_std("f = fun a:Int b:Int c:Int { "
-                        "w=fun c1:Int {a / b - c1}; w c }; f 10 2 3") == "2");
+    CHECK(interpret_std("f = fun (a:Int, b:Int, c:Int) { "
+                        "w=fun c1:Int {a / b - c1}; w c }; f (10, 2, 3)") == "2");
     // closure: outer closure used by inner function
-    CHECK(interpret_std("f = fun a:Int b:Int c:Int { "
+    CHECK(interpret_std("f = fun (a:Int, b:Int, c:Int) { "
                         "g=fun c1:Int {a * b - c1}; "
                         "h=fun c1:Int {g c1}; "
-                        "h c }; f 4 2 3") == "5");
-    CHECK(interpret_std("f = fun a:Int b:Int c:Int { "
+                        "h c }; f (4, 2, 3)") == "5");
+    CHECK(interpret_std("f = fun (a:Int, b:Int, c:Int) { "
                         "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
-                        "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
-                        "w b c }; f 1 2 3") == "9");
+                        "w=fun (b1:Int, c1:Int) {a + u b1 + v c1}; "
+                        "w (b, c) }; f (1, 2, 3)") == "9");
 
     CHECK(interpret_std("outer = fun y:Int {"
                         "inner = fun x:Int { x + y }; inner y "
                         "}; outer 2") == "4");
+    CHECK(interpret_std("outer = fun y:Int { alias = y; alias }; outer 2") == "2");
     CHECK(interpret_std("outer = fun y:Int {"
                         "  inner = fun x:Int { x + y };"
                         "  alias = inner; alias y "
+                        "}; outer 2") == "4");
+    CHECK(interpret_std("outer = fun y:Int {"
+                        "  inner = fun x:Int { x + y };"
+                        "  alias = inner y; alias "
                         "}; outer 2") == "4");
     CHECK(interpret_std("outer = fun y {"
                         "  inner = fun x:Int { x + y };"
@@ -660,51 +706,71 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
                     " wrapped = fun x { l1b 'x'; l1 x }; wrapped a }; l0 2") == "2;'x';2;2;2;2;42L;2;2");
 
     // function as parameter
-    CHECK(interpret("call = fun f:(Int->Int) x:Int -> Int { f x }; ident = fun a:Int -> Int { a }; call ident 42") == "42");  // non-generic
-    CHECK(interpret("call = fun<X,Y> f:(X->Y) x:X -> Y { f x }; ident = fun<A> a:A -> A { a }; call ident 42") == "42");  // generic, explicitly-typed
-    CHECK(interpret("call = fun<X,Y> f:(X->Y) x:X -> Y { f x }; ident = fun a { a }; call ident 42") == "42");
-    CHECK(interpret("call = fun f x { f x }; ident = fun a { a }; call ident 42") == "42");
+    CHECK(interpret("call = fun (f:(Int->Int), x:Int) -> Int { f x }; ident = fun a:Int -> Int { a }; call (ident, 42)") == "42");  // non-generic
+    CHECK(interpret("call = fun<X,Y> (f:(X->Y), x:X) -> Y { f x }; ident = fun<A> a:A -> A { a }; call (ident, 42)") == "42");  // generic, explicitly-typed
+    CHECK(interpret("call = fun<X,Y> (f:(X->Y), x:X) -> Y { f x }; ident = fun a { a }; call (ident, 42)") == "42");
+    CHECK(interpret("call = fun (f, x) { f x }; ident = fun a { a }; call (ident, 42)") == "42");
+    CHECK_THROWS_AS(interpret_std("call = fun<X,Y> (f:(X->Y), x:X) -> Y { f x }; call (add, (1, 2))"), FunctionNotFound);  // this could be resolved, but currently isn't
 
     // "Funarg problem" (upwards)
     auto def_succ = "succ = fun Int->Int { __value 1 .__load_static; __add 0x88 }; "s;
-    auto def_compose = " compose = fun f g { fun x { f (g x) } }; "s;
+    auto def_compose = " compose = fun (f, g) { fun x { f (g x) } }; "s;
     auto def_succ_compose = def_succ + def_compose;
-    CHECK(interpret(def_succ_compose + "plustwo = compose succ succ; plustwo 42") == "44");
-    CHECK(interpret(def_succ_compose + "plustwo = {compose succ succ}; plustwo 42") == "44");
-    CHECK(interpret(def_succ_compose + "plustwo = compose succ succ; plusfour = compose plustwo plustwo;  plustwo 42; plusfour 42") == "44;46");
+    CHECK(interpret(def_succ_compose + "plustwo = compose (succ, succ); plustwo 42") == "44");
+    CHECK(interpret(def_succ_compose + "plustwo = {compose (succ, succ)}; plustwo 42") == "44");
+    CHECK(interpret(def_succ_compose + "plustwo = compose (succ, succ); plusfour = compose (plustwo, plustwo);  plustwo 42; plusfour 42") == "44;46");
     // compose generic functions
     CHECK(interpret("call = fun<X,Y> f:(X->Y) -> (X->Y) { fun x:X { f x } }; ident = fun<T> y:T -> T { y }; same={call ident}; same 42") == "42");
     CHECK(interpret("call = fun<X,Y> f:(X->Y) { fun x:X { f x } }; ident = fun y { y }; same={call ident}; same 42") == "42");
     CHECK(interpret("call = fun<X,Y> f:(X->Y) { fun x { f x } }; ident = fun y { y }; same={call ident}; same 42") == "42");
     //CHECK(interpret("call = fun f { fun x { f x } }; ident = fun y { y }; same={call ident}; same 42") == "42");
 
-    CHECK(interpret_std("compose = fun<X,Y,Z> f:(Y->Z) g:(X->Y) -> (X->Z) { fun x:X -> Z { f (g x) } }; same = {compose pred succ}; same 42") == "42");
+    CHECK(interpret_std("compose = fun<X,Y,Z> (f:(Y->Z), g:(X->Y)) -> (X->Z) { fun x:X -> Z { f (g x) } }; same = {compose (pred, succ)}; same 42") == "42");
     //CHECK(interpret_std("compose = fun<X,Y,Z> f:(Y->Z) g:(X->Y) -> (X->Z) { fun x:X -> Z { f (g x) } }; same = compose pred succ; same 42") == "42");
     //CHECK(interpret_std(def_compose + "same = compose pred succ; same 42") == "42");
 }
 
 
+TEST_CASE( "Function parameters", "[script][interpreter]" )
+{
+    CHECK(interpret("a=1; f=fun a { a }; f 2") == "2");
+    CHECK(interpret("a=1; f=fun b { a }; f 2") == "1");
+    CHECK_THROWS_AS(interpret("f=fun (a,b) { a }; f 2"), FunctionNotFound);
+    CHECK(interpret("a=1; f=fun b { a }; f 2") == "1");
+    CHECK_THROWS_AS(interpret("f=fun (a,b) { a }; f 2,3"), FunctionNotFound);  // call has higher precedence than comma
+    CHECK(interpret("f=fun (c:(a:Int,b:Int),d) { d }; f ((2,3),4)") == "4");
+    CHECK(interpret("f=fun (c:(a:Int,b:Int),d) { c.a }; f ((2,3),4)") == "2");
+    CHECK(interpret("f=fun (c:(a:Int,b:Int),d) { c }; f ((2,3),4)") == "(a=2, b=3)");
+    CHECK(interpret("f=fun a:((a:Int,b:Int),Int) { a }; f ((2,3),4)") == "((a=2, b=3), 4)");
+    CHECK(interpret("f=fun (c:(a,b),d) { d }; f ((2,3),4)") == "4");
+    CHECK(interpret("f=fun (c:(a,b),d) { c.a }; f ((2,3),4)") == "2");
+}
+
+
 TEST_CASE( "Partial function call", "[script][interpreter]" )
 {
-    // partial call: `add 1` returns a lambda which takes single argument
-    CHECK(interpret_std("(add 1) 2") == "3");
-    CHECK(interpret_std("(add (1+3)) 2") == "6");
-    //CHECK(interpret_std("(add (add 1)) 2 3") == "6");
-    CHECK(interpret_std("{add 1} 2") == "3");
-    CHECK(interpret_std("f=add 1; f 2") == "3");
-    CHECK(interpret_std("f={add 1}; f 2") == "3");
-    CHECK(interpret_std("f=fun x:Int {add x}; f 2 1") == "3");
-    CHECK(interpret_std("f=fun x:Int {add 3}; f 2 1") == "4");
-    CHECK(interpret_std("f=fun x:Int y:Int z:Int { (x - y) * z}; g=fun x1:Int { f 3 x1 }; g 4 5") == "-5");
-    CHECK(interpret_std("f=fun x:Int y:Int { g=fun x1:Int z1:Int { (y - x1) / z1 }; g x }; f 1 10 3") == "3");
-    CHECK(interpret_std("f = fun a:Int b:Int { "
-                        "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 - b}; "
-                        "w=fun b1:Int c1:Int {a * u b1 / v c1}; "
-                        "w b }; f 1 2 3") == "3");
+    // Partial call: explicit lambda (there is no syntax sugar for partial application)
+    // I.e. syntax `add 1` is not supported
+    CHECK(interpret_std("(fun a { a+1 }) 2") == "3");
+    CHECK(interpret_std("(fun a { add (a, 1+3) } ) 2") == "6");
+    CHECK(interpret_std("(fun a { fun b { a+b } }) 2 3") == "5");
+    CHECK(interpret_std("fun a { a+1 } 2") == "3");
+    CHECK(interpret_std("f=fun a { a+1 }; f 2") == "3");
+    CHECK(interpret_std("f={fun a { a+1 }}; f 2") == "3");
+    CHECK(interpret_std("f:Int->Int = fun a { a+1 }; f 2") == "3");
+    CHECK(interpret_std("f=fun (x:Int, y:Int, z:Int) { (x - y) * z}; g=fun x1:Int { fun z1:Int { f (x1, 4, z1) } }; g 3 5") == "-5");
+    CHECK(interpret_std("f=fun (x, y, z) { (x - y) * z}; g=fun x1 { fun z1 { f (x1, 4, z1) } }; g 3 5") == "-5");
+    CHECK(interpret_std("f=fun (x:Int, y:Int) { g=fun (x1:Int, z1:Int) { (y - x1) / z1 }; fun z1 { g (x,z1) } }; f (1,10) 3") == "3");
+    CHECK(interpret_std("f = fun (a:Int, b:Int) { "
+                        "   u=fun b2:Int {a + b2}; v=fun c2:Int {c2 - b}; "
+                        "   w=fun (b1:Int, c1:Int) {a * u b1 / v c1}; "
+                        "   fun c { w (b,c) }"
+                        "}; f (1, 2) 3") == "3");
     // [closure.fire] return closure with captured closures, propagate arguments into the closure
     CHECK(interpret_std("f = fun a:Int { "
-                        "u=fun b2:Int {a / b2}; v=fun c2:Int {c2 - a}; "
-                        "fun b1:Int c1:Int {a + u b1 + v c1} }; f 4 2 3") == "5");
+                        "   u=fun b2:Int {a / b2}; v=fun c2:Int {c2 - a}; "
+                        "   fun (b1:Int, c1:Int) {a + u b1 + v c1} "
+                        "}; f 4 (2, 3)") == "5");
 }
 
 
@@ -742,7 +808,7 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
     // generic functions can capture from outer scope
     CHECK(interpret_std("a=3; f=fun x {a + x}; f 4") == "7");
     // generic type declaration, type constraint
-    CHECK(interpret_std("f = fun<T> x:T y:T -> Bool with (Eq T) { x == y }; f 1 2") == "false");
+    CHECK(interpret_std("f = fun<T> (x:T, y:T) -> Bool with (Eq T) { x == y }; f (1, 2)") == "false");
 
     // === Propagating and deducing function types ===
     // arg to ret via type parameter
@@ -765,10 +831,14 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
 
 TEST_CASE( "Overloaded functions", "[script][interpreter]" )
 {
-    CHECK(interpret("f: <T> T -> T = fun a { a }\n"
+    CHECK(interpret("f: Float -> Float = fun a { a }\n"
                     "f: String -> String = fun a { a }\n"
                     "f: Int -> Int = fun a { a }\n"
                     "f 3.f; f 1; f \"abc\";") == "3.0f;1;\"abc\"");
+    CHECK(interpret("f: <T> T -> T = fun a { a }\n"
+                    "f: String -> String = fun a { \"xy\" }\n"
+                    "f: Int -> Int = fun a { 2 }\n"
+                    "f 3.f; f 1; f \"abc\";") == "3.0f;2;\"xy\"");
     CHECK_THROWS_AS(interpret("f = fun a:Int -> Int { a }\n"
                               "f = fun a:Float -> Float { a }"), RedefinedName);
 
@@ -797,10 +867,10 @@ TEST_CASE( "Lexical scope", "[script][interpreter]" )
     CHECK(interpret_std("f=fun x:Int->Int { if x < 2 then x else f (x-1) + f (x-2) }; f 7") == "13");   // Fibonacci number
 
     // iteration (with tail-recursive functions)
-    CHECK(interpret_std("fi=fun prod:Int cnt:Int max:Int -> Int { if cnt > max then prod else fi (cnt*prod) (cnt+1) max };\n"
-                        "f=fun n:Int->Int { fi 1 1 n }; f 7") == "5040");  // factorial
-    CHECK(interpret_std("fi=fun a:Int b:Int n:Int -> Int { if n==0 then b else fi (a+b) a (n-1) };\n"
-                        "f=fun n:Int->Int { fi 1 0 n }; f 7") == "13");    // Fibonacci number
+    CHECK(interpret_std("fi=fun (prod:Int, cnt:Int, max:Int) -> Int { if cnt > max then prod else fi (cnt*prod, cnt+1, max) };\n"
+                        "f=fun n:Int->Int { fi (1, 1, n) }; f 7") == "5040");  // factorial
+    CHECK(interpret_std("fi=fun (a:Int, b:Int, n:Int) -> Int { if n==0 then b else fi (a+b, a, n-1) };\n"
+                        "f=fun n:Int->Int { fi (1, 0, n) }; f 7") == "13");    // Fibonacci number
 }
 
 
@@ -872,14 +942,14 @@ TEST_CASE( "Casting", "[script][interpreter]" )
 
 TEST_CASE( "String operations", "[script][interpreter]" )
 {
-    CHECK(interpret_std("string_equal \"fire\" \"fire\"") == "true");
-    CHECK(interpret_std("string_equal \"fire\" \"water\"") == "false");
+    CHECK(interpret_std("string_equal (\"fire\", \"fire\")") == "true");
+    CHECK(interpret_std("string_equal (\"fire\", \"water\")") == "false");
     CHECK(interpret_std("\"fire\" == \"fire\"") == "true");
     CHECK(interpret_std("\"fire\" != \"water\"") == "true");
-    CHECK(interpret_std("string_compare \"fire\" \"fire\"") == "0");
-    CHECK(interpret_std("string_compare \"fire\" \"earth\" .sign") == "1");
-    CHECK(interpret_std("string_compare \"fire\" \"air\" .sign") == "1");
-    CHECK(interpret_std("string_compare \"fire\" \"water\" .sign") == "-1");
+    CHECK(interpret_std("string_compare (\"fire\", \"fire\")") == "0");
+    CHECK(interpret_std("string_compare (\"fire\", \"earth\") .sign") == "1");
+    CHECK(interpret_std("string_compare (\"fire\", \"air\") .sign") == "1");
+    CHECK(interpret_std("string_compare (\"fire\", \"water\") .sign") == "-1");
     CHECK(interpret_std("\"fire\" > \"fire\"") == "false");
     CHECK(interpret_std("\"fire\" < \"fire\"") == "false");
     CHECK(interpret_std("\"fire\" >= \"fire\"") == "true");
@@ -895,9 +965,9 @@ TEST_CASE( "List subscript", "[script][interpreter]" )
     // custom implementation (same as in std.fire)
     CHECK(interpret("__type_index<Void>") == "0");
     CHECK_THROWS_AS(interpret("__type_index<X>"), UndefinedTypeName);
-    CHECK(interpret("subscript = fun<T> [T] Int -> T { __list_subscript __type_index<T> }; subscript [1,2,3] 1") == "2");
+    CHECK(interpret("subscript = fun<T> ([T], Int) -> T { __list_subscript __type_index<T> }; subscript ([1,2,3], 1)") == "2");
     // std implementation
-    CHECK(interpret_std("subscript [1,2,3] 1") == "2");
+    CHECK(interpret_std("subscript ([1,2,3], 1)") == "2");
     CHECK(interpret_std("[1,2,3] .subscript 0") == "1");
     CHECK(interpret_std("[1,2,3] ! 2") == "3");
     CHECK_THROWS_AS(interpret_std("[1,2,3]!3"), IndexOutOfBounds);
@@ -911,43 +981,43 @@ TEST_CASE( "List subscript", "[script][interpreter]" )
 
 TEST_CASE( "List slice", "[script][interpreter]" )
 {
-    CHECK(interpret("slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __list_slice __type_index<T> }; [1,2,3,4,5] .slice 1 4 1") == "[2, 3, 4]");
+    CHECK(interpret("slice = fun<T> ([T], (start:Int, stop:Int, step:Int)) -> [T] { __list_slice __type_index<T> }; [1,2,3,4,5] .slice (1, 4, 1)") == "[2, 3, 4]");
     // step=0 -- pick one element for a new list
-    CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int 0") == "[4]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int max:Int") == "[4]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice 3 min:Int min:Int") == "[4]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice 0 max:Int 1") == "[1, 2, 3, 4, 5]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice 1 max:Int 1") == "[2, 3, 4, 5]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int 1") == "[4, 5]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice 5 max:Int 1") == "[]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice -1 max:Int 1") == "[5]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice -2 max:Int 1") == "[4, 5]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice -5 max:Int 1") == "[1, 2, 3, 4, 5]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice min:Int max:Int 1") == "[1, 2, 3, 4, 5]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice min:Int max:Int 2") == "[1, 3, 5]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice min:Int max:Int 3") == "[1, 4]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice 2 4 1") == "[3, 4]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice 1 4 2") == "[2, 4]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice max:Int min:Int -1") == "[5, 4, 3, 2, 1]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice max:Int min:Int -2") == "[5, 3, 1]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice max:Int min:Int -3") == "[5, 2]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice 4 3 -1") == "[5]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice 4 1 -1") == "[5, 4, 3]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice -1 -4 -1") == "[5, 4, 3]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice 5 1 1") == "[]");
-    CHECK(interpret_std("[1,2,3,4,5] .slice 1 5 -1") == "[]");
-    CHECK(interpret_std("[] .slice 0 5 1") == "[]");
-    CHECK(interpret_std("[]:[Int] .slice 0 5 1") == "[]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (start=3, stop=max:Int, step=0)") == "[4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (3, max:Int, max:Int)") == "[4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (3, min:Int, min:Int)") == "[4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (0, max:Int, 1)") == "[1, 2, 3, 4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (1, max:Int, 1)") == "[2, 3, 4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (3, max:Int, 1)") == "[4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (5, max:Int, 1)") == "[]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (-1, max:Int, 1)") == "[5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (-2, max:Int, 1)") == "[4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (-5, max:Int, 1)") == "[1, 2, 3, 4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (min:Int, max:Int, 1)") == "[1, 2, 3, 4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (min:Int, max:Int, 2)") == "[1, 3, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (min:Int, max:Int, 3)") == "[1, 4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (2, 4, 1)") == "[3, 4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (1, 4, 2)") == "[2, 4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (max:Int, min:Int, -1)") == "[5, 4, 3, 2, 1]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (max:Int, min:Int, -2)") == "[5, 3, 1]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (max:Int, min:Int, -3)") == "[5, 2]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (4, 3, -1)") == "[5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (4, 1, -1)") == "[5, 4, 3]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (-1, -4, -1)") == "[5, 4, 3]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (5, 1, 1)") == "[]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice (1, 5, -1)") == "[]");
+    CHECK(interpret_std("[] .slice (0, 5, 1)") == "[]");
+    CHECK(interpret_std("[]:[Int] .slice (0, 5, 1)") == "[]");
     CHECK(interpret_std("tail [1,2,3]") == "[2, 3]");
     // heap-allocated type
-    CHECK(interpret_std("[[1],[2],[3],[4],[5]] .slice 2 4 1") == "[[3], [4]]");
+    CHECK(interpret_std("[[1],[2],[3],[4],[5]] .slice (2, 4, 1)") == "[[3], [4]]");
 }
 
 
 TEST_CASE( "List concat", "[script][interpreter]" )
 {
     // custom implementation
-    CHECK(interpret("concat = fun<T> [T] [T] -> [T] { __list_concat __type_index<T> }; concat [1,2,3] [4,5]") == "[1, 2, 3, 4, 5]");
+    CHECK(interpret("concat = fun<T> ([T], [T]) -> [T] { __list_concat __type_index<T> }; concat ([1,2,3], [4,5])") == "[1, 2, 3, 4, 5]");
     // std implementation uses operator `+`
     CHECK(interpret_std("[1,2,3] + [4,5]") == "[1, 2, 3, 4, 5]");
     CHECK(interpret_std("[] + []") == "[]");  // result type is [Void]
@@ -961,21 +1031,21 @@ TEST_CASE( "List concat", "[script][interpreter]" )
 
 TEST_CASE( "List map", "[script][interpreter]" )
 {
-    CHECK(interpret_std("map succ []:[Int]") == "[]");
-    CHECK(interpret_std("map succ [41]") == "[42]");
-    CHECK(interpret_std("map succ [1,2,3]") == "[2, 3, 4]");
+    CHECK(interpret_std("map (succ, []:[Int])") == "[]");
+    CHECK(interpret_std("map (succ, [41])") == "[42]");
+    CHECK(interpret_std("map (succ, [1,2,3])") == "[2, 3, 4]");
 }
 
 
 TEST_CASE( "Type classes", "[script][interpreter]" )
 {
-    CHECK(interpret("class XEq T { xeq : T T -> Bool }; "
+    CHECK(interpret("class XEq T { xeq : (T, T) -> Bool }; "
                     "instance XEq Int32 { xeq = { __equal 0x88 } }; "
-                    "xeq 1 2") == "false");
+                    "xeq (1, 2)") == "false");
     // Instance function may reference the method that is being instantiated
-    CHECK(interpret("class Ord T (Eq T) { lt : T T -> Bool }; "
+    CHECK(interpret("class Ord T (Eq T) { lt : (T, T) -> Bool }; "
                     "instance Ord Int32 { lt = { __less_than 0x88 } }; "
-                    "instance Ord String { lt = fun a b { string_compare a b < 0 } }; "
+                    "instance Ord String { lt = fun (a, b) { string_compare (a, b) < 0 } }; "
                     "\"a\" < \"b\"") == "true");
     // Instantiate type class from another module
     CHECK(interpret_std("instance Ord Bool { lt = { __less_than 0x11 }; gt = {false}; le = {false}; ge = {false} }; "
@@ -1005,9 +1075,9 @@ TEST_CASE( "With expression, I/O streams", "[script][interpreter]" )
 
     // write an actual file
     auto filename = fs::temp_directory_path() / "xci_test_script.txt";
-    CHECK(interpret("with (open \""s + escape(filename.string()) + "\" \"w\")\n"
+    REQUIRE(interpret("with (open (\""s + escape(filename.string()) + "\", \"w\"))\n"
                     "    write \"this goes to the file\"") == "()");
-    CHECK(interpret("with (in=(open \""s + escape(filename.string()) + "\" \"r\"))\n"
+    CHECK(interpret("with (in=(open (\""s + escape(filename.string()) + "\", \"r\")))\n"
                     "    read 9") == "\"this goes\"");
     CHECK(fs::remove(filename));
 }
@@ -1018,9 +1088,9 @@ TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
     // Function signature must be explicitly declared, it's never inferred from intrinsics.
     // Parameter names are not needed (and not used), intrinsics work directly with stack.
     // E.g. `__equal 0x88` pulls two Int32 values and pushes 8bit Bool value back.
-    CHECK(interpret_std("my_eq = fun Int32 Int32 -> Bool { __equal 0x88 }; my_eq 42 (2*21)") == "true");
+    CHECK(interpret_std("my_eq = fun (Int32, Int32) -> Bool { __equal 0x88 }; my_eq (42, 2*21)") == "true");
     // alternative style - essentially the same
-    CHECK(interpret("my_eq : Int32 Int32 -> Bool = { __equal 0x88 }; my_eq 42 43") == "false");
+    CHECK(interpret("my_eq : (Int32, Int32) -> Bool = { __equal 0x88 }; my_eq (42, 43)") == "false");
     // intrinsic with arguments
     CHECK(interpret("my_cast : Int32 -> Int64 = { __cast 0x89 }; my_cast 42") == "42L");
     // Static value
@@ -1031,7 +1101,7 @@ TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
     CHECK(interpret("a=1; __module .__n_fn") == "2");  // `a` is counted as a function
     CHECK(interpret("__module 0 .__module_name") == R"("builtin")");  // module 0 is always builtin
     CHECK(interpret_std("__module 1 .name") == R"("std")");  // module 1 is usually std
-    CHECK_THROWS_AS(interpret("__module 1 2"), UnexpectedArgumentCount);
+    CHECK_THROWS_AS(interpret("__module (1, 2)"), UnexpectedArgumentType);
     CHECK_THROWS_AS(interpret("__module \"builtin\""), UnexpectedArgumentType); // see builtin __module_by_name
 }
 
@@ -1047,7 +1117,7 @@ TEST_CASE( "Explicit type params", "[script][interpreter]")
 
 TEST_CASE( "Type introspection", "[script][interpreter]")
 {
-    CHECK(interpret_std("type_index_of void; type_index_of \"abc\"; type_index_of 42") == "0;1280;768");  // 0<<7; 10<<7; 6<<7
+    CHECK(interpret_std("type_index_of = fun<T> a:T -> TypeIndex { __type_index<T> }; type_index_of void; type_index_of \"abc\"; type_index_of 42") == "0;1280;768");  // 0<<7; 10<<7; 6<<7
     CHECK(interpret_std("type_index_of [1] .name") == R"=("[Int32]")=");
     CHECK(interpret_std("type_index<Void>; type_index<String>; type_index<Int>") == "0;1280;768");
     CHECK(interpret_std("type_index<Int> == type_index<Int32>") == "true");
@@ -1081,6 +1151,17 @@ TEST_CASE( "Modules", "[script][module]" )
     CHECK(interpret("__module_by_name \"builtin\"") == "<module:builtin>");
     CHECK_THROWS_AS(interpret("__module_by_name \"xyz\""), RuntimeError);
     CHECK(interpret("__module_by_name \"builtin\" .__module_name") == R"("builtin")");
+}
+
+
+TEST_CASE( "Format", "[script][std]")
+{
+    CHECK(interpret_std("to_string false") == R"("false")");
+    CHECK(interpret_std("to_string true") == R"("true")");
+    CHECK_THROWS_AS(interpret_std("to_string 1"), FunctionNotFound);  // not implemented
+    CHECK(interpret_std(R"(from_string<Bool> "false")") == "false");
+    CHECK(interpret_std(R"(from_string<Bool> "true")") == "true");
+    CHECK_THROWS_AS(interpret_std(R"(from_string<Int> "1")"), FunctionNotFound);  // not implemented
 }
 
 
@@ -1136,8 +1217,8 @@ TEST_CASE( "Native functions: free function", "[script][native]" )
     native_module->add_native_function("test_fun1b", test_fun1);  // function pointer is deduced
 
     auto result = ctx.interpreter.eval(std::move(main_module), R"(
-        ((test_fun1a 10 4 2)     //  3
-        + (test_fun1b 0 6 3))    // -2
+        (test_fun1a (10, 4, 2)     //  3
+        + test_fun1b (0, 6, 3))    // -2
     )");
     CHECK(result.type() == Type::Int32);
     CHECK(result.get<int32_t>() == 1);
@@ -1160,8 +1241,8 @@ TEST_CASE( "Native functions: lambda", "[script][native]" )
             &state);
 
     auto result = ctx.interpreter.eval(std::move(module), R"(
-        (add1 (add1 1 6)       //  7
-              (add2 3 4))      //  8  (+10 from state)
+        (add1 (add1 (1, 6),       //  7
+               add2 (3, 4)))      //  8  (+10 from state)
     )");
     CHECK(result.type() == Type::Int32);
     CHECK(result.get<int32_t>() == 24);
@@ -1179,11 +1260,11 @@ TEST_CASE( "Fold const expressions", "[script][optimizer]" )
 
     // partially fold if-expression (only some branches)
     CHECK(optimize("num = 16; if true then 10 if num>5 then 5 else 0;") == "num = 16; 10");
-    CHECK(optimize("num = 16; if false then 10 if num>5 then 5 else 0;") == "num = 16; if (num > 5) then 5\nelse 0;");
-    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 else 0;") == "num = 16; if (num > 10) then 10\nelse 5;");
-    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 else 0;") == "num = 16; if (num > 10) then 10\nelse 0;");
-    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 if num==3 then 3 else 0;") == "num = 16; if (num > 10) then 10\nelse 5;");
-    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 if num==3 then 3 else 0;") == "num = 16; if (num > 10) then 10\nif (num == 3) then 3\nelse 0;");
+    CHECK(optimize("num = 16; if false then 10 if num>5 then 5 else 0;") == "num = 16; if (>) (num, 5) then 5\nelse 0;");
+    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 else 0;") == "num = 16; if (>) (num, 10) then 10\nelse 5;");
+    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 else 0;") == "num = 16; if (>) (num, 10) then 10\nelse 0;");
+    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 if num==3 then 3 else 0;") == "num = 16; if (>) (num, 10) then 10\nelse 5;");
+    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 if num==3 then 3 else 0;") == "num = 16; if (>) (num, 10) then 10\nif (==) (num, 3) then 3\nelse 0;");
 
     // collapse block with single statement
     CHECK(optimize("{ 1 }") == "1");

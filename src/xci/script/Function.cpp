@@ -1,7 +1,7 @@
 // Function.cpp created on 2019-05-30 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Function.h"
@@ -40,24 +40,24 @@ Function::Function(Function&& rhs) noexcept
 }
 
 
-void Function::add_parameter(std::string name, TypeInfo&& type_info)
+const TypeInfo& Function::parameter(Index idx) const
 {
-    m_symtab->add({std::move(name), Symbol::Parameter, Index(parameters().size())});
-    signature().add_parameter(std::move(type_info));
-}
-
-
-size_t Function::raw_size_of_parameters() const
-{
-    return std::accumulate(m_signature->params.begin(), m_signature->params.end(), size_t(0),
-               [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
+    if (idx == no_index)
+        return m_signature->param_type;
+    if (m_signature->param_type.is_struct())
+        return m_signature->param_type.struct_items()[idx].second;
+    assert(m_signature->param_type.is_tuple());
+    return m_signature->param_type.subtypes()[idx];
 }
 
 
 size_t Function::parameter_offset(Index idx) const
 {
+    if (idx == no_index)
+        return 0;
+    assert(m_signature->param_type.is_struct_or_tuple());
     size_t ofs = 0;
-    for (const auto& ti : m_signature->params) {
+    for (const auto& ti : m_signature->param_type.struct_or_tuple_subtypes()) {
         if (idx == 0)
             return ofs;
         ofs += ti.size();
@@ -72,28 +72,6 @@ size_t Function::raw_size_of_nonlocals() const
 {
     return std::accumulate(nonlocals().begin(), nonlocals().end(), size_t(0),
             [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
-}
-
-
-void Function::add_partial(TypeInfo&& type_info)
-{
-    signature().add_partial(std::move(type_info));
-}
-
-
-size_t Function::raw_size_of_partial() const
-{
-    return std::accumulate(partial().begin(), partial().end(), size_t(0),
-            [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
-}
-
-
-std::vector<TypeInfo> Function::closure_types() const
-{
-    auto closure = nonlocals();
-    closure.reserve(closure.size() + partial().size());
-    std::copy(partial().cbegin(), partial().cend(), std::back_inserter(closure));
-    return closure;
 }
 
 
@@ -127,8 +105,7 @@ void Function::copy_body(const Function& src)
     return std::visit([this](const auto& v) {
         using T = std::decay_t<decltype(v)>;
         if constexpr (std::is_same_v<T, GenericBody>) {
-            set_ast(v.ast());
-            ensure_ast_copy();
+            m_body = GenericBody{nullptr, v.ast().make_copy()};
         } else {
             m_body = v;
         }
@@ -139,12 +116,6 @@ void Function::copy_body(const Function& src)
 bool Function::CompiledBody::operator==(const Function::CompiledBody& rhs) const
 {
     return code == rhs.code;
-}
-
-
-bool Function::GenericBody::operator==(const Function::GenericBody& rhs) const
-{
-    return false;
 }
 
 

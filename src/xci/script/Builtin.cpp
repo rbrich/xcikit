@@ -51,6 +51,7 @@ const char* builtin::op_to_function_name(ast::Operator::Op op)
         case Op::UnaryMinus:    return "neg";
         case Op::UnaryPlus:     return nullptr;
         case Op::DotCall:       return nullptr;
+        case Op::Call:          return nullptr;
     }
     XCI_UNREACHABLE;
 }
@@ -58,6 +59,7 @@ const char* builtin::op_to_function_name(ast::Operator::Op op)
 
 BuiltinModule::BuiltinModule(ModuleManager& module_manager) : Module(module_manager, "builtin")
 {
+    get_main_function().signature().set_parameter(ti_void());
     get_main_function().signature().set_return_type(ti_void());
     get_main_function().set_code();
     symtab().add({"void", Symbol::Value, add_value(TypedValue{ti_void()})});
@@ -126,7 +128,6 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__load_function", Symbol::Instruction, Index(Opcode::LoadFunction)});
     symtab().add({"__call0", Symbol::Instruction, Index(Opcode::Call0)});
     symtab().add({"__call1", Symbol::Instruction, Index(Opcode::Call1)});
-    symtab().add({"__partial_execute", Symbol::Instruction, Index(Opcode::PartialExecute)});
     symtab().add({"__make_closure", Symbol::Instruction, Index(Opcode::MakeClosure)});
     symtab().add({"__inc_ref", Symbol::Instruction, Index(Opcode::IncRef)});
     symtab().add({"__dec_ref", Symbol::Instruction, Index(Opcode::DecRef)});
@@ -134,10 +135,7 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__jump_if_not", Symbol::Instruction, Index(Opcode::JumpIfNot)});
     symtab().add({"__invoke", Symbol::Instruction, Index(Opcode::Invoke)});
     symtab().add({"__call", Symbol::Instruction, Index(Opcode::Call)});
-    symtab().add({"__partial0", Symbol::Instruction, Index(Opcode::Partial0)});
-    symtab().add({"__partial1", Symbol::Instruction, Index(Opcode::Partial1)});
     symtab().add({"__make_list", Symbol::Instruction, Index(Opcode::MakeList)});
-    symtab().add({"__partial", Symbol::Instruction, Index(Opcode::Partial)});
     */
 
     // `__module` is current Module, `__module 1` is imported module by index 1
@@ -244,13 +242,13 @@ static void string_compare(Stack& stack, void*, void*)
 
 void BuiltinModule::add_string_functions()
 {
-    add_native_function("cast_to_chars", {ti_string()}, ti_chars(), cast_string_to_chars);
-    add_native_function("cast_to_bytes", {ti_string()}, ti_bytes(), cast_string_to_bytes);
-    add_native_function("cast_to_string", {ti_chars()}, ti_string(), cast_chars_to_string);
-    add_native_function("cast_to_string", {ti_bytes()}, ti_string(), cast_bytes_to_string);
+    add_native_function("cast_to_chars", ti_string(), ti_chars(), cast_string_to_chars);
+    add_native_function("cast_to_bytes", ti_string(), ti_bytes(), cast_string_to_bytes);
+    add_native_function("cast_to_string", ti_chars(), ti_string(), cast_chars_to_string);
+    add_native_function("cast_to_string", ti_bytes(), ti_string(), cast_bytes_to_string);
 
-    add_native_function("string_equal", {ti_string(), ti_string()}, ti_bool(), string_equal);
-    add_native_function("string_compare", {ti_string(), ti_string()}, ti_int32(), string_compare);
+    add_native_function("string_equal", ti_tuple(ti_string(), ti_string()), ti_bool(), string_equal);
+    add_native_function("string_compare", ti_tuple(ti_string(), ti_string()), ti_int32(), string_compare);
     add_native_function("string_concat", [](std::string_view a, std::string_view b) -> std::string { return std::string(a) + std::string(b); });
 }
 
@@ -403,22 +401,22 @@ void BuiltinModule::add_io_functions()
     symtab().add({"null", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::null())})});
 
     // functions
-    add_native_function("write", {ti_string()}, ti_void(), write_string);
-    add_native_function("write", {ti_bytes()}, ti_void(), write_bytes);
-    add_native_function("flush", {}, ti_void(), flush_out);
-    add_native_function("error", {ti_string()}, ti_void(), write_error);
-    add_native_function("read", {ti_int32()}, ti_string(), read_string);
-    add_native_function("open", {ti_string(), ti_string()}, ti_stream(), open_file);
-    add_native_function("__streams", {}, TypeInfo(streams), internal_streams);
+    add_native_function("write", ti_string(), ti_void(), write_string);
+    add_native_function("write", ti_bytes(), ti_void(), write_bytes);
+    add_native_function("flush", ti_void(), ti_void(), flush_out);
+    add_native_function("error", ti_string(), ti_void(), write_error);
+    add_native_function("read", ti_int32(), ti_string(), read_string);
+    add_native_function("open", ti_tuple(ti_string(), ti_string()), ti_stream(), open_file);
+    add_native_function("__streams", ti_void(), TypeInfo(streams), internal_streams);
 
-    add_native_function("enter", {ti_stream()}, ti_stream(), output_stream_enter1);
-    add_native_function("leave", {ti_stream()}, ti_void(), output_stream_leave1);
-    add_native_function("enter", {ti_tuple(ti_stream(), ti_stream())}, ti_tuple(ti_stream(), ti_stream()), output_stream_enter2);
-    add_native_function("leave", {ti_tuple(ti_stream(), ti_stream())}, ti_void(), output_stream_leave2);
-    add_native_function("enter", {ti_tuple(ti_stream(), ti_stream(), ti_stream())}, ti_tuple(ti_stream(), ti_stream(), ti_stream()), output_stream_enter3);
-    add_native_function("leave", {ti_tuple(ti_stream(), ti_stream(), ti_stream())}, ti_void(), output_stream_leave3);
-    add_native_function("enter", {streams}, TypeInfo(streams), output_stream_enter3);
-    add_native_function("leave", {streams}, ti_void(), output_stream_leave3);
+    add_native_function("enter", ti_stream(), ti_stream(), output_stream_enter1);
+    add_native_function("leave", ti_stream(), ti_void(), output_stream_leave1);
+    add_native_function("enter", ti_tuple(ti_stream(), ti_stream()), ti_tuple(ti_stream(), ti_stream()), output_stream_enter2);
+    add_native_function("leave", ti_tuple(ti_stream(), ti_stream()), ti_void(), output_stream_leave2);
+    add_native_function("enter", ti_tuple(ti_stream(), ti_stream(), ti_stream()), ti_tuple(ti_stream(), ti_stream(), ti_stream()), output_stream_enter3);
+    add_native_function("leave", ti_tuple(ti_stream(), ti_stream(), ti_stream()), ti_void(), output_stream_leave3);
+    add_native_function("enter", TypeInfo(streams), TypeInfo(streams), output_stream_enter3);
+    add_native_function("leave", TypeInfo(streams), ti_void(), output_stream_leave3);
 }
 
 
@@ -492,16 +490,16 @@ static void introspect_module_by_name(Stack& stack, void*, void*)
 
 void BuiltinModule::add_introspections()
 {
-    add_native_function("__type_size", {ti_type_index()}, ti_int32(), introspect_type_size);
-    add_native_function("__type_name", {ti_type_index()}, ti_string(), introspect_type_name);
-    add_native_function("__underlying_type", {ti_type_index()}, ti_type_index(), introspect_underlying_type);
-    add_native_function("__subtypes", {ti_type_index()}, ti_list(ti_type_index()), introspect_subtypes);
+    add_native_function("__type_size", ti_type_index(), ti_int32(), introspect_type_size);
+    add_native_function("__type_name", ti_type_index(), ti_string(), introspect_type_name);
+    add_native_function("__underlying_type", ti_type_index(), ti_type_index(), introspect_underlying_type);
+    add_native_function("__subtypes", ti_type_index(), ti_list(ti_type_index()), introspect_subtypes);
     // return the builtin module
     add_native_function("__builtin",
             [](void* m) -> Module& { return *static_cast<Module*>(m); },
             this);
     add_native_function("__module_name", [](Module& m) -> std::string { return m.name(); });
-    add_native_function("__module_by_name", {ti_string()}, ti_module(), introspect_module_by_name);
+    add_native_function("__module_by_name", ti_string(), ti_module(), introspect_module_by_name);
     add_native_function("__n_fn", [](Module& m) { return (int) m.num_functions(); });
     add_native_function("__n_types", [](Module& m) { return (int) m.num_types(); });
 }

@@ -9,14 +9,11 @@
 #include <xci/script/Module.h>
 #include <xci/script/Function.h>
 #include <xci/script/Machine.h>
-#include <range/v3/view/reverse.hpp>
 #include <optional>
 
 namespace xci::script {
 
-using ranges::cpp20::views::reverse;
 using std::unique_ptr;
-using std::make_unique;
 using std::optional;
 
 
@@ -84,20 +81,19 @@ public:
     }
 
     void visit(ast::Call& v) override {
-        TypedValues args;
-        bool all_const = true;
-        for (auto& arg : v.args) {
-            apply_and_fold(arg);
-            if (all_const && m_const_value) {
-                args.add(std::move(*m_const_value));
+        TypedValue arg;
+        bool const_arg = false;
+        if (v.arg) {
+            apply_and_fold(v.arg);
+            if (m_const_value) {
+                const_arg = true;
+                arg = std::move(*m_const_value);
                 m_const_value.reset();
-            } else {
-                all_const = false;
             }
         }
-        apply_and_fold(v.callable);
 
-        if (all_const && m_const_value) {
+        apply_and_fold(v.callable);
+        if (const_arg && m_const_value) {
             // prepare to run the function in compile-time
             // + sanity checks
             assert(m_const_value->type() == Type::Function);
@@ -105,10 +101,8 @@ public:
             assert(fnval.closure().empty());  // no values in closure
             auto& fn = *fnval.function();
             assert(!fn.has_nonlocals());
-            assert(fn.parameters().size() == args.size());
-            // push args on stack
-            for (const auto& arg : reverse(args))
-                m_machine.stack().push(arg);
+            // push arg on stack
+            m_machine.stack().push(arg);
             // run it
             bool invoked = false;
             m_machine.call(fn, [&invoked](const TypedValue&){ invoked = true; });
@@ -117,7 +111,7 @@ public:
                 assert(m_machine.stack().size() == reti.size());
                 m_const_value->decref();  // fnval
                 m_const_value = m_machine.stack().pull_typed(reti);
-                m_collapsed = make_unique<ast::Literal>(*m_const_value);
+                m_collapsed = std::make_unique<ast::Literal>(*m_const_value);
             } else {
                 // backoff - can't process invocations in compile-time
                 m_const_value.reset();
@@ -201,7 +195,7 @@ public:
         Function& func = module().get_scope(v.scope_index).function();
 
         // collapse block with single statement
-        if (!func.has_nonvoid_parameters() && v.body.statements.size() == 1) {
+        if (!func.has_nonvoid_parameter() && v.body.statements.size() == 1) {
             auto* ret = dynamic_cast<ast::Return*>(v.body.statements[0].get());
             assert(ret != nullptr);
             apply_and_fold(ret->expression);
@@ -236,14 +230,14 @@ public:
         // cast to Void?
         if (v.to_type.is_void()) {
             m_const_value = TypedValue(ti_void());
-            m_collapsed = make_unique<ast::Literal>(*m_const_value);
+            m_collapsed = std::make_unique<ast::Literal>(*m_const_value);
             return;
         }
         if (!m_const_value)
             return;
         // cast to the same type?
         if (m_const_value->type_info() == v.to_type) {
-            m_collapsed = make_unique<ast::Literal>(*m_const_value);
+            m_collapsed = std::make_unique<ast::Literal>(*m_const_value);
             return;
         }
         // FIXME: evaluate the actual (possibly user-defined) cast function
@@ -251,7 +245,7 @@ public:
         if (cast_result.cast_from(m_const_value->value())) {
             // fold the cast into value
             m_const_value = TypedValue(std::move(cast_result), v.to_type);
-            m_collapsed = make_unique<ast::Literal>(*m_const_value);
+            m_collapsed = std::make_unique<ast::Literal>(*m_const_value);
             return;
         }
         m_const_value.reset();

@@ -98,13 +98,13 @@ public:
         Method,             // method declaration (index = class index, ref = symbol in class scope)
 
         // function scope
-        Parameter,          // function parameter
+        Parameter,          // function parameter (index = tuple item index, or no_index)
         Nonlocal,           // non-local parameter, i.e. a capture from outer scope
         Instruction,        // intrinsics resolve to this, the index is Opcode
         TypeVar,            // type variable in generic function (index = var ID)
 
         // struct type
-        StructItem,         // name = item name, index = struct type index in module
+        StructItem,         // name = item name (index = unused)
 
         // special
         TypeIndex,          // translate type name to TypeIndex (index = (type index in module << 7) + module_index)

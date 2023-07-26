@@ -124,18 +124,14 @@ void TypeInfo::replace_var(SymbolPointer var, const TypeInfo& ti)
             if (generic_var() == var)
                 *this = ti;
             break;
-        case Type::Function: {
-            SignaturePtr sig_ptr;
+        case Type::Function:
             if (signature_ptr().use_count() > 1) {
                 // multiple users - make copy of the signature
                 m_info = std::make_shared<Signature>(signature());
             }
-            for (auto& prm : signature().params) {
-                prm.replace_var(var, ti);
-            }
+            signature().param_type.replace_var(var, ti);
             signature().return_type.replace_var(var, ti);
             break;
-        }
         case Type::Tuple:
         case Type::List:
             assert(std::holds_alternative<Subtypes>(m_info));
@@ -187,9 +183,10 @@ TypeInfo::TypeInfo(std::string name, TypeInfo&& type_info)
 
 
 TypeInfo::TypeInfo(TypeInfo&& other) noexcept
-        : m_type(other.m_type), m_info(std::move(other.m_info))
+        : m_type(other.m_type), m_is_literal(other.m_is_literal), m_info(std::move(other.m_info))
 {
     other.m_type = Type::Unknown;
+    other.m_is_literal = true;
     other.m_info = Var{};
 }
 
@@ -197,8 +194,10 @@ TypeInfo::TypeInfo(TypeInfo&& other) noexcept
 TypeInfo& TypeInfo::operator=(TypeInfo&& other) noexcept
 {
     m_type = other.m_type;
+    m_is_literal = other.m_is_literal;
     m_info = std::move(other.m_info);
     other.m_type = Type::Unknown;
+    other.m_is_literal = true;
     other.m_info = Var{};
     return *this;
 }
@@ -206,7 +205,7 @@ TypeInfo& TypeInfo::operator=(TypeInfo&& other) noexcept
 
 const TypeInfo& TypeInfo::effective_type() const
 {
-    if (is_callable() && !signature().has_nonvoid_params())
+    if (is_callable() && !signature().has_nonvoid_param())
         return signature().return_type.effective_type();
     return *this;
 }
@@ -280,7 +279,30 @@ Type TypeInfo::underlying_type() const
 }
 
 
-bool TypeInfo::is_generic() const
+bool TypeInfo::has_unknown() const
+{
+    switch (m_type) {
+        case Type::Unknown:
+            return true;
+        case Type::Function:
+            return signature_ptr()->has_any_unknown();
+        case Type::List:
+            return elem_type().has_unknown();
+        case Type::Tuple:
+            return ranges::any_of(subtypes(), [](const TypeInfo& type_info) {
+                return type_info.has_unknown();
+            });
+        case Type::Struct:
+            return ranges::any_of(struct_items(), [](const auto& item) {
+                return item.second.has_unknown();
+            });
+        default:
+            return false;
+    }
+}
+
+
+bool TypeInfo::has_generic() const
 {
     switch (m_type) {
         case Type::Unknown:
@@ -288,10 +310,14 @@ bool TypeInfo::is_generic() const
         case Type::Function:
             return signature_ptr()->has_any_generic();
         case Type::List:
-            return elem_type().is_generic();
+            return elem_type().has_generic();
         case Type::Tuple:
             return ranges::any_of(subtypes(), [](const TypeInfo& type_info) {
-                return type_info.is_generic();
+                return type_info.has_generic();
+            });
+        case Type::Struct:
+            return ranges::any_of(struct_items(), [](const auto& item) {
+                return item.second.has_generic();
             });
         default:
             return false;
@@ -359,6 +385,16 @@ auto TypeInfo::struct_items() const -> const StructItems&
 }
 
 
+auto TypeInfo::struct_items() -> StructItems&
+{
+    if (m_type == Type::Named)
+        return named_type().type_info.struct_items();
+    assert(m_type == Type::Struct);
+    assert(std::holds_alternative<StructItems>(m_info));
+    return std::get<StructItems>(m_info);
+}
+
+
 const TypeInfo* TypeInfo::struct_item_by_name(const std::string& name) const
 {
     const auto& items = struct_items();
@@ -373,7 +409,7 @@ const TypeInfo* TypeInfo::struct_item_by_name(const std::string& name) const
 
 auto TypeInfo::struct_or_tuple_subtypes() const -> Subtypes
 {
-    if (m_type == Type::Tuple)
+    if (is_tuple())
         return subtypes();
     const auto& items = struct_items();
     Subtypes res;
@@ -415,33 +451,32 @@ std::string TypeInfo::name() const
 }
 
 
-bool Signature::has_generic_params() const
-{
-    return ranges::any_of(params, [](const TypeInfo& type_info) {
-        return type_info.is_generic();
-    });
-}
-
-
-bool Signature::has_generic_return_type() const
-{
-    return return_type.is_generic();
-}
-
-
 bool Signature::has_generic_nonlocals() const
 {
     return ranges::any_of(nonlocals, [](const TypeInfo& type_info) {
-        return type_info.is_generic();
+        return type_info.has_generic();
     });
 }
 
 
-bool Signature::has_nonvoid_params() const
+bool Signature::has_unknown_nonlocals() const
 {
-    return ranges::any_of(params, [](const TypeInfo& type_info) {
-        return !type_info.is_void();
+    return ranges::any_of(nonlocals, [](const TypeInfo& type_info) {
+        return type_info.has_unknown();
     });
+}
+
+
+bool Signature::has_nonvoid_param() const
+{
+    // Struct can have single Void item
+    if (param_type.is_struct()) {
+        const auto& items = param_type.struct_items();
+        if (items.size() == 1 && items.front().second.is_void())
+            return false;
+    }
+    // Otherwise, only empty Tuple is considered Void
+    return !param_type.is_void();
 }
 
 

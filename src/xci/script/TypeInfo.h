@@ -114,6 +114,7 @@ public:
     Type type() const { return m_type; }
     Type underlying_type() const;
     bool is_unknown() const { return m_type == Type::Unknown; }
+    bool is_generic() const { return m_type == Type::Unknown && bool(generic_var()); }
     bool is_named() const { return m_type == Type::Named; }
     bool is_callable() const { return underlying_type() == Type::Function; }
     bool is_void() const { return is_tuple() && subtypes().empty(); }
@@ -122,10 +123,14 @@ public:
     bool is_list() const { return underlying_type() == Type::List; }
     bool is_tuple() const { return underlying_type() == Type::Tuple; }
     bool is_struct() const { return underlying_type() == Type::Struct; }
+    bool is_struct_or_tuple() const { return is_struct() || is_tuple(); }
 
-    bool is_generic() const;  // deep check, e.g. T, [T], Int->T
-    bool is_unknown_or_generic() const { return is_unknown() || is_generic(); }
+    bool has_unknown() const;  // deep check, e.g. ?, [?], Int->?
+    bool has_generic() const;  // deep check, e.g. T, [T], Int->T
     void replace_var(SymbolPointer var, const TypeInfo& ti);
+
+    bool is_literal() const { return m_is_literal; }
+    void set_literal(bool literal) { m_is_literal = literal; }
 
     // If the type is function without args, get its return type.
     const TypeInfo& effective_type() const;
@@ -148,6 +153,7 @@ public:
     const Subtypes& subtypes() const;  // type = Tuple
     Subtypes& subtypes();              // type = Tuple
     const StructItems& struct_items() const;  // type = Struct
+    StructItems& struct_items();              // type = Struct
     const TypeInfo* struct_item_by_name(const std::string& name) const;  // type = Struct
     Subtypes struct_or_tuple_subtypes() const;  // type = Tuple | Struct
     const SignaturePtr& signature_ptr() const;  // type = Function
@@ -155,6 +161,7 @@ public:
     Signature& signature() { return *signature_ptr(); }
     const NamedTypePtr& named_type_ptr() const;   // type = Named
     const NamedType& named_type() const { return *named_type_ptr(); }
+    NamedType& named_type() { return *named_type_ptr(); }
     const TypeInfo& underlying() const;  // transparently get type_info of NamedType
     std::string name() const;
 
@@ -248,40 +255,38 @@ public:
 
 private:
     Type m_type { Type::Unknown };
+    bool m_is_literal = true;  // literal = any expression that doesn't reference functions/variables
     std::variant<Var, Subtypes, StructItems, SignaturePtr, NamedTypePtr> m_info;
 };
 
 
 struct Signature {
     std::vector<TypeInfo> nonlocals;
-    std::vector<TypeInfo> partial;
-    std::vector<TypeInfo> params;
+    TypeInfo param_type;
     TypeInfo return_type;
 
     void add_nonlocal(TypeInfo&& ti) { nonlocals.emplace_back(ti); }
-    void add_partial(TypeInfo&& ti) { partial.emplace_back(ti); }
-    void add_parameter(TypeInfo&& ti) { params.emplace_back(ti); }
-    void set_return_type(TypeInfo ti) { return_type = std::move(ti); }
+    void set_parameter(TypeInfo ti) { param_type = std::move(ti); }
+    void set_return_type(TypeInfo ti) { return_type = std::move(ti); return_type.set_literal(false); }
 
-    bool has_closure() const { return !nonlocals.empty() || !partial.empty(); }
+    bool has_closure() const { return !nonlocals.empty(); }
 
-    bool has_generic_params() const;
-    bool has_generic_return_type() const;
     bool has_generic_nonlocals() const;
-    bool has_nonvoid_params() const;
-    bool has_any_generic() const { return has_generic_params() || has_generic_return_type() || has_generic_nonlocals(); }
+    bool has_unknown_nonlocals() const;
+    bool has_nonvoid_param() const;
+    bool has_any_unknown() const { return param_type.has_unknown() || return_type.has_unknown() || has_unknown_nonlocals(); }
+    bool has_any_generic() const { return param_type.has_generic() || return_type.has_generic() || has_generic_nonlocals(); }
 
-    unsigned arity() const noexcept { return unsigned(params.size()); }
-
-    explicit operator bool() const { return !params.empty() || return_type; }
+    explicit operator bool() const { return param_type || return_type; }
 
     bool operator==(const Signature& rhs) const = default;
     bool operator!=(const Signature& rhs) const = default;
 
     template <class Archive>
     void serialize(Archive& ar) {
-        ar ("nonlocals", nonlocals) ("partial", partial)
-           ("params", params) ("return_type", return_type);
+        ar ("nonlocals", nonlocals)
+           ("param_type", param_type)
+           ("return_type", return_type);
     }
 };
 
@@ -336,6 +341,9 @@ inline TypeInfo ti_tuple(Args&&... args) { return TypeInfo(TypeInfo::tuple_of, {
 inline TypeInfo ti_struct(std::initializer_list<TypeInfo::StructItem> items)
 { return TypeInfo(TypeInfo::struct_of, std::forward<std::initializer_list<TypeInfo::StructItem>>(items)); }
 
+// Normalize: unwrap tuple of one item
+inline TypeInfo ti_normalize(TypeInfo&& ti)
+{ return ti.is_tuple() && ti.subtypes().size() == 1 ? ti.subtypes().front() : ti; }
 
 } // namespace xci::script
 

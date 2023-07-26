@@ -26,6 +26,8 @@ public:
     // `flags` are Compiler::Flags
     void configure(Compiler::Flags flags) { m_compiler.set_flags(flags); }
 
+    // Build a module.
+    // Ignores mandatory Compiler::Flags, respects only optimization flags
     std::shared_ptr<Module> build_module(const std::string& name, SourceId source_id);
 
     using InvokeCallback = Machine::InvokeCallback;

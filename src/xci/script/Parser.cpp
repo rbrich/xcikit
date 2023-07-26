@@ -69,8 +69,9 @@ struct RS: at<space> {};  // require space
 template<class T> struct SepList: list_tail<T, seq<SC, SemicolonOrNewline, NSC> > {};  // list separated by either semicolon or newline
 
 // Basic tokens
-//                 underscore* (lower identifier_other* | digit+)
-struct Identifier: seq< not_at<Keyword>, star<one<'_'>>, sor<seq<lower, star<identifier_other>>, plus<digit>> > {};
+//                 (underscore* lower identifier_other* | underscore+ digit+)
+struct Identifier: seq< not_at<Keyword>, sor< seq<star<one<'_'>>, lower, star<identifier_other>>,
+                                              seq<plus<one<'_'>>, plus<digit>> > > {};
 struct TypeName: seq< upper, star< identifier_other > > {};
 struct PrefixOperator: sor< one<'-'>, one<'+'>, one<'!'>, one<'~'> > {};
 struct InfixOperator: sor< one<','>, two<'&'>, two<'|'>, two<'='>, string<'!','='>,
@@ -124,18 +125,17 @@ struct RawBytes: seq< one<'b'>, RawString > {};
 struct Literal: sor< Char, RawString, String, Byte, RawBytes, Bytes, Number > {};
 
 // Types
-struct Parameter: sor< Type, seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > > {};
-struct DeclParams: seq< plus<Parameter, SC> > {};
-struct DeclResult: if_must< string<'-', '>'>, SC, Type > {};
+struct DeclParam: sor< Type, seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > > {};
+struct DeclResult: if_must< string<'-', '>'>, SC, Type, opt<SC, DeclResult> > {};
 struct TypeParams: if_must< one<'<'>, TypeName, SC, star_must<one<','>, SC, TypeName, SC>, one<'>'> > {};
 struct TypeConstraint: seq<TypeName, RS, SC, TypeName> {};
 struct TypeContext: if_must< one<'('>, SC, TypeConstraint, SC, star_must<one<','>, SC, TypeConstraint, SC>, one<')'> > {};
-struct FunctionType: seq< opt<TypeParams>, SC, DeclParams, SC, DeclResult > {};
-struct FunctionDecl: seq< opt<TypeParams>, SC, DeclParams, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
+struct FunctionType: seq< opt<TypeParams>, SC, DeclParam, SC, DeclResult > {};
+struct FunctionDecl: seq< opt<TypeParams>, SC, DeclParam, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
 struct PlainTypeName: seq< TypeName, not_at<SC, one<','>> > {};  // not followed by comma (would be TupleType)
 struct ListType: if_must< one<'['>, SC, UnsafeType, SC, one<']'> > {};
 struct TupleType: seq< Type, plus<SC, one<','>, SC, Type> > {};
-struct StructItem: seq< Identifier, SC, one<':'>, SC, must<Type> > {};
+struct StructItem: seq< Identifier, opt<SC, one<':'>, SC, must<Type>> > {};
 struct StructType: seq< StructItem, star<SC, opt<one<','>>, NSC, StructItem>, opt<SC, one<','>> > {};
 struct ParenthesizedType: if_must< one<'('>, NSC, opt<UnsafeType, NSC>, one<')'> > {};
 struct UnsafeType: sor<FunctionType, PlainTypeName, TupleType, StructType, ParenthesizedType, ListType> {};   // usable in context where Type is already expected
@@ -145,17 +145,16 @@ struct Type: sor< ParenthesizedType, ListType, TypeName > {};
 // * some rules are parametrized with S (space type), choose either SC or NSC (allow newline)
 // * in general, rules inside parentheses or brackets use NSC, rules outside use SC
 // * this allows leaving out semicolons but still support multiline expressions
-template<class S> struct Call: seq< ExprCallable, plus<RS, S, ExprArgSafe> > {};
-template<class S> struct DotCallRight: seq< ExprCallable, star<RS, S, ExprArgSafe> > {};
-template<class S> struct DotCall: if_must< one<'.'>, SC, DotCallRight<S> > {};
-template<class S> struct TypeDotCallRight: seq< Reference, star<RS, S, ExprArgSafe> > {};
+template<class S> struct CallRight: seq< RS, S, ExprArgSafe > {};
+template<class S> struct Call: seq< ExprCallable, RS, S, ExprArgSafe > {};
+template<class S> struct TypeDotCallRight: seq< Reference, opt<RS, S, ExprArgSafe> > {};
 template<class S> struct TypeDotCall: if_must< one<'.'>, SC, TypeDotCallRight<S> > {};
 template<class S> struct ExprTypeDotCall: seq< TypeName, TypeDotCall<S> > {};
 template<class S> struct ExprOperand: sor<Call<S>, ExprArgSafe, ExprPrefix, ExprTypeDotCall<S>> {};
-template<class S> struct ExprInfixRight: seq< sor< DotCall<S>, seq<InfixOperator, NSC, ExprOperand<S>> >, S, opt< ExprInfixRight<S> > > {};
+template<class S> struct DotCallRight: seq< NSC, one<'.'>, SC, must<ExprOperand<S>> > {};
+template<class S> struct ExprInfixRight: seq< sor< CallRight<S>, DotCallRight<S>, seq<S, InfixOperator, NSC, ExprOperand<S>> >, opt< ExprInfixRight<S> > > {};
 template<class S> struct TrailingComma: opt<S, one<','>> {};
-template<class S> struct ExprInfix: seq< ExprOperand<S>, S, opt<ExprInfixRight<S>>, TrailingComma<S> > {};
-template<> struct ExprInfix<SC>: seq< ExprOperand<SC>, sor< seq<NSC, at< one<'.'> > >, SC>, opt<ExprInfixRight<SC>>, TrailingComma<SC> > {};  // specialization to allow newline before dotcall even outside parens
+template<class S> struct ExprInfix: seq< ExprOperand<S>, opt<ExprInfixRight<S>>, TrailingComma<S> > {};
 template<class S> struct Expression: sor< ExprCond, ExprWith, ExprTypeDotCall<S>, ExprStruct, ExprInfix<S> > {};
 struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
 struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC, one<'}'>> > > {};
@@ -213,14 +212,14 @@ struct NumberHelper {
 struct RefCall {
     std::unique_ptr<ast::Reference> ref;  // callable
     std::unique_ptr<ast::TypeName> type;
-    std::vector<std::unique_ptr<ast::Expression>> args;
+    std::unique_ptr<ast::Expression> arg;
     SourceLocation source_loc;
 
     std::unique_ptr<ast::Call> to_ast() && {
         auto call = std::make_unique<ast::Call>();
         ref->type_args.insert(ref->type_args.begin(), std::move(type));
         call->callable = std::move(ref);
-        call->args = std::move(args);
+        call->arg = std::move(arg);
         call->source_loc = source_loc;
         return call;
     }
@@ -346,13 +345,14 @@ struct Action<ExprPrefix> : change_states< ast::OpCall > {
     template<typename Input>
     static void success(const Input &in, ast::OpCall& inner, ast::OpCall& outer) {
         auto expr = std::make_unique<ast::OpCall>(std::move(inner));
-        outer.args.push_back(std::move(expr));
+        assert(!outer.arg);
+        outer.arg = std::move(expr);
     }
 
     template<typename Input>
     static void success(const Input &in, ast::OpCall& inner, ast::Call& outer) {
-        auto expr = std::make_unique<ast::OpCall>(std::move(inner));
-        outer.args.push_back(std::move(expr));
+        assert(!outer.arg);
+        outer.arg = std::make_unique<ast::OpCall>(std::move(inner));
     }
 
     template<typename Input>
@@ -383,35 +383,38 @@ struct Action<ExprInfixRight<S>> : change_states< ast::OpCall > {
         if (left.op.is_undefined()) {
             left.op = right.op;
             // append right args
-            left.args.insert(
-                left.args.end(),
-                std::make_move_iterator(right.args.begin()),
-                std::make_move_iterator(right.args.end())
-            );
+            assert(!left.right_arg);
+            left.right_arg = std::move(right.arg);
             left.right_tmp = std::move(right.right_tmp);
             left.source_loc = right.source_loc;
             while (left.right_tmp) {
                 auto expr_tmp = std::make_unique<ast::OpCall>(std::move(left));
                 left = std::move(*expr_tmp->right_tmp);
                 expr_tmp->right_tmp.reset();
-                left.args.insert(left.args.begin(), std::move(expr_tmp));
+                assert(!left.right_arg);
+                left.right_arg = std::move(left.arg);
+                left.arg = std::move(expr_tmp);
             }
         } else {
             if (left.op.precedence() - int(left.op.is_right_associative()) < right.op.precedence()) {
                 // Eg. 1+2*3 :: left='+(2)', right='*(3)'
                 //           => left='+(right), right='*(2 3)'
-                right.args.insert(right.args.begin(), std::move(left.args.back()));
+                assert(!right.right_arg);
+                right.right_arg = std::move(right.arg);
+                assert(!left.right_arg && left.arg);
+                right.arg = std::move(left.arg);
                 while (right.right_tmp && left.op.precedence() < right.right_tmp->op.precedence()) {
                     // Eg. 1 || 2*3-4 :: left='||(?right)', right='*(2 3), tmp='-(4)'
                     //                => left='||(?right)', right='-(*(2 3) 4)'
                     auto expr_tmp = std::make_unique<ast::OpCall>(std::move(right));
                     right = std::move(*expr_tmp->right_tmp);
                     expr_tmp->right_tmp.reset();
-                    right.args.insert(right.args.begin(), std::move(expr_tmp));
+                    assert(!right.right_arg && right.arg);
+                    right.right_arg = std::move(right.arg);
+                    right.arg = std::move(expr_tmp);
                 }
                 left.right_tmp = std::move(right.right_tmp);
-                auto expr_right = std::make_unique<ast::OpCall>(std::move(right));
-                left.args.back() = std::move(expr_right);
+                left.arg = std::make_unique<ast::OpCall>(std::move(right));
             } else {
                 // Eg. 1*2+3 :: left='*(2)', right='+(3)'
                 assert(!left.right_tmp);
@@ -449,10 +452,9 @@ private:
         // Collapse empty OpCall
         if (opc.op.is_undefined()) {
             assert(!opc.right_tmp);
-            assert(opc.args.size() == 1);
-            auto& expr = opc.args.front();
-            expr->source_loc = opc.source_loc;
-            return std::move(expr);
+            assert(opc.arg && !opc.right_arg);
+            opc.arg->source_loc = opc.source_loc;
+            return std::move(opc.arg);
         } else {
             return std::make_unique<ast::OpCall>(std::move(opc));
         }
@@ -525,8 +527,10 @@ struct Action<ParenthesizedExpr> : change_states< ast::Parenthesized > {
 
     template<typename Input>
     static void success(const Input &in, ast::Parenthesized& parenthesized, std::unique_ptr<ast::Expression>& expr) {
-        if (!parenthesized.expression)
+        if (!parenthesized.expression) {
             parenthesized.expression = std::make_unique<ast::Tuple>();  // "()" => empty tuple (void)
+            parenthesized.expression->source_loc = parenthesized.source_loc;
+        }
         expr = std::make_unique<ast::Parenthesized>(std::move(parenthesized));
     }
 };
@@ -569,17 +573,20 @@ struct Action<ExprArgSafe> : change_states< std::unique_ptr<ast::Expression> > {
 
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Call& call) {
-        call.args.push_back(std::move(expr));
+        assert(!call.arg);
+        call.arg = std::move(expr);
     }
 
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::OpCall& opc) {
-        opc.args.push_back(std::move(expr));
+        assert(!opc.arg);
+        opc.arg = std::move(expr);
     }
 
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, RefCall& rcall) {
-        rcall.args.push_back(std::move(expr));
+        assert(!rcall.arg);
+        rcall.arg = std::move(expr);
     }
 
     template<typename Input>
@@ -615,6 +622,23 @@ struct Action<Reference> : change_states< ast::Reference > {
 
 
 template<class S>
+struct Action<CallRight<S>> : change_states< ast::Call > {
+    template<typename Input>
+    static void apply(const Input &in, ast::Call& call) {
+        call.source_loc.load(in.input(), in.position());
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::Call& call, ast::OpCall& outer_opc) {
+        auto expr = std::make_unique<ast::Call>(std::move(call));
+        assert(!outer_opc.arg);
+        outer_opc.arg = std::move(expr);
+        outer_opc.op = ast::Operator::Call;
+    }
+};
+
+
+template<class S>
 struct Action<Call<S>> : change_states< ast::Call > {
     template<typename Input>
     static void apply(const Input &in, ast::Call& call) {
@@ -622,36 +646,18 @@ struct Action<Call<S>> : change_states< ast::Call > {
     }
 
     template<typename Input>
-    static void success(const Input &in, ast::Call& call, std::unique_ptr<ast::Expression>& expr) {
-        expr = std::make_unique<ast::Call>(std::move(call));
-    }
-
-    template<typename Input>
-    static void success(const Input &in, ast::Call& call, ast::Call& outer_call) {
-        auto expr = std::make_unique<ast::Call>(std::move(call));
-        outer_call.args.push_back(std::move(expr));
-    }
-
-    template<typename Input>
     static void success(const Input &in, ast::Call& call, ast::OpCall& outer_opc) {
-        auto expr = std::make_unique<ast::Call>(std::move(call));
-        outer_opc.args.push_back(std::move(expr));
+        assert(!outer_opc.arg);
+        outer_opc.arg = std::make_unique<ast::Call>(std::move(call));
     }
 };
 
 
 template<class S>
-struct Action<DotCall<S>> : change_states< ast::Call > {
+struct Action<DotCallRight<S>> {
     template<typename Input>
-    static void apply(const Input &in, ast::Call& call) {
-        call.source_loc.load(in.input(), in.position());
-    }
-
-    template<typename Input>
-    static void success(const Input &in, ast::Call& call, ast::OpCall& outer_opc) {
-        auto expr = std::make_unique<ast::Call>(std::move(call));
-        outer_opc.args.push_back(std::move(expr));
-        outer_opc.op = ast::Operator::DotCall;
+    static void apply(const Input &in, ast::OpCall& opc) {
+        opc.op = ast::Operator::DotCall;
     }
 };
 
@@ -670,7 +676,8 @@ struct Action<ExprTypeDotCall<S>> : change_states< RefCall > {
 
     template<typename Input>
     static void success(const Input &in, RefCall& rcall, ast::OpCall& outer) {
-        outer.args.push_back(std::move(rcall).to_ast());
+        assert(!outer.arg);
+        outer.arg = std::move(rcall).to_ast();
     }
 };
 
@@ -890,9 +897,10 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
         type->source_loc.load(in.input(), in.position());
     }
 
-    template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::FunctionType& ftype) {
-        ftype.result_type = std::move(type);
+    template<typename Input>                                               // DeclResult
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, std::unique_ptr<ast::Type>& outer_type) {
+        assert(!outer_type);
+        outer_type = std::move(type);
     }
 
     template<typename Input>
@@ -984,10 +992,33 @@ struct Action<Variable> : change_states< ast::Variable > {
 };
 
 template<>
-struct Action<Parameter> : change_states< ast::Parameter > {
+struct Action<DeclParam> : change_states< ast::Parameter > {
     template<typename Input>
     static void success(const Input &in, ast::Parameter& par, ast::FunctionType& ftype) {
-        ftype.params.push_back(std::move(par));
+        ftype.param = std::move(par);
+    }
+};
+
+template<>
+struct Action<DeclResult> : change_states< std::unique_ptr<ast::Type> > {
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::FunctionType& ftype) {
+        ftype.return_type = std::move(type);
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, std::unique_ptr<ast::Type>& outer_type) {
+        if (outer_type) {
+            // cascading function type: A -> B -> C   =>  A -> (B -> C))
+            // `outer_type` is original return type, which becomes parameter (B)
+            // `type` becomes tailing return type (C)
+            auto r = std::make_unique<ast::FunctionType>();
+            r->param.type = std::move(outer_type);
+            r->return_type = std::move(type);
+            outer_type = std::move(r);
+        } else {
+            outer_type = std::move(type);
+        }
     }
 };
 
@@ -1446,9 +1477,8 @@ template<> ErrMsg Control<NSC>::errmsg = {"expected a whitespace character", {}}
 template<> ErrMsg Control<until<eolf>>::errmsg = {"unterminated comment", {}};
 template<> ErrMsg Control<Expression<SC>>::errmsg = {"expected expression", {}};
 template<> ErrMsg Control<Expression<NSC>>::errmsg = {"expected expression", {}};
-template<> ErrMsg Control<DeclParams>::errmsg = {"expected function parameter declaration", {}};
-template<> ErrMsg Control<DotCallRight<SC>>::errmsg = {"expected function name and args", {}};
-template<> ErrMsg Control<DotCallRight<NSC>>::errmsg = {"expected function name and args", {}};
+template<> ErrMsg Control<DeclParam>::errmsg = {"expected function parameter declaration", {}};
+template<> ErrMsg Control<ExprCallable>::errmsg = {"expected callable", {}};
 template<> ErrMsg Control<ExprInfixRight<SC>>::errmsg = {"expected infix operator", {}};
 template<> ErrMsg Control<ExprInfixRight<NSC>>::errmsg = {"expected infix operator", {}};
 template<> ErrMsg Control<Variable>::errmsg = {"expected variable name", {}};

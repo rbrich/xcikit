@@ -1,7 +1,7 @@
 // resolve_nonlocals.cpp created on 2020-01-05 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_nonlocals.h"
@@ -11,7 +11,7 @@
 namespace xci::script {
 
 
-static void resolve_nonlocals_for_scope(Scope& scope, const ast::Block& block);
+static void resolve_nonlocals_for_scope(Scope& scope, ast::Expression& body);
 
 
 void resolve_nonlocals_in_symtab(Scope& scope)
@@ -156,22 +156,6 @@ public:
                     // Referenced function is from another module -> we're done
                     break;
                 }
-                // partial calls
-                if (!function().partial().empty()) {
-                    function().symtab().set_name(v.identifier.name + "/partial");
-                    if (ref_scope.has_nonlocals()) {
-                        Index nl_idx = function().symtab().count(Symbol::Nonlocal);
-                        auto nl_sym = function().symtab().add({
-                                v.identifier.symbol,
-                                Symbol::Nonlocal,
-                                nl_idx,
-                                1});
-                        m_scope.add_nonlocal(nl_idx, TypeInfo{ref_fn.signature_ptr()}, v.index);
-                        v.identifier.symbol = nl_sym;
-                        //v.identifier.symbol->set_callable(true);
-                    }
-                    break;
-                }
                 // add Nonlocal symbol
                 if (ref_scope.has_nonlocals()) {
                     auto nl_symptr = add_nonlocal_symbol(m_scope, symptr, v.identifier.name,
@@ -187,16 +171,9 @@ public:
     }
 
     void visit(ast::Call& v) override {
-        for (auto& arg : v.args) {
-            arg->apply(*this);
-        }
-
-        if (v.partial_index != no_index) {
-            auto& scope = module().get_scope(v.partial_index);
-            process_subroutine(scope, *v.callable);
-        } else {
-            v.callable->apply(*this);
-        }
+        if (v.arg)
+            v.arg->apply(*this);
+        v.callable->apply(*this);
     }
 
     void visit(ast::OpCall& v) override {
@@ -228,11 +205,6 @@ public:
 private:
     Module& module() { return m_scope.module(); }
     Function& function() const { return m_scope.function(); }
-
-    void process_subroutine(Scope& scope, ast::Expression& expression) {
-        ResolveNonlocalsVisitor visitor(scope);
-        expression.apply(visitor);
-    }
 
     SymbolPointer add_nonlocal_symbol(Scope& scope, SymbolPointer symptr,
                                       const std::string& name, const TypeInfo& ti,
@@ -268,19 +240,17 @@ private:
 };
 
 
-static void resolve_nonlocals_for_scope(Scope& scope, const ast::Block& block)
+static void resolve_nonlocals_for_scope(Scope& scope, ast::Expression& body)
 {
     ResolveNonlocalsVisitor visitor {scope};
-    for (const auto& stmt : block.statements) {
-        stmt->apply(visitor);
-    }
+    body.apply(visitor);
     resolve_nonlocals_in_symtab(scope);
 }
 
 
-void resolve_nonlocals(Scope& main, const ast::Block& block)
+void resolve_nonlocals(Scope& main, ast::Expression& body)
 {
-    resolve_nonlocals_for_scope(main, block);
+    resolve_nonlocals_for_scope(main, body);
 
     // Resolve other scopes (not referenced directly via main scope or AST)
     Module& module = main.module();

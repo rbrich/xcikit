@@ -1,7 +1,7 @@
 // Compiler.h created on 2019-05-30 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_COMPILER_H
@@ -24,11 +24,13 @@ public:
         //         Use PP* flags below.
         FoldTuple           = 0x0001,
         FoldDotCall         = 0x0002,
-        ResolveSymbols      = 0x0004,
-        ResolveDecl         = 0x0008,
-        ResolveTypes        = 0x0010,
-        ResolveSpec         = 0x0020,
-        ResolveNonlocals    = 0x0040,
+        FoldParen           = 0x0004,
+        ResolveSymbols      = 0x0010,
+        ResolveDecl         = 0x0020,
+        ResolveTypes        = 0x0040,
+        ResolveSpec         = 0x0080,
+        ResolveNonlocals    = 0x0100,
+        CompileFunctions    = 0x1000,
         FoldConstExpr       = 0x0001 << 16,
 
         // Bit masks
@@ -36,22 +38,24 @@ public:
         OptimizationMask    = 0xffff << 16,
 
         // Mandatory AST passes
-        // - if none of the flags are set, all passes will be enabled
-        // - if one or more of these flags is set, the Compiler won't compile, only preprocess
-        // - each flag may bring in other flags as its dependencies
+        // SAFE: these flags bring in also their dependencies
         PPTuple         = FoldTuple,
         PPDotCall       = FoldDotCall,
-        PPSymbols       = ResolveSymbols | PPDotCall | PPTuple,
+        PPParen         = FoldParen,
+        PPSymbols       = ResolveSymbols | PPDotCall | PPTuple | PPParen,
         PPDecl          = ResolveDecl | PPSymbols,
         PPTypes         = ResolveTypes | PPDecl,
         PPSpec          = ResolveSpec | PPTypes,
         PPNonlocals     = ResolveNonlocals | PPSpec,
 
-        // Optimization
-        O0 = 0,
-        O1 = FoldConstExpr,
+        // All mandatory passes, no optimization
+        Default         = CompileFunctions | PPNonlocals,
 
-        Default = 0,
+        // Optimization passes
+        OP1             = FoldConstExpr,
+
+        // All mandatory passes + optimizations
+        O1              = Default | OP1,
     };
 
     // Allow basic arithmetic on OpCode
@@ -67,12 +71,12 @@ public:
 
     /// Compile AST into Function object, which contains objects in scope + code
     /// (module is a special kind of function, with predefined parameters)
-    /// \returns true if actually compiled (depends on Flags)
-    bool compile(Scope& scope, ast::Module& ast);
+    /// Compiles only partially unless flags contain complete Default set.
+    void compile(Scope& scope, ast::Module& ast);
 
     /// Compile single function that has fully prepared AST
     /// (all other phases were run on it)
-    void compile_function(Scope& scope, const ast::Block& body);
+    void compile_function(Scope& scope, ast::Expression& body);
 
     /// Compile all functions in a module except `main`
     /// that are marked with compile flag but not yet compiled
