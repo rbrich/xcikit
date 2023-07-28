@@ -920,7 +920,7 @@ w 7                 // -> 16
 
 === Casting
 
-Any expression can be casted to another type.
+Any expression can be cast to another type.
 The syntax is similar as in variable definition with explicit type.
 
 [source,fire]
@@ -955,6 +955,39 @@ instance Cast MyType Int {
 instance Cast Int MyType {
     cast = fun x:Int { /* convert Int to MyType }
 }
+----
+
+=== Initializers
+
+Type names can be called. This syntax is translated to call of an `init` function of `Init` class.
+The default `init` function calls the `cast` function, so it supports same operations as <<Casting>>:
+
+[source,fire]
+----
+Int64(42)
+a = 42; Byte(a)
+Int64(1 + 2)
+String ['a', 'b', 'c']   // -> "abc"
+----
+
+As with `cast`, the `init` function can be called explicitly:
+
+[source,fire]
+----
+a:Int64 = init 42
+(init 42):Int64
+----
+
+User-defined types can have custom initializers:
+
+[source,fire]
+----
+type MyType = (Int, String)
+instance Init Int MyType {
+    init = fun a { (a, "Foo"):MyType }
+}
+MyType(42)  // -> (42, "Foo")
+42:MyType  // Error, cast doesn't fall back to init
 ----
 
 === Coercion

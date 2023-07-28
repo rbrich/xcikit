@@ -227,8 +227,12 @@ public:
 
     void visit(ast::Cast& v) override {
         apply_and_fold(v.expression);
+        if (v.is_init) {
+            m_const_value.reset();
+            return;
+        }
         // cast to Void?
-        if (v.to_type.is_void()) {
+        if (v.ti.is_void()) {
             m_const_value = TypedValue(ti_void());
             m_collapsed = std::make_unique<ast::Literal>(*m_const_value);
             return;
@@ -236,15 +240,15 @@ public:
         if (!m_const_value)
             return;
         // cast to the same type?
-        if (m_const_value->type_info() == v.to_type) {
+        if (m_const_value->type_info() == v.ti) {
             m_collapsed = std::make_unique<ast::Literal>(*m_const_value);
             return;
         }
         // FIXME: evaluate the actual (possibly user-defined) cast function
-        auto cast_result = create_value(v.to_type);
+        auto cast_result = create_value(v.ti);
         if (cast_result.cast_from(m_const_value->value())) {
             // fold the cast into value
-            m_const_value = TypedValue(std::move(cast_result), v.to_type);
+            m_const_value = TypedValue(std::move(cast_result), v.ti);
             m_collapsed = std::make_unique<ast::Literal>(*m_const_value);
             return;
         }

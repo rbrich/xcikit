@@ -281,6 +281,7 @@ class Ord <T> (Eq T) { }
 */
 
 
+// cast value of type T to type R: `value : R`
 class Cast T R {
     cast : T -> R
 }
@@ -348,6 +349,16 @@ instance Cast String [Byte] { cast = cast_to_bytes }
 instance Cast [Char] String { cast = cast_to_string }
 instance Cast [Byte] String { cast = cast_to_string }
 instance Cast Int32 TypeIndex { cast = { __noop } }
+
+
+// initializer for type R, with value of type T: `R value` or `value .R`
+class Init T R {
+    init : T -> R
+}
+
+// fallback to cast
+instance<T, R> Init T R { init = fun a { a:R } }
+
 
 class Bounded T {
     min : Void -> T

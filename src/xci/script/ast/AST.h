@@ -558,14 +558,16 @@ struct Cast: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
-    const TypeInfo& type_info() const override { return to_type; }
+    const TypeInfo& type_info() const override { return ti; }
 
     std::unique_ptr<Expression> expression;
     std::unique_ptr<Type> type;
-    std::unique_ptr<Reference> cast_function;  // none for cast to Void or to same type
 
     // resolved:
-    TypeInfo to_type;    // resolved Type (cast to)
+    std::unique_ptr<Reference> cast_function;  // none for cast to Void or to same type
+    TypeInfo ti;    // resolved type (cast to)
+
+    bool is_init = false;  // Cast and Init share same AST node
 };
 
 

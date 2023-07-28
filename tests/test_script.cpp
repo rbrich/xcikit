@@ -940,6 +940,38 @@ TEST_CASE( "Casting", "[script][interpreter]" )
 }
 
 
+TEST_CASE( "Initializer", "[script][interpreter]" )
+{
+    // fallback to cast - allows same operations unless user-defined init was found
+    CHECK(interpret_std("Void(\"drop this\")") == "()");
+    CHECK(interpret_std("Void {42}") == "()");
+    CHECK(interpret_std("Void fun x { x + 1 }") == "()");
+    CHECK(interpret_std("String \"noop\"") == "\"noop\"");
+    CHECK(interpret_std("Int64 42") == "42L");
+    CHECK(interpret_std("Int64 (42)") == "42L");
+    CHECK(interpret_std("Int64(42)") == "42L");
+    CHECK(interpret_std("Int -12.9") == "-12");
+    CHECK(interpret_std("a = 42; Byte a") == "b'*'");
+    CHECK(interpret_std("Int64(1 + 2)") == "3L");
+    CHECK(interpret_std("Bool 0") == "false");
+    CHECK(interpret_std("Int (Bool 42)") == "1");
+    CHECK(interpret_std("!Bool 42") == "false");  // '!' is prefix operator, init has higher precedence
+    CHECK_THROWS_AS(interpret_std("-Bool 42"), FunctionNotFound);
+    CHECK(interpret_std("Bool -42") == "true");
+    CHECK(interpret_std("(init 42):Int64") == "42L");
+    CHECK(interpret_std("a:Int64 = init 42; a") == "42L");
+    CHECK_THROWS_AS(interpret_std("init 42"), FunctionConflict);  // must specify the result type
+    CHECK(interpret_std("String ['a','b','č']") == "\"abč\"");
+    CHECK_THROWS_AS(interpret_std("[Char] \"abč\""), ParseError);
+    // user-defined init
+    CHECK(interpret_std("type MyType = (Int, String)\n"
+                        "instance Init Int MyType {\n"
+                        "    init = fun a { (a, \"Foo\"):MyType }\n"
+                        "}\n"
+                        "MyType(42)") == "(42, \"Foo\")");
+}
+
+
 TEST_CASE( "String operations", "[script][interpreter]" )
 {
     CHECK(interpret_std("string_equal (\"fire\", \"fire\")") == "true");

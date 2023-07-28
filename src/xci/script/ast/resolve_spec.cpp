@@ -515,24 +515,25 @@ public:
 
     // The cast expression is translated to a call to `cast` method from the Cast class.
     // The inner expression type and the cast type are used to look up the instance of Cast.
+    // (Or same for `init` method from Init class.)
     void visit(ast::Cast& v) override {
         // resolve the inner expression -> m_value_type
         // (the Expression might use the specified type from `m_cast_type`)
-        resolve_generic_type(v.to_type, m_scope.type_args());
-        m_cast_type = v.to_type;
+        resolve_generic_type(v.ti, m_scope.type_args());
+        m_cast_type = v.is_init ? TypeInfo{} : v.ti;
         m_call_sig.clear();
         v.expression->apply(*this);
         m_cast_type = {};
         m_value_type = m_value_type.effective_type();
         // Cast to the same type or same underlying type (from/to a named type) -> noop
-        if (is_same_underlying(m_value_type, v.to_type)) {
+        if (!v.is_init && is_same_underlying(m_value_type, v.ti)) {
             v.cast_function.reset();
-            m_value_type = v.to_type;
+            m_value_type = v.ti;
             return;
         }
         // lookup the cast function with the resolved arg/return types
         m_call_sig.emplace_back().set_arg({m_value_type, v.expression->source_loc});
-        m_call_sig.back().set_return_type(v.to_type);
+        m_call_sig.back().set_return_type(v.ti);
         v.cast_function->apply(*this);
         // set the effective type of the Cast expression and clean the call types
         m_value_type = std::move(m_call_sig.back().return_type);

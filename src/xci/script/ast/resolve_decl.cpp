@@ -352,7 +352,7 @@ public:
     void visit(ast::Cast& v) override {
         // resolve the target type -> m_type_info
         v.type->apply(*this);
-        v.to_type = std::move(m_type_info);
+        v.ti = std::move(m_type_info);
 
         v.expression->apply(*this);
     }
