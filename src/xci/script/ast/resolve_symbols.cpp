@@ -330,7 +330,7 @@ public:
     void visit(ast::Cast& v) override {
         v.expression->apply(*this);
         v.type->apply(*this);
-        v.cast_function = std::make_unique<ast::Reference>(ast::Identifier{"cast"});
+        v.cast_function = std::make_unique<ast::Reference>(ast::Identifier{v.is_init ? "init" : "cast"});
         v.cast_function->source_loc = v.source_loc;
         v.cast_function->apply(*this);
     }

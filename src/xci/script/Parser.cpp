@@ -64,6 +64,7 @@ struct SemicolonOrNewline: sor<one<';'>, eol, LineComment> {};
 struct SC: star< SpaceOrComment > {};  // optional space or comments
 struct NSC: star< NlSpaceOrComment > {};  // optional newlines, space or comments
 struct RS: at<space> {};  // require space
+struct RSP: at< sor<space, one<'('>> > {};  // require space or paren
 
 // Aux templates
 template<class T> struct SepList: list_tail<T, seq<SC, SemicolonOrNewline, NSC> > {};  // list separated by either semicolon or newline
@@ -145,17 +146,18 @@ struct Type: sor< ParenthesizedType, ListType, TypeName > {};
 // * some rules are parametrized with S (space type), choose either SC or NSC (allow newline)
 // * in general, rules inside parentheses or brackets use NSC, rules outside use SC
 // * this allows leaving out semicolons but still support multiline expressions
-template<class S> struct CallRight: seq< RS, S, ExprArgSafe > {};
-template<class S> struct Call: seq< ExprCallable, RS, S, ExprArgSafe > {};
-template<class S> struct TypeDotCallRight: seq< Reference, opt<RS, S, ExprArgSafe> > {};
-template<class S> struct TypeDotCall: if_must< one<'.'>, SC, TypeDotCallRight<S> > {};
-template<class S> struct ExprTypeDotCall: seq< TypeName, TypeDotCall<S> > {};
-template<class S> struct ExprOperand: sor<Call<S>, ExprArgSafe, ExprPrefix, ExprTypeDotCall<S>> {};
-template<class S> struct DotCallRight: seq< NSC, one<'.'>, SC, must<ExprOperand<S>> > {};
-template<class S> struct ExprInfixRight: seq< sor< CallRight<S>, DotCallRight<S>, seq<S, InfixOperator, NSC, ExprOperand<S>> >, opt< ExprInfixRight<S> > > {};
+template<class S> struct CallRight: seq< RSP, S, ExprArgSafe > {};
+template<class S> struct Call: seq< ExprCallable, RSP, S, ExprArgSafe > {};
+template<class S> struct TypeDotCallRight: seq< Reference, opt<RSP, S, ExprArgSafe> > {};
+template<class S> struct ExprTypeDotCall: seq< TypeName, S, if_must< one<'.'>, SC, TypeDotCallRight<S> > > {};
+template<class S> struct ExprTypeInit: seq< TypeName, RSP, S, ExprArgSafe > {};
+template<class S> struct ExprOperand: sor<Call<S>, ExprArgSafe, ExprPrefix, ExprTypeInit<S>, ExprTypeDotCall<S>> {};
+template<class S> struct DotCallRight: seq< NSC, one<'.'>, SC, must<sor<TypeName, ExprOperand<S>>> > {};
+template<class S> struct ExprInfixRight: seq< sor< CallRight<S>, DotCallRight<S>,
+                                seq<S, InfixOperator, NSC, ExprOperand<S>> >, opt< ExprInfixRight<S> > > {};
 template<class S> struct TrailingComma: opt<S, one<','>> {};
 template<class S> struct ExprInfix: seq< ExprOperand<S>, opt<ExprInfixRight<S>>, TrailingComma<S> > {};
-template<class S> struct Expression: sor< ExprCond, ExprWith, ExprTypeDotCall<S>, ExprStruct, ExprInfix<S> > {};
+template<class S> struct Expression: sor< ExprCond, ExprWith, ExprStruct, ExprInfix<S> > {};
 struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
 struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC, one<'}'>> > > {};
 struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
@@ -590,6 +592,12 @@ struct Action<ExprArgSafe> : change_states< std::unique_ptr<ast::Expression> > {
     }
 
     template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Cast& cast) {
+        assert(!cast.expression);
+        cast.expression = std::move(expr);
+    }
+
+    template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::WithContext& with) {
         assert(!with.context);
         with.context = std::move(expr);
@@ -658,6 +666,27 @@ struct Action<DotCallRight<S>> {
     template<typename Input>
     static void apply(const Input &in, ast::OpCall& opc) {
         opc.op = ast::Operator::DotCall;
+    }
+};
+
+
+template<class S>
+struct Action<ExprTypeInit<S>> : change_states< ast::Cast > {
+    template<typename Input>
+    static void apply(const Input &in, ast::Cast& init) {
+        init.source_loc.load(in.input(), in.position());
+        init.is_init = true;
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::Cast& init, std::unique_ptr<ast::Expression>& expr) {
+        expr = std::make_unique<ast::Cast>(std::move(init));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::Cast& init, ast::OpCall& outer) {
+        assert(!outer.arg);
+        outer.arg = std::make_unique<ast::Cast>(std::move(init));
     }
 };
 
@@ -770,9 +799,23 @@ struct Action<TypeName> : change_states< ast::TypeName > {
     }
 
 
-    template<typename Input>
+    template<typename Input>                                   // Cast
     static void success(const Input &in, ast::TypeName& tname, RefCall& rcall) {
         rcall.type = std::make_unique<ast::TypeName>(std::move(tname));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::TypeName& tname, ast::Cast& cast) {
+        assert(!cast.type);
+        cast.type = std::make_unique<ast::TypeName>(std::move(tname));
+    }
+
+    template<typename Input>                                   // "DotTypeInit"
+    static void success(const Input &in, ast::TypeName& tname, ast::OpCall& outer) {
+        auto init = std::make_unique<ast::Cast>();
+        init->is_init = true;
+        init->type = std::make_unique<ast::TypeName>(std::move(tname));
+        outer.arg = std::move(init);
     }
 
     template<typename Input>

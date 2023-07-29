@@ -591,18 +591,22 @@ std::ostream& operator<<(std::ostream& os, const Function& v)
 std::ostream& operator<<(std::ostream& os, const Cast& v)
 {
     if (stream_options(os).enable_tree) {
-        os << "Cast(Expression)";
-        if (v.to_type)
-            os << " [type_info=" << v.to_type << ']';
+        os << (v.is_init ? "Init(Expression)" : "Cast(Expression)");
+        if (v.ti)
+            os << " [type_info=" << v.ti << ']';
         os << endl
-           << more_indent
-           << put_indent << *v.expression
-           << put_indent << *v.type;
+           << more_indent;
+        if (v.expression)
+           os << put_indent << *v.expression;
+        os << put_indent << *v.type;
         if (v.cast_function)
             os << put_indent << *v.cast_function;
         return os << less_indent;
     } else {
-        return os << *v.expression << ":" << *v.type;
+        if (v.is_init)
+            return os << *v.type << ' ' << *v.expression;
+        else
+            return os << *v.expression << ':' << *v.type;
     }
 }
 

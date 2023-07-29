@@ -360,7 +360,8 @@ std::unique_ptr<ast::Expression> Cast::make_copy() const
         r->cast_function = std::make_unique<Reference>();
         cast_function->copy_to(*r->cast_function);
     }
-    r->to_type = to_type;
+    r->ti = ti;
+    r->is_init = is_init;
     return r;
 }
 

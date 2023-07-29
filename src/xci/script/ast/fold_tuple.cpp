@@ -109,7 +109,8 @@ public:
     void visit(ast::Reference&) override {}
 
     void visit(ast::Cast& v) override {
-        apply_and_fold(v.expression);
+        if (v.expression)
+            apply_and_fold(v.expression);
     }
 
     void visit(ast::Class&) override {}
