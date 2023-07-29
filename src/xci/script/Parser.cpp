@@ -152,11 +152,12 @@ template<class S> struct TypeDotCallRight: seq< Reference, opt<RSP, S, ExprArgSa
 template<class S> struct ExprTypeDotCall: seq< TypeName, S, if_must< one<'.'>, SC, TypeDotCallRight<S> > > {};
 template<class S> struct ExprTypeInit: seq< TypeName, RSP, S, ExprArgSafe > {};
 template<class S> struct ExprOperand: sor<Call<S>, ExprArgSafe, ExprPrefix, ExprTypeInit<S>, ExprTypeDotCall<S>> {};
-template<class S> struct DotCallRight: seq< NSC, one<'.'>, SC, must<ExprOperand<S>> > {};
-template<class S> struct ExprInfixRight: seq< sor< CallRight<S>, DotCallRight<S>, seq<S, InfixOperator, NSC, ExprOperand<S>> >, opt< ExprInfixRight<S> > > {};
+template<class S> struct DotCallRight: seq< NSC, one<'.'>, SC, must<sor<TypeName, ExprOperand<S>>> > {};
+template<class S> struct ExprInfixRight: seq< sor< CallRight<S>, DotCallRight<S>,
+                                seq<S, InfixOperator, NSC, ExprOperand<S>> >, opt< ExprInfixRight<S> > > {};
 template<class S> struct TrailingComma: opt<S, one<','>> {};
 template<class S> struct ExprInfix: seq< ExprOperand<S>, opt<ExprInfixRight<S>>, TrailingComma<S> > {};
-template<class S> struct Expression: sor< ExprCond, ExprWith, ExprTypeDotCall<S>, ExprStruct, ExprInfix<S> > {};
+template<class S> struct Expression: sor< ExprCond, ExprWith, ExprStruct, ExprInfix<S> > {};
 struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
 struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC, one<'}'>> > > {};
 struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
@@ -807,6 +808,14 @@ struct Action<TypeName> : change_states< ast::TypeName > {
     static void success(const Input &in, ast::TypeName& tname, ast::Cast& cast) {
         assert(!cast.type);
         cast.type = std::make_unique<ast::TypeName>(std::move(tname));
+    }
+
+    template<typename Input>                                   // "DotTypeInit"
+    static void success(const Input &in, ast::TypeName& tname, ast::OpCall& outer) {
+        auto init = std::make_unique<ast::Cast>();
+        init->is_init = true;
+        init->type = std::make_unique<ast::TypeName>(std::move(tname));
+        outer.arg = std::move(init);
     }
 
     template<typename Input>

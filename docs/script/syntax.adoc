@@ -990,6 +990,18 @@ MyType(42)  // -> (42, "Foo")
 42:MyType  // Error, cast doesn't fall back to init
 ----
 
+The initializer can also be called with the dot syntax:
+
+[source,fire]
+----
+(42).Int64
+42 .Int64
+42.Int64  // Syntax error: could be float literal suffix
+a = 42; a.Byte
+['a', 'b', 'c'].String   // -> "abc"
+----
+
+
 === Coercion
 
 The values of the same kind can coerce to a bigger type.

@@ -595,9 +595,10 @@ std::ostream& operator<<(std::ostream& os, const Cast& v)
         if (v.ti)
             os << " [type_info=" << v.ti << ']';
         os << endl
-           << more_indent
-           << put_indent << *v.expression
-           << put_indent << *v.type;
+           << more_indent;
+        if (v.expression)
+           os << put_indent << *v.expression;
+        os << put_indent << *v.type;
         if (v.cast_function)
             os << put_indent << *v.cast_function;
         return os << less_indent;

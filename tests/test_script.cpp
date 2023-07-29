@@ -969,6 +969,11 @@ TEST_CASE( "Initializer", "[script][interpreter]" )
                         "    init = fun a { (a, \"Foo\"):MyType }\n"
                         "}\n"
                         "MyType(42)") == "(42, \"Foo\")");
+    // dot type init
+    CHECK(interpret_std("(42).Int64") == "42L");
+    CHECK(interpret_std("42 .Int64") == "42L");
+    CHECK(interpret_std("a = 42; a.Byte") == "b'*'");
+    CHECK(interpret_std("['a', 'b', 'c'].String") == "\"abc\"");
 }
 
 

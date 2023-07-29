@@ -59,6 +59,15 @@ public:
             // Collapse inner Call into outer OpCall (with op=DotCall)
             assert(!v.callable);
             assert(v.arg && v.right_arg);
+            // collapse Cast (dot type init, i.e. `1 .Int`)
+            auto* cast = dynamic_cast<ast::Cast*>(v.right_arg.get());
+            if (cast) {
+                m_collapsed = std::move(v.right_arg);
+                assert(cast->type);
+                assert(!cast->expression);
+                cast->expression = std::move(v.arg);
+                return;
+            }
             auto* call = dynamic_cast<ast::Call*>(v.right_arg.get());
             if (call) {
                 m_collapsed = std::move(v.right_arg);
@@ -134,7 +143,8 @@ public:
     void visit(ast::Reference&) override {}
 
     void visit(ast::Cast& v) override {
-        v.expression->apply(*this);
+        if (v.expression)
+            v.expression->apply(*this);
     }
 
     void visit(ast::Class&) override {}
