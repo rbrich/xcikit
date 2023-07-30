@@ -1,4 +1,5 @@
 :sectnums:
+:idprefix:
 :toc: macro
 ifdef::env-github[]
 :!toc-title:
@@ -691,7 +692,7 @@ The return value of the whole expression is what the inner expression returns.
 
 === Exceptions
 
-See <<side-effects,Side Effects>> below for information on how this works.
+See <<Side Effects>> below for information on how this works.
 
 [source,fire]
 ----
@@ -790,7 +791,7 @@ A function returning `()` doesn't push any data on the stack.
 The size of the value is effectively zero, so the value doesn't exist at all.
 It's only known to the compiler for the purpose of type checking.
 
-[#user-defined-types]
+
 === User-defined types
 
 User-defined types are made by giving a name to a type, or to a composition of types.
@@ -978,7 +979,7 @@ a:Int64 = init 42
 (init 42):Int64
 ----
 
-User-defined types can have custom initializers:
+<<User-defined types>> can have custom initializers:
 
 [source,fire]
 ----
@@ -1105,7 +1106,7 @@ It can still take normal arguments:
 String.myfun "hello"  // => myfun<String> "hello"
 ----
 
-A special builtin `TypeOf` can be used to obtain type of an expression.
+A special builtin `TypeOf` can be used to obtain the type of expression.
 It takes a single argument and returns its type.
 It can only be used in context where a type is expected:
 
@@ -1118,7 +1119,6 @@ type_name<TypeOf "abc">     // -> "String"
 ----
 
 
-[#side-effects]
 == Side Effects
 
 Each function may have side effects. Writing to a disk or throwing an exception
@@ -1176,7 +1176,7 @@ f = fun msg:String | out exc
 // type of f: String -> Void | out exc
 ----
 
-Undeclaring the side effects (if compiler adds them but you want to override it):
+Undeclaring the side effects (if compiler adds them, but you want to override it):
 [source,fire]
 ----
 f = fun msg:String | !out !exc { write msg }
@@ -1226,7 +1226,7 @@ The Executor can do anything with the results, for example:
 * print them to the console (i.e. just printing the program output)
 * interpret them as drawing commands (i.e. implementing something similar to PostScript)
 * test them for a condition (i.e. unit testing)
-* concatenate them as a HTTP response (i.e. Web application)
+* concatenate them as an HTTP response (i.e. Web application)
 * implementing anything else that needs a sequence of records
 
 === Importing modules

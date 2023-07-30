@@ -1,7 +1,7 @@
 = Contributing to xcikit
 
 First, note that this is a personal hobby project. It's basically my playground for C++ and graphics stuff.
-Sometimes I rewrite things. Sometimes I drop things I no longer like. Some parts might be quite broken at times.
+Sometimes I rewrite things. Sometimes I remove things. Some parts might be broken at times.
 
 == You've found a bug
 
