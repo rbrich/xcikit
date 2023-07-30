@@ -125,15 +125,30 @@ int main(int argc, const char* argv[])
 
     CoordEditor coord_editor(theme, prim);
 
+    Label help(theme,
+              "[F11] fullscreen\n"
+              "[F1] hide help\n"
+              "[F2] hide uniform editor\n"
+              "[Esc] hide UI\n"
+              "[f] hide frame\n"
+              "[t] toggle triangle/quad\n"
+              "[r] reset coords\n"
+              "[q] quit\n");
+    help.set_color(Color(200, 100, 50));
+    help.set_outline_color(Color::Black());
+    help.set_outline_radius(1_px);
+
     struct {
         bool all : 1 = false;
+        bool help : 1 = false;
         bool frame : 1 = false;
         bool uniforms : 1 = false;
     } hide;
 
     window.set_size_callback([&](View& view) {
-        auto tl = view.viewport_top_left({45_vp, 1_vp});
-        unifed.set_position({-tl.x, tl.y});
+        auto tl = view.viewport_top_left({1_vp, 1_vp});
+        unifed.set_position({-tl.x - 44_vp, tl.y});
+        help.set_position({tl.x, tl.y});
     });
 
     float elapsed_acc = 0;
@@ -168,8 +183,15 @@ int main(int argc, const char* argv[])
             case Key::F:
                 hide.frame = ! hide.frame;
                 break;
-            case Key::U:
+            case Key::F1:
+                hide.help = ! hide.help;
+                break;
+            case Key::F2:
                 hide.uniforms = ! hide.uniforms;
+                break;
+            case Key::R:
+                coord_editor.reset_coords();
+                coord_editor.resize(v);
                 break;
             case Key::T:
                 coord_editor.toggle_triangle_quad();
@@ -186,13 +208,15 @@ int main(int argc, const char* argv[])
         }
         unifed.set_hidden(hide.all || hide.uniforms);
         coord_editor.set_hidden(hide.all || hide.frame);
+        help.set_hidden(hide.all || hide.help);
     });
 
-    window.set_refresh_mode(RefreshMode::Periodic);
+    window.set_refresh_mode(RefreshMode::OnEvent);
 
     Composite root {theme};
     root.add_child(coord_editor);
     root.add_child(unifed);
+    root.add_child(help);
 
     Bind bind(window, root);
     window.display();

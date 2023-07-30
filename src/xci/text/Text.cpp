@@ -13,24 +13,24 @@ using namespace graphics;
 using namespace core;
 
 
-Text::Text(Font& font, const std::string &string, Format format)
+Text::Text(Font& font, const std::string &string, TextFormat format)
 {
     m_layout.set_default_font(&font);
     set_string(string, format);
 }
 
 
-void Text::set_string(const std::string& string, Format format)
+void TextMixin::set_string(const std::string& string, TextFormat format)
 {
     m_layout.clear();
     switch (format) {
-        case Format::None:
+        case TextFormat::None:
             m_layout.add_word(string);
             break;
-        case Format::Plain:
+        case TextFormat::Plain:
             parse_plain(m_layout, string);
             break;
-        case Format::Markup:
+        case TextFormat::Markup:
             Markup(m_layout, string);
             break;
     }
@@ -38,88 +38,86 @@ void Text::set_string(const std::string& string, Format format)
 }
 
 
-void Text::set_width(VariUnits width)
+void TextMixin::set_width(VariUnits width)
 {
     m_layout.set_default_page_width(width);
     m_need_typeset = true;
 }
 
 
-void Text::set_font(Font& font)
+void TextMixin::set_font(Font& font)
 {
     m_layout.set_default_font(&font);
     m_need_typeset = true;
 }
 
 
-void Text::set_font_size(VariUnits size, bool allow_scale)
+void TextMixin::set_font_size(VariUnits size, bool allow_scale)
 {
     m_layout.set_default_font_size(size, allow_scale);
     m_need_typeset = true;
 }
 
 
-void Text::set_font_style(FontStyle font_style)
+void TextMixin::set_font_style(FontStyle font_style)
 {
     m_layout.set_default_font_style(font_style);
     m_need_typeset = true;
 }
 
 
-void Text::set_font_weight(uint16_t weight)
+void TextMixin::set_font_weight(uint16_t weight)
 {
     m_layout.set_default_font_weight(weight);
     m_need_typeset = true;
 }
 
 
-void Text::set_color(graphics::Color color)
+void TextMixin::set_color(graphics::Color color)
 {
     m_layout.set_default_color(color);
     m_need_typeset = true;
 }
 
 
-void Text::set_outline_radius(VariUnits radius)
+void TextMixin::set_outline_radius(VariUnits radius)
 {
     m_layout.set_default_outline_radius(radius);
     m_need_typeset = true;
 }
 
 
-void Text::set_outline_color(graphics::Color color)
+void TextMixin::set_outline_color(graphics::Color color)
 {
     m_layout.set_default_outline_color(color);
     m_need_typeset = true;
 }
 
 
-void Text::set_tab_stops(std::vector<VariUnits> stops)
+void TextMixin::set_tab_stops(std::vector<VariUnits> stops)
 {
     m_layout.set_default_tab_stops(std::move(stops));
     m_need_typeset = true;
 }
 
 
-void Text::set_alignment(Alignment alignment)
+void TextMixin::set_alignment(Alignment alignment)
 {
     m_layout.set_default_alignment(alignment);
     m_need_typeset = true;
 }
 
 
-void Text::resize(graphics::View& view)
+void TextMixin::_resize(graphics::View& view)
 {
-    view.finish_draw();
     m_layout.typeset(view);
     m_layout.update(view);
     m_need_typeset = false;
 }
 
 
-void Text::update(graphics::View& view)
+void TextMixin::_update(graphics::View& view)
 {
-    view.finish_draw();
     if (m_need_typeset) {
         m_layout.typeset(view);
         m_need_typeset = false;
@@ -128,7 +126,7 @@ void Text::update(graphics::View& view)
 }
 
 
-void Text::draw(graphics::View& view, VariCoords pos)
+void TextMixin::_draw(graphics::View& view, VariCoords pos)
 {
     m_layout.draw(view, pos);
 }

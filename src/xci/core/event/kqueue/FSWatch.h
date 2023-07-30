@@ -1,7 +1,7 @@
 // FSWatch.h created on 2019-03-29 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_KQUEUE_FSWATCH_H
@@ -57,7 +57,6 @@ private:
     int register_kevent(const fs::path& path, uint32_t fflags, bool no_exist_ok=false);
     void unregister_kevent(int fd);
 
-private:
     Callback m_main_cb;
 
     struct File {

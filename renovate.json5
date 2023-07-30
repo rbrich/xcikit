@@ -40,9 +40,10 @@
             "groupName": "conan dependencies",
             "groupSlug": "conan-deps-patch"
         },
-        {
+        {  // Renovate keeps offering downgrade for this package
             "matchManagers": ["regex"],
-            "matchPackageNames": ["spirv-cross"]
+            "matchPackageNames": ["spirv-cross"],
+            "enabled": false
         }
     ],
     "dependencyDashboardApproval": true,

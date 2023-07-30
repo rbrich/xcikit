@@ -23,8 +23,9 @@ using ranges::views::enumerate;
 
 ShaderCompiler::ShaderCompiler()
 {
-    const char* vulkan_sdk = std::getenv("VULKAN_SDK");
-    if (vulkan_sdk)
+    if (const char* glslc = std::getenv("GLSLC"))
+        m_glslc = fs::path(glslc);
+    if (const char* vulkan_sdk = std::getenv("VULKAN_SDK"))
         m_glslc = fs::path(vulkan_sdk) / "bin/glslc";
 }
 

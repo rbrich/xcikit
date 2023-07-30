@@ -29,6 +29,7 @@ public:
     explicit CoordEditor(Theme& theme, Primitives& prim);
 
     void toggle_triangle_quad() { m_is_quad = !m_is_quad; }
+    void reset_coords();
 
     using ChangeCallback = std::function<void(CoordEditor&)>;
     void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }
@@ -53,15 +54,8 @@ private:
         ViewportCoords pos;
         Vec2f uv;
     };
-    std::vector<Point> m_quad_vertices {
-            {{-49_vp, -49_vp}, {-1, -1}},
-            {{+49_vp, +49_vp}, {+1, +1}},
-    };
-    std::vector<Point> m_triangle_vertices {
-            {{-49_vp, -49_vp}, {0.0, 0.0}},
-            {{-49_vp, +49_vp}, {0.5, 0.0}},
-            {{+49_vp, +49_vp}, {1.0, 1.0}},
-    };
+    std::vector<Point> m_quad_vertices;
+    std::vector<Point> m_triangle_vertices;
     unsigned m_active_vertex = ~0u;
     FramebufferCoords m_pan_pos;
     bool m_dragging = false;

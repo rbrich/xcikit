@@ -39,7 +39,7 @@ FSWatch::~FSWatch()
 bool FSWatch::add(const fs::path& pathname, FSWatch::PathCallback cb)
 {
     // Is the directory already watched?
-    auto dir = pathname.parent_path();
+    auto dir = absolute(pathname).parent_path();
     auto it = std::find_if(m_dir.begin(), m_dir.end(),
                            [&dir](const Dir& d) { return d.name == dir; });
     int dir_fd;
