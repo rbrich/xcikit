@@ -21,21 +21,19 @@ namespace xci::text {
 using graphics::VariUnits;
 using graphics::VariCoords;
 
+enum class TextFormat {
+    None,   // interpret nothing (\n is char 0x10 in the font)
+    Plain,  // interpret just C escapes (\n, \t)
+    Markup, // interpret control sequences etc. (see Markup.h)
+};
+
+
 // Text rendering - convenient combination of Layout and Markup
-class Text {
+class TextMixin {
 public:
-    enum class Format {
-        None,   // interpret nothing (\n is char 0x10 in the font)
-        Plain,  // interpret just C escapes (\n, \t)
-        Markup, // interpret control sequences etc. (see Markup.h)
-    };
-
-    Text() = default;
-    Text(Font& font, const std::string &string, Format format = Format::Plain);
-
-    void set_string(const std::string& string, Format format = Format::Plain);
-    void set_fixed_string(const std::string& string) { set_string(string, Format::None); }
-    void set_markup_string(const std::string& string) { set_string(string, Format::Markup); }
+    void set_string(const std::string& string, TextFormat format = TextFormat::Plain);
+    void set_fixed_string(const std::string& string) { set_string(string, TextFormat::None); }
+    void set_markup_string(const std::string& string) { set_string(string, TextFormat::Markup); }
 
     void set_width(VariUnits width);
     void set_font(Font& font);
@@ -50,13 +48,24 @@ public:
 
     Layout& layout() { return m_layout; }
 
-    void resize(graphics::View& view);
-    void update(graphics::View& view);
-    void draw(graphics::View& view, VariCoords pos);
+protected:
+    void _resize(graphics::View& view);
+    void _update(graphics::View& view);
+    void _draw(graphics::View& view, VariCoords pos);
 
-private:
     Layout m_layout;
     bool m_need_typeset = false;
+};
+
+
+class Text: public TextMixin {
+public:
+    Text() = default;
+    Text(Font& font, const std::string &string, TextFormat format = TextFormat::Plain);
+
+    void resize(graphics::View& view) { view.finish_draw(); _resize(view); }
+    void update(graphics::View& view) { view.finish_draw(); _update(view); }
+    void draw(graphics::View& view, VariCoords pos) { _draw(view, pos); }
 };
 
 

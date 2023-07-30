@@ -25,7 +25,23 @@ CoordEditor::CoordEditor(Theme& theme, Primitives& prim)
       m_rectangle(theme.renderer()),
       m_triangle(theme.renderer()),
       m_circles(theme.renderer())
-{}
+{
+    reset_coords();
+}
+
+
+void CoordEditor::reset_coords()
+{
+    m_quad_vertices = {
+        {{-49_vp, -49_vp}, {-1, -1}},
+        {{+49_vp, +49_vp}, {+1, +1}},
+    };
+    m_triangle_vertices = {
+        {{-49_vp, -49_vp}, {0.0, 0.0}},
+        {{-49_vp, +49_vp}, {0.5, 0.0}},
+        {{+49_vp, +49_vp}, {1.0, 1.0}},
+    };
+}
 
 
 void CoordEditor::resize(View& view)

@@ -74,7 +74,7 @@ int main(int argc, const char* argv[])
     static constexpr auto help_color_highlight = Color(255, 170, 120);
     Text help_text(font, "<s:smooth><b>[s]</b> smooth scaling</s:smooth> <tab>"
                          "<s:font><b>[f]</b> font scaling</s:font><br>"
-                         "(Resize window to observe the scaling effect.)", Text::Format::Markup);
+                         "(Resize window to observe the scaling effect.)", TextFormat::Markup);
     help_text.set_color(help_color_normal);
     help_text.set_font_size(5_vp);
 
