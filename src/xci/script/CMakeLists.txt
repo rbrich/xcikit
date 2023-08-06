@@ -21,6 +21,7 @@ add_library(xci-script
     Builtin.cpp
     Class.cpp
     Code.cpp
+    CodeAssembly.cpp
     Compiler.cpp
     Error.cpp
     Function.cpp

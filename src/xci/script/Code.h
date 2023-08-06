@@ -131,6 +131,8 @@ enum class Opcode: uint8_t {
     Drop,                   // remove a value from stack: drop <arg2> bytes, skipping top <arg1> bytes
     Swap,                   // swap values on stack: <arg1> bytes from top with following <arg2> bytes
 
+    Annotation,             // used only in CodeAssembly, must not appear in Code
+
     // --------------------------------------------------------------
     // Auxiliary aliases
 
@@ -141,7 +143,7 @@ enum class Opcode: uint8_t {
     L1ArgFirst = LoadStatic,
     L1ArgLast = Invoke,
     L2ArgFirst = Call,
-    L2ArgLast = Swap,
+    L2ArgLast = Annotation,
 };
 
 // Allow basic arithmetic on OpCode

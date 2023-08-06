@@ -10,6 +10,7 @@
 #include "typing/type_index.h"
 #include <xci/data/coding/leb128.h>
 #include <xci/compat/macros.h>
+#include <fmt/core.h>
 #include <iomanip>
 #include <bitset>
 
@@ -828,8 +829,12 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
     if (opcode >= Opcode::B1ArgFirst && opcode <= Opcode::B1ArgLast) {
         // B1
         auto arg = *(v.pos++);
-        os << std::hex << "0x" << static_cast<int>(arg) << std::dec;
+        os << fmt::format("0x{:02x}", arg);
         switch (opcode) {  // NOLINT
+            case Opcode::Jump:
+            case Opcode::JumpIfNot:
+                os << fmt::format(" (+{})", arg);
+                break;
             case Opcode::Cast: {
                 const auto from_type = decode_arg_type(arg >> 4);
                 const auto to_type = decode_arg_type(arg & 0xf);
