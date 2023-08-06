@@ -32,6 +32,9 @@ public:
         ResolveNonlocals    = 0x0100,
         CompileFunctions    = 0x1000,
         FoldConstExpr       = 0x0001 << 16,
+        InlineFunctions     = 0x0002 << 16,
+        OptimizeCopyDrop    = 0x0004 << 16,
+        OptimizeTailCall    = 0x0008 << 16,
 
         // Bit masks
         MandatoryMask       = 0xffff,
@@ -49,13 +52,18 @@ public:
         PPNonlocals     = ResolveNonlocals | PPSpec,
 
         // All mandatory passes, no optimization
-        Default         = CompileFunctions | PPNonlocals,
+        Mandatory       = CompileFunctions | PPNonlocals,
 
         // Optimization passes
-        OP1             = FoldConstExpr,
+        OP1             = OptimizeTailCall | OptimizeCopyDrop,
+        OP2             = OP1 | FoldConstExpr | InlineFunctions,
 
         // All mandatory passes + optimizations
-        O1              = Default | OP1,
+        O1              = Mandatory | OP1,
+        O2              = Mandatory | OP2,
+
+        // Mandatory passes + default optimizations
+        Default         = O1
     };
 
     // Allow basic arithmetic on OpCode
@@ -78,11 +86,11 @@ public:
     /// (all other phases were run on it)
     void compile_function(Scope& scope, ast::Expression& body);
 
+private:
     /// Compile all functions in a module except `main`
     /// that are marked with compile flag but not yet compiled
     void compile_all_functions(Scope& main);
 
-private:
     Flags m_flags = Flags::Default;
 };
 

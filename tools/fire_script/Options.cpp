@@ -74,6 +74,17 @@ static bool parse_pass_list(ReplOptions& ro, const char* list_str)
 }
 
 
+void ReplOptions::apply_optimization()
+{
+    switch (optimization) {
+        case 0u: return;
+        default:
+        case 1u: compiler_flags |= Compiler::Flags::OP1; return;
+        case 2u: compiler_flags |= Compiler::Flags::OP2; return;
+    }
+}
+
+
 void Options::parse(char* argv[])
 {
     auto& ro = repl_opts;
@@ -84,7 +95,7 @@ void Options::parse(char* argv[])
             Option("-c, --compile", "Compile a module (don't run anything)", po.compile),
             Option("-o, --output FILE", "Output file for compiled module (default is <source basename>.firm)", po.output_file),
             Option("-e, --eval EXPR", "Execute EXPR as main input", po.expr),
-            Option("-O, --optimize", "Allow optimizations", [&ro]{ ro.compiler_flags |= Flags::OP1; }),
+            Option("-O LEVEL, --optimization", "Set optimization level (default: 1)", ro.optimization),
             Option("-r, --raw-ast", "Print raw AST", ro.print_raw_ast),
             Option("-t, --ast", "Print processed AST", ro.print_ast),
             Option("-b, --bytecode", "Print bytecode being run", ro.print_bytecode),
@@ -103,6 +114,7 @@ void Options::parse(char* argv[])
             Option("[INPUT ...]", "Input files", [&po](const char* arg)
             { po.input_files.emplace_back(arg); return true; }),
     } (argv);
+    ro.apply_optimization();
 }
 
 

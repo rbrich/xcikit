@@ -59,7 +59,7 @@ bool Repl::evaluate(const std::string& module_name, std::string module_source, E
         rusage.start_if(m_opts.print_rusage, "compiled");
         compiler.compile(module->get_main_scope(), ast);
         rusage.stop();
-        if ((m_opts.compiler_flags & Compiler::Flags::Default) != Compiler::Flags::Default) {
+        if ((m_opts.compiler_flags & Compiler::Flags::Mandatory) != Compiler::Flags::Mandatory) {
             // We're only processing the AST, without actual compilation
             mode = EvalMode::Preprocess;
         }

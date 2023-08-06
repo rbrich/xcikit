@@ -38,6 +38,7 @@ struct Context {
     Context() {
         Logger::init(Logger::Level::Warning);
         vfs.mount(XCI_SHARE);
+        interpreter.configure(Compiler::Flags::Mandatory);
     }
 };
 
@@ -107,7 +108,7 @@ static std::string optimize(const std::string& input)
     module.import_module("builtin");
     module.import_module("std");
 
-    Compiler compiler(Compiler::Flags::O1);
+    Compiler compiler(Compiler::Flags::O2);
     compiler.compile(module.get_main_scope(), ast);
 
     std::ostringstream os;

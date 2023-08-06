@@ -1,7 +1,7 @@
 // Options.h created on 2021-03-16 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021 Radek Brich
+// Copyright 2021–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_TOOL_OPTIONS_H
@@ -24,7 +24,10 @@ struct ReplOptions {
     bool print_bytecode = false;
     bool trace_bytecode = false;
     bool with_std_lib = true;
-    Compiler::Flags compiler_flags = Compiler::Flags::Default;
+    Compiler::Flags compiler_flags = Compiler::Flags::Mandatory;
+    unsigned optimization = 1;
+
+    void apply_optimization();
 };
 
 struct ProgramOptions {
