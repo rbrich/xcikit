@@ -26,12 +26,13 @@ using std::setw;
 // stream manipulators
 
 struct StreamOptions {
-    bool enable_tree : 1;
-    bool module_verbose : 1;  // Module: dump function bodies etc.
-    bool parenthesize_fun_types : 1;
-    bool multiline : 1;
-    bool qualify_type_vars : 1;
-    unsigned level : 6;
+    bool enable_tree : 1 = false;
+    bool module_verbose : 1 = false;  // Module: dump function bodies etc.
+    bool enable_disassembly : 1 = false;  // When dumping function bytecode, disassemble it (via CodeAssembly)
+    bool parenthesize_fun_types : 1 = false;
+    bool multiline : 1 = false;
+    bool qualify_type_vars : 1 = false;
+    unsigned level : 6 = 0;
     std::bitset<32> rules;
 };
 
@@ -58,6 +59,12 @@ std::ostream& dump_tree(std::ostream& os)
 std::ostream& dump_module_verbose(std::ostream& os)
 {
     stream_options(os).module_verbose = true;
+    return os;
+}
+
+std::ostream& dump_disassemble(std::ostream& os)
+{
+    stream_options(os).enable_disassembly = true;
     return os;
 }
 
@@ -796,13 +803,19 @@ std::ostream& operator<<(std::ostream& os, const Function& f)
     os << f.signature() << endl;
     switch (f.kind()) {
         case Function::Kind::Bytecode:
-            for (auto it = f.bytecode().begin(); it != f.bytecode().end();) {
-                os << ' ' << DumpBytecode{f, it} << endl;
+            if (stream_options(os).enable_disassembly) {
+                CodeAssembly dis;
+                dis.disassemble(f.bytecode());
+                for (const auto& instr : dis)
+                    os << ' ' << DumpInstruction{f, instr} << '\n';
+            } else {
+                for (auto it = f.bytecode().begin(); it != f.bytecode().end();)
+                    os << ' ' << DumpBytecode{f, it} << '\n';
             }
             return os;
         case Function::Kind::Assembly:
             for (const auto& instr : f.asm_code()) {
-                os << ' ' << DumpInstruction{f, instr} << endl;
+                os << ' ' << DumpInstruction{f, instr} << '\n';
             }
             return os;
         case Function::Kind::Generic:
@@ -988,8 +1001,14 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
         }
         if (verbose && f.kind() == Function::Kind::Bytecode) {
             os << more_indent;
-            for (auto it = f.bytecode().begin(); it != f.bytecode().end();) {
-                os << put_indent << DumpBytecode{f, it} << '\n';
+            if (stream_options(os).enable_disassembly) {
+                CodeAssembly dis;
+                dis.disassemble(f.bytecode());
+                for (const auto& instr : dis)
+                    os << put_indent << DumpInstruction{f, instr} << '\n';
+            } else {
+                for (auto it = f.bytecode().begin(); it != f.bytecode().end();)
+                    os << put_indent << DumpBytecode{f, it} << '\n';
             }
             os << less_indent;
         }

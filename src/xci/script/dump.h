@@ -18,6 +18,7 @@ namespace xci::script {
 // stream manipulators
 std::ostream& dump_tree(std::ostream& os);
 std::ostream& dump_module_verbose(std::ostream& os);
+std::ostream& dump_disassemble(std::ostream& os);
 std::ostream& put_indent(std::ostream& os);
 std::ostream& rule_indent(std::ostream& os);  // indent with visible guide
 std::ostream& more_indent(std::ostream& os);

@@ -125,12 +125,16 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
     }
 
     // print compiled module content
-    if (m_opts.print_module || m_opts.print_module_verbose || m_opts.print_module_verbose_ast) {
+    if (m_opts.print_module || m_opts.print_module_verbose ||
+        m_opts.print_module_verbose_ast|| m_opts.print_module_verbose_dis)
+    {
         auto s = t.stream();
         if (m_opts.print_module_verbose)
             s << dump_module_verbose;
         if (m_opts.print_module_verbose_ast)
             s << dump_module_verbose << dump_tree;
+        if (m_opts.print_module_verbose_dis)
+            s << dump_module_verbose << dump_disassemble;
         s << "Module content:" << endl << module << endl;
     }
 
