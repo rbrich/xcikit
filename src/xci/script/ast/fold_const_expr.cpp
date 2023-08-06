@@ -67,7 +67,7 @@ public:
             case Symbol::Function: {
                 assert(v.index != no_index);
                 Function& fn = v.module->get_scope(v.index).function();
-                if (fn.has_code()) {
+                if (fn.is_assembly()) {
                     m_const_value = TypedValue(value::Closure(fn), TypeInfo{fn.signature_ptr()});
                     return;
                 }
@@ -101,6 +101,7 @@ public:
             assert(fnval.closure().empty());  // no values in closure
             auto& fn = *fnval.function();
             assert(!fn.has_nonlocals());
+            fn.assembly_to_bytecode();
             // push arg on stack
             m_machine.stack().push(arg);
             // run it

@@ -1,7 +1,7 @@
 // BytecodeTracer.cpp created on 2020-01-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2021 Radek Brich
+// Copyright 2020–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "BytecodeTracer.h"
@@ -49,14 +49,14 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
                 auto frame = m_machine.stack().n_frames() - 1;
                 cout << "[" << frame << "] " << f.name() << " " << f.signature() << endl;
             }
-            for (auto it = f.code().begin(); it != f.code().end();) {
+            for (auto it = f.bytecode().begin(); it != f.bytecode().end();) {
                 if (it == ipos) {
-                    cout << t.yellow() << '>' << DumpInstruction{f, it} << t.normal() << endl;
+                    cout << t.yellow() << '>' << DumpBytecode{f, it} << t.normal() << endl;
                 } else {
-                    cout << ' ' << DumpInstruction{f, it} << endl;
+                    cout << ' ' << DumpBytecode{f, it} << endl;
                 }
             }
-            if (ipos == f.code().end()) {
+            if (ipos == f.bytecode().end()) {
                 t.print("{fg:yellow}> --- RETURN ---{t:normal}\n");
                 ++ m_lines_to_erase;
             }
@@ -91,9 +91,9 @@ void BytecodeTracer::print_code(size_t frame, const Function& f)
 {
     m_lines_to_erase = 0;
     cout << "[" << frame << "] " << f.name() << " " << f.signature() << endl;
-    for (auto it = f.code().begin(); it != f.code().end();) {
+    for (auto it = f.bytecode().begin(); it != f.bytecode().end();) {
         ++ m_lines_to_erase;
-        cout << ' ' << DumpInstruction{f, it} << endl;
+        cout << ' ' << DumpBytecode{f, it} << endl;
     }
 }
 

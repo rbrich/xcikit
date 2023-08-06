@@ -8,6 +8,7 @@
 #define XCI_SCRIPT_FUNCTION_H
 
 #include "Code.h"
+#include "CodeAssembly.h"
 #include "ast/AST.h"
 #include "SymbolTable.h"
 #include "TypeInfo.h"
@@ -74,14 +75,17 @@ public:
     TypeInfo effective_return_type() const { return m_signature->return_type.effective_type(); }
 
     // compiled function body
-    Code& code() { return std::get<CompiledBody>(m_body).code; }
-    const Code& code() const { return std::get<CompiledBody>(m_body).code; }
+    CodeAssembly& asm_code() { return std::get<AssemblyBody>(m_body).code; }
+    const CodeAssembly& asm_code() const { return std::get<AssemblyBody>(m_body).code; }
+    Code& bytecode() { return std::get<BytecodeBody>(m_body).code; }
+    const Code& bytecode() const { return std::get<BytecodeBody>(m_body).code; }
+    void assembly_to_bytecode();
 
     // Special intrinsics function cannot contain any compiled code and is always inlined.
     // This counter helps to check no other code was generated.
-    void add_intrinsics(size_t code_size) { std::get<CompiledBody>(m_body).intrinsics += (unsigned int) code_size; }
-    size_t intrinsics() const { return std::get<CompiledBody>(m_body).intrinsics; }
-    bool has_intrinsics() const { return std::get<CompiledBody>(m_body).intrinsics > 0; }
+    void add_intrinsics() { std::get<AssemblyBody>(m_body).intrinsics += 1; }
+    size_t intrinsics() const { return std::get<AssemblyBody>(m_body).intrinsics; }
+    bool has_intrinsics() const { return std::get<AssemblyBody>(m_body).intrinsics > 0; }
 
     // Generic function: AST of function body
     struct GenericBody;
@@ -105,19 +109,29 @@ public:
 
     // Kind of function body
 
-    // function has compiled bytecode and will be called or inlined
-    struct CompiledBody {
-        bool operator==(const CompiledBody& rhs) const;
+    // function has compiled bytecode
+    struct BytecodeBody {
+        bool operator==(const BytecodeBody& rhs) const { return code == rhs.code; }
 
         template<class Archive>
         void serialize(Archive& ar) {
             ar("code", code);
         }
 
-        // Compiled function body
         Code code;
-        // Counter for code bytes from intrinsics
-        unsigned intrinsics = 0;
+    };
+
+    // function has intermediate relocatable compiled bytecode
+    struct AssemblyBody {
+        bool operator==(const AssemblyBody& rhs) const { return code == rhs.code; }
+
+        template<class Archive>
+        void serialize(Archive&) {
+            throw std::runtime_error("Function with CodeAssembly cannot be serialized");
+        }
+
+        CodeAssembly code;
+        unsigned intrinsics = 0;    // Counter for code bytes from intrinsics
     };
 
     // function is not yet compiled or generic
@@ -171,13 +185,15 @@ public:
     };
 
     void set_undefined() { m_body = std::monostate{}; }
-    void set_code() { m_body = CompiledBody{}; m_compile = false; }
+    void set_assembly() { m_body = AssemblyBody{}; m_compile = false; }
+    void set_bytecode() { m_body = BytecodeBody{}; }
 
     void set_native(NativeDelegate native) { m_body = NativeBody{native}; }
     void call_native(Stack& stack) const { std::get<NativeBody>(m_body).native(stack); }
 
     bool is_undefined() const { return std::holds_alternative<std::monostate>(m_body); }
-    bool has_code() const { return std::holds_alternative<CompiledBody>(m_body); }
+    bool is_bytecode() const { return std::holds_alternative<BytecodeBody>(m_body); }
+    bool is_assembly() const { return std::holds_alternative<AssemblyBody>(m_body); }
     bool is_generic() const { return std::holds_alternative<GenericBody>(m_body); }
     bool is_native() const { return std::holds_alternative<NativeBody>(m_body); }
 
@@ -197,7 +213,8 @@ public:
 
     enum class Kind {
         Undefined,  // not yet compiled
-        Compiled,   // compiled into bytecode
+        Bytecode,   // compiled into bytecode
+        Assembly,   // compiled into assembly code
         Generic,    // generic function in AST representation
         Native,     // wrapped native function (C++ binding)
     };
@@ -228,7 +245,7 @@ private:
     // function signature
     SignaturePtr m_signature;
     // function body (depending on kind of function)
-    std::variant<std::monostate, CompiledBody, GenericBody, NativeBody> m_body;
+    std::variant<std::monostate, BytecodeBody, AssemblyBody, GenericBody, NativeBody> m_body;
     // flags
     bool m_expression : 1 = false;  // doesn't have its own parameters, but can alias something with parameters
     bool m_specialized : 1 = false;

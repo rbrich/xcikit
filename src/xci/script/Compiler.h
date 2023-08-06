@@ -21,7 +21,7 @@ public:
         // All compiler passes
         // UNSAFE: Don't use these flags directly - the wrong set of flags
         //         can crash the compiler (asserts in Debug mode).
-        //         Use PP* flags below.
+        //         Use PP/CP/OP flags below, which contain required dependencies.
         FoldTuple           = 0x0001,
         FoldDotCall         = 0x0002,
         FoldParen           = 0x0004,
@@ -31,6 +31,7 @@ public:
         ResolveSpec         = 0x0080,
         ResolveNonlocals    = 0x0100,
         CompileFunctions    = 0x1000,
+        AssembleFunctions   = 0x2000,
         FoldConstExpr       = 0x0001 << 16,
         InlineFunctions     = 0x0002 << 16,
         OptimizeCopyDrop    = 0x0004 << 16,
@@ -39,6 +40,13 @@ public:
         // Bit masks
         MandatoryMask       = 0xffff,
         OptimizationMask    = 0xffff << 16,
+
+        // Predefined optimization levels
+        OptLevel1       = OptimizeTailCall | OptimizeCopyDrop,
+        OptLevel2       = OptLevel1 | FoldConstExpr | InlineFunctions,
+
+        // ---------------------------------------------------------------------
+        // The following flags are safe to use individually
 
         // Mandatory AST passes
         // SAFE: these flags bring in also their dependencies
@@ -51,16 +59,20 @@ public:
         PPSpec          = ResolveSpec | PPTypes,
         PPNonlocals     = ResolveNonlocals | PPSpec,
 
-        // All mandatory passes, no optimization
-        Mandatory       = CompileFunctions | PPNonlocals,
+        // Mandatory compilation passes
+        CPCompile       = CompileFunctions | PPNonlocals,
+        CPAssemble      = AssembleFunctions | CPCompile,
 
         // Optimization passes
-        OP1             = OptimizeTailCall | OptimizeCopyDrop,
-        OP2             = OP1 | FoldConstExpr | InlineFunctions,
+        OPCopyDrop      = OptimizeCopyDrop | CPCompile,
+        OPTailCall      = OptimizeTailCall | CPCompile,
+
+        // All mandatory passes, no optimization
+        Mandatory       = CPAssemble,
 
         // All mandatory passes + optimizations
-        O1              = Mandatory | OP1,
-        O2              = Mandatory | OP2,
+        O1              = Mandatory | OptLevel1,
+        O2              = Mandatory | OptLevel2,
 
         // Mandatory passes + default optimizations
         Default         = O1

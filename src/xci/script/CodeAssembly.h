@@ -25,9 +25,14 @@ public:
 
     struct Instruction {
         Opcode opcode = Opcode::Noop;
-        std::pair<size_t, size_t> args;
+        std::pair<size_t, size_t> args = {0u, 0u};
 
+        Instruction() = default;
+        Instruction(Opcode opc, size_t arg1 = 0u, size_t arg2 = 0u)
+                : opcode(opc), args(arg1, arg2) {}
         uint8_t arg_B1() const { return static_cast<uint8_t>(args.first); }
+
+        bool operator==(const Instruction& rhs) const { return opcode == rhs.opcode && args == rhs.args; }
     };
 
     /// Translate to binary representation and append to Code
@@ -44,6 +49,15 @@ public:
     ///     would be consumed as the instruction args.
     void disassemble(const Code& code);
 
+    // Add instructions
+    void add(Opcode opcode) { m_instr.emplace_back(opcode); }
+    void add_B1(Opcode opcode, uint8_t arg) { m_instr.emplace_back(opcode, size_t(arg)); }
+    void add_L1(Opcode opcode, size_t arg) { m_instr.emplace_back(opcode, arg); }
+    void add_L2(Opcode opcode, size_t arg1, size_t arg2) { m_instr.emplace_back(opcode, arg1, arg2); }
+
+    // Label counter
+    unsigned add_label() { return m_labels++; }
+
     using const_iterator = std::vector<Instruction>::const_iterator;
     const_iterator begin() const { return m_instr.begin(); }
     const_iterator end() const { return m_instr.end(); }
@@ -53,6 +67,8 @@ public:
     Instruction& operator[](size_t i) { return m_instr[i]; }
 
     Instruction& back() noexcept { return m_instr.back(); }
+
+    bool operator==(const CodeAssembly& rhs) const { return m_instr == rhs.m_instr; }
 
 private:
     struct Label {
@@ -64,7 +80,7 @@ private:
     void assemble_repeat_jumps(Code& code, std::vector<Label>& labels);
 
     std::vector<Instruction> m_instr;
-    size_t m_labels = 0;  // number of jump targets
+    size_t m_labels = 0;  // counter for labels (each jump has its own label)
 };
 
 

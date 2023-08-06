@@ -46,7 +46,8 @@ static void cmd_dump_info() {
     t.print("  sizeof(Value) = {}\n", sizeof(Value));
     t.print("  sizeof(TypeInfo) = {}\n", sizeof(TypeInfo));
     t.print("  sizeof(Function) = {}\n", sizeof(Function));
-    t.print("  sizeof(Function::CompiledBody) = {}\n", sizeof(Function::CompiledBody));
+    t.print("  sizeof(Function::BytecodeBody) = {}\n", sizeof(Function::BytecodeBody));
+    t.print("  sizeof(Function::AssemblyBody) = {}\n", sizeof(Function::AssemblyBody));
     t.print("  sizeof(Function::GenericBody) = {}\n", sizeof(Function::GenericBody));
     t.print("  sizeof(Function::NativeBody) = {}\n", sizeof(Function::NativeBody));
 }

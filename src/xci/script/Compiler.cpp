@@ -137,26 +137,24 @@ public:
         switch (sym.type()) {
             case Symbol::Instruction: {
                 // intrinsics - just output the requested instruction
+                function().add_intrinsics();
                 auto opcode = Opcode(sym.index());
                 if (opcode <= Opcode::NoArgLast) {
-                    function().code().add_opcode(opcode);
-                    function().add_intrinsics(1);
+                    code().add(opcode);
                 } else if (opcode <= Opcode::B1ArgLast) {
                     assert(m_instruction_args.size() == 1);
                     auto arg = m_instruction_args[0].value().to_int64();
                     if (arg < 0 || arg >= 256)
                         throw IntrinsicsFunctionError("arg value out of Byte range: "
                                   + std::to_string(arg), v.source_loc);
-                    function().code().add_B1(opcode, (uint8_t) arg);
-                    function().add_intrinsics(2);
+                    code().add_B1(opcode, (uint8_t) arg);
                 } else if (opcode <= Opcode::L1ArgLast) {
                     assert(m_instruction_args.size() == 1);
                     auto arg = m_instruction_args[0].value().to_int64();
                     if (arg < 0)
                         throw IntrinsicsFunctionError("intrinsic argument is negative: "
                                                       + std::to_string(arg), v.source_loc);
-                    auto n = function().code().add_L1(opcode, size_t(arg));
-                    function().add_intrinsics(n);
+                    code().add_L1(opcode, size_t(arg));
                 } else {
                     assert(opcode <= Opcode::L2ArgLast);
                     assert(m_instruction_args.size() == 2);
@@ -168,8 +166,7 @@ public:
                     if (arg2 < 0)
                         throw IntrinsicsFunctionError("intrinsic argument #2 is negative: "
                                                       + std::to_string(arg2), v.source_loc);
-                    auto n = function().code().add_L2(opcode, size_t(arg1), size_t(arg2));
-                    function().add_intrinsics(n);
+                    code().add_L2(opcode, size_t(arg1), size_t(arg2));
                 }
                 break;
             }
@@ -221,7 +218,7 @@ public:
                 });
                 // if it's a function object, execute it
                 if (sym.is_callable()) {
-                    code().add_opcode(Opcode::Execute);
+                    code().add(Opcode::Execute);
                 }
                 break;
             }
@@ -259,7 +256,7 @@ public:
                 });
                 if (m_callable && ti.is_callable()) {
                     // EXECUTE
-                    code().add_opcode(Opcode::Execute);
+                    code().add(Opcode::Execute);
                 }
                 break;
             }
@@ -273,7 +270,7 @@ public:
                     if (fn.is_generic()) {
                         assert(!fn.has_any_generic());  // fully specialized
                         auto body = fn.yank_generic_body();
-                        fn.set_code();  // this would release AST copy
+                        fn.set_assembly();  // this would release AST copy
                         m_compiler.compile_function(scope, body.ast());
                     }
 
@@ -303,7 +300,7 @@ public:
                     if (fn.is_generic()) {
                         assert(!fn.has_any_generic());  // fully specialized
                         auto body = fn.yank_generic_body();
-                        fn.set_code();  // this would release AST copy
+                        fn.set_assembly();  // this would release AST copy
                         m_compiler.compile_function(scope, body.ast());
                     }
 
@@ -314,7 +311,7 @@ public:
                         code().add_L1(Opcode::MakeClosure, scope.function_index());
                         // EXECUTE
                         if (execute)
-                            code().add_opcode(Opcode::Execute);
+                            code().add(Opcode::Execute);
                     } else {
                         if (!execute) {
                             // LOAD_FUNCTION <function_idx>
@@ -365,17 +362,17 @@ public:
                     }
                     item.second.foreach_heap_slot([this, skip](size_t offset) {
                         // DEC_REF <offset>
-                        function().code().add_L1(Opcode::DecRef, offset + skip);
+                        code().add_L1(Opcode::DecRef, offset + skip);
                     });
                     drop += item.second.size();
                 }
                 if (drop_before != 0) {
                     // DROP <skip> <size>
-                    function().code().add_L2(Opcode::Drop, 0, drop_before);
+                    code().add_L2(Opcode::Drop, 0, drop_before);
                 }
                 if (drop != 0) {
                     // DROP <skip> <size>
-                    function().code().add_L2(Opcode::Drop, skip, drop);
+                    code().add_L2(Opcode::Drop, skip, drop);
                 }
                 break;
             }
@@ -408,7 +405,7 @@ public:
                 v.wrapped_execs = 1;
         }
         for (auto i = v.wrapped_execs; i != 0; --i)
-            code().add_opcode(Opcode::Execute);
+            code().add(Opcode::Execute);
 
         m_intrinsic = false;
         m_callable = orig_callable;
@@ -420,30 +417,27 @@ public:
 
     void visit(ast::Condition& v) override {
         // See "Conditional jumps" in `docs/script/machine.adoc`
-        std::vector<Code::OpIdx> end_arg_pos;
+        std::vector<unsigned> end_labels;
         for (auto& item : v.if_then_expr) {
             // condition
             item.first->apply(*this);
             // JUMP_IF_NOT (to next condition)
-            code().add_B1(Opcode::JumpIfNot, 0);
-            auto jump_arg_pos = code().this_instruction_address();
+            const auto label_cond = code().add_label();
+            code().add_L2(Opcode::Annotation, (size_t) CodeAssembly::Annotation::JumpIfNot, label_cond);
             // then branch
             item.second->apply(*this);
             // JUMP (to end)
-            code().add_B1(Opcode::Jump, 0);
-            end_arg_pos.push_back( code().this_instruction_address() );
-            // .condX label
-            // fill the above jump instruction target (jump here)
-            const auto label_cond = code().this_instruction_address();
-            code().set_arg_B(jump_arg_pos, label_cond - jump_arg_pos);
+            const auto label_end = code().add_label();
+            end_labels.push_back(label_end);
+            code().add_L2(Opcode::Annotation, (size_t) CodeAssembly::Annotation::Jump, label_end);
+            // add label for the above JUMP_IF_NOT
+            code().add_L2(Opcode::Annotation, (size_t) CodeAssembly::Annotation::Label, label_cond);
         }
         // else branch
         v.else_expr->apply(*this);
-        // .end label
-        // fill the target in all previous jump instructions
-        const auto label_end = code().this_instruction_address();
-        for (auto arg_pos : end_arg_pos) {
-            code().set_arg_B(arg_pos, label_end - arg_pos);
+        // add end labels for all previous JUMP instructions
+        for (const auto label : end_labels) {
+            code().add_L2(Opcode::Annotation, (size_t) CodeAssembly::Annotation::Label, label);
         }
     }
 
@@ -477,8 +471,8 @@ public:
             return;
         }
 
-        if (!func.has_code()) {
-            func.set_code();
+        if (!func.is_assembly()) {
+            func.set_assembly();
             m_compiler.compile_function(scope, v.body);
         }
 
@@ -499,7 +493,7 @@ public:
                 if (!func.has_nonvoid_parameter()) {
                     // parameterless closure is executed immediately
                     // EXECUTE
-                    code().add_opcode(Opcode::Execute);
+                    code().add(Opcode::Execute);
                 }
             }
         } else if (!v.definition) {
@@ -532,7 +526,7 @@ public:
 private:
     Module& module() { return m_scope.module(); }
     Function& function() { return m_scope.function(); }
-    Code& code() { return m_code == nullptr ? function().code() : *m_code; }
+    CodeAssembly& code() { return function().asm_code(); }
 
     void make_closure(const Scope& scope) {
         if (!scope.has_nonlocals())
@@ -604,7 +598,6 @@ private:
 private:
     Compiler& m_compiler;
     Scope& m_scope;
-    Code* m_code = nullptr;
 
     bool m_callable = false;
 
@@ -614,10 +607,26 @@ private:
 };
 
 
+using FnCallback = void (*)(Function&);
+static void foreach_asm_fn_in_module(Module& module, FnCallback cb)
+{
+    for (unsigned i = module.num_scopes(); i != 0; --i) {
+        Scope& scope = module.get_scope(i - 1);
+        if (!scope.has_function())
+            continue;
+        Function& fn = scope.function();
+        if (!fn.is_assembly())
+            continue; // generic
+
+        cb(fn);
+    }
+}
+
+
 void Compiler::compile(Scope& scope, ast::Module& ast)
 {
     auto& func = scope.function();
-    func.set_code();
+    func.set_assembly();
     func.set_compile();
     func.signature().set_parameter(ti_void());
     func.signature().set_return_type(ti_unknown());
@@ -661,6 +670,19 @@ void Compiler::compile(Scope& scope, ast::Module& ast)
 
     if ((m_flags & Flags::CompileFunctions) == Flags::CompileFunctions)
         compile_function(scope, ast.body);
+
+    // TODO
+//    if ((m_flags & Flags::InlineFunctions) == Flags::InlineFunctions)
+//        inline_functions(scope);
+
+//    if ((m_flags & Flags::OptimizeCopyDrop) == Flags::OptimizeCopyDrop)
+//        foreach_asm_fn_in_module(scope.module(), optimize_copy_drop);
+//
+//    if ((m_flags & Flags::OptimizeTailCall) == Flags::OptimizeTailCall)
+//        foreach_asm_fn_in_module(scope.module(), optimize_tail_call);
+
+    if ((m_flags & Flags::AssembleFunctions) == Flags::AssembleFunctions)
+        foreach_asm_fn_in_module(scope.module(), [](Function& fn){ fn.assembly_to_bytecode(); });
 }
 
 
@@ -672,9 +694,9 @@ void Compiler::compile_function(Scope& scope, ast::Expression& body)
 
     if (fn.is_expression() && fn.has_nonvoid_parameter()) {
         // Copy parameter to be passed to a function contained inside the expression
-        fn.code().add_L2(Opcode::Copy, closure_size, parameter_size);
+        fn.asm_code().add_L2(Opcode::Copy, closure_size, parameter_size);
         fn.parameter().foreach_heap_slot([&fn](size_t offset) {
-            fn.code().add_L1(Opcode::IncRef, offset);
+            fn.asm_code().add_L1(Opcode::IncRef, offset);
         });
     }
 
@@ -683,7 +705,7 @@ void Compiler::compile_function(Scope& scope, ast::Expression& body)
     body.apply(visitor);
 
     if (fn.has_intrinsics()) {
-        if (fn.intrinsics() != fn.code().size())
+        if (fn.intrinsics() != fn.asm_code().size())
             throw IntrinsicsFunctionError(
                     "cannot mix compiled code with intrinsics",
                     body.source_loc);
@@ -698,17 +720,17 @@ void Compiler::compile_function(Scope& scope, ast::Expression& body)
         for (const auto& ti : fn.nonlocals()) {
             ti.foreach_heap_slot([&fn, pos](size_t offset) {
                 // DEC_REF <addr in nonlocals>
-                fn.code().add_L1(Opcode::DecRef, pos + offset);
+                fn.asm_code().add_L1(Opcode::DecRef, pos + offset);
             });
             pos += ti.size();
         }
 
         fn.parameter().foreach_heap_slot([&fn, pos](size_t offset) {
             // DEC_REF <addr in params>
-            fn.code().add_L1(Opcode::DecRef, pos + offset);
+            fn.asm_code().add_L1(Opcode::DecRef, pos + offset);
         });
         // DROP <ret_value> <params + nonlocals>
-        fn.code().add_L2(Opcode::Drop, skip, drop);
+        fn.asm_code().add_L2(Opcode::Drop, skip, drop);
     }
     // return value left on stack
 }
@@ -733,7 +755,7 @@ void Compiler::compile_all_functions(Scope& main)
 
         assert(!fn.has_any_generic());
         auto body = fn.yank_generic_body();
-        fn.set_code();  // this removes AST from the function
+        fn.set_assembly();  // this removes AST from the function
         compile_function(scope, body.ast());
     }
 }

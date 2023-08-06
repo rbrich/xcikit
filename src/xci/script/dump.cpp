@@ -795,9 +795,14 @@ std::ostream& operator<<(std::ostream& os, const Function& f)
 {
     os << f.signature() << endl;
     switch (f.kind()) {
-        case Function::Kind::Compiled:
-            for (auto it = f.code().begin(); it != f.code().end();) {
-                os << ' ' << DumpInstruction{f, it} << endl;
+        case Function::Kind::Bytecode:
+            for (auto it = f.bytecode().begin(); it != f.bytecode().end();) {
+                os << ' ' << DumpBytecode{f, it} << endl;
+            }
+            return os;
+        case Function::Kind::Assembly:
+            for (const auto& instr : f.asm_code()) {
+                os << ' ' << DumpInstruction{f, instr} << endl;
             }
             return os;
         case Function::Kind::Generic:
@@ -808,96 +813,131 @@ std::ostream& operator<<(std::ostream& os, const Function& f)
     XCI_UNREACHABLE;
 }
 
-
 std::ostream& operator<<(std::ostream& os, Function::Kind v)
 {
     switch (v) {
         case Function::Kind::Undefined: return os << "undefined";
-        case Function::Kind::Compiled:  return os << "compiled";
+        case Function::Kind::Bytecode:  return os << "bytecode";
+        case Function::Kind::Assembly:  return os << "assembly";
         case Function::Kind::Generic:   return os << "generic";
         case Function::Kind::Native:    return os << "native";
     }
     XCI_UNREACHABLE;
 }
 
+static void dump_b1_instruction(std::ostream& os, Opcode opcode, uint8_t arg)
+{
+    os << fmt::format("0x{:02x}", arg);
+    switch (opcode) {  // NOLINT
+        case Opcode::Jump:
+        case Opcode::JumpIfNot:
+            os << fmt::format(" (+{})", arg);
+            break;
+        case Opcode::Cast: {
+            const auto from_type = decode_arg_type(arg >> 4);
+            const auto to_type = decode_arg_type(arg & 0xf);
+            os << " (" << TypeInfo{from_type} << " -> " << TypeInfo{to_type} << ")";
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+static void dump_l1_instruction(std::ostream& os, Opcode opcode, size_t arg, const Module& mod)
+{
+    os << arg;
+    switch (opcode) {
+        case Opcode::LoadStatic: {
+            const auto& value = mod.get_value(arg);
+            os << " (" << value << ':' << value.type_info() << ")";
+            break;
+        }
+        case Opcode::LoadFunction:
+        case Opcode::MakeClosure:
+        case Opcode::Call0: {
+            const auto& fn = mod.get_function(arg);
+            os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
+            break;
+        }
+        case Opcode::Call1: {
+            const auto& fn = mod.get_imported_module(0).get_function(arg);
+            os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
+            break;
+        }
+        case Opcode::ListSubscript:
+        case Opcode::ListLength:
+        case Opcode::ListSlice:
+        case Opcode::ListConcat: {
+            const TypeInfo& ti = get_type_info(mod.module_manager(), arg);
+            os << " (" << ti << ")";
+            break;
+        }
+        default:
+            break;
+    }
+}
+
+static void dump_l2_instruction(std::ostream& os, Opcode opcode, size_t arg1, size_t arg2, const Module& mod)
+{
+    os << static_cast<int>(arg1) << ' ' << static_cast<int>(arg2);
+    switch (opcode) {  // NOLINT
+        case Opcode::Call: {
+            const auto& fn = mod.get_imported_module(arg1).get_function(arg2);
+            os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
+            break;
+        }
+        case Opcode::MakeList: {
+            const TypeInfo& ti = get_type_info(mod.module_manager(), arg2);
+            os << " (" << ti << ")";
+            break;
+        }
+        default:
+            break;
+    }
+}
+
 
 std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
 {
-    auto inum = v.pos - v.func.code().begin();
+    const auto opcode = v.instr.opcode;
+    if (opcode == Opcode::Annotation) {
+        switch (static_cast<CodeAssembly::Annotation>(v.instr.args.first)) {
+            case CodeAssembly::Annotation::Label:
+                return os << fmt::format("label{}:", v.instr.args.second);
+            case CodeAssembly::Annotation::Jump:
+            case CodeAssembly::Annotation::JumpIfNot:
+                return os << fmt::format("   {:<20}label{}", Opcode(v.instr.args.first), v.instr.args.second);
+        }
+    }
+    os << fmt::format("   {:<20}", opcode);
+    if (opcode >= Opcode::B1ArgFirst && opcode <= Opcode::B1ArgLast)
+        dump_b1_instruction(os, opcode, v.instr.arg_B1());
+    else if (opcode >= Opcode::L1ArgFirst && opcode <= Opcode::L1ArgLast)
+        dump_l1_instruction(os, opcode, v.instr.args.first, v.func.module());
+    else if (opcode >= Opcode::L2ArgFirst && opcode <= Opcode::L2ArgLast)
+        dump_l2_instruction(os, opcode, v.instr.args.first, v.instr.args.second, v.func.module());
+    return os;
+}
+
+
+std::ostream& operator<<(std::ostream& os, DumpBytecode&& v)
+{
+    auto inum = v.pos - v.func.bytecode().begin();
     auto opcode = static_cast<Opcode>(*v.pos++);
     os << right << setw(3) << inum << "  " << left << setw(20) << opcode;
     if (opcode >= Opcode::B1ArgFirst && opcode <= Opcode::B1ArgLast) {
-        // B1
-        auto arg = *(v.pos++);
-        os << fmt::format("0x{:02x}", arg);
-        switch (opcode) {  // NOLINT
-            case Opcode::Jump:
-            case Opcode::JumpIfNot:
-                os << fmt::format(" (+{})", arg);
-                break;
-            case Opcode::Cast: {
-                const auto from_type = decode_arg_type(arg >> 4);
-                const auto to_type = decode_arg_type(arg & 0xf);
-                os << " (" << TypeInfo{from_type} << " -> " << TypeInfo{to_type} << ")";
-                break;
-            }
-            default:
-                break;
-        }
-    }
+        const auto arg = *(v.pos++);
+        dump_b1_instruction(os, opcode, arg);
+    } else
     if (opcode >= Opcode::L1ArgFirst && opcode <= Opcode::L1ArgLast) {
-        // L1
-        auto arg = leb128_decode<Index>(v.pos);
-        os << arg;
-        switch (opcode) {
-            case Opcode::LoadStatic: {
-                const auto& value = v.func.module().get_value(arg);
-                os << " (" << value << ':' << value.type_info() << ")";
-                break;
-            }
-            case Opcode::LoadFunction:
-            case Opcode::MakeClosure:
-            case Opcode::Call0: {
-                const auto& fn = v.func.module().get_function(arg);
-                os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
-                break;
-            }
-            case Opcode::Call1: {
-                const auto& fn = v.func.module().get_imported_module(0).get_function(arg);
-                os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
-                break;
-            }
-            case Opcode::ListSubscript:
-            case Opcode::ListLength:
-            case Opcode::ListSlice:
-            case Opcode::ListConcat: {
-                const TypeInfo& ti = get_type_info(v.func.module().module_manager(), arg);
-                os << " (" << ti << ")";
-                break;
-            }
-            default:
-                break;
-        }
-    }
+        const auto arg = leb128_decode<Index>(v.pos);
+        dump_l1_instruction(os, opcode, arg, v.func.module());
+    } else
     if (opcode >= Opcode::L2ArgFirst && opcode <= Opcode::L2ArgLast) {
-        // L2
-        auto arg1 = leb128_decode<Index>(v.pos);
-        auto arg2 = leb128_decode<Index>(v.pos);
-        os << static_cast<int>(arg1) << ' ' << static_cast<int>(arg2);
-        switch (opcode) {  // NOLINT
-            case Opcode::Call: {
-                const auto& fn = v.func.module().get_imported_module(arg1).get_function(arg2);
-                os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
-                break;
-            }
-            case Opcode::MakeList: {
-                const TypeInfo& ti = get_type_info(v.func.module().module_manager(), arg2);
-                os << " (" << ti << ")";
-                break;
-            }
-            default:
-                break;
-        }
+        const auto arg1 = leb128_decode<Index>(v.pos);
+        const auto arg2 = leb128_decode<Index>(v.pos);
+        dump_l2_instruction(os, opcode, arg1, arg2, v.func.module());
     }
     return os;
 }
@@ -918,7 +958,7 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     for (Index i = 0; i < v.num_functions(); ++i) {
         const auto& f = v.get_function(i);
         os << put_indent << '[' << i << "] ";
-        if (f.kind() != Function::Kind::Compiled) {
+        if (f.kind() == Function::Kind::Generic) {
             os << '(' << f.kind();
             if (f.is_expression())
                 os << ", expr";
@@ -939,10 +979,17 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
             if (!dump_tree)
                 os << '\n';
         }
-        if (verbose && f.kind() == Function::Kind::Compiled) {
+        if (verbose && f.kind() == Function::Kind::Assembly) {
             os << more_indent;
-            for (auto it = f.code().begin(); it != f.code().end();) {
-                os << put_indent << DumpInstruction{f, it} << '\n';
+            for (const auto& instr : f.asm_code()) {
+                os << put_indent << DumpInstruction{f, instr} << '\n';
+            }
+            os << less_indent;
+        }
+        if (verbose && f.kind() == Function::Kind::Bytecode) {
+            os << more_indent;
+            for (auto it = f.bytecode().begin(); it != f.bytecode().end();) {
+                os << put_indent << DumpBytecode{f, it} << '\n';
             }
             os << less_indent;
         }

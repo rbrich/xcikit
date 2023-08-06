@@ -40,7 +40,8 @@ void Machine::run(const InvokeCallback& cb)
 {
     // Avoid double-recursion - move these pointers instead (we already have a stack)
     const Function* function = &m_stack.frame().function;
-    auto it = function->code().begin() + (std::ptrdiff_t) m_stack.frame().instruction;
+    assert(function->is_bytecode());
+    auto it = function->bytecode().begin() + (std::ptrdiff_t) m_stack.frame().instruction;
     auto base = m_stack.frame().base;
 
     auto call_fun = [this, &function, &it, &base](const Function& fn) {
@@ -49,11 +50,11 @@ void Machine::run(const InvokeCallback& cb)
             return;
         }
         // return address
-        m_stack.frame().instruction = it - function->code().begin();
-        assert(fn.has_code());
+        m_stack.frame().instruction = it - function->bytecode().begin();
+        assert(fn.is_bytecode());
         function = &fn;
         m_stack.push_frame(fn);
-        it = function->code().begin();
+        it = function->bytecode().begin();
         base = m_stack.frame().base;
         if (m_call_enter_cb)
             m_call_enter_cb(*function);
@@ -70,10 +71,10 @@ void Machine::run(const InvokeCallback& cb)
     if (m_call_enter_cb)
         m_call_enter_cb(*function);
     for (;;) {
-        if (it == function->code().end()) {
+        if (it == function->bytecode().end()) {
             // return from function
             if (m_bytecode_trace_cb)
-                m_bytecode_trace_cb(*function, function->code().end());
+                m_bytecode_trace_cb(*function, function->bytecode().end());
 
             if (m_call_exit_cb)
                 m_call_exit_cb(*function);
@@ -89,7 +90,7 @@ void Machine::run(const InvokeCallback& cb)
             // return into previous call location
             m_stack.pop_frame();
             function = &m_stack.frame().function;
-            it = function->code().begin() + (std::ptrdiff_t) m_stack.frame().instruction;
+            it = function->bytecode().begin() + (std::ptrdiff_t) m_stack.frame().instruction;
             base = m_stack.frame().base;
             continue;
         }
