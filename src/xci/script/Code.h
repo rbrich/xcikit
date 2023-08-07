@@ -44,6 +44,8 @@ enum class Opcode: uint8_t {
     // Control flow
     Execute,                // pull closure from stack, unwrap it, call the contained function
 
+    Ret,                    // return from a function
+
     // --------------------------------------------------------------
     // B1 (one single-byte operand)
 
@@ -137,7 +139,7 @@ enum class Opcode: uint8_t {
     // Auxiliary aliases
 
     A0First = Noop,
-    A0Last = Execute,
+    A0Last = Ret,
     B1First = Cast,
     B1Last = JumpIfNot,
     L1First = LoadStatic,

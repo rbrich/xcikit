@@ -71,6 +71,7 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::DecRef:            return os << "DEC_REF";
         case Opcode::Jump:              return os << "JUMP";
         case Opcode::JumpIfNot:         return os << "JUMP_IF_NOT";
+        case Opcode::Ret:               return os << "RET";
         case Opcode::Annotation:        return os << "(ANNOTATION)";
     }
     XCI_UNREACHABLE;

@@ -709,7 +709,8 @@ void Compiler::compile_function(Scope& scope, ast::Expression& body)
             throw IntrinsicsFunctionError(
                     "cannot mix compiled code with intrinsics",
                     body.source_loc);
-        // no DROP for intrinsics function
+        // RET, do not add any DROP for intrinsics function
+        fn.asm_code().add(Opcode::Ret);
         return;
     }
 
@@ -732,7 +733,8 @@ void Compiler::compile_function(Scope& scope, ast::Expression& body)
         // DROP <ret_value> <params + nonlocals>
         fn.asm_code().add_L2(Opcode::Drop, skip, drop);
     }
-    // return value left on stack
+    // RET (return value left on stack)
+    fn.asm_code().add(Opcode::Ret);
 }
 
 

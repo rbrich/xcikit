@@ -203,6 +203,8 @@ void Repl::print_runtime_error(const RuntimeError& e)
 {
     core::TermCtl& t = m_ctx.term_out;
 
+    t.print("Stack trace:\n");
+
     if (!e.trace().empty()) {
         int i = 0;
         for (const auto& frame : e.trace() | reverse) {

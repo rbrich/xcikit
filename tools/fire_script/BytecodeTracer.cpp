@@ -56,10 +56,6 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
                     cout << ' ' << DumpBytecode{f, it} << endl;
                 }
             }
-            if (ipos == f.bytecode().end()) {
-                t.print("{fg:yellow}> --- RETURN ---{t:normal}\n");
-                ++ m_lines_to_erase;
-            }
             // pause
             for (;;) {
                 cout << "dbg> " << std::flush;

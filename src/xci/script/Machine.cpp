@@ -71,37 +71,35 @@ void Machine::run(const InvokeCallback& cb)
     if (m_call_enter_cb)
         m_call_enter_cb(*function);
     for (;;) {
-        if (it == function->bytecode().end()) {
-            // return from function
-            if (m_bytecode_trace_cb)
-                m_bytecode_trace_cb(*function, function->bytecode().end());
-
-            if (m_call_exit_cb)
-                m_call_exit_cb(*function);
-
-            // no more stack frames?
-            if (m_stack.n_frames() == 1) {
-                assert(function == &m_stack.frame().function);
-                assert(m_stack.size() == function->effective_return_type().size());
-                m_stack.pop_frame();
-                break;
-            }
-
-            // return into previous call location
-            m_stack.pop_frame();
-            function = &m_stack.frame().function;
-            it = function->bytecode().begin() + (std::ptrdiff_t) m_stack.frame().instruction;
-            base = m_stack.frame().base;
-            continue;
-        }
+        if (it == function->bytecode().end())
+            throw RuntimeError("reached end of code (missing RET)");
 
         if (m_bytecode_trace_cb)
             m_bytecode_trace_cb(*function, it);
 
-
         auto opcode = static_cast<Opcode>(*it++);
         switch (opcode) {
             case Opcode::Noop:
+                break;
+
+            case Opcode::Ret:
+                // return from function
+                if (m_call_exit_cb)
+                    m_call_exit_cb(*function);
+
+                // no more stack frames?
+                if (m_stack.n_frames() == 1) {
+                    assert(function == &m_stack.frame().function);
+                    assert(m_stack.size() == function->effective_return_type().size());
+                    m_stack.pop_frame();
+                    return;
+                }
+
+                // return into previous call location
+                m_stack.pop_frame();
+                function = &m_stack.frame().function;
+                it = function->bytecode().begin() + (std::ptrdiff_t) m_stack.frame().instruction;
+                base = m_stack.frame().base;
                 break;
 
             case Opcode::LogicalOr:
