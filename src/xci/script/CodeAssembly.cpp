@@ -47,7 +47,7 @@ void CodeAssembly::disassemble(const Code& code)
     while (it != code.end()) {
         Instruction& instr = m_instr.emplace_back();
         instr.opcode = static_cast<Opcode>(*it); ++it;
-        if (instr.opcode >= Opcode::B1ArgFirst && instr.opcode <= Opcode::B1ArgLast) {
+        if (instr.opcode >= Opcode::B1First && instr.opcode <= Opcode::B1Last) {
             instr.args.first = *it; ++it;
             if (instr.opcode == Opcode::Jump || instr.opcode == Opcode::JumpIfNot) {
                 size_t addr = it - code.begin();
@@ -58,10 +58,10 @@ void CodeAssembly::disassemble(const Code& code)
                 instr.opcode = Opcode::Annotation;
             }
         } else
-        if (instr.opcode >= Opcode::L1ArgFirst && instr.opcode <= Opcode::L1ArgLast) {
+        if (instr.opcode >= Opcode::L1First && instr.opcode <= Opcode::L1Last) {
             instr.args.first = leb128_decode<size_t>(it);
         } else
-        if (instr.opcode >= Opcode::L2ArgFirst && instr.opcode <= Opcode::L2ArgLast) {
+        if (instr.opcode >= Opcode::L2First && instr.opcode <= Opcode::L2Last) {
             instr.args = std::make_pair(leb128_decode<size_t>(it), leb128_decode<size_t>(it));
         }
         // else: opcode has no args
@@ -83,7 +83,7 @@ void CodeAssembly::assemble_repeat_jumps(Code& code, std::vector<Label>& labels)
             // 21 is the longest instruction code possible (L2 with two max size_t args)
             // 2 is size of JUMP instruction with B1 arg
             code.add_B1(Opcode::Jump, 2);  // jump over the repeated jump
-            code.set_arg_B(label.addr - 1, code.size());  // update original jump to here
+            code.set(label.addr - 1, uint8_t(code.size() - label.addr));  // update original jump to here
             code.add_B1(Opcode::Jump, 0);  // generate repeated jump
             label.addr = code.size();  // update label to point to the repeated jump
         }
@@ -106,18 +106,18 @@ void CodeAssembly::assemble_to(Code& code)
                 auto& label = labels[label_idx];
                 unsigned jump = code.size() - label.addr;
                 assert(jump <= 255);
-                code.set_arg_B(label.addr - 1, jump);
+                code.set(label.addr - 1, uint8_t(jump));
                 label.processed = true;
             }
             // else: ignore, do not generate any code
         } else
-        if (instr.opcode >= Opcode::B1ArgFirst && instr.opcode <= Opcode::B1ArgLast) {
+        if (instr.opcode >= Opcode::B1First && instr.opcode <= Opcode::B1Last) {
             code.add_B1(instr.opcode, instr.arg_B1());
         } else
-        if (instr.opcode >= Opcode::L1ArgFirst && instr.opcode <= Opcode::L1ArgLast) {
+        if (instr.opcode >= Opcode::L1First && instr.opcode <= Opcode::L1Last) {
             code.add_L1(instr.opcode, instr.args.first);
         } else
-        if (instr.opcode >= Opcode::L2ArgFirst && instr.opcode <= Opcode::L2ArgLast) {
+        if (instr.opcode >= Opcode::L2First && instr.opcode <= Opcode::L2Last) {
             code.add_L2(instr.opcode, instr.args.first, instr.args.second);
         } else {
             code.add_opcode(instr.opcode);

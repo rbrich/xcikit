@@ -917,18 +917,18 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
     if (opcode == Opcode::Annotation) {
         switch (static_cast<CodeAssembly::Annotation>(v.instr.args.first)) {
             case CodeAssembly::Annotation::Label:
-                return os << fmt::format("label{}:", v.instr.args.second);
+                return os << fmt::format(".j{}:", v.instr.args.second);
             case CodeAssembly::Annotation::Jump:
             case CodeAssembly::Annotation::JumpIfNot:
-                return os << fmt::format("   {:<20}label{}", Opcode(v.instr.args.first), v.instr.args.second);
+                return os << fmt::format("     {:<20}.j{}", Opcode(v.instr.args.first), v.instr.args.second);
         }
     }
-    os << fmt::format("   {:<20}", opcode);
-    if (opcode >= Opcode::B1ArgFirst && opcode <= Opcode::B1ArgLast)
+    os << fmt::format("     {:<20}", opcode);
+    if (opcode >= Opcode::B1First && opcode <= Opcode::B1Last)
         dump_b1_instruction(os, opcode, v.instr.arg_B1());
-    else if (opcode >= Opcode::L1ArgFirst && opcode <= Opcode::L1ArgLast)
+    else if (opcode >= Opcode::L1First && opcode <= Opcode::L1Last)
         dump_l1_instruction(os, opcode, v.instr.args.first, v.func.module());
-    else if (opcode >= Opcode::L2ArgFirst && opcode <= Opcode::L2ArgLast)
+    else if (opcode >= Opcode::L2First && opcode <= Opcode::L2Last)
         dump_l2_instruction(os, opcode, v.instr.args.first, v.instr.args.second, v.func.module());
     return os;
 }
@@ -939,15 +939,15 @@ std::ostream& operator<<(std::ostream& os, DumpBytecode&& v)
     auto inum = v.pos - v.func.bytecode().begin();
     auto opcode = static_cast<Opcode>(*v.pos++);
     os << right << setw(3) << inum << "  " << left << setw(20) << opcode;
-    if (opcode >= Opcode::B1ArgFirst && opcode <= Opcode::B1ArgLast) {
+    if (opcode >= Opcode::B1First && opcode <= Opcode::B1Last) {
         const auto arg = *(v.pos++);
         dump_b1_instruction(os, opcode, arg);
     } else
-    if (opcode >= Opcode::L1ArgFirst && opcode <= Opcode::L1ArgLast) {
+    if (opcode >= Opcode::L1First && opcode <= Opcode::L1Last) {
         const auto arg = leb128_decode<Index>(v.pos);
         dump_l1_instruction(os, opcode, arg, v.func.module());
     } else
-    if (opcode >= Opcode::L2ArgFirst && opcode <= Opcode::L2ArgLast) {
+    if (opcode >= Opcode::L2First && opcode <= Opcode::L2Last) {
         const auto arg1 = leb128_decode<Index>(v.pos);
         const auto arg2 = leb128_decode<Index>(v.pos);
         dump_l2_instruction(os, opcode, arg1, arg2, v.func.module());

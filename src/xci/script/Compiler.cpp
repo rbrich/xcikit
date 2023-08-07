@@ -139,16 +139,16 @@ public:
                 // intrinsics - just output the requested instruction
                 function().add_intrinsics();
                 auto opcode = Opcode(sym.index());
-                if (opcode <= Opcode::NoArgLast) {
+                if (opcode <= Opcode::A0Last) {
                     code().add(opcode);
-                } else if (opcode <= Opcode::B1ArgLast) {
+                } else if (opcode <= Opcode::B1Last) {
                     assert(m_instruction_args.size() == 1);
                     auto arg = m_instruction_args[0].value().to_int64();
                     if (arg < 0 || arg >= 256)
                         throw IntrinsicsFunctionError("arg value out of Byte range: "
                                   + std::to_string(arg), v.source_loc);
                     code().add_B1(opcode, (uint8_t) arg);
-                } else if (opcode <= Opcode::L1ArgLast) {
+                } else if (opcode <= Opcode::L1Last) {
                     assert(m_instruction_args.size() == 1);
                     auto arg = m_instruction_args[0].value().to_int64();
                     if (arg < 0)
@@ -156,7 +156,7 @@ public:
                                                       + std::to_string(arg), v.source_loc);
                     code().add_L1(opcode, size_t(arg));
                 } else {
-                    assert(opcode <= Opcode::L2ArgLast);
+                    assert(opcode <= Opcode::L2Last);
                     assert(m_instruction_args.size() == 2);
                     auto arg1 = m_instruction_args[0].value().to_int64();
                     if (arg1 < 0)

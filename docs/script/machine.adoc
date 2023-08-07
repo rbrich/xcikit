@@ -24,13 +24,13 @@ There are really two stacks:
         +---------------+
         |   1st local   |
 base    +===============+
-        | 1st non-local |
-        +---------------+
-        | 2nd non-local |
+        | 1st non-local | \
+        +---------------+  > tuple with nonlocals
+        | 2nd non-local | /
 (args)  +===============+
-        | 1st argument  |
-        +---------------+
-        | 2nd argument  |
+        | 1st argument  | \
+        +---------------+  > tuple with arguments
+        | 2nd argument  | /
 (ret)   +---------------+  (higher address)
 ----
 
@@ -223,11 +223,11 @@ The size of the tuple and its content depends on the function's type information
 
 == Bytecode
 
-The instructions and their arguments are encoded in a bytecode representation.
-There are 256 possible instructions, each of which can have any number of bytes
-as arguments. Some instructions use variable-length arguments, so
+The instructions and their operands are encoded in a bytecode representation.
+There are 256 possible opcodes, each of which can have any number of bytes
+as operands. Some instructions use variable-length operands, so
 the instruction code is not enough to know how many following bytes
-are the arguments. We have to look inside their bits.
+are the operands. We have to look inside their bits.
 
 Example instructions:
 
@@ -235,7 +235,7 @@ Example instructions:
 when generating the machine bytecode.
 * `LOGICAL_OR` - Pull two Bools from stack and push a Bool result
 of `||` operation back.
-* `SUBSCRIPT` - Has a type T as an instruction argument. Pulls a list of T
+* `SUBSCRIPT` - Has a type T as an instruction operand. Pulls a list of T
 and an Int index from stack. Pushes result of subscript operation back.
 
 NOTE: All instructions are documented in `Code.h` and `Machine.cpp`.
@@ -244,7 +244,7 @@ NOTE: All instructions are documented in `Code.h` and `Machine.cpp`.
 
 Types are stored in modules. Any type from the current module
 can be referenced by an instruction.
-The information that needs to be encoded in the instruction arguments
+The information that needs to be encoded in the instruction operands
 is the index of the type in the module's type table.
 
 Built-in primitive types are expected to be referenced frequently,
@@ -302,9 +302,9 @@ Translates to:
     JUMP_IF_NOT         .else
     LOAD_STATIC         (10)
     JUMP                .end
-.else
+.else:
     LOAD_STATIC         (0)
-.end
+.end:
 ----
 
 The same happens with a multi-branch if-expression.
@@ -323,16 +323,16 @@ Translates to:
     JUMP_IF_NOT         .cond1
     LOAD_STATIC         (10)
     JUMP                .end
-.cond1
+.cond1:
     LOAD_STATIC         (5)
     CALL0               (num Void -> Int32)
     CALL                (gt Int32 Int32 -> Bool)
     JUMP_IF_NOT         .else
     LOAD_STATIC         (5)
     JUMP                .end
-.else
+.else:
     LOAD_STATIC         (0)
-.end
+.end:
 ----
 
 The logic is always the same:
