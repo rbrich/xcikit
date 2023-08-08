@@ -107,7 +107,9 @@ enum class Opcode: uint8_t {
     LoadFunction,           // operand = idx of function in module, push on stack
 
     Call0,                  // operand = idx of function in current module, call it, pull args from stack, push result back
+    TailCall0,              // same as Call0, but pop stack frame before the call
     Call1,                  // operand = idx of function in builtin module, call it, pull args from stack, push result back
+    TailCall1,              // same as Call1, but pop stack frame before the call
 
     MakeClosure,            // operand = idx of function in current module, pull nonlocals from stack, wrap them into closure, push closure back
     SetBase,                // set base for Copy etc., operand = number of stack frames to climb up
@@ -126,6 +128,7 @@ enum class Opcode: uint8_t {
     // L2 (two LEB128-encoded operands)
 
     Call,                   // operand1 = idx of imported module, operand2 = idx of function in the module, call it, pull args from stack, push result back
+    TailCall,               // same as Call, but pop stack frame before the call
 
     MakeList,               // operand1 = number of elements, operand2 = elem type (type index), pulls number elems from stack, creates list on heap, pushes list handle back to stack
 

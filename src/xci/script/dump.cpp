@@ -868,12 +868,14 @@ static void dump_l1_instruction(std::ostream& os, Opcode opcode, size_t arg, con
         }
         case Opcode::LoadFunction:
         case Opcode::MakeClosure:
-        case Opcode::Call0: {
+        case Opcode::Call0:
+        case Opcode::TailCall0: {
             const auto& fn = mod.get_function(arg);
             os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
             break;
         }
-        case Opcode::Call1: {
+        case Opcode::Call1:
+        case Opcode::TailCall1: {
             const auto& fn = mod.get_imported_module(0).get_function(arg);
             os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
             break;
@@ -895,7 +897,8 @@ static void dump_l2_instruction(std::ostream& os, Opcode opcode, size_t arg1, si
 {
     os << static_cast<int>(arg1) << ' ' << static_cast<int>(arg2);
     switch (opcode) {  // NOLINT
-        case Opcode::Call: {
+        case Opcode::Call:
+        case Opcode::TailCall: {
             const auto& fn = mod.get_imported_module(arg1).get_function(arg2);
             os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
             break;

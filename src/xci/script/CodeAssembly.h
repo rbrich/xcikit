@@ -67,6 +67,7 @@ public:
     Instruction& operator[](size_t i) { return m_instr[i]; }
 
     Instruction& back() noexcept { return m_instr.back(); }
+    void pop_back() { m_instr.pop_back(); }
 
     bool operator==(const CodeAssembly& rhs) const { return m_instr == rhs.m_instr; }
 

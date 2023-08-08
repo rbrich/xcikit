@@ -15,6 +15,8 @@
 #include "ast/fold_dot_call.h"
 #include "ast/fold_tuple.h"
 #include "ast/fold_paren.h"
+#include "code/optimize_tail_call.h"
+#include "code/optimize_copy_drop.h"
 #include "typing/type_index.h"
 #include "Stack.h"
 #include <xci/compat/macros.h>
@@ -675,11 +677,11 @@ void Compiler::compile(Scope& scope, ast::Module& ast)
 //    if ((m_flags & Flags::InlineFunctions) == Flags::InlineFunctions)
 //        inline_functions(scope);
 
-//    if ((m_flags & Flags::OptimizeCopyDrop) == Flags::OptimizeCopyDrop)
-//        foreach_asm_fn_in_module(scope.module(), optimize_copy_drop);
-//
-//    if ((m_flags & Flags::OptimizeTailCall) == Flags::OptimizeTailCall)
-//        foreach_asm_fn_in_module(scope.module(), optimize_tail_call);
+    if ((m_flags & Flags::OptimizeCopyDrop) == Flags::OptimizeCopyDrop)
+        foreach_asm_fn_in_module(scope.module(), optimize_copy_drop);
+
+    if ((m_flags & Flags::OptimizeTailCall) == Flags::OptimizeTailCall)
+        foreach_asm_fn_in_module(scope.module(), optimize_tail_call);
 
     if ((m_flags & Flags::AssembleFunctions) == Flags::AssembleFunctions)
         foreach_asm_fn_in_module(scope.module(), [](Function& fn){ fn.assembly_to_bytecode(); });

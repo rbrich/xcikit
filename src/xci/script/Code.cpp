@@ -63,6 +63,9 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::Call0:             return os << "CALL0";
         case Opcode::Call1:             return os << "CALL1";
         case Opcode::Call:              return os << "CALL";
+        case Opcode::TailCall0:         return os << "TAIL_CALL0";
+        case Opcode::TailCall1:         return os << "TAIL_CALL1";
+        case Opcode::TailCall:          return os << "TAIL_CALL";
         case Opcode::Execute:           return os << "EXECUTE";
         case Opcode::MakeClosure:       return os << "MAKE_CLOSURE";
         case Opcode::MakeList:          return os << "MAKE_LIST";
