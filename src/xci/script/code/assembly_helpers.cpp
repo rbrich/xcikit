@@ -18,13 +18,13 @@ const Function& get_call_function(const CodeAssembly::Instruction& instr, const 
     Module::FunctionIdx fn_idx;
     if (instr.opcode == Opcode::Call0) {
         module = &mod;
-        fn_idx = instr.args.first;
+        fn_idx = Module::FunctionIdx(instr.args.first);
     } else if (instr.opcode == Opcode::Call1) {
         module = &mod.get_imported_module(0);
-        fn_idx = instr.args.first;
+        fn_idx = Module::FunctionIdx(instr.args.first);
     } else if (instr.opcode == Opcode::Call) {
-        module = &mod.get_imported_module(instr.args.first);
-        fn_idx = instr.args.second;
+        module = &mod.get_imported_module(Index(instr.args.first));
+        fn_idx = Module::FunctionIdx(instr.args.second);
     } else {
         assert(!"not a call instruction");
         XCI_UNREACHABLE;

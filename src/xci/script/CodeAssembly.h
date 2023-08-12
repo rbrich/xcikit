@@ -56,7 +56,7 @@ public:
     void add_L2(Opcode opcode, size_t arg1, size_t arg2) { m_instr.emplace_back(opcode, arg1, arg2); }
 
     // Label counter
-    unsigned add_label() { return m_labels++; }
+    size_t add_label() { return m_labels++; }
 
     using const_iterator = std::vector<Instruction>::const_iterator;
     const_iterator begin() const { return m_instr.begin(); }
@@ -68,6 +68,8 @@ public:
 
     Instruction& back() noexcept { return m_instr.back(); }
     void pop_back() { m_instr.pop_back(); }
+    void remove(size_t idx) { m_instr.erase(m_instr.begin() + idx); }
+    void remove(size_t idx, size_t count) { m_instr.erase(m_instr.begin() + idx, m_instr.begin() + idx + count); }
 
     bool operator==(const CodeAssembly& rhs) const { return m_instr == rhs.m_instr; }
 

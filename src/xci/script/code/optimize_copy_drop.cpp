@@ -16,7 +16,7 @@ namespace xci::script {
 using ranges::views::enumerate;
 
 
-static void move_tail_drop_up(Function& fn, CodeAssembly& ca, size_t i)
+static void move_drop_up(Function& fn, CodeAssembly& ca, size_t i)
 {
     auto* drop = &ca[i];
     while (i > 0) {
@@ -45,16 +45,57 @@ static void move_tail_drop_up(Function& fn, CodeAssembly& ca, size_t i)
 }
 
 
+namespace {
+static size_t i_offset(const CodeAssembly::Instruction& instr) { return instr.args.first; }
+static size_t i_size(const CodeAssembly::Instruction& instr) { return instr.args.second; }
+}
+
+static void merge_contiguous_copies(Function& fn, CodeAssembly& ca, size_t i)
+{
+    auto& copy1 = ca[i++];
+    while (i < ca.size()) {
+        const auto& copy2 = ca[i];
+        // Is the following instruction a continuous copy?
+        if (copy2.opcode != Opcode::Copy || i_offset(copy2) + i_size(copy2) != i_offset(copy1))
+            break;
+        copy1.args = {i_offset(copy2), i_size(copy1) + i_size(copy2)};
+        ca.remove(i);
+    }
+}
+
+
+static void eliminate_copy_drop(Function& fn, CodeAssembly& ca, size_t i)
+{
+    auto& copy = ca[i];
+    auto& drop = ca[i+1];
+    if (drop.opcode == Opcode::Drop
+    && i_size(copy) == i_size(drop)
+    && i_offset(copy) == 0 && i_offset(drop) == i_size(copy)) {
+        ca.remove(i, 2);
+    }
+}
+
+
 void optimize_copy_drop(Function& fn)
 {
     CodeAssembly& ca = fn.asm_code();
-    for (const auto& [idx, instr] : ca | enumerate) {
+
+    for (const auto& [i, instr] : ca | enumerate) {
         if (instr.opcode == Opcode::Drop) {
-            move_tail_drop_up(fn, ca, idx);
+            // Move DROP instruction up before any CALLs
+            move_drop_up(fn, ca, i);
         }
     }
 
-    // TODO: eliminate COPY/DROP pairs
+    // NOTE: ca.size() may change during the loop
+    for (size_t i = 0; i < ca.size(); ++i) {
+        if (ca[i].opcode == Opcode::Copy) {
+            // Merge multiple COPY instructions that in effect copy one continuous block of bytes
+            merge_contiguous_copies(fn, ca, i);
+            // Then check if following DROP is affecting all copied bytes and eliminate both COPY/DROP
+            eliminate_copy_drop(fn, ca, i);
+        }
+    }
 }
 
 

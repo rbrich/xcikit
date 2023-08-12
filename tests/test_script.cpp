@@ -1370,7 +1370,7 @@ TEST_CASE( "Optimize copy-drop, tail call", "[script][optimizer]" )
          LOAD_STATIC         1 (1:Int32)
          TAIL_CALL           1 60 (add (Int32, Int32) -> Int32)
     )");
-//    CHECK(optimize_code(opt, "f=fun (a:Int,b:Int)->Int { a+b }", "f") == R"(
-//         TAIL_CALL           1 60 (add (Int32, Int32) -> Int32)
-//    )");
+    CHECK(optimize_code(opt, "f=fun (a:Int,b:Int)->Int { a+b }", "f") == R"(
+         TAIL_CALL           1 60 (add (Int32, Int32) -> Int32)
+    )");
 }

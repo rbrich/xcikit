@@ -57,11 +57,11 @@ void CodeAssembly::disassemble(const Code& code)
                 instr.args.second = labels.size() - 1;
                 instr.opcode = Opcode::Annotation;
             }
-        } else
-        if (instr.opcode >= Opcode::L1First && instr.opcode <= Opcode::L1Last) {
+        }
+        else if (instr.opcode >= Opcode::L1First && instr.opcode <= Opcode::L1Last) {
             instr.args.first = leb128_decode<size_t>(it);
-        } else
-        if (instr.opcode >= Opcode::L2First && instr.opcode <= Opcode::L2Last) {
+        }
+        else if (instr.opcode >= Opcode::L2First && instr.opcode <= Opcode::L2Last) {
             instr.args = std::make_pair(leb128_decode<size_t>(it), leb128_decode<size_t>(it));
         }
         // else: opcode has no args
@@ -110,16 +110,17 @@ void CodeAssembly::assemble_to(Code& code)
                 label.processed = true;
             }
             // else: ignore, do not generate any code
-        } else
-        if (instr.opcode >= Opcode::B1First && instr.opcode <= Opcode::B1Last) {
+        }
+        else if (instr.opcode >= Opcode::B1First && instr.opcode <= Opcode::B1Last) {
             code.add_B1(instr.opcode, instr.arg_B1());
-        } else
-        if (instr.opcode >= Opcode::L1First && instr.opcode <= Opcode::L1Last) {
+        }
+        else if (instr.opcode >= Opcode::L1First && instr.opcode <= Opcode::L1Last) {
             code.add_L1(instr.opcode, instr.args.first);
-        } else
-        if (instr.opcode >= Opcode::L2First && instr.opcode <= Opcode::L2Last) {
+        }
+        else if (instr.opcode >= Opcode::L2First && instr.opcode <= Opcode::L2Last) {
             code.add_L2(instr.opcode, instr.args.first, instr.args.second);
-        } else {
+        }
+        else {
             code.add_opcode(instr.opcode);
         }
         assemble_repeat_jumps(code, labels);
