@@ -92,6 +92,16 @@ auto Module::add_function(Function&& fn) -> WeakFunctionId
 }
 
 
+auto Module::find_function(std::string_view name) const -> WeakFunctionId
+{
+    auto it = std::find_if(m_functions.begin(), m_functions.end(),
+                           [name](const Function& fn) { return fn.name() == name; });
+    if (it == m_functions.end())
+        return m_functions.not_found;
+    return it.weak_index();
+}
+
+
 auto Module::add_scope(Scope&& scope) -> ScopeIdx
 {
     assert(scope.parent() != nullptr);  // only main scope has no parent

@@ -489,6 +489,12 @@ static void introspect_module_by_name(Stack& stack, void*, void*)
 }
 
 
+static void introspect_stack_n_frames(Stack& stack, void*, void*)
+{
+    stack.push(value::Int32{(int32_t)stack.n_frames()});
+}
+
+
 void BuiltinModule::add_introspections()
 {
     add_native_function("__type_size", ti_type_index(), ti_int32(), introspect_type_size);
@@ -503,6 +509,7 @@ void BuiltinModule::add_introspections()
     add_native_function("__module_by_name", ti_string(), ti_module(), introspect_module_by_name);
     add_native_function("__n_fn", [](Module& m) { return (int) m.num_functions(); });
     add_native_function("__n_types", [](Module& m) { return (int) m.num_types(); });
+    add_native_function("__n_frames", ti_void(), ti_int32(), introspect_stack_n_frames);
 }
 
 

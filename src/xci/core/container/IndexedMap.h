@@ -1,7 +1,7 @@
 // IndexedMap.h created on 2020-03-01 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2021 Radek Brich
+// Copyright 2020–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_INDEXED_MAP_H
@@ -141,6 +141,10 @@ public:
         reference operator*() const { return m_chunk[m_chunk_idx].slot[m_slot_idx].elem; }
         pointer operator->() const { return &m_chunk[m_chunk_idx].slot[m_slot_idx].elem; }
 
+        Index index() const { return m_chunk_idx * chunk_size + m_slot_idx; }
+        Tenant tenant() const { return m_chunk[m_chunk_idx].slot[m_slot_idx].tenant; }
+        WeakIndex weak_index() const { return {index(), tenant()}; }
+
     private:
         explicit iterator(const std::vector<Chunk>& chunk) : m_chunk(chunk) {}
         explicit iterator(const std::vector<Chunk>& chunk, Index) : m_chunk(chunk), m_chunk_idx(0), m_slot_idx(0) {
@@ -175,6 +179,10 @@ public:
 
         reference operator*() const { return m_chunk[m_chunk_idx].slot[m_slot_idx].elem; }
         pointer operator->() const { return &m_chunk[m_chunk_idx].slot[m_slot_idx].elem; }
+
+        Index index() const { return m_chunk_idx * chunk_size + m_slot_idx; }
+        Tenant tenant() const { return m_chunk[m_chunk_idx].slot[m_slot_idx].tenant; }
+        WeakIndex weak_index() const { return {index(), tenant()}; }
 
     private:
         explicit const_iterator(const std::vector<Chunk>& chunk) : m_chunk(chunk) {}

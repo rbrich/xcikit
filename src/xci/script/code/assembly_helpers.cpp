@@ -7,6 +7,7 @@
 #include "assembly_helpers.h"
 #include <xci/script/Function.h>
 #include <xci/script/Module.h>
+#include <xci/compat/macros.h>
 
 namespace xci::script {
 
@@ -26,8 +27,7 @@ const Function& get_call_function(const CodeAssembly::Instruction& instr, const 
         fn_idx = instr.args.second;
     } else {
         assert(!"not a call instruction");
-        const Function* r = nullptr;
-        return *r;
+        XCI_UNREACHABLE;
     }
     return module->get_function(fn_idx);
 }
