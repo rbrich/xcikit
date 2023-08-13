@@ -419,7 +419,7 @@ public:
 
     void visit(ast::Condition& v) override {
         // See "Conditional jumps" in `docs/script/machine.adoc`
-        std::vector<unsigned> end_labels;
+        std::vector<size_t> end_labels;
         for (auto& item : v.if_then_expr) {
             // condition
             item.first->apply(*this);

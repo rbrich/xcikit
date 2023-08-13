@@ -54,7 +54,7 @@ private:
     const core::Vfs& m_vfs;
     Interpreter& m_interpreter;
     std::vector<ModulePtr> m_modules;
-    std::map<std::string, size_t> m_module_names;  // map name to index
+    std::map<std::string, Index> m_module_names;  // map name to index
 };
 
 

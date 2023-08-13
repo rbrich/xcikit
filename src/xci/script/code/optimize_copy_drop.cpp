@@ -46,8 +46,8 @@ static void move_drop_up(Function& fn, CodeAssembly& ca, size_t i)
 
 
 namespace {
-static size_t i_offset(const CodeAssembly::Instruction& instr) { return instr.args.first; }
-static size_t i_size(const CodeAssembly::Instruction& instr) { return instr.args.second; }
+size_t get_offset(const CodeAssembly::Instruction& instr) { return instr.args.first; }
+size_t get_size(const CodeAssembly::Instruction& instr) { return instr.args.second; }
 }
 
 static void merge_contiguous_copies(Function& fn, CodeAssembly& ca, size_t i)
@@ -56,9 +56,9 @@ static void merge_contiguous_copies(Function& fn, CodeAssembly& ca, size_t i)
     while (i < ca.size()) {
         const auto& copy2 = ca[i];
         // Is the following instruction a continuous copy?
-        if (copy2.opcode != Opcode::Copy || i_offset(copy2) + i_size(copy2) != i_offset(copy1))
+        if (copy2.opcode != Opcode::Copy || get_offset(copy2) + get_size(copy2) != get_offset(copy1))
             break;
-        copy1.args = {i_offset(copy2), i_size(copy1) + i_size(copy2)};
+        copy1.args = {get_offset(copy2), get_size(copy1) + get_size(copy2)};
         ca.remove(i);
     }
 }
@@ -69,8 +69,8 @@ static void eliminate_copy_drop(Function& fn, CodeAssembly& ca, size_t i)
     auto& copy = ca[i];
     auto& drop = ca[i+1];
     if (drop.opcode == Opcode::Drop
-    && i_size(copy) == i_size(drop)
-    && i_offset(copy) == 0 && i_offset(drop) == i_size(copy)) {
+    && get_size(copy) == get_size(drop)
+    && get_offset(copy) == 0 && get_offset(drop) == get_size(copy)) {
         ca.remove(i, 2);
     }
 }

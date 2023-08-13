@@ -104,7 +104,7 @@ void CodeAssembly::assemble_to(Code& code)
                 labels[label_idx].addr = code.size();
             } else if (annot == Annotation::Label) {
                 auto& label = labels[label_idx];
-                unsigned jump = code.size() - label.addr;
+                size_t jump = code.size() - label.addr;
                 assert(jump <= 255);
                 code.set(label.addr - 1, uint8_t(jump));
                 label.processed = true;
