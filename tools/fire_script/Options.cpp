@@ -36,6 +36,10 @@ static PassItem pass_names[] = {
         {"resolve_types", Flags::PPTypes},
         {"resolve_spec", Flags::PPSpec},
         {"resolve_nonlocals", Flags::PPNonlocals},
+        {"compile", Flags::CPCompile},
+        {"assemble", Flags::CPAssemble},
+        {"optimize_copy_drop", Flags::OPCopyDrop},
+        {"optimize_tail_call", Flags::OPTailCall},
 };
 
 
@@ -74,6 +78,17 @@ static bool parse_pass_list(ReplOptions& ro, const char* list_str)
 }
 
 
+void ReplOptions::apply_optimization()
+{
+    switch (optimization) {
+        case 0u: return;
+        default:
+        case 1u: compiler_flags |= Compiler::Flags::OptLevel1; return;
+        case 2u: compiler_flags |= Compiler::Flags::OptLevel2; return;
+    }
+}
+
+
 void Options::parse(char* argv[])
 {
     auto& ro = repl_opts;
@@ -84,17 +99,18 @@ void Options::parse(char* argv[])
             Option("-c, --compile", "Compile a module (don't run anything)", po.compile),
             Option("-o, --output FILE", "Output file for compiled module (default is <source basename>.firm)", po.output_file),
             Option("-e, --eval EXPR", "Execute EXPR as main input", po.expr),
-            Option("-O, --optimize", "Allow optimizations", [&ro]{ ro.compiler_flags |= Flags::OP1; }),
+            Option("-O LEVEL, --optimization", "Set optimization level (default: 1)", ro.optimization),
             Option("-r, --raw-ast", "Print raw AST", ro.print_raw_ast),
             Option("-t, --ast", "Print processed AST", ro.print_ast),
-            Option("-b, --bytecode", "Print bytecode being run", ro.print_bytecode),
+            Option("-b, --bytecode", "Print bytecode as being run", ro.print_bytecode),
             Option("-s, --symtab", "Print symbol table", ro.print_symtab),
             Option("-m, --module", "Print compiled module content", ro.print_module),
             Option("-M, --module-verbose", "Print compiled module content, including function bodies", ro.print_module_verbose),
             Option("-T, --module-ast", "Print compiled module content like -M, but dump generic functions as AST", ro.print_module_verbose_ast),
+            Option("-B, --module-dis", "Print compiled module content like -M, but disassemble bytecode", ro.print_module_verbose_dis),
             Option("--trace", "Trace bytecode", ro.trace_bytecode),
             Option("--rusage", "Measure time and resource utilization during compilation and execution", ro.print_rusage),
-            Option("-p PASS_LIST", "Preprocess AST and stop, don't compile. "
+            Option("-p PASS_LIST", "Select compiler passes to be run on main module. "
                                    "PASS_LIST is comma separated list of pass names (or unique substrings of them): "
                                    + output_pass_list()
                                    , [&ro](const char* arg){ return parse_pass_list(ro, arg); }),
@@ -103,6 +119,7 @@ void Options::parse(char* argv[])
             Option("[INPUT ...]", "Input files", [&po](const char* arg)
             { po.input_files.emplace_back(arg); return true; }),
     } (argv);
+    ro.apply_optimization();
 }
 
 

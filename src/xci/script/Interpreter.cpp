@@ -31,7 +31,7 @@ std::shared_ptr<Module> Interpreter::build_module(const std::string& name, Sourc
 
     // compile
     const auto configured_flags = m_compiler.flags();
-    m_compiler.set_flags(configured_flags | Compiler::Flags::Default);
+    m_compiler.set_flags(configured_flags | Compiler::Flags::Mandatory);
     m_compiler.compile(module->get_main_scope(), ast);
     m_compiler.set_flags(configured_flags);
 
@@ -48,7 +48,7 @@ std::shared_ptr<Module> Interpreter::build_module(const std::string& name, Sourc
 }
 
 
-TypedValue Interpreter::eval(size_t mod_idx, SourceId source_id, const InvokeCallback& cb)
+TypedValue Interpreter::eval(Index mod_idx, SourceId source_id, const InvokeCallback& cb)
 {
     // parse
     ast::Module ast;

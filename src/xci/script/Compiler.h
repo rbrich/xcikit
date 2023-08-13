@@ -17,25 +17,36 @@ namespace xci::script {
 
 class Compiler {
 public:
-    enum class Flags {
+    enum class Flags: uint32_t {
         // All compiler passes
         // UNSAFE: Don't use these flags directly - the wrong set of flags
         //         can crash the compiler (asserts in Debug mode).
-        //         Use PP* flags below.
-        FoldTuple           = 0x0001,
-        FoldDotCall         = 0x0002,
-        FoldParen           = 0x0004,
-        ResolveSymbols      = 0x0010,
-        ResolveDecl         = 0x0020,
-        ResolveTypes        = 0x0040,
-        ResolveSpec         = 0x0080,
-        ResolveNonlocals    = 0x0100,
-        CompileFunctions    = 0x1000,
-        FoldConstExpr       = 0x0001 << 16,
+        //         Use PP/CP/OP flags below, which contain required dependencies.
+        FoldTuple           = 0x0001u,
+        FoldDotCall         = 0x0002u,
+        FoldParen           = 0x0004u,
+        ResolveSymbols      = 0x0010u,
+        ResolveDecl         = 0x0020u,
+        ResolveTypes        = 0x0040u,
+        ResolveSpec         = 0x0080u,
+        ResolveNonlocals    = 0x0100u,
+        CompileFunctions    = 0x1000u,
+        AssembleFunctions   = 0x2000u,
+        FoldConstExpr       = 0x0001u << 16,
+        InlineFunctions     = 0x0002u << 16,
+        OptimizeCopyDrop    = 0x0004u << 16,
+        OptimizeTailCall    = 0x0008u << 16,
 
         // Bit masks
-        MandatoryMask       = 0xffff,
-        OptimizationMask    = 0xffff << 16,
+        MandatoryMask       = 0xffffu,
+        OptimizationMask    = 0xffffu << 16,
+
+        // Predefined optimization levels
+        OptLevel1       = OptimizeTailCall | OptimizeCopyDrop,
+        OptLevel2       = OptLevel1 | FoldConstExpr | InlineFunctions,
+
+        // ---------------------------------------------------------------------
+        // The following flags are safe to use individually
 
         // Mandatory AST passes
         // SAFE: these flags bring in also their dependencies
@@ -48,20 +59,30 @@ public:
         PPSpec          = ResolveSpec | PPTypes,
         PPNonlocals     = ResolveNonlocals | PPSpec,
 
-        // All mandatory passes, no optimization
-        Default         = CompileFunctions | PPNonlocals,
+        // Mandatory compilation passes
+        CPCompile       = CompileFunctions | PPNonlocals,
+        CPAssemble      = AssembleFunctions | CPCompile,
 
         // Optimization passes
-        OP1             = FoldConstExpr,
+        OPCopyDrop      = OptimizeCopyDrop | CPCompile,
+        OPTailCall      = OptimizeTailCall | CPCompile,
+
+        // All mandatory passes, no optimization
+        Mandatory       = CPAssemble,
 
         // All mandatory passes + optimizations
-        O1              = Default | OP1,
+        O1              = Mandatory | OptLevel1,
+        O2              = Mandatory | OptLevel2,
+
+        // Mandatory passes + default optimizations
+        Default         = O1
     };
 
     // Allow basic arithmetic on OpCode
-    friend inline Flags operator|(Flags a, Flags b) { return Flags(int32_t(a) | int32_t(b)); }
-    friend inline Flags operator&(Flags a, Flags b) { return Flags(int32_t(a) & int32_t(b)); }
-    friend inline Flags operator|=(Flags& a, Flags b) { return a = a | b; }
+    friend inline constexpr Flags operator~(Flags a) { return Flags(~uint32_t(a)); }
+    friend inline constexpr Flags operator|(Flags a, Flags b) { return Flags(uint32_t(a) | uint32_t(b)); }
+    friend inline constexpr Flags operator&(Flags a, Flags b) { return Flags(uint32_t(a) & uint32_t(b)); }
+    friend inline constexpr Flags operator|=(Flags& a, Flags b) { return a = a | b; }
 
     Compiler() = default;
     explicit Compiler(Flags flags) : m_flags(flags) {}
@@ -78,11 +99,11 @@ public:
     /// (all other phases were run on it)
     void compile_function(Scope& scope, ast::Expression& body);
 
+private:
     /// Compile all functions in a module except `main`
     /// that are marked with compile flag but not yet compiled
     void compile_all_functions(Scope& main);
 
-private:
     Flags m_flags = Flags::Default;
 };
 

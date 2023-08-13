@@ -59,7 +59,7 @@ bool Repl::evaluate(const std::string& module_name, std::string module_source, E
         rusage.start_if(m_opts.print_rusage, "compiled");
         compiler.compile(module->get_main_scope(), ast);
         rusage.stop();
-        if ((m_opts.compiler_flags & Compiler::Flags::Default) != Compiler::Flags::Default) {
+        if ((m_opts.compiler_flags & Compiler::Flags::Mandatory) != Compiler::Flags::Mandatory) {
             // We're only processing the AST, without actual compilation
             mode = EvalMode::Preprocess;
         }
@@ -125,12 +125,16 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
     }
 
     // print compiled module content
-    if (m_opts.print_module || m_opts.print_module_verbose || m_opts.print_module_verbose_ast) {
+    if (m_opts.print_module || m_opts.print_module_verbose ||
+        m_opts.print_module_verbose_ast|| m_opts.print_module_verbose_dis)
+    {
         auto s = t.stream();
         if (m_opts.print_module_verbose)
             s << dump_module_verbose;
         if (m_opts.print_module_verbose_ast)
             s << dump_module_verbose << dump_tree;
+        if (m_opts.print_module_verbose_dis)
+            s << dump_module_verbose << dump_disassemble;
         s << "Module content:" << endl << module << endl;
     }
 
@@ -198,6 +202,8 @@ void Repl::print_error(const ScriptError& e)
 void Repl::print_runtime_error(const RuntimeError& e)
 {
     core::TermCtl& t = m_ctx.term_out;
+
+    t.print("Stack trace:\n");
 
     if (!e.trace().empty()) {
         int i = 0;

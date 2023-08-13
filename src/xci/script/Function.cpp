@@ -100,6 +100,14 @@ void Function::set_symtab_by_qualified_name(std::string_view name)
 }
 
 
+void Function::assembly_to_bytecode()
+{
+    auto ac = std::move(asm_code());
+    set_bytecode();
+    ac.assemble_to(bytecode());
+}
+
+
 void Function::copy_body(const Function& src)
 {
     return std::visit([this](const auto& v) {
@@ -110,12 +118,6 @@ void Function::copy_body(const Function& src)
             m_body = v;
         }
     }, src.m_body);
-}
-
-
-bool Function::CompiledBody::operator==(const Function::CompiledBody& rhs) const
-{
-    return code == rhs.code;
 }
 
 

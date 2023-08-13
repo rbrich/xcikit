@@ -13,6 +13,9 @@ add_library(xci-script
     ast/resolve_nonlocals.cpp
     ast/resolve_symbols.cpp
     ast/resolve_types.cpp
+    code/assembly_helpers.cpp
+    code/optimize_copy_drop.cpp
+    code/optimize_tail_call.cpp
     parser/raw_string.cpp
     typing/TypeChecker.cpp
     typing/generic_resolver.cpp
@@ -21,6 +24,7 @@ add_library(xci-script
     Builtin.cpp
     Class.cpp
     Code.cpp
+    CodeAssembly.cpp
     Compiler.cpp
     Error.cpp
     Function.cpp

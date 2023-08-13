@@ -31,7 +31,7 @@ public:
     std::shared_ptr<Module> build_module(const std::string& name, SourceId source_id);
 
     using InvokeCallback = Machine::InvokeCallback;
-    TypedValue eval(size_t mod_idx, SourceId source_id, const InvokeCallback& cb = Machine::no_invoke_cb);
+    TypedValue eval(Index mod_idx, SourceId source_id, const InvokeCallback& cb = Machine::no_invoke_cb);
     TypedValue eval(std::shared_ptr<Module> mod, std::string input, const InvokeCallback& cb = Machine::no_invoke_cb);
     TypedValue eval(std::string input, bool import_std = true, const InvokeCallback& cb = Machine::no_invoke_cb);
 

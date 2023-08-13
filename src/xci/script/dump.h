@@ -1,7 +1,7 @@
 // dump.h created on 2019-10-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_DUMP_H
@@ -18,6 +18,7 @@ namespace xci::script {
 // stream manipulators
 std::ostream& dump_tree(std::ostream& os);
 std::ostream& dump_module_verbose(std::ostream& os);
+std::ostream& dump_disassemble(std::ostream& os);
 std::ostream& put_indent(std::ostream& os);
 std::ostream& rule_indent(std::ostream& os);  // indent with visible guide
 std::ostream& more_indent(std::ostream& os);
@@ -64,8 +65,10 @@ std::ostream& operator<<(std::ostream& os, const Module& v);
 // Function
 std::ostream& operator<<(std::ostream& os, const Function& f);
 std::ostream& operator<<(std::ostream& os, Function::Kind v);
-struct DumpInstruction { const Function& func; Code::const_iterator& pos; };
+struct DumpInstruction { const Function& func; const CodeAssembly::Instruction& instr; };
 std::ostream& operator<<(std::ostream& os, DumpInstruction&& v);
+struct DumpBytecode { const Function& func; Code::const_iterator& pos; };
+std::ostream& operator<<(std::ostream& os, DumpBytecode&& v);
 
 // Module
 std::ostream& operator<<(std::ostream& os, const Module& v);

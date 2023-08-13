@@ -63,6 +63,9 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::Call0:             return os << "CALL0";
         case Opcode::Call1:             return os << "CALL1";
         case Opcode::Call:              return os << "CALL";
+        case Opcode::TailCall0:         return os << "TAIL_CALL0";
+        case Opcode::TailCall1:         return os << "TAIL_CALL1";
+        case Opcode::TailCall:          return os << "TAIL_CALL";
         case Opcode::Execute:           return os << "EXECUTE";
         case Opcode::MakeClosure:       return os << "MAKE_CLOSURE";
         case Opcode::MakeList:          return os << "MAKE_LIST";
@@ -71,26 +74,28 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::DecRef:            return os << "DEC_REF";
         case Opcode::Jump:              return os << "JUMP";
         case Opcode::JumpIfNot:         return os << "JUMP_IF_NOT";
+        case Opcode::Ret:               return os << "RET";
+        case Opcode::Annotation:        return os << "(ANNOTATION)";
     }
     XCI_UNREACHABLE;
 }
 
 
-size_t Code::add_L1(Opcode opcode, size_t arg)
+size_t Code::add_L1(Opcode opcode, size_t operand)
 {
     const auto orig_ops = m_ops.size();
     add_opcode(opcode);
-    leb128_encode(m_ops, arg);
+    leb128_encode(m_ops, operand);
     return m_ops.size() - orig_ops;
 }
 
 
-size_t Code::add_L2(Opcode opcode, size_t arg1, size_t arg2)
+size_t Code::add_L2(Opcode opcode, size_t operand1, size_t operand2)
 {
     const auto orig_ops = m_ops.size();
     add_opcode(opcode);
-    leb128_encode(m_ops, arg1);
-    leb128_encode(m_ops, arg2);
+    leb128_encode(m_ops, operand1);
+    leb128_encode(m_ops, operand2);
     return m_ops.size() - orig_ops;
 }
 

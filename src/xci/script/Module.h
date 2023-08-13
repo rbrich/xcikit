@@ -77,9 +77,11 @@ public:
 
     // Functions
     WeakFunctionId add_function(Function&& fn);
+    const Function* get_function(WeakFunctionId id) const { return m_functions.get(id); }
     const Function& get_function(FunctionIdx id) const { return m_functions[id]; }
     Function& get_function(FunctionIdx id) { return m_functions[id]; }
     Function& get_main_function() { return m_functions[0]; }
+    WeakFunctionId find_function(std::string_view name) const;
     Size num_functions() const { return Size(m_functions.size()); }
 
     // Scopes

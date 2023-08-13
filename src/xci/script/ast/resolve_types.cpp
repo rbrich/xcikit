@@ -171,14 +171,14 @@ public:
                 };
                 // check args - their number and type depends on Opcode
                 auto opcode = (Opcode) sym.index();
-                if (opcode <= Opcode::NoArgLast) {
+                if (opcode <= Opcode::A0Last) {
                     if (!arg.type_info.is_void())
                         throw UnexpectedArgumentType(ti_void(), arg.type_info, v.source_loc);
-                } else if (opcode <= Opcode::L1ArgLast) {
+                } else if (opcode <= Opcode::L1Last) {
                     if (!check_type(arg.type_info))
                         throw UnexpectedArgumentType(ti_int32(), arg.type_info, arg.source_loc);
                 } else {
-                    assert(opcode <= Opcode::L2ArgLast);
+                    assert(opcode <= Opcode::L2Last);
                     if (!arg.type_info.is_tuple() || arg.type_info.subtypes().size() != 2)
                         throw UnexpectedArgumentType(ti_tuple(ti_int32(), ti_int32()),
                                                      arg.type_info, v.source_loc);

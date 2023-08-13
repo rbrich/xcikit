@@ -38,6 +38,7 @@ struct Context {
     Context() {
         Logger::init(Logger::Level::Warning);
         vfs.mount(XCI_SHARE);
+        interpreter.configure(Compiler::Flags::Mandatory);
     }
 };
 
@@ -107,11 +108,41 @@ static std::string optimize(const std::string& input)
     module.import_module("builtin");
     module.import_module("std");
 
-    Compiler compiler(Compiler::Flags::O1);
+    Compiler compiler(Compiler::Flags::O2);
     compiler.compile(module.get_main_scope(), ast);
 
     std::ostringstream os;
     os << ast;
+    return os.str();
+}
+
+
+static std::string optimize_code(Compiler::Flags opt, const std::string& input, std::string_view fn_name = "main")
+{
+    SourceManager src_man;
+    auto src_id = src_man.add_source("<input>", input);
+
+    ast::Module ast;
+    Parser parser {src_man};
+    parser.parse(src_id, ast);
+
+    Context& ctx = context();
+    Module module {ctx.interpreter.module_manager(), "main"};
+    module.import_module("builtin");
+    module.import_module("std");
+
+    Compiler compiler(opt | (Compiler::Flags::Mandatory & ~Compiler::Flags::AssembleFunctions));
+    compiler.compile(module.get_main_scope(), ast);
+
+    const Function* fn = module.get_function(module.find_function(fn_name));
+    REQUIRE(fn);
+
+    std::ostringstream os;
+    os << '\n';  // for nicer formatting in CHECK
+    const char* indent = "    ";
+    for (const auto& instr : fn->asm_code())
+        os << indent << DumpInstruction{*fn, instr} << '\n';
+    os << indent;
     return os.str();
 }
 
@@ -1321,4 +1352,29 @@ TEST_CASE( "Fold const expressions", "[script][optimizer]" )
 
     // cast of constant value is collapsed to the value
     CHECK(optimize("42l:Int") == "42");
+}
+
+
+TEST_CASE( "Optimize copy-drop, tail call", "[script][optimizer]" )
+{
+    // tail call optimization - fewer frames pushed on stack
+    CHECK(interpret("f = { { __n_frames } }; f") == "3");  // not optimized
+    const auto orig_flags = context().interpreter.compiler().flags();
+    context().interpreter.configure(Compiler::Flags::O1);
+    CHECK(interpret("f = { { __n_frames } }; f") == "1");  // optimized
+    context().interpreter.configure(orig_flags);
+    // check generated code
+    constexpr auto opt = Compiler::Flags::OptimizeCopyDrop | Compiler::Flags::OptimizeTailCall;
+    CHECK(optimize_code(opt, "1+2") == R"(
+         LOAD_STATIC         0 (2:Int32)
+         LOAD_STATIC         1 (1:Int32)
+         TAIL_CALL           1 60 (add (Int32, Int32) -> Int32)
+    )");
+    CHECK(optimize_code(opt, "f=fun (a:Int,b:Int)->Int { a+b }", "f") == R"(
+         TAIL_CALL           1 60 (add (Int32, Int32) -> Int32)
+    )");
+    CHECK(optimize_code(opt, "f2=fun (b:Int,a:Int64)->Int { b }; f=fun (a:Int64,b:Int)->Int { f2 (b,a) }", "f") == R"(
+         SWAP                8 4
+         TAIL_CALL0          1 (f2 (b: Int32, a: Int64) -> Int32)
+    )");
 }

@@ -1,7 +1,7 @@
 // IndexedMap.h created on 2020-03-01 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2021 Radek Brich
+// Copyright 2020–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_INDEXED_MAP_H
@@ -138,18 +138,22 @@ public:
         }
         iterator operator++(int) { auto v = *this; ++*this; return v; }
 
-        reference operator*() const { return m_chunk[m_chunk_idx].slot[m_slot_idx].elem; }
-        pointer operator->() const { return &m_chunk[m_chunk_idx].slot[m_slot_idx].elem; }
+        reference operator*() const { return (*m_chunk)[m_chunk_idx].slot[m_slot_idx].elem; }
+        pointer operator->() const { return &(*m_chunk)[m_chunk_idx].slot[m_slot_idx].elem; }
+
+        Index index() const { return m_chunk_idx * chunk_size + m_slot_idx; }
+        Tenant tenant() const { return (*m_chunk)[m_chunk_idx].slot[m_slot_idx].tenant; }
+        WeakIndex weak_index() const { return {index(), tenant()}; }
 
     private:
-        explicit iterator(const std::vector<Chunk>& chunk) : m_chunk(chunk) {}
-        explicit iterator(const std::vector<Chunk>& chunk, Index) : m_chunk(chunk), m_chunk_idx(0), m_slot_idx(0) {
+        explicit iterator(const std::vector<Chunk>& chunk) : m_chunk(&chunk) {}
+        explicit iterator(const std::vector<Chunk>& chunk, Index) : m_chunk(&chunk), m_chunk_idx(0), m_slot_idx(0) {
             jump_to_next();
         }
 
         void jump_to_next();
 
-        std::vector<Chunk>& m_chunk;
+        std::vector<Chunk>* m_chunk;
         Index m_chunk_idx = no_index;
         Index m_slot_idx = no_index;
     };
@@ -173,18 +177,22 @@ public:
         }
         const_iterator operator++(int) { auto v = *this; ++*this; return v; }
 
-        reference operator*() const { return m_chunk[m_chunk_idx].slot[m_slot_idx].elem; }
-        pointer operator->() const { return &m_chunk[m_chunk_idx].slot[m_slot_idx].elem; }
+        reference operator*() const { return (*m_chunk)[m_chunk_idx].slot[m_slot_idx].elem; }
+        pointer operator->() const { return &(*m_chunk)[m_chunk_idx].slot[m_slot_idx].elem; }
+
+        Index index() const { return m_chunk_idx * chunk_size + m_slot_idx; }
+        Tenant tenant() const { return (*m_chunk)[m_chunk_idx].slot[m_slot_idx].tenant; }
+        WeakIndex weak_index() const { return {index(), tenant()}; }
 
     private:
-        explicit const_iterator(const std::vector<Chunk>& chunk) : m_chunk(chunk) {}
-        explicit const_iterator(const std::vector<Chunk>& chunk, Index) : m_chunk(chunk), m_chunk_idx(0), m_slot_idx(0) {
+        explicit const_iterator(const std::vector<Chunk>& chunk) : m_chunk(&chunk) {}
+        explicit const_iterator(const std::vector<Chunk>& chunk, Index) : m_chunk(&chunk), m_chunk_idx(0), m_slot_idx(0) {
             jump_to_next();
         }
 
         void jump_to_next();
 
-        const std::vector<Chunk>& m_chunk;
+        const std::vector<Chunk>* m_chunk;
         Index m_chunk_idx = no_index;
         Index m_slot_idx = no_index;
     };
@@ -428,8 +436,8 @@ auto IndexedMap<T>::acquire_slot(Index& index) -> Slot&
 template<class T>
 void IndexedMap<T>::iterator::jump_to_next()
 {
-    while (m_chunk_idx < m_chunk.size()) {
-        const Chunk& chunk = m_chunk[m_chunk_idx];
+    while (m_chunk_idx < m_chunk->size()) {
+        const Chunk& chunk = (*m_chunk)[m_chunk_idx];
         while ((chunk.free_map & (uint64_t{1} << m_slot_idx)) == 0) {
             // slot is free, jump to next one
             ++m_slot_idx;
@@ -457,8 +465,8 @@ void IndexedMap<T>::iterator::jump_to_next()
 template<class T>
 void IndexedMap<T>::const_iterator::jump_to_next()
 {
-    while (m_chunk_idx < m_chunk.size()) {
-        const Chunk& chunk = m_chunk[m_chunk_idx];
+    while (m_chunk_idx < m_chunk->size()) {
+        const Chunk& chunk = (*m_chunk)[m_chunk_idx];
         while ((chunk.free_map & (uint64_t{1} << m_slot_idx)) == 0) {
             // slot is free, jump to next one
             ++m_slot_idx;

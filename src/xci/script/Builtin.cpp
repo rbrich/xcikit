@@ -61,7 +61,8 @@ BuiltinModule::BuiltinModule(ModuleManager& module_manager) : Module(module_mana
 {
     get_main_function().signature().set_parameter(ti_void());
     get_main_function().signature().set_return_type(ti_void());
-    get_main_function().set_code();
+    get_main_function().set_bytecode();
+    get_main_function().bytecode().add_opcode(Opcode::Ret);
     symtab().add({"void", Symbol::Value, add_value(TypedValue{ti_void()})});
     symtab().add({"false", Symbol::Value, add_value(TypedValue{value::Bool(false)})});
     symtab().add({"true", Symbol::Value, add_value(TypedValue{value::Bool(true)})});
@@ -488,6 +489,12 @@ static void introspect_module_by_name(Stack& stack, void*, void*)
 }
 
 
+static void introspect_stack_n_frames(Stack& stack, void*, void*)
+{
+    stack.push(value::Int32{(int32_t)stack.n_frames()});
+}
+
+
 void BuiltinModule::add_introspections()
 {
     add_native_function("__type_size", ti_type_index(), ti_int32(), introspect_type_size);
@@ -502,6 +509,7 @@ void BuiltinModule::add_introspections()
     add_native_function("__module_by_name", ti_string(), ti_module(), introspect_module_by_name);
     add_native_function("__n_fn", [](Module& m) { return (int) m.num_functions(); });
     add_native_function("__n_types", [](Module& m) { return (int) m.num_types(); });
+    add_native_function("__n_frames", ti_void(), ti_int32(), introspect_stack_n_frames);
 }
 
 

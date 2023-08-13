@@ -1,7 +1,7 @@
 // ArgParser.cpp created on 2019-06-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019, 2020, 2021 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "ArgParser.h"
@@ -125,7 +125,7 @@ std::string Option::usage() const
 {
     auto& t = TermCtl::stdout_instance();
     std::string res;
-    bool required = (is_positional() && !is_remainder()) && required_args() != 0;
+    const bool required = (is_positional() && !is_remainder()) && required_args() != 0;
     if (!required)
         res += '[';
     bool first = true;
@@ -303,7 +303,7 @@ ArgParser& ArgParser::operator()(const char* argv[], bool detect_width, unsigned
 {
     m_max_width = max_width == 0 ? ~0u : max_width;
     if (detect_width) {
-        int detected_width = TermCtl::stdout_instance().size().cols;
+        const int detected_width = TermCtl::stdout_instance().size().cols;
         if (detected_width != 0)
             m_max_width = std::min(m_max_width, (unsigned) std::max(detected_width, 80));
     }
