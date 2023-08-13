@@ -48,7 +48,7 @@ static void move_drop_up(Function& fn, CodeAssembly& ca, size_t i)
 namespace {
 size_t get_offset(const CodeAssembly::Instruction& instr) { return instr.args.first; }
 size_t get_size(const CodeAssembly::Instruction& instr) { return instr.args.second; }
-}
+} // namespace
 
 static void merge_contiguous_copies(Function& fn, CodeAssembly& ca, size_t i)
 {
@@ -76,6 +76,27 @@ static void eliminate_copy_drop(Function& fn, CodeAssembly& ca, size_t i)
 }
 
 
+static void replace_copy_drop_by_swap(Function& fn, CodeAssembly& ca, size_t i)
+{
+    if (i + 2 >= ca.size())
+        return;
+    auto& copy1 = ca[i];
+    auto& copy2 = ca[i+1];
+    auto& drop = ca[i+2];
+    if (copy1.opcode != Opcode::Copy || copy2.opcode != Opcode::Copy || drop.opcode != Opcode::Drop)
+        return;
+    if (get_offset(copy1) == 0 && get_offset(copy2) == get_size(copy1)
+    && get_size(copy1) + get_size(copy2) == get_size(drop)
+    && get_offset(drop) == get_size(drop))
+    {
+        copy1.opcode = Opcode::Swap;
+        copy1.args.first = get_size(copy1);
+        copy1.args.second = get_size(copy2);
+        ca.remove(i+1, 2);
+    }
+}
+
+
 void optimize_copy_drop(Function& fn)
 {
     CodeAssembly& ca = fn.asm_code();
@@ -95,6 +116,8 @@ void optimize_copy_drop(Function& fn)
             // Then check if following DROP is affecting all copied bytes and eliminate both COPY/DROP
             eliminate_copy_drop(fn, ca, i);
         }
+        // Special case: non-continuous COPY+DROP to SWAP
+       replace_copy_drop_by_swap(fn, ca, i);
     }
 }
 

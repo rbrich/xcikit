@@ -1373,4 +1373,8 @@ TEST_CASE( "Optimize copy-drop, tail call", "[script][optimizer]" )
     CHECK(optimize_code(opt, "f=fun (a:Int,b:Int)->Int { a+b }", "f") == R"(
          TAIL_CALL           1 60 (add (Int32, Int32) -> Int32)
     )");
+    CHECK(optimize_code(opt, "f2=fun (b:Int,a:Int64)->Int { b }; f=fun (a:Int64,b:Int)->Int { f2 (b,a) }", "f") == R"(
+         SWAP                8 4
+         TAIL_CALL0          1 (f2 (b: Int32, a: Int64) -> Int32)
+    )");
 }
