@@ -81,21 +81,21 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
 }
 
 
-size_t Code::add_L1(Opcode opcode, size_t arg)
+size_t Code::add_L1(Opcode opcode, size_t operand)
 {
     const auto orig_ops = m_ops.size();
     add_opcode(opcode);
-    leb128_encode(m_ops, arg);
+    leb128_encode(m_ops, operand);
     return m_ops.size() - orig_ops;
 }
 
 
-size_t Code::add_L2(Opcode opcode, size_t arg1, size_t arg2)
+size_t Code::add_L2(Opcode opcode, size_t operand1, size_t operand2)
 {
     const auto orig_ops = m_ops.size();
     add_opcode(opcode);
-    leb128_encode(m_ops, arg1);
-    leb128_encode(m_ops, arg2);
+    leb128_encode(m_ops, operand1);
+    leb128_encode(m_ops, operand2);
     return m_ops.size() - orig_ops;
 }
 

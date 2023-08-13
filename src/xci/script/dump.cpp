@@ -945,12 +945,12 @@ std::ostream& operator<<(std::ostream& os, DumpBytecode&& v)
     if (opcode >= Opcode::B1First && opcode <= Opcode::B1Last) {
         const auto arg = *(v.pos++);
         dump_b1_instruction(os, opcode, arg);
-    } else
-    if (opcode >= Opcode::L1First && opcode <= Opcode::L1Last) {
+    }
+    else if (opcode >= Opcode::L1First && opcode <= Opcode::L1Last) {
         const auto arg = leb128_decode<Index>(v.pos);
         dump_l1_instruction(os, opcode, arg, v.func.module());
-    } else
-    if (opcode >= Opcode::L2First && opcode <= Opcode::L2Last) {
+    }
+    else if (opcode >= Opcode::L2First && opcode <= Opcode::L2Last) {
         const auto arg1 = leb128_decode<Index>(v.pos);
         const auto arg2 = leb128_decode<Index>(v.pos);
         dump_l2_instruction(os, opcode, arg1, arg2, v.func.module());

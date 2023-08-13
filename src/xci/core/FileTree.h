@@ -1,7 +1,7 @@
 // FileTree.h created on 2020-10-05 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_FILETREE_H
@@ -20,6 +20,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <filesystem>
+#include <algorithm>  // sort
 #include <cstring>
 #include <cassert>
 

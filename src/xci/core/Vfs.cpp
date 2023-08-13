@@ -1,7 +1,7 @@
 // Vfs.cpp created on 2018-09-01 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Vfs.h"
@@ -93,7 +93,7 @@ DarArchive::DarArchive(std::string&& path, std::unique_ptr<std::istream>&& strea
     TRACE("Opening archive: {}", m_path);
     // obtain file size
     m_stream->seekg(0, std::ios_base::end);
-    size_t size = size_t(m_stream->tellg());
+    const auto size = size_t(m_stream->tellg());
     m_stream->seekg(0);
 
     // read archive index
