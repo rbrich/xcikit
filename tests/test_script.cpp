@@ -767,8 +767,11 @@ TEST_CASE( "Function parameters", "[script][interpreter]" )
 {
     CHECK(interpret("a=1; f=fun a { a }; f 2") == "2");
     CHECK(interpret("a=1; f=fun b { a }; f 2") == "1");
+    CHECK(interpret("f=fun (a,b) { a }; f (1,2)") == "1");
+    CHECK_THROWS_AS(interpret("f=fun a,b { a }; f (1,2)"), ParseError);  // parens around tuple param are required
     CHECK_THROWS_AS(interpret("f=fun (a,b) { a }; f 2"), FunctionNotFound);
-    CHECK(interpret("a=1; f=fun b { a }; f 2") == "1");
+    CHECK(interpret("f=fun a:[Int] { a }; f [2]") == "[2]");
+    CHECK(interpret("f=fun a:(x:Int,y:Float) { a.y }; f (1, 2.0f)") == "2.0f");
     CHECK_THROWS_AS(interpret("f=fun (a,b) { a }; f 2,3"), FunctionNotFound);  // call has higher precedence than comma
     CHECK(interpret("f=fun (c:(a:Int,b:Int),d) { d }; f ((2,3),4)") == "4");
     CHECK(interpret("f=fun (c:(a:Int,b:Int),d) { c.a }; f ((2,3),4)") == "2");
@@ -776,6 +779,12 @@ TEST_CASE( "Function parameters", "[script][interpreter]" )
     CHECK(interpret("f=fun a:((a:Int,b:Int),Int) { a }; f ((2,3),4)") == "((a=2, b=3), 4)");
     CHECK(interpret("f=fun (c:(a,b),d) { d }; f ((2,3),4)") == "4");
     CHECK(interpret("f=fun (c:(a,b),d) { c.a }; f ((2,3),4)") == "2");
+    // Void param = same as block
+    CHECK(interpret("a=1; f={ a }; f") == "1");
+    CHECK(interpret("a=1; f=fun Void { a }; f") == "1");
+    CHECK(interpret("a=1; f=fun () { a }; f") == "1");
+    CHECK(interpret("a=1; f=fun() { a }; f") == "1");
+    CHECK(interpret("a=1; f=fun(Void){a}; f") == "1");
 }
 
 
