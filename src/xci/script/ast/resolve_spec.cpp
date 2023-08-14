@@ -545,30 +545,6 @@ private:
     Module& module() const { return m_scope.module(); }
     Function& function() const { return m_scope.function(); }
 
-    // Check return type matches and set it to concrete type if it's generic.
-    void resolve_return_type(Signature& sig, const TypeInfo& deduced,
-                             Scope& scope, const SourceLocation& loc) const
-    {
-        if (sig.return_type.has_unknown()) {
-            if (deduced.is_unknown() && !deduced.has_generic()) {
-                if (!sig.has_any_generic())
-                    throw MissingExplicitType(loc);
-                return;  // nothing to resolve
-            }
-            if (deduced.is_callable() && &sig == &deduced.signature())
-                throw MissingExplicitType(loc);  // the return type is recursive!
-            specialize_arg(sig.return_type, deduced, scope.type_args(),
-                    [](const TypeInfo& exp, const TypeInfo& got) {
-                        throw UnexpectedReturnType(exp, got);
-                    });
-            resolve_type_vars(sig, scope.type_args());  // fill in concrete types using new type var info
-            sig.set_return_type(deduced);  // Unknown/var=0 not handled by resolve_type_vars
-            return;
-        }
-        if (sig.return_type != deduced)
-            throw UnexpectedReturnType(sig.return_type, deduced);
-    }
-
     /// Resolve return type after applying m_call_sig
     TypeInfo resolve_return_type_from_call_args(const SignaturePtr& signature, ast::Call& v)
     {
@@ -678,8 +654,8 @@ private:
         // resolve generic return type
         if (!deduced_ret.is_unknown() && deduced_ret != sig_ret)
             specialize_arg(sig_ret, deduced_ret, scope.type_args(),
-                           [](const TypeInfo& exp, const TypeInfo& got) {
-                               throw UnexpectedReturnType(exp, got);
+                           [&loc](const TypeInfo& exp, const TypeInfo& got) {
+                               throw UnexpectedReturnType(exp, got, loc);
                            });
         resolve_generic_type(sig_ret, scope.type_args());
         signature.return_type = sig_ret;

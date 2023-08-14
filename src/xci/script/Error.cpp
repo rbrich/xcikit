@@ -29,9 +29,9 @@ UnexpectedArgumentType::UnexpectedArgumentType(const TypeInfo& exp, const TypeIn
 {}
 
 
-UnexpectedReturnType::UnexpectedReturnType(const TypeInfo& exp, const TypeInfo& got)
+UnexpectedReturnType::UnexpectedReturnType(const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc)
         : ScriptError(fmt::format("function returns {}, body evaluates to {}",
-                                  exp, got))
+                                  exp, got), loc)
 {}
 
 

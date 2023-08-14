@@ -144,6 +144,30 @@ void resolve_type_vars(Signature& signature, const Scope& scope)
 }
 
 
+void resolve_return_type(Signature& sig, const TypeInfo& deduced,
+                         Scope& scope, const SourceLocation& loc)
+{
+    if (sig.return_type.has_unknown()) {
+        if (deduced.is_unknown() && !deduced.has_generic()) {
+            if (!sig.has_any_generic())
+                throw MissingExplicitType(loc);
+            return;  // nothing to resolve
+        }
+        if (deduced.is_callable() && &sig == &deduced.signature())
+            throw MissingExplicitType(loc);  // the return type is recursive!
+        specialize_arg(sig.return_type, deduced, scope.type_args(),
+                [&loc](const TypeInfo& exp, const TypeInfo& got) {
+                    throw UnexpectedReturnType(exp, got, loc);
+                });
+        resolve_type_vars(sig, scope.type_args());  // fill in concrete types using new type var info
+        sig.set_return_type(deduced);  // Unknown/var=0 not handled by resolve_type_vars
+        return;
+    }
+    if (sig.return_type.effective_type() != deduced.effective_type())
+        throw UnexpectedReturnType(sig.return_type, deduced, loc);
+}
+
+
 void specialize_arg(const TypeInfo& sig, const TypeInfo& deduced,
                     TypeArgs& type_args,
                     const std::function<void(const TypeInfo& exp, const TypeInfo& got)>& exc_cb)

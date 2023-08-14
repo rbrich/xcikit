@@ -164,7 +164,7 @@ struct UnexpectedArgumentType : public ScriptError {
 
 
 struct UnexpectedReturnType : public ScriptError {
-    explicit UnexpectedReturnType(const TypeInfo& exp, const TypeInfo& got);
+    explicit UnexpectedReturnType(const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc);
 };
 
 

@@ -465,6 +465,7 @@ TEST_CASE( "Variables", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret("m = { m = m }"), MissingExplicitType);
     CHECK_THROWS_AS(interpret_std("m = { m = m + 1 }"), MissingExplicitType);
     CHECK(interpret_std("m = { m = 1; m }; m") == "1");
+    CHECK(interpret_std("x=1; p=fun ()->Int { x }; p") == "1");
     // "m = { m + 1 }" compiles fine, but infinitely recurses
     CHECK_THROWS_AS(interpret_std("a:[Char] = [1,2,3]"), DefinitionTypeMismatch);
 }
