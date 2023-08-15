@@ -14,7 +14,7 @@ namespace xci::script {
 using ranges::views::zip;
 
 
-MatchScore match_params(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& expected)
+MatchScore match_inst_types(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& expected)
 {
     if (candidate.size() != expected.size())
         return MatchScore(-1);

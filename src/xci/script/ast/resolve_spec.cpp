@@ -224,7 +224,7 @@ public:
                     assert(psym->type() == Symbol::Instance);
                     auto& inst = inst_mod->get_instance(psym->index());
                     auto inst_fn = inst.get_function(cls_fn_idx);
-                    auto m = match_params(inst.types(), resolved_types);
+                    auto m = match_inst_types(inst.types(), resolved_types);
                     candidates.push_back({inst_mod, inst_fn.scope_index, psym, {}, {}, inst_type_args, m});
                 }
 

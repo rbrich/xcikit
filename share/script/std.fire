@@ -287,6 +287,7 @@ class Cast T R {
 }
 
 instance<T> Cast T Void { cast = {} }
+instance<T> Cast T T { cast = { __noop } }
 
 instance Cast Bool Byte { cast = { __noop } }
 instance Cast Bool UInt32 { cast = { __cast 0x13 } }
