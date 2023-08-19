@@ -867,6 +867,8 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
     CHECK(interpret("fun<T> [T] -> [T] { __noop } [1,2]") == "[1, 2]");
     CHECK(interpret("len = fun<T> [T] -> UInt { __list_length __type_index<T> }; len [1,2,3]") == "3U");
     CHECK(interpret_std("f = fun<T> a:[T] -> T { a!1 }; f [1,2,3]") == "2");
+    CHECK(interpret_std("clear = fun<T> [T] -> [T] { []:[T] }; clear [1,2,3]") == "[]");
+    CHECK(interpret("clear = fun<T> [T] -> [T] { [] }; clear [1,2,3]") == "[]");
 }
 
 

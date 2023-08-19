@@ -120,6 +120,7 @@ public:
             }
         }
         m_value_type = type_check.resolve(ti_list(std::move(elem_type)), v.source_loc);
+        resolve_generic_type(m_value_type, m_scope);
         assert(m_value_type.is_list());
         if (m_value_type.elem_type().has_unknown())
             throw MissingExplicitType(v.source_loc);

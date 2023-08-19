@@ -151,7 +151,7 @@ auto TypeChecker::resolve(const TypeInfo& inferred, const SourceLocation& loc) -
                 throw DefinitionTypeMismatch(ti, inferred, loc);
             TypeInfo res = std::move(eval_type());
             for (auto&& [st_item, inf_subtype] : zip(res.struct_items(), inferred.subtypes())) {
-                if (st_item.second.is_unknown() && !st_item.second.is_generic())
+                if (st_item.second.is_unspecified())
                     st_item.second = inf_subtype;
             }
             return res;

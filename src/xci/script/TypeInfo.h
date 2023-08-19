@@ -114,6 +114,7 @@ public:
     Type type() const { return m_type; }
     Type underlying_type() const;
     bool is_unknown() const { return m_type == Type::Unknown; }
+    bool is_unspecified() const { return m_type == Type::Unknown && !generic_var(); }  // == is_unknown() && !is_generic()
     bool is_generic() const { return m_type == Type::Unknown && bool(generic_var()); }
     bool is_named() const { return m_type == Type::Named; }
     bool is_callable() const { return underlying_type() == Type::Function; }

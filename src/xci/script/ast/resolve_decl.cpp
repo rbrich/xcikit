@@ -90,6 +90,8 @@ public:
     }
 
     void visit(ast::Return& ret) override {
+        if (!function().signature().return_type.is_unknown())
+            m_type_info = function().signature().return_type;
         ret.expression->apply(*this);
     }
 
