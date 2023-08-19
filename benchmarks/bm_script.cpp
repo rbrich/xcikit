@@ -62,13 +62,18 @@ BENCHMARK(bm_parser_list)->Range(1, 1<<8);
 
 
 static void bm_parser_function_params(benchmark::State& state) {
-    std::string input = "f = fun a0:Int";
+    std::string input = "f = fun (a0:Int";
     for (int i = 1; i < state.range(0); ++i) {
-        input += " a";
+        input += ", a";
         input += std::to_string(i);
         input += ":Int";
     }
-    input += " { 0 }";
+    input += ") { a0";
+    for (int i = 1; i < state.range(0); ++i) {
+        input += ", a";
+        input += std::to_string(i);
+    }
+    input += " }";
     SimpleParser parser(input);
     for (auto _ : state) {
         auto mod = parser.parse();
