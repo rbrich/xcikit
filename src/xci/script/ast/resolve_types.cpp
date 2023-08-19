@@ -455,11 +455,15 @@ public:
 
     void visit(ast::Condition& v) override {
         TypeInfo expr_type;
+        TypeInfo cast_type = std::move(m_cast_type);
         bool all_literal = true;
         for (auto& item : v.if_then_expr) {
+            // condition
+            m_cast_type = {};
             item.first->apply(*this);
             if (m_value_type != ti_bool())
                 throw ConditionNotBool();
+            m_cast_type = cast_type;
             item.second->apply(*this);
             all_literal = all_literal && m_value_type.is_literal();
             // check that all then-expressions have the same type
@@ -471,6 +475,7 @@ public:
             }
         }
 
+        m_cast_type = cast_type;
         v.else_expr->apply(*this);
         if (expr_type != m_value_type)
             throw BranchTypeMismatch(expr_type, m_value_type);

@@ -278,12 +278,14 @@ public:
     }
 
     void visit(ast::Condition& v) override {
-        TypeInfo expr_type;
+        TypeInfo type_info = std::move(m_type_info);
         for (auto& item : v.if_then_expr) {
+            m_type_info = {};
             item.first->apply(*this);
+            m_type_info = type_info;
             item.second->apply(*this);
         }
-
+        m_type_info = type_info;
         v.else_expr->apply(*this);
     }
 
