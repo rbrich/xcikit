@@ -107,7 +107,8 @@ public:
             item->apply(*this);
         }
         // MAKE_LIST <length> <elem_type>
-        code().add_L2(Opcode::MakeList, v.items.size(), get_type_index(module().module_manager(), v.ti.elem_type()));
+        const Index type_index = make_type_index(module(), v.ti.elem_type());
+        code().add_L2(Opcode::MakeList, v.items.size(), type_index);
     }
 
     void visit(ast::StructInit& v) override {

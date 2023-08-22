@@ -451,6 +451,9 @@ TEST_CASE( "Literals", "[script][interpreter]" )
     CHECK(interpret_std("[].empty") == "true");
     CHECK(interpret_std("[1,2,3].empty") == "false");
     CHECK(interpret("[1,2,3]") == "[1, 2, 3]");
+    CHECK(interpret_std("empty_list = fun<T> Void { []:[T] }; empty_list<Int>") == "[]");
+    CHECK(interpret_std("empty_list = fun<T> Void -> [T] { [] }; empty_list<Int>") == "[]"); // equivalent
+    CHECK(interpret_std("empty_list = fun<T> Void { []:[T] }; empty_list<[Int]>") == "[]");  // returns empty list of type [[Int32]]
 }
 
 
