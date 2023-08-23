@@ -55,7 +55,7 @@ public:
             m_type_info = std::move(eval_type);
 
             auto idx_in_cls = m_instance->class_().get_index_of_function(psym->ref()->index());
-            m_instance->set_function(idx_in_cls, psym.get_scope_index(m_scope), psym);
+            m_instance->set_function(idx_in_cls, &module(), psym.get_scope_index(m_scope), psym);
         }
 
         Function& fn = dfn.symbol().get_function(m_scope);

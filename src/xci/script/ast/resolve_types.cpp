@@ -246,7 +246,7 @@ public:
                     assert(psym->type() == Symbol::Instance);
                     auto& inst = inst_mod->get_instance(psym->index());
                     auto inst_fn_info = inst.get_function(cls_fn_idx);
-                    const auto& fn = inst_mod->get_scope(inst_fn_info.scope_index).function();
+                    const auto& fn = inst_fn_info.module->get_scope(inst_fn_info.scope_index).function();
                     auto m = match_inst_types(inst.types(), resolved_types);
                     if (m.is_generic()) {
                         // If it's a generic match, make sure the generic vars can be specialized
@@ -254,7 +254,7 @@ public:
                         specialize_arg(TypeInfo{inst.types()}, TypeInfo{resolved_types}, type_args,
                                        [&m] (const TypeInfo&, const TypeInfo&) { m = MatchScore(-1); });
                     }
-                    candidates.push_back({inst_mod, inst_fn_info.scope_index, psym, TypeInfo{fn.signature_ptr()}, cls_fn_ti, inst_type_args, m});
+                    candidates.push_back({inst_fn_info.module, inst_fn_info.scope_index, psym, TypeInfo{fn.signature_ptr()}, cls_fn_ti, inst_type_args, m});
                 }
 
                 auto [found, conflict] = find_best_candidate(candidates);

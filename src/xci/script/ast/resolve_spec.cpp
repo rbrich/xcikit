@@ -226,7 +226,7 @@ public:
                     auto& inst = inst_mod->get_instance(psym->index());
                     auto inst_fn = inst.get_function(cls_fn_idx);
                     auto m = match_inst_types(inst.types(), resolved_types);
-                    candidates.push_back({inst_mod, inst_fn.scope_index, psym, {}, {}, inst_type_args, m});
+                    candidates.push_back({inst_fn.module, inst_fn.scope_index, psym, {}, {}, inst_type_args, m});
                 }
 
                 auto [found, conflict] = find_best_candidate(candidates);
@@ -235,9 +235,9 @@ public:
                     auto spec_idx = specialize_instance(found->symptr, cls_fn_idx, v.identifier.source_loc);
                     if (spec_idx != no_index) {
                         auto& inst = module().get_instance(spec_idx);
-                        auto inst_scope_idx = inst.get_function(cls_fn_idx).scope_index;
-                        v.module = &module();
-                        v.index = inst_scope_idx;
+                        auto inst_fn_info = inst.get_function(cls_fn_idx);
+                        v.module = inst_fn_info.module;
+                        v.index = inst_fn_info.scope_index;
                         auto& scope = v.module->get_scope(v.index);
                         scope.type_args().add_from(found->type_args);
                     } else {
@@ -859,9 +859,9 @@ private:
             auto fn_info = inst.get_function(i);
             auto specialized = specialize_function(fn_info.symptr, loc, {});
             if (specialized) {
-                spec.set_function(i, specialized.scope_index, fn_info.symptr);
+                spec.set_function(i, &module(), specialized.scope_index, fn_info.symptr);
             } else {
-                spec.set_function(i, fn_info.scope_index, fn_info.symptr);
+                spec.set_function(i, inst_mod, fn_info.scope_index, fn_info.symptr);
             }
         }
 

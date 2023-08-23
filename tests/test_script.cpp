@@ -1133,6 +1133,19 @@ TEST_CASE( "Type classes", "[script][interpreter]" )
     // Instantiate type class from another module
     CHECK(interpret_std("instance Ord Bool { lt = { __less_than 0x11 }; gt = {false}; le = {false}; ge = {false} }; "
                         "false < true; 2 < 1") == "true;false");
+    // Specialize generic instance
+    CHECK(interpret("class XCls T R {\n"
+                    "  fn1 : T -> R\n"
+                    "  fn2 : R -> Int\n"
+                    "}\n"
+                    "instance<T> XCls T Int {\n"
+                    "  fn1 = fun a:T -> Int { 1 }\n"  // generic method
+                    "  fn2 = fun a:Int -> Int { 2 }\n"  // already concrete, not being specialized
+                    "}\n"
+                    "fn1 42u; "  // creates specialized instance XCls UInt32 Int32
+                    "fn2 42; "   // calls function from generic instance XCls T Int (which uses only the second arg which is already concrete)
+                    "__module.__n_fn"  // 1 for main, 2 for generic fns in class, 2 for fns in instance<T>, 1 for specialized fn1
+                    ) == "1;2;6");
 }
 
 

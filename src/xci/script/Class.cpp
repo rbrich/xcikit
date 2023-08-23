@@ -46,10 +46,10 @@ bool Instance::is_generic() const
 }
 
 
-void Instance::set_function(Index cls_fn_idx, Index mod_scope_idx, SymbolPointer symptr)
+void Instance::set_function(Index cls_fn_idx, Module* mod, Index mod_scope_idx, SymbolPointer symptr)
 {
     m_functions.resize(m_class.num_function_scopes());
-    m_functions[cls_fn_idx] = FunctionInfo{mod_scope_idx, symptr};
+    m_functions[cls_fn_idx] = FunctionInfo{mod, mod_scope_idx, symptr};
 }
 
 

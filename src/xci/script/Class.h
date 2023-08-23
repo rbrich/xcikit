@@ -1,7 +1,7 @@
 // Class.h created on 2019-09-11 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_CLASS_H
@@ -55,11 +55,12 @@ public:
 
     // Functions
     struct FunctionInfo {
+        Module* module;
         Index scope_index;  // scope idx in module
         SymbolPointer symptr;  // SymbolPointer to associated symbol (for specialized function, this points to original generic one)
     };
 
-    void set_function(Index cls_fn_idx, Index mod_scope_idx, SymbolPointer symptr);
+    void set_function(Index cls_fn_idx, Module* mod, Index mod_scope_idx, SymbolPointer symptr);
     const FunctionInfo& get_function(Index cls_fn_idx) const { return m_functions[cls_fn_idx]; }
     Size num_functions() const { return Size(m_functions.size()); }
 
