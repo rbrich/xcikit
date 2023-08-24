@@ -9,6 +9,7 @@ endif()
 
 add_demo(demo_log LINK xci-core)
 add_demo(demo_chunked_stack LINK xci-core)
+add_demo(demo_indexed_map LINK xci-core)
 add_demo(demo_termctl LINK xci-core magic_enum::magic_enum)
 add_demo(demo_vfs LINK xci-core-vfs DEPS share)
 
