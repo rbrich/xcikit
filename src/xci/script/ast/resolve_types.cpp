@@ -97,9 +97,7 @@ public:
         TypeChecker type_check(std::move(v.ti), std::move(m_cast_type));
         // check all items have same type
         TypeInfo elem_type;
-        if (!type_check.eval_type() && v.items.empty())
-            elem_type = ti_void();
-        else for (auto& item : v.items) {
+        for (auto& item : v.items) {
             item->apply(*this);
             if (item.get() == v.items.front().get()) {
                 // first item
@@ -112,7 +110,7 @@ public:
         }
         m_value_type = type_check.resolve(ti_list(std::move(elem_type)), v.source_loc);
         assert(m_value_type.is_list());
-        if (m_value_type.elem_type().has_unknown() && !m_value_type.has_generic())
+        if (m_value_type.elem_type().is_unspecified())
             throw MissingExplicitType(v.source_loc);
         v.ti = m_value_type;
     }

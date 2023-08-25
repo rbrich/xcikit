@@ -247,6 +247,11 @@ struct BranchTypeMismatch : public ScriptError {
 };
 
 
+struct ListTypeMismatch : public ScriptError {
+    explicit ListTypeMismatch(const TypeInfo& got, const SourceLocation& loc);
+};
+
+
 struct ListElemTypeMismatch : public ScriptError {
     explicit ListElemTypeMismatch(const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc);
 };

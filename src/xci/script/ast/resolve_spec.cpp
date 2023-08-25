@@ -106,9 +106,7 @@ public:
         TypeChecker type_check(std::move(v.ti), std::move(m_cast_type));
         // check all items have same type
         TypeInfo elem_type;
-        if (!type_check.eval_type() && v.items.empty())
-            elem_type = ti_void();
-        else for (auto& item : v.items) {
+        for (auto& item : v.items) {
             item->apply(*this);
             if (item.get() == v.items.front().get()) {
                 // first item
@@ -122,8 +120,6 @@ public:
         m_value_type = type_check.resolve(ti_list(std::move(elem_type)), v.source_loc);
         resolve_generic_type(m_value_type, m_scope);
         assert(m_value_type.is_list());
-        if (m_value_type.elem_type().has_unknown())
-            throw MissingExplicitType(v.source_loc);
         v.ti = m_value_type;
     }
 
@@ -394,6 +390,11 @@ public:
                         m_call_sig.clear();
                         m_call_sig.emplace_back().load_from(call_item.signature(), arg->source_loc);
                         arg->apply(*this);
+                    } else {
+                        m_call_sig.clear();
+                        m_cast_type = call_item;
+                        arg->apply(*this);
+                        m_cast_type = {};
                     }
                 }
             } else {
@@ -401,6 +402,11 @@ public:
                     m_call_sig.clear();
                     m_call_sig.emplace_back().load_from(call_ti.signature(), v.arg->source_loc);
                     v.arg->apply(*this);
+                } else {
+                    m_call_sig.clear();
+                    m_cast_type = call_ti;
+                    v.arg->apply(*this);
+                    m_cast_type = {};
                 }
             }
         }
@@ -842,8 +848,10 @@ private:
         const auto& called_inst_fn = inst.get_function(cls_fn_idx).symptr.get_function(m_scope);
         auto resolved_types = resolve_instance_types(called_inst_fn.signature(), m_call_sig, m_cast_type);
         auto inst_types = inst.types();
-        for (auto& it : inst_types)
-            resolve_generic_type(it, resolved_types);
+        for (auto& ti : inst_types)
+            resolve_generic_type(ti, resolved_types);
+        resolve_generic_type(m_call_sig.back().arg.type_info, resolved_types);
+        resolve_generic_type(m_call_sig.back().return_type, resolved_types);
 
         // Check already created specializations if one of them matches
         for (auto spec_idx : module().get_spec_instances(symptr)) {

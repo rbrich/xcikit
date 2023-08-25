@@ -21,11 +21,11 @@ void set_type_arg(SymbolPointer var, const TypeInfo& deduced, TypeArgs& type_arg
         TypeInfo& existing = it->second;
         if (!match_type(existing, deduced))
             exc_cb(existing, deduced);
-        if (existing.is_unknown()) {
-            if (existing.generic_var())
-                set_type_arg(existing.generic_var(), deduced, type_args, exc_cb);
-            else
-                existing = deduced;
+        if (existing.is_unspecified()) {
+            existing = deduced;
+        } else if (existing.has_generic()) {
+            specialize_arg(existing, deduced, type_args, exc_cb);
+            resolve_generic_type(existing, type_args);
         }
     }
 }

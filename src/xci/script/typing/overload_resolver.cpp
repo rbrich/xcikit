@@ -173,10 +173,14 @@ TypeArgs resolve_instance_types(const Signature& signature, const std::vector<Ca
     if (signature.return_type.is_unknown()) {
         auto var = signature.return_type.generic_var();
         assert(var);
-        if (!call_sig_stack.empty() && !call_sig_stack[0].return_type.is_unknown())
-            res.set(var, call_sig_stack[0].return_type);
-        if (!cast_type.is_unknown())
-            res.set(var, cast_type.effective_type());
+        if (!call_sig_stack.empty() && !call_sig_stack[0].return_type.is_unknown()) {
+            set_type_arg(var, call_sig_stack[0].return_type, res,
+                         [](const TypeInfo& exp, const TypeInfo& got) {});
+        }
+        if (!cast_type.is_unknown()) {
+            set_type_arg(var, cast_type.effective_type(), res,
+                         [](const TypeInfo& exp, const TypeInfo& got) {});
+        }
     }
     return res;
 }

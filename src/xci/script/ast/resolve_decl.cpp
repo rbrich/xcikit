@@ -153,11 +153,15 @@ public:
     }
 
     void visit(ast::List& v) override {
-        v.ti = std::move(m_type_info);
+        auto specified = std::move(m_type_info);
+        if (!specified.is_unknown() && !specified.is_list())
+            throw ListTypeMismatch(specified, v.source_loc);
         for (auto& item : v.items) {
-            m_type_info = {};
+            m_type_info = specified ? specified.elem_type() : TypeInfo{};
             item->apply(*this);
         }
+        if (specified)
+            v.ti = std::move(specified);
     }
 
     void visit(ast::StructInit& v) override {

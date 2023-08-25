@@ -443,12 +443,12 @@ TEST_CASE( "Literals", "[script][interpreter]" )
     CHECK(interpret("\"hello\"") == "\"hello\"");
     CHECK(interpret("\"řečiště\"") == "\"řečiště\"");
     // Lists
-    CHECK(interpret("[]") == "[]");  // no type -> [Void]
+    CHECK_THROWS_AS(interpret("[]"), UnexpectedGenericFunction);  // the list type must be specified or deduced
     CHECK(interpret_std("[]:[Void]") == "[]");  // same
     CHECK(interpret_std("[]:[Int]") == "[]");
-    CHECK(interpret_std("[].len") == "0U");
+    CHECK(interpret_std("[]:[Void].len") == "0U");
     CHECK(interpret_std("[1,2,3].len") == "3U");
-    CHECK(interpret_std("[].empty") == "true");
+    CHECK(interpret_std("[]:[Int].empty") == "true");
     CHECK(interpret_std("[1,2,3].empty") == "false");
     CHECK(interpret("[1,2,3]") == "[1, 2, 3]");
     CHECK(interpret_std("empty_list = fun<T> Void { []:[T] }; empty_list<Int>") == "[]");
@@ -961,6 +961,7 @@ TEST_CASE( "Casting", "[script][interpreter]" )
     CHECK(interpret_std("(- 42):Bool") == "true");
     CHECK(interpret_std("(cast 42):Int64") == "42L");
     CHECK(interpret_std("a:Int64 = cast 42; a") == "42L");
+    CHECK(interpret_std("a:[Int] = cast []; a") == "[]");
     CHECK_THROWS_AS(interpret_std("cast 42"), FunctionConflict);  // must specify the result type
     CHECK(interpret_std("{23L}:Int") == "23");
     CHECK(interpret_std("min:Int") == "-2147483648");
@@ -1089,7 +1090,6 @@ TEST_CASE( "List slice", "[script][interpreter]" )
     CHECK(interpret_std("[1,2,3,4,5] .slice (-1, -4, -1)") == "[5, 4, 3]");
     CHECK(interpret_std("[1,2,3,4,5] .slice (5, 1, 1)") == "[]");
     CHECK(interpret_std("[1,2,3,4,5] .slice (1, 5, -1)") == "[]");
-    CHECK(interpret_std("[] .slice (0, 5, 1)") == "[]");
     CHECK(interpret_std("[]:[Int] .slice (0, 5, 1)") == "[]");
     CHECK(interpret_std("tail [1,2,3]") == "[2, 3]");
     // heap-allocated type
@@ -1103,9 +1103,10 @@ TEST_CASE( "List concat", "[script][interpreter]" )
     CHECK(interpret("concat = fun<T> ([T], [T]) -> [T] { __list_concat __type_index<T> }; concat ([1,2,3], [4,5])") == "[1, 2, 3, 4, 5]");
     // std implementation uses operator `+`
     CHECK(interpret_std("[1,2,3] + [4,5]") == "[1, 2, 3, 4, 5]");
-    CHECK(interpret_std("[] + []") == "[]");  // result type is [Void]
+    CHECK_THROWS_AS(interpret_std("[] + []"), UnexpectedGenericFunction);  // the type must be specified or deduced
     CHECK(interpret_std("[]:[Int] + []:[Int]") == "[]");  // result type is [Int]
-    CHECK_THROWS_AS(interpret_std("[1,2,3] + []"), UnexpectedArgumentType);
+    CHECK(interpret_std("[1,2,3] + []") == "[1, 2, 3]");  // second argument type is deduced from function args
+    CHECK(interpret_std("[] + [1,2,3]") == "[1, 2, 3]");
     // heap-allocated elements
     CHECK(interpret_std(R"(["a", "bb", "ccc"] + ["dd", "e"])") == R"(["a", "bb", "ccc", "dd", "e"])");
     CHECK(interpret_std("[[1,2], [3,4]] + [[5,6]]") == "[[1, 2], [3, 4], [5, 6]]");

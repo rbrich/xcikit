@@ -64,6 +64,13 @@ BranchTypeMismatch::BranchTypeMismatch(const TypeInfo& exp, const TypeInfo& got)
 {}
 
 
+ListTypeMismatch::ListTypeMismatch(const TypeInfo& got, const SourceLocation& loc)
+        : ScriptError(fmt::format("cannot cast a list to {}",
+                                  got),
+                      loc)
+{}
+
+
 ListElemTypeMismatch::ListElemTypeMismatch(const TypeInfo& exp, const TypeInfo& got,
                                            const SourceLocation& loc)
         : ScriptError(fmt::format("list element type mismatch: got {} in list of {}",
