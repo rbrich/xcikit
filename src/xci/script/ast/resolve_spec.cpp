@@ -264,6 +264,7 @@ public:
             case Symbol::Function:
             case Symbol::StructItem: {
                 // specified type in definition
+                bool clear_call_sig = false;
                 if (sym.type() == Symbol::Function && v.definition && v.ti) {
                     assert(m_call_sig.empty());
                     if (v.ti.is_callable()) {
@@ -272,6 +273,19 @@ public:
                         // A naked type, consider it a function return type
                         m_call_sig.emplace_back().set_return_type(v.ti);
                     }
+                    clear_call_sig = true;
+                }
+                // cast type
+                if (sym.type() == Symbol::Function && m_call_sig.empty() && m_cast_type) {
+                    if (m_cast_type.is_callable()) {
+                        m_call_sig.emplace_back().load_from(m_cast_type.signature(), v.source_loc);
+                    } else {
+                        // A naked type, consider it a function return type
+                        auto& call_sig = m_call_sig.emplace_back();
+                        call_sig.arg.type_info = ti_void();
+                        call_sig.set_return_type(m_cast_type);
+                    }
+                    clear_call_sig = true;
                 }
 
                 // Specialize
@@ -288,7 +302,7 @@ public:
                             v.ti = TypeInfo(fn.signature_ptr());
                         }
                     }
-                    if (v.definition) {
+                    if (clear_call_sig) {
                         m_call_sig.clear();
                     }
                 } else {

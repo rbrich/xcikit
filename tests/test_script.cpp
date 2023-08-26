@@ -984,6 +984,8 @@ TEST_CASE( "Casting", "[script][interpreter]" )
     CHECK(interpret_std("\"řež\":[Byte]") == "b\"\\xc5\\x99e\\xc5\\xbe\"");
     // "multi-cast" (parentheses are required)
     CHECK(interpret_std("((\"fire\":[Byte]):String):[Char]") == "['f', 'i', 'r', 'e']");
+    // cast function call
+    CHECK(interpret_std("empty_list = fun<T> Void->[T] { [] }; empty_list:[Int]") == "[]");  // specialize by casting
 }
 
 
