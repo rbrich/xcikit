@@ -13,7 +13,7 @@ add_demo(demo_indexed_map LINK xci-core)
 add_demo(demo_termctl LINK xci-core magic_enum::magic_enum)
 add_demo(demo_vfs LINK xci-core-vfs DEPS share)
 
-if (NOT WIN32 AND NOT EMSCRIPTEN AND XCI_SCRIPT)
+if (incbin_FOUND AND XCI_SCRIPT)
     set(SHARE_ARCHIVE "${XCIKIT_BINARY_DIR}/${XCI_SHARE_DAR}")
     add_demo(demo_vfs_incbin LINK xci-core-vfs incbin::incbin
         CDEFS SHARE_ARCHIVE="${SHARE_ARCHIVE}")
