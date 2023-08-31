@@ -43,15 +43,15 @@ TypeArgs specialize_signature(const SignaturePtr& signature, const std::vector<C
     for (const CallSignature& call_sig : call_sig_stack | reverse) {
         if (!sig)
             sig = signature;
-        else if (sig->return_type.type() == Type::Function) {
+        else if (sig->return_type.is_callable()) {
             // continue with specializing args of a returned function
-            sig = sig->return_type.signature_ptr();
+            sig = sig->return_type.ul_signature_ptr();
         } else {
             throw UnexpectedArgument(TypeInfo{sig}, call_sig.arg.source_loc);
         }
         // skip blocks / functions without params
-        while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
-            sig = sig->return_type.signature_ptr();
+        while (sig->param_type.is_void() && sig->return_type.is_callable()) {
+            sig = sig->return_type.ul_signature_ptr();
         };
         const auto& c_sig = call_sig.signature();
         const auto& source_loc = call_sig.arg.source_loc;

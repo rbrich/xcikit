@@ -91,7 +91,7 @@ if (ENABLE_TIDY)
 endif()
 
 if (ENABLE_IWYU)
-    find_program(IWYU_EXECUTABLE iwyu)
+    find_program(IWYU_EXECUTABLE include-what-you-use iwyu)
     message(STATUS "Found iwyu: ${IWYU_EXECUTABLE}")
     if (IWYU_EXECUTABLE)
         set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${IWYU_EXECUTABLE})

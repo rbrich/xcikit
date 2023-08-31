@@ -60,9 +60,154 @@ size_t type_size_on_stack(Type type)
 }
 
 
+// -------------------------------------------------------------------------------------------------
+namespace detail {
+
+
+TypeInfoUnion::TypeInfoUnion(ListTag, TypeInfo elem)
+        : m_type(Type::List)
+{
+    std::construct_at(&m_subtypes, std::vector{std::move(elem)});
+}
+
+
+TypeInfoUnion::TypeInfoUnion(StructTag, StructItems items)
+        : m_type(Type::Struct)
+{
+    std::construct_at(&m_struct_items, std::move(items));
+}
+
+
+TypeInfoUnion::TypeInfoUnion(std::string name, TypeInfo&& type_info)
+        : m_type(Type::Named)
+{
+    std::construct_at(&m_named_type_ptr,
+                      std::make_shared<NamedType>(NamedType{std::move(name), std::move(type_info)}));
+}
+
+
+TypeInfoUnion& TypeInfoUnion::operator =(const TypeInfoUnion& r)
+{
+    if (this == &r)
+        return *this;
+    if (m_type != r.m_type) {
+        destroy_variant();
+        m_type = r.m_type;
+        construct_variant();
+    }
+    switch (m_type) {
+        case Type::Unknown: m_var = r.m_var; break;
+        case Type::List:
+        case Type::Tuple: m_subtypes = r.m_subtypes; break;
+        case Type::Struct: m_struct_items = r.m_struct_items; break;
+        case Type::Function: m_signature_ptr = r.m_signature_ptr; break;
+        case Type::Named: m_named_type_ptr = r.m_named_type_ptr; break;
+        default:
+            break;
+    }
+    return *this;
+}
+
+
+TypeInfoUnion& TypeInfoUnion::operator =(TypeInfoUnion&& r) noexcept {
+    assert(this != &r);
+    if (m_type != r.m_type) {
+        destroy_variant();
+        m_type = r.m_type;
+        construct_variant();
+    }
+    switch (m_type) {
+        case Type::Unknown: m_var = std::move(r.m_var); break;
+        case Type::List:
+        case Type::Tuple: m_subtypes = std::move(r.m_subtypes); break;
+        case Type::Struct: m_struct_items = std::move(r.m_struct_items); break;
+        case Type::Function: m_signature_ptr = std::move(r.m_signature_ptr); break;
+        case Type::Named: m_named_type_ptr = std::move(r.m_named_type_ptr); break;
+        default:
+            break;
+    }
+    r.set_type(Type::Unknown);
+    return *this;
+}
+
+
+void TypeInfoUnion::construct_variant() {
+    switch (m_type) {
+        case Type::Unknown: std::construct_at(&m_var); break;
+        case Type::List:
+        case Type::Tuple: std::construct_at(&m_subtypes); break;
+        case Type::Struct: std::construct_at(&m_struct_items); break;
+        case Type::Function: std::construct_at(&m_signature_ptr); break;
+        case Type::Named: std::construct_at(&m_named_type_ptr); break;
+        default:
+            break;
+    }
+}
+
+
+void TypeInfoUnion::destroy_variant() {
+    switch (m_type) {
+        case Type::Unknown: m_var.~Var(); break;
+        case Type::List:
+        case Type::Tuple: m_subtypes.~Subtypes(); break;
+        case Type::Struct: m_struct_items.~StructItems(); break;
+        case Type::Function: m_signature_ptr.~SignaturePtr(); break;
+        case Type::Named: m_named_type_ptr.~NamedTypePtr(); break;
+        default:
+            break;
+    }
+}
+
+
+auto TypeInfoUnion::generic_var() const -> Var
+{
+    assert(m_type == Type::Unknown);
+    return m_var;
+}
+
+
+auto TypeInfoUnion::generic_var() -> Var&
+{
+    assert(m_type == Type::Unknown);
+    return m_var;
+}
+
+
+auto TypeInfoUnion::subtypes() const -> const Subtypes&
+{
+    assert(m_type == Type::Tuple || type() == Type::List);
+    return m_subtypes;
+}
+
+
+auto TypeInfoUnion::struct_items() const -> const StructItems&
+{
+    assert(m_type == Type::Struct);
+    return m_struct_items;
+}
+
+
+auto TypeInfoUnion::signature_ptr() const -> const SignaturePtr&
+{
+    assert(type() == Type::Function);
+    return m_signature_ptr;
+}
+
+
+auto TypeInfoUnion::named_type_ptr() const -> const NamedTypePtr&
+{
+    assert(m_type == Type::Named);
+    return m_named_type_ptr;
+}
+
+
+} // namespace detail
+// -------------------------------------------------------------------------------------------------
+
+
 size_t TypeInfo::size() const
 {
-    switch (m_type) {
+    switch (type()) {
         case Type::Named:
             return named_type().type_info.size();
         case Type::Tuple: {
@@ -83,7 +228,8 @@ size_t TypeInfo::size() const
 
 void TypeInfo::foreach_heap_slot(std::function<void(size_t offset)> cb) const
 {
-    switch (underlying_type()) {
+    const auto& uti = underlying();
+    switch (uti.type()) {
         case Type::String:
         case Type::List:
         case Type::Function:
@@ -92,7 +238,7 @@ void TypeInfo::foreach_heap_slot(std::function<void(size_t offset)> cb) const
             break;
         case Type::Tuple: {
             size_t pos = 0;
-            for (const auto& ti : subtypes()) {
+            for (const auto& ti : uti.subtypes()) {
                 ti.foreach_heap_slot([&cb, pos](size_t offset) {
                     cb(pos + offset);
                 });
@@ -102,7 +248,7 @@ void TypeInfo::foreach_heap_slot(std::function<void(size_t offset)> cb) const
         }
         case Type::Struct: {
             size_t pos = 0;
-            for (const auto& item : struct_items()) {
+            for (const auto& item : uti.struct_items()) {
                 item.second.foreach_heap_slot([&cb, pos](size_t offset) {
                     cb(pos + offset);
                 });
@@ -119,7 +265,7 @@ void TypeInfo::replace_var(SymbolPointer var, const TypeInfo& ti)
 {
     if (!var)
         return;
-    switch (m_type) {
+    switch (type()) {
         case Type::Unknown:
             if (generic_var() == var)
                 *this = ti;
@@ -127,20 +273,18 @@ void TypeInfo::replace_var(SymbolPointer var, const TypeInfo& ti)
         case Type::Function:
             if (signature_ptr().use_count() > 1) {
                 // multiple users - make copy of the signature
-                m_info = std::make_shared<Signature>(signature());
+                signature_ptr() = std::make_shared<Signature>(signature());
             }
             signature().param_type.replace_var(var, ti);
             signature().return_type.replace_var(var, ti);
             break;
         case Type::Tuple:
         case Type::List:
-            assert(std::holds_alternative<Subtypes>(m_info));
-            for (auto& sub : std::get<Subtypes>(m_info))
+            for (auto& sub : subtypes())
                 sub.replace_var(var, ti);
             break;
         case Type::Struct:
-            assert(std::holds_alternative<StructItems>(m_info));
-            for (auto& item : std::get<StructItems>(m_info))
+            for (auto& item : struct_items())
                 item.second.replace_var(var, ti);
             break;
         default:
@@ -149,64 +293,10 @@ void TypeInfo::replace_var(SymbolPointer var, const TypeInfo& ti)
 }
 
 
-TypeInfo::TypeInfo(Type type) : m_type(type)
-{
-    switch (type) {
-        case Type::Unknown:
-            m_info = Var{};
-            break;
-        case Type::List:
-        case Type::Tuple:
-            m_info = Subtypes();
-            break;
-        case Type::Struct:
-            m_info = StructItems();
-            break;
-        case Type::Function:
-            m_info = SignaturePtr();
-            break;
-        default:
-            break;
-    }
-}
-
-
-TypeInfo::TypeInfo(ListTag, TypeInfo list_elem)
-        : m_type(Type::List), m_info(std::vector{std::move(list_elem)})
-{}
-
-
-TypeInfo::TypeInfo(std::string name, TypeInfo&& type_info)
-        : m_type(Type::Named),
-          m_info(std::make_shared<NamedType>(NamedType{std::move(name), std::move(type_info)}))
-{}
-
-
-TypeInfo::TypeInfo(TypeInfo&& other) noexcept
-        : m_type(other.m_type), m_is_literal(other.m_is_literal), m_info(std::move(other.m_info))
-{
-    other.m_type = Type::Unknown;
-    other.m_is_literal = true;
-    other.m_info = Var{};
-}
-
-
-TypeInfo& TypeInfo::operator=(TypeInfo&& other) noexcept
-{
-    m_type = other.m_type;
-    m_is_literal = other.m_is_literal;
-    m_info = std::move(other.m_info);
-    other.m_type = Type::Unknown;
-    other.m_is_literal = true;
-    other.m_info = Var{};
-    return *this;
-}
-
-
 const TypeInfo& TypeInfo::effective_type() const
 {
-    if (is_callable() && !signature().has_nonvoid_param())
-        return signature().return_type.effective_type();
+    if (is_callable() && !ul_signature().has_nonvoid_param())
+        return ul_signature().return_type.effective_type();
     return *this;
 }
 
@@ -261,27 +351,25 @@ bool is_same_underlying(const TypeInfo& lhs, const TypeInfo& rhs)
 
 bool TypeInfo::operator==(const TypeInfo& rhs) const
 {
-    if (m_type == Type::Unknown || rhs.type() == Type::Unknown)
+    if (type() == Type::Unknown || rhs.type() == Type::Unknown)
         return true;  // unknown type matches any other type
-    if (m_type != rhs.type())
+    if (type() != rhs.type())
         return false;
-    if (m_type == Type::Function)
-        return signature() == rhs.signature();  // compare content, not pointer
-    if (m_type == Type::Named)
-        return named_type() == rhs.named_type();
-    return m_info == rhs.m_info;
-}
-
-
-Type TypeInfo::underlying_type() const
-{
-    return m_type == Type::Named ? named_type().type_info.underlying_type() : m_type;
+    switch (type()) {
+        case Type::List:
+        case Type::Tuple: return subtypes() == rhs.subtypes();
+        case Type::Struct: return struct_items() == rhs.struct_items();
+        case Type::Function: return signature() == rhs.signature();  // compare content, not pointer
+        case Type::Named: return named_type() == rhs.named_type();
+        default:
+            return true;
+    }
 }
 
 
 bool TypeInfo::has_unknown() const
 {
-    switch (m_type) {
+    switch (type()) {
         case Type::Unknown:
             return true;
         case Type::Function:
@@ -304,7 +392,7 @@ bool TypeInfo::has_unknown() const
 
 bool TypeInfo::has_generic() const
 {
-    switch (m_type) {
+    switch (type()) {
         case Type::Unknown:
             return bool(generic_var());
         case Type::Function:
@@ -325,73 +413,11 @@ bool TypeInfo::has_generic() const
 }
 
 
-auto TypeInfo::generic_var() const -> Var
-{
-    assert(m_type == Type::Unknown);
-    assert(std::holds_alternative<Var>(m_info));
-    return std::get<Var>(m_info);
-}
-
-
 auto TypeInfo::elem_type() const -> const TypeInfo&
 {
-    if (m_type == Type::Named)
-        return named_type().type_info.elem_type();
-    assert(m_type == Type::List);
-    assert(std::holds_alternative<Subtypes>(m_info));
-    assert(std::get<Subtypes>(m_info).size() == 1);
-    return std::get<Subtypes>(m_info)[0];
-}
-
-
-auto TypeInfo::elem_type() -> TypeInfo&
-{
-    if (m_type == Type::Named)
-        return named_type_ptr()->type_info.elem_type();
-    assert(m_type == Type::List);
-    assert(std::holds_alternative<Subtypes>(m_info));
-    assert(std::get<Subtypes>(m_info).size() == 1);
-    return std::get<Subtypes>(m_info)[0];
-}
-
-
-auto TypeInfo::subtypes() const -> const Subtypes&
-{
-    if (m_type == Type::Named)
-        return named_type().type_info.subtypes();
-    assert(m_type == Type::Tuple);
-    assert(std::holds_alternative<Subtypes>(m_info));
-    return std::get<Subtypes>(m_info);
-}
-
-
-auto TypeInfo::subtypes() -> Subtypes&
-{
-    if (m_type == Type::Named)
-        return named_type_ptr()->type_info.subtypes();
-    assert(m_type == Type::Tuple);
-    assert(std::holds_alternative<Subtypes>(m_info));
-    return std::get<Subtypes>(m_info);
-}
-
-
-auto TypeInfo::struct_items() const -> const StructItems&
-{
-    if (m_type == Type::Named)
-        return named_type().type_info.struct_items();
-    assert(m_type == Type::Struct);
-    assert(std::holds_alternative<StructItems>(m_info));
-    return std::get<StructItems>(m_info);
-}
-
-
-auto TypeInfo::struct_items() -> StructItems&
-{
-    if (m_type == Type::Named)
-        return named_type().type_info.struct_items();
-    assert(m_type == Type::Struct);
-    assert(std::holds_alternative<StructItems>(m_info));
-    return std::get<StructItems>(m_info);
+    assert(type() == Type::List);
+    assert(subtypes().size() == 1);
+    return subtypes()[0];
 }
 
 
@@ -421,33 +447,21 @@ auto TypeInfo::struct_or_tuple_subtypes() const -> Subtypes
 }
 
 
-auto TypeInfo::signature_ptr() const -> const SignaturePtr&
+std::string TypeInfo::name() const
 {
-    if (m_type == Type::Named)
-        return named_type().type_info.signature_ptr();
-    assert(m_type == Type::Function);
-    assert(std::holds_alternative<SignaturePtr>(m_info));
-    return std::get<SignaturePtr>(m_info);
-}
-
-
-const TypeInfo::NamedTypePtr& TypeInfo::named_type_ptr() const
-{
-    assert(m_type == Type::Named);
-    assert(std::holds_alternative<NamedTypePtr>(m_info));
-    return std::get<NamedTypePtr>(m_info);
+    return named_type().name;
 }
 
 
 const TypeInfo& TypeInfo::underlying() const
 {
-    return m_type == Type::Named ? named_type().type_info.underlying() : *this;
+    return is_named() ? named_type().type_info.underlying() : *this;
 }
 
 
-std::string TypeInfo::name() const
+TypeInfo& TypeInfo::underlying()
 {
-    return named_type().name;
+    return is_named() ? named_type().type_info.underlying() : *this;
 }
 
 

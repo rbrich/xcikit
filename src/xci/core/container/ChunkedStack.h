@@ -1,7 +1,7 @@
 // ChunkedStack.h created on 2019-12-21 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019, 2020 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_CHUNKED_STACK_H
@@ -245,8 +245,9 @@ ChunkedStack<T>::ChunkedStack(const ChunkedStack& other)
 
 template<class T>
 ChunkedStack<T>::ChunkedStack(ChunkedStack&& other) noexcept
+        : m_tail(other.m_tail)
 {
-    std::swap(m_tail, other.m_tail);
+    other.m_tail = allocate(nullptr, project_capacity(0), 0);
 }
 
 
@@ -266,7 +267,9 @@ ChunkedStack<T>& ChunkedStack<T>::operator=(const ChunkedStack& other)  // NOLIN
 template<class T>
 ChunkedStack<T>& ChunkedStack<T>::operator=(ChunkedStack&& other) noexcept
 {
-    std::swap(m_tail, other.m_tail);
+    assert(this != &other);
+    m_tail = other.m_tail;
+    other.m_tail = allocate(nullptr, project_capacity(0), 0);
     return *this;
 }
 

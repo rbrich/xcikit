@@ -209,9 +209,9 @@ void Scope::add_nonlocal(Index index, TypeInfo ti, Index fn_scope_idx)
         }
     }
     m_nonlocals.emplace_back(Nonlocal{index, fn_scope_idx});
-    if (ti.is_callable() && ti.signature_ptr() == function().signature_ptr()) {
+    if (ti.is_callable() && ti.ul_signature_ptr() == function().signature_ptr()) {
         // copy if the target signature is same object as ti.signature
-        ti = TypeInfo(std::make_shared<Signature>(ti.signature()));
+        ti = TypeInfo(std::make_shared<Signature>(ti.ul_signature()));
     }
     auto new_i = m_nonlocals.size() - 1;
     if (new_i < sig.nonlocals.size()) {

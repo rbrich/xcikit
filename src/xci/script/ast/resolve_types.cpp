@@ -41,7 +41,7 @@ public:
 
             Function& fn = dfn.symbol().get_function(m_scope);
             if (m_value_type.is_callable())
-                fn.signature() = m_value_type.signature();
+                fn.signature() = m_value_type.ul_signature();
             else {
                 const auto& source_loc = dfn.expression ?
                                 dfn.expression->source_loc : dfn.variable.identifier.source_loc;
@@ -79,7 +79,7 @@ public:
 
     void visit(ast::Tuple& v) override {
         TypeChecker type_check(TypeInfo(v.ti), std::move(m_cast_type));
-        const auto& spec = type_check.eval_type();  // specified/cast type
+        const auto& spec = type_check.eval_type().underlying();  // specified/cast type
         TypeInfo::Subtypes cast_items = spec.is_struct_or_tuple() ? spec.struct_or_tuple_subtypes() : TypeInfo::Subtypes{};
         // build TypeInfo from subtypes
         std::vector<TypeInfo> subtypes;
@@ -89,6 +89,7 @@ public:
             item->apply(*this);
             subtypes.push_back(m_value_type.effective_type());
         }
+        m_cast_type = {};
         m_value_type = type_check.resolve(TypeInfo(std::move(subtypes)), v.source_loc);
         v.ti = m_value_type;
     }
@@ -119,7 +120,7 @@ public:
         // first pass - resolve incomplete struct type
         //              and check it matches specified type (if any)
         TypeChecker type_check(std::move(v.ti), std::move(m_cast_type));
-        const auto& specified = type_check.eval_type();
+        const auto& specified = type_check.eval_type().underlying();
         if (!specified.is_unknown() && !specified.is_struct())
             throw StructTypeMismatch(specified, v.source_loc);
         // build TypeInfo for the struct initializer
@@ -311,7 +312,7 @@ public:
                 if (sym.type() == Symbol::Function && v.definition && v.ti) {
                     assert(m_call_sig.empty());
                     if (v.ti.is_callable()) {
-                        m_call_sig.emplace_back().load_from(v.ti.signature(), v.source_loc);
+                        m_call_sig.emplace_back().load_from(v.ti.ul_signature(), v.source_loc);
                     } else {
                         // A naked type, consider it a function return type
                         m_call_sig.emplace_back().set_return_type(v.ti);
@@ -423,9 +424,9 @@ public:
 
         if (m_value_type.is_callable()) {
             // result is new signature with args removed (applied)
-            const auto param_type_args = resolve_generic_args_to_signature(m_value_type.signature(), m_call_sig);
+            const auto param_type_args = resolve_generic_args_to_signature(m_value_type.ul_signature(), m_call_sig);
             store_resolved_param_type_vars(m_scope, param_type_args);
-            auto return_type = resolve_return_type_from_call_args(m_value_type.signature_ptr(), v);
+            auto return_type = resolve_return_type_from_call_args(m_value_type.ul_signature_ptr(), v);
             if (v.definition == nullptr) {
                 // all args consumed, or a zero-arg function being called
                 // -> effective type is the return type
@@ -491,7 +492,7 @@ public:
         v.enter_function.apply(*this);
         m_call_sig.clear();
         assert(m_value_type.is_callable());
-        auto enter_sig = m_value_type.signature();
+        auto enter_sig = m_value_type.ul_signature();
         // re-resolve type of context (match actual struct type as found by resolving `with` function)
         m_cast_type = enter_sig.param_type;
         v.context->apply(*this);
@@ -625,9 +626,9 @@ private:
                 // Special symbol that says the name may be a struct member.
                 // In that case the arg has to be a struct with the referenced member name.
                 // If it isn't, skip the candidate.
-                if (!m_call_sig.empty() && m_call_sig.back().arg.type_info.is_struct()) {
+                if (!m_call_sig.empty() && m_call_sig.back().arg.type_info.underlying().is_struct()) {
                     const auto& struct_type = m_call_sig.back().arg.type_info;
-                    const auto* item_type = struct_type.struct_item_by_name(symptr->name());
+                    const auto* item_type = struct_type.underlying().struct_item_by_name(symptr->name());
                     if (item_type == nullptr) {
                         // skip - struct doesn't have the referenced member
                         continue;
@@ -723,8 +724,8 @@ private:
                 assert(!"unexpected return type");
             }
             // skip blocks / functions without params
-            while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
-                sig = sig->return_type.signature_ptr();
+            while (sig->param_type.is_void() && sig->return_type.is_callable()) {
+                sig = sig->return_type.ul_signature_ptr();
                 ++v.wrapped_execs;
             };
             const auto& c_sig = call_sig.signature();
@@ -750,7 +751,7 @@ private:
                     // resolve overload in case the arg is a function that was specialized
                     auto orig_call_sig = std::move(m_call_sig);
                     m_call_sig.clear();
-                    m_call_sig.emplace_back().load_from(sig_type.signature(), source_loc);
+                    m_call_sig.emplace_back().load_from(sig_type.ul_signature(), source_loc);
                     v.arg->apply(*this);
                     m_call_sig = std::move(orig_call_sig);
                 }
@@ -764,7 +765,7 @@ private:
                         for (auto&& [i, sig_item] : sig_subtypes | enumerate) {
                             if (sig_item.is_callable()) {
                                 m_call_sig.clear();
-                                m_call_sig.emplace_back().load_from(sig_item.signature(), source_loc);
+                                m_call_sig.emplace_back().load_from(sig_item.ul_signature(), source_loc);
                                 tuple->items[i]->apply(*this);
                             }
                         }

@@ -570,6 +570,9 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
 {
     // 'type' keyword makes strong types
     CHECK(interpret_std("type X=Int; x:X = 42; x:Int") == "42");
+    CHECK(interpret_std("type X=Int; x = 42:X; x:Int") == "42");
+    CHECK(interpret_std("type X=Int; x = X 42; x:Int") == "42");
+    CHECK(interpret_std("type X=Int; x = (42).X; x:Int") == "42");
     CHECK_THROWS_AS(interpret_std("type X=Int; x:X = 42; x:Int64"), FunctionNotFound);  // cast X -> Int64
     CHECK(interpret_std("type X=Int; x:X = 42; (x:Int):Int64") == "42L");  // OK with intermediate cast to Int
     // alias (not a strong type)
@@ -577,30 +580,33 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     // tuple
     const std::string my_tuple = "type MyTuple = (String, Int); ";
     CHECK(interpret(R"(TupleAlias = (String, Int); a:TupleAlias = "hello", 42; a)") == R"(("hello", 42))");
-    CHECK(interpret(my_tuple + R"(a:MyTuple = "hello", 42; a)") == R"(("hello", 42))");
-    CHECK(interpret(my_tuple + R"(type Tuple2 = (String, MyTuple); a:Tuple2 = ("hello", ("a", 1)); a)") == R"(("hello", ("a", 1)))");
+    CHECK(interpret(my_tuple + R"(a:MyTuple = "hello", 42; a)") == R"(MyTuple("hello", 42))");
+    CHECK(interpret(my_tuple + R"(a:MyTuple = ("hello", 42); a)") == R"(MyTuple("hello", 42))");
+    CHECK(interpret(my_tuple + R"(type Tuple2 = (String, MyTuple); a:Tuple2 = ("hello", ("a", 1)); a)") == R"(Tuple2("hello", MyTuple("a", 1)))");
     // struct
     CHECK(interpret(R"(a:(name: String, age: Int) = ("hello", 42); a)") == R"((name="hello", age=42))");  // anonymous
     CHECK(interpret(R"(Rec = (name: String, age: Int); a:Rec = (name="hello", age=42); a)") == R"((name="hello", age=42))");  // alias
     const std::string my_struct = "type MyStruct = (name:String, age:Int); ";  // named struct
-    CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a)") == R"((name="hello", age=42))");
-    CHECK(interpret(my_struct + R"( a:MyStruct = "hello", 42; a)") == R"((name="hello", age=42))");
+    CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a)") == R"(MyStruct(name="hello", age=42))");
+    CHECK(interpret(my_struct + R"( a:MyStruct = "hello", 42; a)") == R"(MyStruct(name="hello", age=42))");
+    CHECK(interpret_std(my_struct + R"( a = MyStruct(name="hello", age=42); a)") == R"(MyStruct(name="hello", age=42))");
+    CHECK(interpret_std(my_struct + R"( a = MyStruct("hello", 42); a)") == R"(MyStruct(name="hello", age=42))");
     // struct defaults (left out fields get default "zero" value)
     CHECK_THROWS_AS(interpret("x:(Int,Int) = ()"), DefinitionTypeMismatch);  // tuple doesn't have defaults
-    CHECK(interpret_std("x:FormatSpec = (fill='_',width=2); x") == R"((fill='_', align='\x00', sign='\x00', width=2, precision=0, spec=""))");
-    CHECK(interpret_std("x:FormatSpec = (width=2); x") == R"((fill='\x00', align='\x00', sign='\x00', width=2, precision=0, spec=""))");
-    CHECK(interpret_std("x:FormatSpec = (); x") == R"((fill='\x00', align='\x00', sign='\x00', width=0, precision=0, spec=""))");  // empty tuple stands for empty StructInit
+    CHECK(interpret_std("x:FormatSpec = (fill='_',width=2); x") == R"(FormatSpec(fill='_', align='\x00', sign='\x00', width=2, precision=0, spec=""))");
+    CHECK(interpret_std("x:FormatSpec = (width=2); x") == R"(FormatSpec(fill='\x00', align='\x00', sign='\x00', width=2, precision=0, spec=""))");
+    CHECK(interpret_std("x:FormatSpec = (); x") == R"(FormatSpec(fill='\x00', align='\x00', sign='\x00', width=0, precision=0, spec=""))");  // empty tuple stands for empty StructInit
     CHECK_THROWS_AS(interpret_std("x:FormatSpec = ('_', '>')"), DefinitionTypeMismatch);  // when initializing with a tuple, all fields have to be specified (no defaults are filled in)
     CHECK(interpret_std("x:(field:Int) = 2; x") == "(field=2)");  // a single-item struct can be initialized with the field value (as there is no single-field tuple)
     // cast from underlying type
-    CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a)") == R"((name="hello", age=42))");
+    CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a)") == R"(MyStruct(name="hello", age=42))");
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a:(String, Int))") == R"(("hello", 42))");
-    CHECK(interpret_std(my_struct + R"( a = (name="hello", age=42):MyStruct; a)") == R"((name="hello", age=42))");
+    CHECK(interpret_std(my_struct + R"( a = (name="hello", age=42):MyStruct; a)") == R"(MyStruct(name="hello", age=42))");
     CHECK_THROWS_AS(interpret(my_struct + R"(a = ("Luke", 10); b: MyStruct = a)"), FunctionNotFound);
     CHECK_THROWS_AS(interpret(my_struct + R"(type OtherStruct = (name:String, age:Int); a:MyStruct = ("Luke", 10); b: OtherStruct = a)"), FunctionNotFound);
-    CHECK(interpret_std(my_struct + R"(a = ("Luke", 10); b: MyStruct = a: MyStruct; b)") == R"((name="Luke", age=10))");
-    CHECK(interpret_std(my_struct + R"(a = ("Luke", 10); b = a: MyStruct; b)") == R"((name="Luke", age=10))");
-    CHECK(interpret_std(my_tuple + R"(a = ("hello", 42):MyTuple; a)") == R"(("hello", 42))");
+    CHECK(interpret_std(my_struct + R"(a = ("Luke", 10); b: MyStruct = a: MyStruct; b)") == R"(MyStruct(name="Luke", age=10))");
+    CHECK(interpret_std(my_struct + R"(a = ("Luke", 10); b = a: MyStruct; b)") == R"(MyStruct(name="Luke", age=10))");
+    CHECK(interpret_std(my_tuple + R"(a = ("hello", 42):MyTuple; a)") == R"(MyTuple("hello", 42))");
     CHECK_THROWS_AS(interpret_std(my_tuple + "(1, 2):MyTuple"), DefinitionTypeMismatch);  // bad cast
     // struct member access
     CHECK(interpret(R"( (name="hello", age=42, valid=true).age )") == "42");
@@ -1017,7 +1023,7 @@ TEST_CASE( "Initializer", "[script][interpreter]" )
                         "instance Init Int MyType {\n"
                         "    init = fun a { (a, \"Foo\"):MyType }\n"
                         "}\n"
-                        "MyType(42)") == "(42, \"Foo\")");
+                        "MyType(42)") == "MyType(42, \"Foo\")");
     // dot type init
     CHECK(interpret_std("(42).Int64") == "42L");
     CHECK(interpret_std("42 .Int64") == "42L");

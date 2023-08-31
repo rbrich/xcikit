@@ -883,7 +883,8 @@ static void dump_l1_instruction(std::ostream& os, Opcode opcode, size_t arg, con
         case Opcode::ListSubscript:
         case Opcode::ListLength:
         case Opcode::ListSlice:
-        case Opcode::ListConcat: {
+        case Opcode::ListConcat:
+        case Opcode::Invoke: {
             const TypeInfo& ti = get_type_info(mod.module_manager(), arg);
             os << " (" << ti << ")";
             break;

@@ -83,10 +83,10 @@ public:
 
     void visit(ast::Tuple& v) override {
         // build tuple on stack
-        if (v.ti.is_struct() && v.items.empty()) {
+        if (v.ti.underlying().is_struct() && v.items.empty()) {
             // A struct can be initialized with empty tuple "()".
             // Fill in the defaults.
-            for (const auto& ti : reverse(v.ti.struct_items())) {
+            for (const auto& ti : reverse(v.ti.underlying().struct_items())) {
                 if (ti.second.is_void())
                     return;  // Void value
                 // add to static values
@@ -107,13 +107,13 @@ public:
             item->apply(*this);
         }
         // MAKE_LIST <length> <elem_type>
-        const Index type_index = make_type_index(module(), v.ti.elem_type());
+        const Index type_index = make_type_index(module(), v.ti.underlying().elem_type());
         code().add_L2(Opcode::MakeList, v.items.size(), type_index);
     }
 
     void visit(ast::StructInit& v) override {
         // build struct on stack according to struct_type, fill in defaults
-        for (const auto& ti : reverse(v.ti.struct_items())) {
+        for (const auto& ti : reverse(v.ti.underlying().struct_items())) {
             // lookup the name in StructInit
             auto it = std::find_if(v.items.begin(), v.items.end(),
                 [&ti](const ast::StructInit::Item& item) {
@@ -349,9 +349,9 @@ public:
                 break;
             case Symbol::StructItem: {
                 // arg = struct (pushed on stack)
-                assert(v.ti.is_callable());
-                assert(v.ti.signature().param_type.is_struct());
-                const TypeInfo& struct_type = v.ti.signature().param_type;
+                assert(v.ti.is_function());
+                assert(v.ti.signature().param_type.underlying().is_struct());
+                const TypeInfo& struct_type = v.ti.signature().param_type.underlying();
 
                 // return the item -> drop all other items from stack, leaving only the selected one
                 size_t drop_before = 0;  // first DROP 0 <size>

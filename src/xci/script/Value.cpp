@@ -797,8 +797,8 @@ size_t Values::size_on_stack() const
 TypedValue::TypedValue(Value value, TypeInfo type_info)
         : m_value(std::move(value)), m_type_info(std::move(type_info))
 {
-    assert(m_value.type() == m_type_info.underlying_type()
-        || (m_value.type() == Type::Tuple && m_type_info.is_struct()));
+    assert(m_value.type() == m_type_info.underlying().type()
+        || (m_value.type() == Type::Tuple && m_type_info.underlying().is_struct()));
 }
 
 
@@ -865,16 +865,19 @@ public:
         os << "]";
     }
     void visit(const TupleV& v) override {
-        os << "(";
-        if (type_info.is_tuple()) {
-            auto ti_iter = type_info.subtypes().begin();
+        if (type_info.is_named())
+            os << type_info.name();
+        const auto& underlying = type_info.underlying();
+        os << '(';
+        if (underlying.is_tuple()) {
+            auto ti_iter = underlying.subtypes().begin();
             for (Value* it = v.values.get(); !it->is_unknown(); ++it) {
                 if (it != v.values.get())
                     os << ", ";
                 os << TypedValue(*it, *ti_iter++);
             }
-        } else if (type_info.is_struct()) {
-            auto ti_iter = type_info.struct_items().begin();
+        } else if (underlying.is_struct()) {
+            auto ti_iter = underlying.struct_items().begin();
             for (Value* it = v.values.get(); !it->is_unknown(); ++it) {
                 if (it != v.values.get())
                     os << ", ";

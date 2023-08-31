@@ -153,7 +153,7 @@ void resolve_return_type(Signature& sig, const TypeInfo& deduced,
                 throw MissingExplicitType(loc);
             return;  // nothing to resolve
         }
-        if (deduced.is_callable() && &sig == &deduced.signature())
+        if (deduced.is_callable() && &sig == &deduced.ul_signature())
             throw MissingExplicitType(loc);  // the return type is recursive!
         specialize_arg(sig.return_type, deduced, scope.type_args(),
                 [&loc](const TypeInfo& exp, const TypeInfo& got) {
