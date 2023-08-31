@@ -3,6 +3,11 @@
 # ------------ #
 
 find_package(Freetype REQUIRED)
+if (NOT TARGET Freetype::Freetype AND TARGET freetype)
+    # vcpkg is missing the standard target for some reason
+    add_library(Freetype::Freetype ALIAS freetype)
+endif()
+
 find_package(harfbuzz REQUIRED)
 
 

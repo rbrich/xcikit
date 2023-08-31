@@ -117,7 +117,7 @@ TypeInfoUnion& TypeInfoUnion::operator =(TypeInfoUnion&& r) noexcept {
         construct_variant();
     }
     switch (m_type) {
-        case Type::Unknown: m_var = std::move(r.m_var); break;
+        case Type::Unknown: m_var = r.m_var; break;
         case Type::List:
         case Type::Tuple: m_subtypes = std::move(r.m_subtypes); break;
         case Type::Struct: m_struct_items = std::move(r.m_struct_items); break;
