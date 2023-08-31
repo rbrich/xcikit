@@ -116,7 +116,7 @@ if (BUILD_BENCHMARKS)
 endif()
 
 if (BUILD_EXAMPLES AND NOT WIN32 AND NOT EMSCRIPTEN)
-    find_package(incbin REQUIRED)
+    find_package(incbin QUIET)
 endif()
 
 # Doxygen

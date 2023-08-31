@@ -30,7 +30,7 @@ public:
         auto symptr = symtab().find_by_name(name);
 
         // allow overloading in some cases
-        // * must not have forward declaration
+        // * must not have a forward declaration
         // * must be a plain function (not method)
         // * must have explicitly specified type
         if (!symptr
@@ -199,7 +199,10 @@ public:
     }
 
     void visit(ast::List& v) override {
-        for (auto& item : v.items) {
+        if (v.items.empty()) {
+            // Create implicit type var for empty list literal: `[]`
+            v.ti = ti_list(TypeInfo(allocate_type_var("$L")));
+        } else for (auto& item : v.items) {
             item->apply(*this);
         }
     }

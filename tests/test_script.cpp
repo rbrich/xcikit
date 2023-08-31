@@ -443,14 +443,17 @@ TEST_CASE( "Literals", "[script][interpreter]" )
     CHECK(interpret("\"hello\"") == "\"hello\"");
     CHECK(interpret("\"řečiště\"") == "\"řečiště\"");
     // Lists
-    CHECK(interpret("[]") == "[]");  // no type -> [Void]
+    CHECK_THROWS_AS(interpret("[]"), UnexpectedGenericFunction);  // the list type must be specified or deduced
     CHECK(interpret_std("[]:[Void]") == "[]");  // same
     CHECK(interpret_std("[]:[Int]") == "[]");
-    CHECK(interpret_std("[].len") == "0U");
+    CHECK(interpret_std("[]:[Void].len") == "0U");
     CHECK(interpret_std("[1,2,3].len") == "3U");
-    CHECK(interpret_std("[].empty") == "true");
+    CHECK(interpret_std("[]:[Int].empty") == "true");
     CHECK(interpret_std("[1,2,3].empty") == "false");
     CHECK(interpret("[1,2,3]") == "[1, 2, 3]");
+    CHECK(interpret_std("empty_list = fun<T> Void { []:[T] }; empty_list<Int>") == "[]");
+    CHECK(interpret_std("empty_list = fun<T> Void -> [T] { [] }; empty_list<Int>") == "[]"); // equivalent
+    CHECK(interpret_std("empty_list = fun<T> Void { []:[T] }; empty_list<[Int]>") == "[]");  // returns empty list of type [[Int32]]
 }
 
 
@@ -465,6 +468,7 @@ TEST_CASE( "Variables", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret("m = { m = m }"), MissingExplicitType);
     CHECK_THROWS_AS(interpret_std("m = { m = m + 1 }"), MissingExplicitType);
     CHECK(interpret_std("m = { m = 1; m }; m") == "1");
+    CHECK(interpret_std("x=1; p=fun ()->Int { x }; p") == "1");
     // "m = { m + 1 }" compiles fine, but infinitely recurses
     CHECK_THROWS_AS(interpret_std("a:[Char] = [1,2,3]"), DefinitionTypeMismatch);
 }
@@ -566,6 +570,9 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
 {
     // 'type' keyword makes strong types
     CHECK(interpret_std("type X=Int; x:X = 42; x:Int") == "42");
+    CHECK(interpret_std("type X=Int; x = 42:X; x:Int") == "42");
+    CHECK(interpret_std("type X=Int; x = X 42; x:Int") == "42");
+    CHECK(interpret_std("type X=Int; x = (42).X; x:Int") == "42");
     CHECK_THROWS_AS(interpret_std("type X=Int; x:X = 42; x:Int64"), FunctionNotFound);  // cast X -> Int64
     CHECK(interpret_std("type X=Int; x:X = 42; (x:Int):Int64") == "42L");  // OK with intermediate cast to Int
     // alias (not a strong type)
@@ -573,30 +580,33 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     // tuple
     const std::string my_tuple = "type MyTuple = (String, Int); ";
     CHECK(interpret(R"(TupleAlias = (String, Int); a:TupleAlias = "hello", 42; a)") == R"(("hello", 42))");
-    CHECK(interpret(my_tuple + R"(a:MyTuple = "hello", 42; a)") == R"(("hello", 42))");
-    CHECK(interpret(my_tuple + R"(type Tuple2 = (String, MyTuple); a:Tuple2 = ("hello", ("a", 1)); a)") == R"(("hello", ("a", 1)))");
+    CHECK(interpret(my_tuple + R"(a:MyTuple = "hello", 42; a)") == R"(MyTuple("hello", 42))");
+    CHECK(interpret(my_tuple + R"(a:MyTuple = ("hello", 42); a)") == R"(MyTuple("hello", 42))");
+    CHECK(interpret(my_tuple + R"(type Tuple2 = (String, MyTuple); a:Tuple2 = ("hello", ("a", 1)); a)") == R"(Tuple2("hello", MyTuple("a", 1)))");
     // struct
     CHECK(interpret(R"(a:(name: String, age: Int) = ("hello", 42); a)") == R"((name="hello", age=42))");  // anonymous
     CHECK(interpret(R"(Rec = (name: String, age: Int); a:Rec = (name="hello", age=42); a)") == R"((name="hello", age=42))");  // alias
     const std::string my_struct = "type MyStruct = (name:String, age:Int); ";  // named struct
-    CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a)") == R"((name="hello", age=42))");
-    CHECK(interpret(my_struct + R"( a:MyStruct = "hello", 42; a)") == R"((name="hello", age=42))");
+    CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a)") == R"(MyStruct(name="hello", age=42))");
+    CHECK(interpret(my_struct + R"( a:MyStruct = "hello", 42; a)") == R"(MyStruct(name="hello", age=42))");
+    CHECK(interpret_std(my_struct + R"( a = MyStruct(name="hello", age=42); a)") == R"(MyStruct(name="hello", age=42))");
+    CHECK(interpret_std(my_struct + R"( a = MyStruct("hello", 42); a)") == R"(MyStruct(name="hello", age=42))");
     // struct defaults (left out fields get default "zero" value)
     CHECK_THROWS_AS(interpret("x:(Int,Int) = ()"), DefinitionTypeMismatch);  // tuple doesn't have defaults
-    CHECK(interpret_std("x:FormatSpec = (fill='_',width=2); x") == R"((fill='_', align='\x00', sign='\x00', width=2, precision=0, spec=""))");
-    CHECK(interpret_std("x:FormatSpec = (width=2); x") == R"((fill='\x00', align='\x00', sign='\x00', width=2, precision=0, spec=""))");
-    CHECK(interpret_std("x:FormatSpec = (); x") == R"((fill='\x00', align='\x00', sign='\x00', width=0, precision=0, spec=""))");  // empty tuple stands for empty StructInit
+    CHECK(interpret_std("x:FormatSpec = (fill='_',width=2); x") == R"(FormatSpec(fill='_', align='\x00', sign='\x00', width=2, precision=0, spec=""))");
+    CHECK(interpret_std("x:FormatSpec = (width=2); x") == R"(FormatSpec(fill='\x00', align='\x00', sign='\x00', width=2, precision=0, spec=""))");
+    CHECK(interpret_std("x:FormatSpec = (); x") == R"(FormatSpec(fill='\x00', align='\x00', sign='\x00', width=0, precision=0, spec=""))");  // empty tuple stands for empty StructInit
     CHECK_THROWS_AS(interpret_std("x:FormatSpec = ('_', '>')"), DefinitionTypeMismatch);  // when initializing with a tuple, all fields have to be specified (no defaults are filled in)
     CHECK(interpret_std("x:(field:Int) = 2; x") == "(field=2)");  // a single-item struct can be initialized with the field value (as there is no single-field tuple)
     // cast from underlying type
-    CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a)") == R"((name="hello", age=42))");
+    CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a)") == R"(MyStruct(name="hello", age=42))");
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a:(String, Int))") == R"(("hello", 42))");
-    CHECK(interpret_std(my_struct + R"( a = (name="hello", age=42):MyStruct; a)") == R"((name="hello", age=42))");
+    CHECK(interpret_std(my_struct + R"( a = (name="hello", age=42):MyStruct; a)") == R"(MyStruct(name="hello", age=42))");
     CHECK_THROWS_AS(interpret(my_struct + R"(a = ("Luke", 10); b: MyStruct = a)"), FunctionNotFound);
     CHECK_THROWS_AS(interpret(my_struct + R"(type OtherStruct = (name:String, age:Int); a:MyStruct = ("Luke", 10); b: OtherStruct = a)"), FunctionNotFound);
-    CHECK(interpret_std(my_struct + R"(a = ("Luke", 10); b: MyStruct = a: MyStruct; b)") == R"((name="Luke", age=10))");
-    CHECK(interpret_std(my_struct + R"(a = ("Luke", 10); b = a: MyStruct; b)") == R"((name="Luke", age=10))");
-    CHECK(interpret_std(my_tuple + R"(a = ("hello", 42):MyTuple; a)") == R"(("hello", 42))");
+    CHECK(interpret_std(my_struct + R"(a = ("Luke", 10); b: MyStruct = a: MyStruct; b)") == R"(MyStruct(name="Luke", age=10))");
+    CHECK(interpret_std(my_struct + R"(a = ("Luke", 10); b = a: MyStruct; b)") == R"(MyStruct(name="Luke", age=10))");
+    CHECK(interpret_std(my_tuple + R"(a = ("hello", 42):MyTuple; a)") == R"(MyTuple("hello", 42))");
     CHECK_THROWS_AS(interpret_std(my_tuple + "(1, 2):MyTuple"), DefinitionTypeMismatch);  // bad cast
     // struct member access
     CHECK(interpret(R"( (name="hello", age=42, valid=true).age )") == "42");
@@ -766,8 +776,11 @@ TEST_CASE( "Function parameters", "[script][interpreter]" )
 {
     CHECK(interpret("a=1; f=fun a { a }; f 2") == "2");
     CHECK(interpret("a=1; f=fun b { a }; f 2") == "1");
+    CHECK(interpret("f=fun (a,b) { a }; f (1,2)") == "1");
+    CHECK_THROWS_AS(interpret("f=fun a,b { a }; f (1,2)"), ParseError);  // parens around tuple param are required
     CHECK_THROWS_AS(interpret("f=fun (a,b) { a }; f 2"), FunctionNotFound);
-    CHECK(interpret("a=1; f=fun b { a }; f 2") == "1");
+    CHECK(interpret("f=fun a:[Int] { a }; f [2]") == "[2]");
+    CHECK(interpret("f=fun a:(x:Int,y:Float) { a.y }; f (1, 2.0f)") == "2.0f");
     CHECK_THROWS_AS(interpret("f=fun (a,b) { a }; f 2,3"), FunctionNotFound);  // call has higher precedence than comma
     CHECK(interpret("f=fun (c:(a:Int,b:Int),d) { d }; f ((2,3),4)") == "4");
     CHECK(interpret("f=fun (c:(a:Int,b:Int),d) { c.a }; f ((2,3),4)") == "2");
@@ -775,6 +788,12 @@ TEST_CASE( "Function parameters", "[script][interpreter]" )
     CHECK(interpret("f=fun a:((a:Int,b:Int),Int) { a }; f ((2,3),4)") == "((a=2, b=3), 4)");
     CHECK(interpret("f=fun (c:(a,b),d) { d }; f ((2,3),4)") == "4");
     CHECK(interpret("f=fun (c:(a,b),d) { c.a }; f ((2,3),4)") == "2");
+    // Void param = same as block
+    CHECK(interpret("a=1; f={ a }; f") == "1");
+    CHECK(interpret("a=1; f=fun Void { a }; f") == "1");
+    CHECK(interpret("a=1; f=fun () { a }; f") == "1");
+    CHECK(interpret("a=1; f=fun() { a }; f") == "1");
+    CHECK(interpret("a=1; f=fun(Void){a}; f") == "1");
 }
 
 
@@ -857,6 +876,8 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
     CHECK(interpret("fun<T> [T] -> [T] { __noop } [1,2]") == "[1, 2]");
     CHECK(interpret("len = fun<T> [T] -> UInt { __list_length __type_index<T> }; len [1,2,3]") == "3U");
     CHECK(interpret_std("f = fun<T> a:[T] -> T { a!1 }; f [1,2,3]") == "2");
+    CHECK(interpret_std("clear = fun<T> [T] -> [T] { []:[T] }; clear [1,2,3]") == "[]");
+    CHECK(interpret("clear = fun<T> [T] -> [T] { [] }; clear [1,2,3]") == "[]");
 }
 
 
@@ -946,6 +967,7 @@ TEST_CASE( "Casting", "[script][interpreter]" )
     CHECK(interpret_std("(- 42):Bool") == "true");
     CHECK(interpret_std("(cast 42):Int64") == "42L");
     CHECK(interpret_std("a:Int64 = cast 42; a") == "42L");
+    CHECK(interpret_std("a:[Int] = cast []; a") == "[]");
     CHECK_THROWS_AS(interpret_std("cast 42"), FunctionConflict);  // must specify the result type
     CHECK(interpret_std("{23L}:Int") == "23");
     CHECK(interpret_std("min:Int") == "-2147483648");
@@ -968,6 +990,8 @@ TEST_CASE( "Casting", "[script][interpreter]" )
     CHECK(interpret_std("\"řež\":[Byte]") == "b\"\\xc5\\x99e\\xc5\\xbe\"");
     // "multi-cast" (parentheses are required)
     CHECK(interpret_std("((\"fire\":[Byte]):String):[Char]") == "['f', 'i', 'r', 'e']");
+    // cast function call
+    CHECK(interpret_std("empty_list = fun<T> Void->[T] { [] }; empty_list:[Int]") == "[]");  // specialize by casting
 }
 
 
@@ -999,7 +1023,7 @@ TEST_CASE( "Initializer", "[script][interpreter]" )
                         "instance Init Int MyType {\n"
                         "    init = fun a { (a, \"Foo\"):MyType }\n"
                         "}\n"
-                        "MyType(42)") == "(42, \"Foo\")");
+                        "MyType(42)") == "MyType(42, \"Foo\")");
     // dot type init
     CHECK(interpret_std("(42).Int64") == "42L");
     CHECK(interpret_std("42 .Int64") == "42L");
@@ -1074,7 +1098,6 @@ TEST_CASE( "List slice", "[script][interpreter]" )
     CHECK(interpret_std("[1,2,3,4,5] .slice (-1, -4, -1)") == "[5, 4, 3]");
     CHECK(interpret_std("[1,2,3,4,5] .slice (5, 1, 1)") == "[]");
     CHECK(interpret_std("[1,2,3,4,5] .slice (1, 5, -1)") == "[]");
-    CHECK(interpret_std("[] .slice (0, 5, 1)") == "[]");
     CHECK(interpret_std("[]:[Int] .slice (0, 5, 1)") == "[]");
     CHECK(interpret_std("tail [1,2,3]") == "[2, 3]");
     // heap-allocated type
@@ -1088,9 +1111,10 @@ TEST_CASE( "List concat", "[script][interpreter]" )
     CHECK(interpret("concat = fun<T> ([T], [T]) -> [T] { __list_concat __type_index<T> }; concat ([1,2,3], [4,5])") == "[1, 2, 3, 4, 5]");
     // std implementation uses operator `+`
     CHECK(interpret_std("[1,2,3] + [4,5]") == "[1, 2, 3, 4, 5]");
-    CHECK(interpret_std("[] + []") == "[]");  // result type is [Void]
+    CHECK_THROWS_AS(interpret_std("[] + []"), UnexpectedGenericFunction);  // the type must be specified or deduced
     CHECK(interpret_std("[]:[Int] + []:[Int]") == "[]");  // result type is [Int]
-    CHECK_THROWS_AS(interpret_std("[1,2,3] + []"), UnexpectedArgumentType);
+    CHECK(interpret_std("[1,2,3] + []") == "[1, 2, 3]");  // second argument type is deduced from function args
+    CHECK(interpret_std("[] + [1,2,3]") == "[1, 2, 3]");
     // heap-allocated elements
     CHECK(interpret_std(R"(["a", "bb", "ccc"] + ["dd", "e"])") == R"(["a", "bb", "ccc", "dd", "e"])");
     CHECK(interpret_std("[[1,2], [3,4]] + [[5,6]]") == "[[1, 2], [3, 4], [5, 6]]");
@@ -1118,6 +1142,19 @@ TEST_CASE( "Type classes", "[script][interpreter]" )
     // Instantiate type class from another module
     CHECK(interpret_std("instance Ord Bool { lt = { __less_than 0x11 }; gt = {false}; le = {false}; ge = {false} }; "
                         "false < true; 2 < 1") == "true;false");
+    // Specialize generic instance
+    CHECK(interpret("class XCls T R {\n"
+                    "  fn1 : T -> R\n"
+                    "  fn2 : R -> Int\n"
+                    "}\n"
+                    "instance<T> XCls T Int {\n"
+                    "  fn1 = fun a:T -> Int { 1 }\n"  // generic method
+                    "  fn2 = fun a:Int -> Int { 2 }\n"  // already concrete, not being specialized
+                    "}\n"
+                    "fn1 42u; "  // creates specialized instance XCls UInt32 Int32
+                    "fn2 42; "   // calls function from generic instance XCls T Int (which uses only the second arg which is already concrete)
+                    "__module.__n_fn"  // 1 for main, 2 for generic fns in class, 2 for fns in instance<T>, 1 for specialized fn1
+                    ) == "1;2;6");
 }
 
 

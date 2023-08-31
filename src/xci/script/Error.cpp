@@ -29,9 +29,9 @@ UnexpectedArgumentType::UnexpectedArgumentType(const TypeInfo& exp, const TypeIn
 {}
 
 
-UnexpectedReturnType::UnexpectedReturnType(const TypeInfo& exp, const TypeInfo& got)
+UnexpectedReturnType::UnexpectedReturnType(const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc)
         : ScriptError(fmt::format("function returns {}, body evaluates to {}",
-                                  exp, got))
+                                  exp, got), loc)
 {}
 
 
@@ -61,6 +61,13 @@ DefinitionParamTypeMismatch::DefinitionParamTypeMismatch(size_t idx, const TypeI
 BranchTypeMismatch::BranchTypeMismatch(const TypeInfo& exp, const TypeInfo& got)
         : ScriptError(fmt::format("branch type mismatch: expected {}, got {}",
                                   exp, got))
+{}
+
+
+ListTypeMismatch::ListTypeMismatch(const TypeInfo& got, const SourceLocation& loc)
+        : ScriptError(fmt::format("cannot cast a list to {}",
+                                  got),
+                      loc)
 {}
 
 

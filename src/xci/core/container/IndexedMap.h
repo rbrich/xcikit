@@ -238,9 +238,11 @@ IndexedMap<T>::IndexedMap(IndexedMap&& other) noexcept
 template<class T>
 IndexedMap<T>& IndexedMap<T>::operator=(IndexedMap&& other) noexcept
 {
-    std::swap(m_chunk, other.m_chunk);
-    std::swap(m_size, other.m_size);
-    std::swap(m_free_chunk, other.m_free_chunk);
+    m_chunk = std::move(other.m_chunk);
+    m_size = other.m_size;
+    m_free_chunk = other.m_free_chunk;
+    other.m_size = 0;
+    other.m_free_chunk = no_index;
     return *this;
 }
 

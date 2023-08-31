@@ -1,7 +1,7 @@
 // ff.cpp created on 2020-03-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2022 Radek Brich
+// Copyright 2020–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// Find File (ff) command line tool
@@ -604,7 +604,7 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
     TermCtl& term = TermCtl::stdout_instance();
     fmt::print(std::cout, "{}{:c}{:04o}{} {:>{}}:{:{}} {}{:4}{}{}{} {}{:4}{}{}{}  {:%F %H:%M}  ",
             term.fg(file_mode_to_color(st.st_mode)), file_type, st.st_mode & 07777, term.normal(),
-            user, w_user, group, w_group,
+            user, w_user_new, group, w_group_new,
             term.fg(size_unit_to_color(size_unit)), size, term.dim(), size_unit, term.normal(),
             term.fg(size_unit_to_color(alloc_unit)), alloc, term.dim(), alloc_unit, term.normal(),
             fmt::localtime(st.st_mtime));
@@ -626,7 +626,10 @@ static void print_stats(const Counters& counters)
     fmt::print(stderr, "----------------------------------------------\n"
                        " Searched {:8} directories {:8} files\n"
                        " Matched  {:8} directories {:8} files\n",
-            counters.seen_dirs, counters.seen_files, counters.matched_dirs, counters.matched_files);
+            counters.seen_dirs.load(std::memory_order_acquire),
+            counters.seen_files.load(std::memory_order_acquire),
+            counters.matched_dirs.load(std::memory_order_acquire),
+            counters.matched_files.load(std::memory_order_acquire));
     if (counters.total_size || counters.total_blocks) {
         size_t size = counters.total_size;
         size_t alloc = counters.total_blocks * 512;

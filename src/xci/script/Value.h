@@ -254,7 +254,7 @@ public:
     bool is_unknown() const { return type() == Type::Unknown; }
     bool is_void() const { return type() == Type::Tuple && get<TupleV>().empty(); }
     bool is_bool() const { return type() == Type::Bool; }
-    bool is_callable() const { return type() == Type::Function; }
+    bool is_function() const { return type() == Type::Function; }
 
     // Load value from `other` and return true if the value is compatible
     // (can be statically cast). Return false otherwise.

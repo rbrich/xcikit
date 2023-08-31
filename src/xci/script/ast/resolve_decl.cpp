@@ -55,7 +55,7 @@ public:
             m_type_info = std::move(eval_type);
 
             auto idx_in_cls = m_instance->class_().get_index_of_function(psym->ref()->index());
-            m_instance->set_function(idx_in_cls, psym.get_scope_index(m_scope), psym);
+            m_instance->set_function(idx_in_cls, &module(), psym.get_scope_index(m_scope), psym);
         }
 
         Function& fn = dfn.symbol().get_function(m_scope);
@@ -69,7 +69,7 @@ public:
             m_type_info = std::move(declared_type);
         } else {
             if (m_type_info.is_callable())
-                fn.signature() = m_type_info.signature();
+                fn.signature() = m_type_info.ul_signature();
             else {
                 fn.signature().set_parameter(ti_void());
                 fn.signature().set_return_type(m_type_info);
@@ -90,6 +90,8 @@ public:
     }
 
     void visit(ast::Return& ret) override {
+        if (!function().signature().return_type.is_unknown())
+            m_type_info = function().signature().return_type;
         ret.expression->apply(*this);
     }
 
@@ -133,10 +135,10 @@ public:
     void visit(ast::Literal& v) override {
         TypeInfo declared {m_type_info};
         if (m_type_info.is_callable()) {
-            if (m_type_info.signature().has_nonvoid_param()) {
+            if (m_type_info.ul_signature().has_nonvoid_param()) {
                 throw DefinitionTypeMismatch(m_type_info, v.value.type_info(), v.source_loc);
             }
-            declared = m_type_info.signature().return_type;
+            declared = m_type_info.ul_signature().return_type;
         }
         TypeChecker type_check(std::move(declared));
         v.ti = type_check.resolve(v.value.type_info(), v.source_loc);
@@ -151,21 +153,26 @@ public:
     }
 
     void visit(ast::List& v) override {
-        v.ti = std::move(m_type_info);
+        auto specified = std::move(m_type_info);
+        if (!specified.is_unknown() && !specified.is_list())
+            throw ListTypeMismatch(specified, v.source_loc);
         for (auto& item : v.items) {
-            m_type_info = {};
+            m_type_info = specified ? specified.elem_type() : TypeInfo{};
             item->apply(*this);
         }
+        m_type_info = {};
+        if (specified)
+            v.ti = std::move(specified);
     }
 
     void visit(ast::StructInit& v) override {
         auto specified = std::move(m_type_info);
-        if (!specified.is_unknown() && !specified.is_struct())
+        if (!specified.is_unknown() && !specified.underlying().is_struct())
             throw StructTypeMismatch(specified, v.source_loc);
         for (auto& item : v.items) {
             // resolve item type
             if (specified) {
-                const TypeInfo* specified_item = specified.struct_item_by_name(item.first.name);
+                const TypeInfo* specified_item = specified.underlying().struct_item_by_name(item.first.name);
                 if (specified_item)
                     m_type_info = *specified_item;
             }
@@ -276,12 +283,14 @@ public:
     }
 
     void visit(ast::Condition& v) override {
-        TypeInfo expr_type;
+        TypeInfo type_info = std::move(m_type_info);
         for (auto& item : v.if_then_expr) {
+            m_type_info = {};
             item.first->apply(*this);
+            m_type_info = type_info;
             item.second->apply(*this);
         }
-
+        m_type_info = type_info;
         v.else_expr->apply(*this);
     }
 
@@ -305,12 +314,14 @@ public:
         assert(m_type_info);
         // fill in types from specified function type
         if (specified_type.is_callable() && m_type_info.is_callable()) {
-            if (m_type_info.signature().return_type.is_unknown() && specified_type.signature().return_type)
-                m_type_info.signature().set_return_type(specified_type.signature().return_type);
-            if (!m_instance && specified_type.signature().return_type != m_type_info.signature().return_type)
+            const auto& spec_sig = specified_type.ul_signature();
+            auto& underlying = m_type_info.underlying();
+            if (underlying.signature().return_type.is_unknown() && spec_sig.return_type)
+                underlying.signature().set_return_type(spec_sig.return_type);
+            if (!m_instance && spec_sig.return_type != underlying.signature().return_type)
                 throw DeclarationTypeMismatch(specified_type, m_type_info, v.source_loc);
-            auto& param = m_type_info.signature().param_type;
-            const auto& spec = specified_type.signature().param_type;
+            auto& param = underlying.signature().param_type;
+            const auto& spec = spec_sig.param_type;
             if (param.is_unknown() || param.is_void())
                 param = spec;
             if (param.is_tuple() && spec.is_tuple()) {
@@ -340,7 +351,7 @@ public:
         } else if (!m_instance && specified_type && specified_type != m_type_info.effective_type())
             throw DeclarationTypeMismatch(specified_type, m_type_info, v.source_loc);
 
-        fn.set_signature(m_type_info.signature_ptr());
+        fn.set_signature(m_type_info.ul_signature_ptr());
 
         resolve_decl(scope, v.body);
 
@@ -367,14 +378,15 @@ public:
             if (t.param.type)
                 t.param.type->apply(*this);
             else
-                m_type_info = ti_unknown();
+                m_type_info = {};
             signature->set_parameter(std::move(m_type_info));
-        } else
+        } else {
             signature->set_parameter(ti_void());
+        }
         if (t.return_type)
             t.return_type->apply(*this);
         else
-            m_type_info = ti_unknown();
+            m_type_info = {};
         signature->set_return_type(m_type_info);
         m_type_info = TypeInfo{std::move(signature)};
     }

@@ -32,11 +32,15 @@ void resolve_generic_type(TypeInfo& sig, const Scope& scope);
 void resolve_type_vars(Signature& signature, const TypeArgs& type_args);
 void resolve_type_vars(Signature& signature, const Scope& scope);
 
+/// Check return type matches and set it to concrete type if it's generic
+void resolve_return_type(Signature& sig, const TypeInfo& deduced,
+                         Scope& scope, const SourceLocation& loc);
+
 void specialize_arg(const TypeInfo& sig, const TypeInfo& deduced,
                     TypeArgs& type_args,
                     const UnexpectedTypeCallback& exc_cb);
 
-/// check `scope` for TypeVar symbols and store their resolved type to scope
+/// Check `scope` for TypeVar symbols and store their resolved type to scope
 void store_resolved_param_type_vars(Scope& scope, const TypeArgs& type_args);
 
 }  // namespace xci::script

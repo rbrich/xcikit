@@ -43,15 +43,15 @@ TypeArgs specialize_signature(const SignaturePtr& signature, const std::vector<C
     for (const CallSignature& call_sig : call_sig_stack | reverse) {
         if (!sig)
             sig = signature;
-        else if (sig->return_type.type() == Type::Function) {
+        else if (sig->return_type.is_callable()) {
             // continue with specializing args of a returned function
-            sig = sig->return_type.signature_ptr();
+            sig = sig->return_type.ul_signature_ptr();
         } else {
             throw UnexpectedArgument(TypeInfo{sig}, call_sig.arg.source_loc);
         }
         // skip blocks / functions without params
-        while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
-            sig = sig->return_type.signature_ptr();
+        while (sig->param_type.is_void() && sig->return_type.is_callable()) {
+            sig = sig->return_type.ul_signature_ptr();
         };
         const auto& c_sig = call_sig.signature();
         const auto& source_loc = call_sig.arg.source_loc;
@@ -173,10 +173,14 @@ TypeArgs resolve_instance_types(const Signature& signature, const std::vector<Ca
     if (signature.return_type.is_unknown()) {
         auto var = signature.return_type.generic_var();
         assert(var);
-        if (!call_sig_stack.empty() && !call_sig_stack[0].return_type.is_unknown())
-            res.set(var, call_sig_stack[0].return_type);
-        if (!cast_type.is_unknown())
-            res.set(var, cast_type.effective_type());
+        if (!call_sig_stack.empty() && !call_sig_stack[0].return_type.is_unknown()) {
+            set_type_arg(var, call_sig_stack[0].return_type, res,
+                         [](const TypeInfo& exp, const TypeInfo& got) {});
+        }
+        if (!cast_type.is_unknown()) {
+            set_type_arg(var, cast_type.effective_type(), res,
+                         [](const TypeInfo& exp, const TypeInfo& got) {});
+        }
     }
     return res;
 }

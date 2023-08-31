@@ -16,7 +16,6 @@
 #include <memory>
 #include <functional>
 #include <utility>
-#include <variant>
 
 namespace xci::script {
 
@@ -64,14 +63,15 @@ struct Signature;
 struct NamedType;
 
 
-class TypeInfo {
+namespace detail {
+
+/// Discriminated union for TypeInfo details.
+/// In comparison to std::variant, this saves 8 bytes + some unnecessary templating.
+class TypeInfoUnion {
 public:
     struct ListTag {};
     struct TupleTag {};
     struct StructTag {};
-    static constexpr ListTag list_of {};
-    static constexpr TupleTag tuple_of {};
-    static constexpr StructTag struct_of {};
 
     using Var = SymbolPointer;  // for unknown type, specifies which type variable this represents
     using Subtypes = std::vector<TypeInfo>;
@@ -80,49 +80,114 @@ public:
     using SignaturePtr = std::shared_ptr<Signature>;
     using NamedTypePtr = std::shared_ptr<NamedType>;
 
+    Type type() const noexcept { return m_type; }
+    void set_type(Type type) {
+        if (m_type == type)
+            return;
+        destroy_variant();
+        m_type = type;
+        construct_variant();
+    }
+
+    Var generic_var() const;  // type = Unknown
+    Var& generic_var();  // type = Unknown
+    const Subtypes& subtypes() const;  // type = Tuple
+    Subtypes& subtypes() { return const_cast<Subtypes&>( const_cast<const TypeInfoUnion*>(this)->subtypes() ); }
+    const StructItems& struct_items() const;  // type = Struct
+    StructItems& struct_items() { return const_cast<StructItems&>( const_cast<const TypeInfoUnion*>(this)->struct_items() ); }
+    const SignaturePtr& signature_ptr() const;  // type = Function
+    SignaturePtr& signature_ptr() { return const_cast<SignaturePtr&>( const_cast<const TypeInfoUnion*>(this)->signature_ptr() ); }
+    const NamedTypePtr& named_type_ptr() const;   // type = Named
+
+protected:
+    TypeInfoUnion() { construct_variant(); }
+    TypeInfoUnion(Var var) { std::construct_at(&m_var, var); }
+    TypeInfoUnion(Type type) : m_type(type) { construct_variant(); }
+    TypeInfoUnion(SignaturePtr signature) : m_type(Type::Function) { std::construct_at(&m_signature_ptr, std::move(signature)); }
+    TypeInfoUnion(ListTag, TypeInfo elem);
+    TypeInfoUnion(TupleTag, Subtypes subtypes) : m_type(Type::Tuple) { std::construct_at(&m_subtypes, std::move(subtypes)); }
+    TypeInfoUnion(StructTag, StructItems items);
+    TypeInfoUnion(std::string name, TypeInfo&& type_info);
+    ~TypeInfoUnion() { destroy_variant(); }
+
+    TypeInfoUnion(const TypeInfoUnion& r) : m_type(r.m_type) { construct_variant(); *this = r; }
+    TypeInfoUnion& operator =(const TypeInfoUnion& r);
+
+    TypeInfoUnion(TypeInfoUnion&& r) noexcept : m_type(r.m_type) { construct_variant(); *this = std::move(r); }
+    TypeInfoUnion& operator =(TypeInfoUnion&& r) noexcept;
+
+private:
+    void construct_variant();
+    void destroy_variant();
+
+    union {
+        Var m_var;
+        Subtypes m_subtypes;
+        StructItems m_struct_items;
+        SignaturePtr m_signature_ptr;
+        NamedTypePtr m_named_type_ptr;
+    };
+    Type m_type { Type::Unknown };
+};
+
+}  // namespace detail
+
+
+class TypeInfo: public detail::TypeInfoUnion {
+public:
+    static constexpr ListTag list_of {};
+    static constexpr TupleTag tuple_of {};
+    static constexpr StructTag struct_of {};
+
     // Unknown / generic
     TypeInfo() = default;
-    explicit TypeInfo(Var var) : m_info(var) {}
-    // Plain types
-    explicit TypeInfo(Type type);
+    explicit TypeInfo(Var var) : detail::TypeInfoUnion(var) {}
+    // Default-construct any type
+    explicit TypeInfo(Type type) : detail::TypeInfoUnion(type) {}
     // Function
-    explicit TypeInfo(SignaturePtr signature)
-        : m_type(Type::Function), m_info(std::move(signature)) {}
+    explicit TypeInfo(SignaturePtr signature) : detail::TypeInfoUnion(std::move(signature)) {}
     // List
-    explicit TypeInfo(ListTag, TypeInfo list_elem);
+    explicit TypeInfo(ListTag tag, TypeInfo elem) : detail::TypeInfoUnion(tag, std::move(elem)) {}
     // Tuple
-    explicit TypeInfo(TupleTag, std::initializer_list<TypeInfo> subtypes)
-        : m_type(Type::Tuple), m_info(Subtypes(subtypes)) {}
+    explicit TypeInfo(TupleTag tag, std::initializer_list<TypeInfo> subtypes)
+            : detail::TypeInfoUnion(tag, Subtypes(subtypes)) {}
     explicit TypeInfo(Subtypes subtypes)
-        : m_type(Type::Tuple), m_info(std::move(subtypes)) {}
+            : detail::TypeInfoUnion(tuple_of, std::move(subtypes)) {}
     // Struct
     explicit TypeInfo(StructTag, std::initializer_list<StructItem> items)
-            : m_type(Type::Struct), m_info(StructItems(items)) {}
+            : detail::TypeInfoUnion(struct_of, StructItems(items)) {}
     explicit TypeInfo(StructItems items)
-            : m_type(Type::Struct), m_info(std::move(items)) {}
+            : detail::TypeInfoUnion(struct_of, std::move(items)) {}
     // Named
-    explicit TypeInfo(std::string name, TypeInfo&& type_info);
+    explicit TypeInfo(std::string name, TypeInfo&& type_info)
+            : detail::TypeInfoUnion(std::move(name), std::move(type_info)) {}
 
     TypeInfo(const TypeInfo&) = default;
     TypeInfo& operator =(const TypeInfo&) = default;
-    TypeInfo(TypeInfo&& other) noexcept;
-    TypeInfo& operator =(TypeInfo&& other) noexcept;
+    TypeInfo(TypeInfo&& r) noexcept : detail::TypeInfoUnion(std::move(r)), m_is_literal(r.m_is_literal)
+        { if (this != &r) r.m_is_literal = true; }
+    TypeInfo& operator =(TypeInfo&& r) noexcept {
+        assert(this != &r);
+        this->detail::TypeInfoUnion::operator=(std::move(r));
+        m_is_literal = r.m_is_literal; r.m_is_literal = true;
+        return *this;
+    }
 
     size_t size() const;
     void foreach_heap_slot(std::function<void(size_t offset)> cb) const;
 
-    Type type() const { return m_type; }
-    Type underlying_type() const;
-    bool is_unknown() const { return m_type == Type::Unknown; }
-    bool is_generic() const { return m_type == Type::Unknown && bool(generic_var()); }
-    bool is_named() const { return m_type == Type::Named; }
-    bool is_callable() const { return underlying_type() == Type::Function; }
+    bool is_unknown() const { return type() == Type::Unknown; }
+    bool is_unspecified() const { return is_unknown() && !generic_var(); }  // == is_unknown() && !is_generic()
+    bool is_generic() const { return is_unknown() && bool(generic_var()); }
+    bool is_named() const { return type() == Type::Named; }
+    bool is_function() const { return type() == Type::Function; }
+    bool is_callable() const { return underlying().is_function(); }
     bool is_void() const { return is_tuple() && subtypes().empty(); }
-    bool is_bool() const { return underlying_type() == Type::Bool; }
-    bool is_string() const { return underlying_type() == Type::String; }
-    bool is_list() const { return underlying_type() == Type::List; }
-    bool is_tuple() const { return underlying_type() == Type::Tuple; }
-    bool is_struct() const { return underlying_type() == Type::Struct; }
+    bool is_bool() const { return type() == Type::Bool; }
+    bool is_string() const { return type() == Type::String; }
+    bool is_list() const { return type() == Type::List; }
+    bool is_tuple() const { return type() == Type::Tuple; }
+    bool is_struct() const { return type() == Type::Struct; }
     bool is_struct_or_tuple() const { return is_struct() || is_tuple(); }
 
     bool has_unknown() const;  // deep check, e.g. ?, [?], Int->?
@@ -142,36 +207,32 @@ public:
     bool operator==(const TypeInfo& rhs) const;
     bool operator!=(const TypeInfo& rhs) const { return !(*this == rhs); }
 
-    explicit operator bool() const { return m_type != Type::Unknown || generic_var(); }
+    explicit operator bool() const { return type() != Type::Unknown || generic_var(); }
 
     // -------------------------------------------------------------------------
     // Additional info, subtypes
 
-    Var generic_var() const;  // type = Unknown
     const TypeInfo& elem_type() const;  // type = List (Subtypes[0])
-    TypeInfo& elem_type();              // type = List (Subtypes[0])
-    const Subtypes& subtypes() const;  // type = Tuple
-    Subtypes& subtypes();              // type = Tuple
-    const StructItems& struct_items() const;  // type = Struct
-    StructItems& struct_items();              // type = Struct
+    TypeInfo& elem_type() { return const_cast<TypeInfo&>( const_cast<const TypeInfo*>(this)->elem_type() ); }
     const TypeInfo* struct_item_by_name(const std::string& name) const;  // type = Struct
     Subtypes struct_or_tuple_subtypes() const;  // type = Tuple | Struct
-    const SignaturePtr& signature_ptr() const;  // type = Function
     const Signature& signature() const { return *signature_ptr(); }
     Signature& signature() { return *signature_ptr(); }
-    const NamedTypePtr& named_type_ptr() const;   // type = Named
     const NamedType& named_type() const { return *named_type_ptr(); }
     NamedType& named_type() { return *named_type_ptr(); }
-    const TypeInfo& underlying() const;  // transparently get type_info of NamedType
     std::string name() const;
+    const TypeInfo& underlying() const;  // transparently get type_info of NamedType
+    TypeInfo& underlying();
+    const SignaturePtr& ul_signature_ptr() const { return underlying().signature_ptr(); }
+    const Signature& ul_signature() const { return underlying().signature(); }
 
     // -------------------------------------------------------------------------
     // Serialization
 
     template <class Archive>
     void save_schema(Archive& ar) const {
-        ar("type", m_type);
-        if (ar.enter_union("info", "type", typeid(decltype(m_info)))) {
+        ar("type", type());
+        if (ar.enter_union("info", "type", typeid(TypeInfoUnion))) {
             ar(uint8_t(Type::Unknown), "var", SymbolPointer{});
             ar(uint8_t(Type::List), "elem_type", TypeInfo{});
             ar(uint8_t(Type::Tuple), "subtypes", Subtypes{});
@@ -184,8 +245,8 @@ public:
 
     template <class Archive>
     void save(Archive& ar) const {
-        ar("type", m_type);
-        switch (m_type) {
+        ar("type", type());
+        switch (type()) {
             case Type::Unknown:
                 ar("var", generic_var());
                 break;
@@ -212,40 +273,33 @@ public:
     template <class Archive>
     void load(Archive& ar)
     {
-        ar(m_type);
-        switch (m_type) {
+        Type t;
+        ar(t);
+        set_type(t);
+        switch (type()) {
             case Type::Unknown: {
-                m_info.emplace<Var>();
-                ar(std::get<Var>(m_info));
+                ar(generic_var());
                 break;
             }
             case Type::Function: {
-                auto signature = std::make_shared<Signature>();
-                ar(*signature);
-                m_info = std::move(signature);
+                ar(*signature_ptr());
                 break;
             }
             case Type::List: {
-                m_info.emplace<Subtypes>();
-                auto& subtypes = std::get<Subtypes>(m_info);
-                subtypes.emplace_back();
-                ar(subtypes.back());
+                subtypes().emplace_back();
+                ar(subtypes().back());
                 break;
             }
             case Type::Tuple: {
-                m_info.emplace<Subtypes>();
-                ar(std::get<Subtypes>(m_info));
+                ar(subtypes());
                 break;
             }
             case Type::Struct: {
-                m_info.emplace<StructItems>();
-                ar(std::get<StructItems>(m_info));
+                ar(struct_items());
                 break;
             }
             case Type::Named: {
-                auto named_type = std::make_shared<NamedType>();
-                ar(named_type);
-                m_info.emplace<NamedTypePtr>(std::move(named_type));
+                ar(named_type());
                 break;
             }
             default:
@@ -254,9 +308,7 @@ public:
     }
 
 private:
-    Type m_type { Type::Unknown };
     bool m_is_literal = true;  // literal = any expression that doesn't reference functions/variables
-    std::variant<Var, Subtypes, StructItems, SignaturePtr, NamedTypePtr> m_info;
 };
 
 

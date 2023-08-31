@@ -45,7 +45,7 @@ public:
     size_t num_modules() const { return m_modules.size(); }
 
     Module& builtin_module() { return *m_modules.front(); }
-    const Module& builtin_module() const { return const_cast<ModuleManager*>(this)->builtin_module(); }
+    const Module& builtin_module() const { return *m_modules.front(); }
 
     // drop all modules except builtin and std
     void clear(bool keep_std = true);

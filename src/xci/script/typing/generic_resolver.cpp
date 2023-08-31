@@ -21,11 +21,11 @@ void set_type_arg(SymbolPointer var, const TypeInfo& deduced, TypeArgs& type_arg
         TypeInfo& existing = it->second;
         if (!match_type(existing, deduced))
             exc_cb(existing, deduced);
-        if (existing.is_unknown()) {
-            if (existing.generic_var())
-                set_type_arg(existing.generic_var(), deduced, type_args, exc_cb);
-            else
-                existing = deduced;
+        if (existing.is_unspecified()) {
+            existing = deduced;
+        } else if (existing.has_generic()) {
+            specialize_arg(existing, deduced, type_args, exc_cb);
+            resolve_generic_type(existing, type_args);
         }
     }
 }
@@ -141,6 +141,30 @@ void resolve_type_vars(Signature& signature, const Scope& scope)
 {
     resolve_generic_type(signature.param_type, scope);
     resolve_generic_type(signature.return_type, scope);
+}
+
+
+void resolve_return_type(Signature& sig, const TypeInfo& deduced,
+                         Scope& scope, const SourceLocation& loc)
+{
+    if (sig.return_type.has_unknown()) {
+        if (deduced.is_unknown() && !deduced.has_generic()) {
+            if (!sig.has_any_generic())
+                throw MissingExplicitType(loc);
+            return;  // nothing to resolve
+        }
+        if (deduced.is_callable() && &sig == &deduced.ul_signature())
+            throw MissingExplicitType(loc);  // the return type is recursive!
+        specialize_arg(sig.return_type, deduced, scope.type_args(),
+                [&loc](const TypeInfo& exp, const TypeInfo& got) {
+                    throw UnexpectedReturnType(exp, got, loc);
+                });
+        resolve_type_vars(sig, scope.type_args());  // fill in concrete types using new type var info
+        sig.set_return_type(deduced);  // Unknown/var=0 not handled by resolve_type_vars
+        return;
+    }
+    if (sig.return_type.effective_type() != deduced.effective_type())
+        throw UnexpectedReturnType(sig.return_type, deduced, loc);
 }
 
 

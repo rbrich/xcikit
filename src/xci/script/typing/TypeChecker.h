@@ -8,6 +8,7 @@
 #define XCI_SCRIPT_TYPE_CHECKER_H
 
 #include <xci/script/TypeInfo.h>
+#include <xci/script/Function.h>
 #include <xci/script/Source.h>
 #include <compare>
 
@@ -64,10 +65,10 @@ private:
     int8_t m_generic = 0;  // num parameters matched generically (T == T or T == Int or Num T == Int)
 };
 
-/// Match function parameters
-/// \param candidate    Candidate parameters (inferred types of the arguments)
-/// \param expected     Parameters expected by signature
-MatchScore match_params(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& expected);
+/// Match instance types
+/// \param candidate    Candidate types (types of specific instance)
+/// \param expected     Parameters expected by signature (resolved class types)
+MatchScore match_inst_types(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& expected);
 
 /// Match a single type
 /// \param candidate    Candidate / inferred type

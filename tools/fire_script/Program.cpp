@@ -20,7 +20,7 @@ using namespace xci::core;
 static constexpr const char* intro =
         "{t:bold}{fg:magenta}🔥 fire script{t:normal} {fg:magenta}v{}{t:normal}\n"
         "Type {t:bold}{fg:yellow}.h{t:normal} for help, {t:bold}{fg:yellow}.q{t:normal} to quit.\n";
-static constexpr const char* prompt = "{fg:green}_{} ?{t:normal} ";
+static constexpr const char* prompt = "{fg:green}_{}>{t:normal} ";
 
 
 Program::Program(bool log_debug)

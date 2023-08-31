@@ -883,7 +883,8 @@ static void dump_l1_instruction(std::ostream& os, Opcode opcode, size_t arg, con
         case Opcode::ListSubscript:
         case Opcode::ListLength:
         case Opcode::ListSlice:
-        case Opcode::ListConcat: {
+        case Opcode::ListConcat:
+        case Opcode::Invoke: {
             const TypeInfo& ti = get_type_info(mod.module_manager(), arg);
             os << " (" << ti << ")";
             break;
@@ -1074,8 +1075,8 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
             os << ' ' << t;
         os << '\n' << more_indent;
         for (Index j = 0; j < inst.num_functions(); ++j) {
-            const auto scope_idx = inst.get_function(j).scope_index;
-            const auto& f = v.get_scope(scope_idx).function();
+            const auto& inst_fn_info = inst.get_function(j);
+            const auto& f = inst_fn_info.module->get_scope(inst_fn_info.scope_index).function();
             os << put_indent << f.name() << ": " << f.signature() << '\n';
         }
         os << less_indent;

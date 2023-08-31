@@ -46,6 +46,7 @@ print_usage()
     echo "      --asan, --lsan, --ubsan, --tsan"
     echo "                              Build with sanitizers (Address, Leak, UB, Thread)"
     echo "      --tidy                  Run clang-tidy on each compiled file"
+    echo "      --iwyu                  Run include-what-you-use on each compiled file"
     echo "      --update                Passed to conan - update dependencies"
     echo "      --profile, -pr PROFILE  Passed to conan - use the profile"
     echo "      --no-system-deps        Detect and use system-installed / precached deps"
@@ -169,6 +170,9 @@ while [[ $# -gt 0 ]] ; do
             shift 1 ;;
         --tidy )
             CMAKE_ARGS+=(-D'ENABLE_TIDY=1')
+            shift 1 ;;
+        --iwyu )
+            CMAKE_ARGS+=(-D'ENABLE_IWYU=1')
             shift 1 ;;
         --update )
             CONAN_ARGS+=('--update')

@@ -1,0 +1,1 @@
+command script import ./extras/lldb_formatters/xci_script_lldb.py
