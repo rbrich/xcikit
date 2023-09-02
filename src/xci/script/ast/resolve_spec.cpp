@@ -115,7 +115,7 @@ public:
             } else {
                 // other items
                 if (elem_type != m_value_type)
-                    throw ListElemTypeMismatch(elem_type, m_value_type, item->source_loc);
+                    throw list_elem_type_mismatch(elem_type, m_value_type, item->source_loc);
             }
         }
         m_value_type = type_check.resolve(ti_list(std::move(elem_type)), v.source_loc);
@@ -130,7 +130,7 @@ public:
         TypeChecker type_check(std::move(v.ti), std::move(m_cast_type));
         const auto& specified = type_check.eval_type().underlying();
         if (!specified.is_unknown() && !specified.is_struct())
-            throw StructTypeMismatch(specified, v.source_loc);
+            throw struct_type_mismatch(specified, v.source_loc);
         // build TypeInfo for the struct initializer
         TypeInfo::StructItems ti_items;
         ti_items.reserve(v.items.size());
@@ -258,9 +258,9 @@ public:
                 if (!m_call_sig.empty())
                     o_ftype << ' ' << m_call_sig.back().signature();
                 if (conflict)
-                    throw FunctionConflict(o_ftype.str(), o_candidates.str(), v.source_loc);
+                    throw function_conflict(o_ftype.str(), o_candidates.str(), v.source_loc);
                 else
-                    throw FunctionNotFound(o_ftype.str(), o_candidates.str(), v.source_loc);
+                    throw function_not_found(o_ftype.str(), o_candidates.str(), v.source_loc);
             }
             case Symbol::Function:
             case Symbol::StructItem: {
@@ -494,7 +494,7 @@ public:
                 if (fn.has_any_generic()) {
                     stringstream sig_str;
                     sig_str << fn.name() << ':' << fn.signature();
-                    throw UnexpectedGenericFunction(sig_str.str(), v.source_loc);
+                    throw unexpected_generic_function(sig_str.str(), v.source_loc);
                 }
                 m_value_type = TypeInfo{fn.signature_ptr()};
             }
@@ -510,7 +510,7 @@ public:
                 if (clone_fn.has_any_generic()) {
                     stringstream sig_str;
                     sig_str << clone_fn.name() << ':' << clone_fn.signature();
-                    throw UnexpectedGenericFunction(sig_str.str(), v.source_loc);
+                    throw unexpected_generic_function(sig_str.str(), v.source_loc);
                 }
                 m_value_type = TypeInfo{clone_fn.signature_ptr()};
             }/* else {
@@ -598,7 +598,7 @@ private:
                 const auto& call_type = c_sig.param_type;
                 const auto m = match_type(call_type, sig_type);
                 if (!m)
-                    throw UnexpectedArgumentType(sig_type, call_type, source_loc);
+                    throw unexpected_argument_type(sig_type, call_type, source_loc);
                 if (m.is_coerce()) {
                     // Update type_info of the coerced literal argument
                     m_cast_type = sig_type;
@@ -677,7 +677,7 @@ private:
         if (!deduced_ret.is_unknown() && deduced_ret != sig_ret)
             specialize_arg(sig_ret, deduced_ret, scope.type_args(),
                            [&loc](const TypeInfo& exp, const TypeInfo& got) {
-                               throw UnexpectedReturnType(exp, got, loc);
+                               throw unexpected_return_type(exp, got, loc);
                            });
         resolve_generic_type(sig_ret, scope.type_args());
         signature.return_type = sig_ret;
@@ -925,7 +925,7 @@ void resolve_spec(Scope& scope, ast::Expression& body)
         if (scope.parent() == nullptr) {
             stringstream sig_str;
             sig_str << fn.name() << ':' << fn.signature();
-            throw UnexpectedGenericFunction(sig_str.str());
+            throw unexpected_generic_function(sig_str.str());
         }
         return;
     }

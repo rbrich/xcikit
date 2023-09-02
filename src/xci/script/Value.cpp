@@ -950,7 +950,7 @@ namespace value {
 Byte::Byte(std::string_view str)
 {
     if (str.size() != 1)
-        throw ValueOutOfRange("byte value out of range");
+        throw value_out_of_range("byte value out of range");
     m_value = (byte) str.front();
 }
 

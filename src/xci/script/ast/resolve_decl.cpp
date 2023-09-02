@@ -50,7 +50,7 @@ public:
             // specified type is basically useless here, let's just check
             // it matches evaluated type from class instance
             if (m_type_info && m_type_info != eval_type)
-                throw DefinitionTypeMismatch(m_type_info, eval_type, dfn.expression->source_loc);
+                throw definition_type_mismatch(m_type_info, eval_type, dfn.expression->source_loc);
 
             m_type_info = std::move(eval_type);
 
@@ -64,7 +64,7 @@ public:
         if (fn.signature()) {
             TypeInfo declared_type(fn.signature_ptr());
             if (m_type_info && declared_type != m_type_info) {
-                throw DeclarationTypeMismatch(declared_type, m_type_info, dfn.expression->source_loc);
+                throw declaration_type_mismatch(declared_type, m_type_info, dfn.expression->source_loc);
             }
             m_type_info = std::move(declared_type);
         } else {
@@ -136,7 +136,7 @@ public:
         TypeInfo declared {m_type_info};
         if (m_type_info.is_callable()) {
             if (m_type_info.ul_signature().has_nonvoid_param()) {
-                throw DefinitionTypeMismatch(m_type_info, v.value.type_info(), v.source_loc);
+                throw definition_type_mismatch(m_type_info, v.value.type_info(), v.source_loc);
             }
             declared = m_type_info.ul_signature().return_type;
         }
@@ -155,7 +155,7 @@ public:
     void visit(ast::List& v) override {
         auto specified = std::move(m_type_info);
         if (!specified.is_unknown() && !specified.is_list())
-            throw ListTypeMismatch(specified, v.source_loc);
+            throw list_type_mismatch(specified, v.source_loc);
         for (auto& item : v.items) {
             m_type_info = specified ? specified.elem_type() : TypeInfo{};
             item->apply(*this);
@@ -168,7 +168,7 @@ public:
     void visit(ast::StructInit& v) override {
         auto specified = std::move(m_type_info);
         if (!specified.is_unknown() && !specified.underlying().is_struct())
-            throw StructTypeMismatch(specified, v.source_loc);
+            throw struct_type_mismatch(specified, v.source_loc);
         for (auto& item : v.items) {
             // resolve item type
             if (specified) {
@@ -189,7 +189,7 @@ public:
 
         if (!v.type_args.empty()) {
             if (sym.type() != Symbol::Function && sym.type() != Symbol::TypeIndex)
-                throw UnexpectedTypeArg(v.type_args.front()->source_loc);
+                throw unexpected_type_arg(v.type_args.front()->source_loc);
             auto orig_type_info = std::move(m_type_info);
             for (auto& type_arg : v.type_args) {
                 type_arg->apply(*this);
@@ -206,9 +206,9 @@ public:
             }
             case Symbol::TypeIndex: {
                 if (v.type_args_ti.empty())
-                    throw MissingTypeArg(v.source_loc);
+                    throw missing_type_arg(v.source_loc);
                 if (v.type_args_ti.size() > 1)
-                    throw UnexpectedTypeArg(v.type_args[1]->source_loc);
+                    throw unexpected_type_arg(v.type_args[1]->source_loc);
                 v.ti = std::move(v.type_args_ti.front());
                 v.type_args_ti.clear();
                 break;
@@ -319,7 +319,7 @@ public:
             if (underlying.signature().return_type.is_unknown() && spec_sig.return_type)
                 underlying.signature().set_return_type(spec_sig.return_type);
             if (!m_instance && spec_sig.return_type != underlying.signature().return_type)
-                throw DeclarationTypeMismatch(specified_type, m_type_info, v.source_loc);
+                throw declaration_type_mismatch(specified_type, m_type_info, v.source_loc);
             auto& param = underlying.signature().param_type;
             const auto& spec = spec_sig.param_type;
             if (param.is_unknown() || param.is_void())
@@ -339,17 +339,17 @@ public:
                     else {
                         auto m = match_type(par, sp);
                         if (!m)
-                            throw DefinitionParamTypeMismatch(1+i, sp, par, v.source_loc);
+                            throw definition_param_type_mismatch(1+i, sp, par, v.source_loc);
                     }
                 }
             } else {
                 // specified param must match now
                 auto m = match_type(param, spec);
                 if (!m)
-                    throw DeclarationTypeMismatch(spec, param, v.source_loc);
+                    throw declaration_type_mismatch(spec, param, v.source_loc);
             }
         } else if (!m_instance && specified_type && specified_type != m_type_info.effective_type())
-            throw DeclarationTypeMismatch(specified_type, m_type_info, v.source_loc);
+            throw declaration_type_mismatch(specified_type, m_type_info, v.source_loc);
 
         fn.set_signature(m_type_info.ul_signature_ptr());
 

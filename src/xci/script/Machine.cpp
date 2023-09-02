@@ -85,7 +85,7 @@ void Machine::run(const InvokeCallback& cb)
         m_call_enter_cb(*function);
     for (;;) {
         if (it == function->bytecode().end())
-            throw RuntimeError("reached end of code (missing RET)");
+            throw bad_instruction("reached end of code (missing RET)");
 
         if (m_bytecode_trace_cb)
             m_bytecode_trace_cb(*function, it);
@@ -136,7 +136,7 @@ void Machine::run(const InvokeCallback& cb)
                 const auto lhs_type = decode_arg_type(arg >> 4);
                 const auto rhs_type = decode_arg_type(arg & 0xf);
                 if (lhs_type == Type::Unknown || rhs_type == Type::Unknown || lhs_type != rhs_type)
-                    throw NotImplemented(format("opcode: {} lhs type: {:x} rhs type: {:x}",
+                    throw not_implemented(format("opcode: {} lhs type: {:x} rhs type: {:x}",
                             opcode, arg >> 4, arg & 0xf));
                 auto lhs = m_stack.pull(TypeInfo{lhs_type});
                 auto rhs = m_stack.pull(TypeInfo{rhs_type});
@@ -200,7 +200,7 @@ void Machine::run(const InvokeCallback& cb)
                 const auto lhs_type = decode_arg_type(arg >> 4);
                 const auto rhs_type = decode_arg_type(arg & 0xf);
                 if (lhs_type == Type::Unknown || rhs_type == Type::Unknown || lhs_type != rhs_type)
-                    throw NotImplemented(format("opcode: {} lhs type: {:x} rhs type: {:x}",
+                    throw not_implemented(format("opcode: {} lhs type: {:x} rhs type: {:x}",
                             opcode, arg >> 4, arg & 0xf));
                 auto lhs = m_stack.pull(TypeInfo{lhs_type});
                 auto rhs = m_stack.pull(TypeInfo{rhs_type});
@@ -221,7 +221,7 @@ void Machine::run(const InvokeCallback& cb)
                 const auto lhs_type = decode_arg_type(arg >> 4);
                 const auto rhs_type = decode_arg_type(arg & 0xf);
                 if (lhs_type == Type::Unknown || rhs_type == Type::Unknown || lhs_type != rhs_type)
-                    throw NotImplemented(format("opcode: {} lhs type: {:x} rhs type: {:x}",
+                    throw not_implemented(format("opcode: {} lhs type: {:x} rhs type: {:x}",
                             opcode, arg >> 4, arg & 0xf));
                 auto lhs = m_stack.pull(TypeInfo{lhs_type});
                 auto rhs = m_stack.pull(TypeInfo{rhs_type});
@@ -241,12 +241,12 @@ void Machine::run(const InvokeCallback& cb)
                 const auto lhs_type = decode_arg_type(arg >> 4);
                 const auto rhs_type = decode_arg_type(arg & 0xf);
                 if (lhs_type == Type::Unknown || rhs_type == Type::Unknown || lhs_type != rhs_type)
-                    throw NotImplemented(format("modulus lhs: {:x} rhs: {:x}",
+                    throw not_implemented(format("modulus lhs: {:x} rhs: {:x}",
                             arg >> 4, arg & 0xf));
                 auto lhs = m_stack.pull(TypeInfo{lhs_type});
                 auto rhs = m_stack.pull(TypeInfo{rhs_type});
                 if (!lhs.modulus(rhs))
-                    throw NotImplemented(format("modulus lhs: {:x} rhs: {:x}",
+                    throw not_implemented(format("modulus lhs: {:x} rhs: {:x}",
                             arg >> 4, arg & 0xf));
                 m_stack.push(lhs);
                 break;
@@ -272,7 +272,7 @@ void Machine::run(const InvokeCallback& cb)
                 const auto arg = *it++;
                 const auto type = decode_arg_type(arg & 0xf);
                 if (type == Type::Unknown)
-                    throw NotImplemented(format("opcode: {} type: {:x}",
+                    throw not_implemented(format("opcode: {} type: {:x}",
                             opcode, arg & 0xf));
                 auto v = m_stack.pull(TypeInfo{type});
                 v.negate();
@@ -290,7 +290,7 @@ void Machine::run(const InvokeCallback& cb)
                     idx += (int) len;
                 if (idx < 0 || (size_t) idx >= len) {
                     lhs.decref();
-                    throw IndexOutOfBounds(idx, len);
+                    throw index_out_of_bounds(idx, len);
                 }
                 const Value item = lhs.get<ListV>().value_at(idx, elem_ti);
                 item.incref();
@@ -337,13 +337,13 @@ void Machine::run(const InvokeCallback& cb)
                 const auto from_type = decode_arg_type(arg >> 4);
                 const auto to_type = decode_arg_type(arg & 0xf);
                 if (from_type == Type::Unknown)
-                    throw NotImplemented(format("cast from: {:x}", arg >> 4));
+                    throw not_implemented(format("cast from: {:x}", arg >> 4));
                 if (to_type == Type::Unknown)
-                    throw NotImplemented(format("cast to: {:x}", arg & 0xf));
+                    throw not_implemented(format("cast to: {:x}", arg & 0xf));
                 auto from = m_stack.pull(TypeInfo{from_type});
                 auto to = create_value(TypeInfo{to_type});
                 if (!to.cast_from(from))
-                    throw NotImplemented(format("cast {} to {}",
+                    throw not_implemented(format("cast {} to {}",
                                          TypeInfo{from_type}, TypeInfo{to_type}));
                 m_stack.push(to);
                 break;
@@ -503,7 +503,7 @@ void Machine::run(const InvokeCallback& cb)
             }
 
             default:
-                throw NotImplemented(format("opcode {}", opcode));
+                throw not_implemented(format("opcode {}", opcode));
         }
     }
 }

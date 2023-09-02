@@ -47,7 +47,7 @@ TypeArgs specialize_signature(const SignaturePtr& signature, const std::vector<C
             // continue with specializing args of a returned function
             sig = sig->return_type.ul_signature_ptr();
         } else {
-            throw UnexpectedArgument(TypeInfo{sig}, call_sig.arg.source_loc);
+            throw unexpected_argument(TypeInfo{sig}, call_sig.arg.source_loc);
         }
         // skip blocks / functions without params
         while (sig->param_type.is_void() && sig->return_type.is_callable()) {
@@ -57,7 +57,7 @@ TypeArgs specialize_signature(const SignaturePtr& signature, const std::vector<C
         const auto& source_loc = call_sig.arg.source_loc;
         {
             if (!sig->has_nonvoid_param() && c_sig.has_nonvoid_param()) {
-                throw UnexpectedArgument(TypeInfo{sig}, source_loc);
+                throw unexpected_argument(TypeInfo{sig}, source_loc);
             }
             const auto& sig_type = sig->param_type;
             const auto& call_type = c_sig.param_type;
@@ -66,7 +66,7 @@ TypeArgs specialize_signature(const SignaturePtr& signature, const std::vector<C
                                call_type_args,
                                [&sig_type, &call_type, &source_loc]
                                (const TypeInfo& exp, const TypeInfo& got) {
-                                   throw UnexpectedArgumentType(exp, got, sig_type, call_type, source_loc);
+                                   throw unexpected_argument_type(exp, got, sig_type, call_type, source_loc);
                                });
             }
         }
@@ -92,7 +92,7 @@ TypeArgs resolve_generic_args_to_signature(const Signature& signature,
             // continue resolving params of returned function
             sig = &sig->return_type.signature();
         } else {
-            throw UnexpectedArgument(TypeInfo{std::make_shared<Signature>(*sig)}, call_sig.arg.source_loc);
+            throw unexpected_argument(TypeInfo{std::make_shared<Signature>(*sig)}, call_sig.arg.source_loc);
         }
         // skip blocks / functions without params
         while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
@@ -103,7 +103,7 @@ TypeArgs resolve_generic_args_to_signature(const Signature& signature,
         {
             // check there are more params to consume
             if (!sig->has_nonvoid_param() && c_sig.has_nonvoid_param()) {
-                throw UnexpectedArgument(TypeInfo{std::make_shared<Signature>(*sig)}, source_loc);
+                throw unexpected_argument(TypeInfo{std::make_shared<Signature>(*sig)}, source_loc);
             }
             // next param
             const auto& sig_type = sig->param_type;
@@ -133,7 +133,7 @@ TypeArgs resolve_instance_types(const Signature& signature, const std::vector<Ca
             // collapse returned function, start consuming its params
             sig = &sig->return_type.signature();
         } else {
-            throw UnexpectedArgument(TypeInfo{std::make_shared<Signature>(*sig)}, call_sig.arg.source_loc);
+            throw unexpected_argument(TypeInfo{std::make_shared<Signature>(*sig)}, call_sig.arg.source_loc);
         }
         // skip blocks / functions without params
         while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
@@ -146,7 +146,7 @@ TypeArgs resolve_instance_types(const Signature& signature, const std::vector<Ca
             // check there are more params to consume
             if (!sig->has_nonvoid_param() && c_sig.has_nonvoid_param()) {
                 // unexpected argument
-                throw UnexpectedArgument(TypeInfo{std::make_shared<Signature>(*sig)}, source_loc);
+                throw unexpected_argument(TypeInfo{std::make_shared<Signature>(*sig)}, source_loc);
             }
             // resolve T (only from original signature)
             const auto& sig_type = sig->param_type;
@@ -159,13 +159,13 @@ TypeArgs resolve_instance_types(const Signature& signature, const std::vector<Ca
 
             const auto m = match_type(call_type, sig_type);
             if (!m)
-                throw UnexpectedArgumentType(sig_type, call_type, source_loc);
+                throw unexpected_argument_type(sig_type, call_type, source_loc);
 
             auto arg_type = call_type.effective_type();
             specialize_arg(sig_type, arg_type, res,
                     [&sig_type, &arg_type, &source_loc]
                     (const TypeInfo& exp, const TypeInfo& got) {
-                        throw UnexpectedArgumentType(exp, got, sig_type, arg_type, source_loc);
+                        throw unexpected_argument_type(exp, got, sig_type, arg_type, source_loc);
                     });
         }
     }

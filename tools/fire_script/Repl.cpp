@@ -192,7 +192,7 @@ void Repl::print_error(const ScriptError& e)
 
     if (!e.file().empty())
         t.print("{}: ", e.file());
-    t.print("{fg:red}{t:bold}Error: {}{t:normal}", e.what());
+    t.print("{fg:red}{t:bold}{}: {fg:*white}{t:normal_intensity}{}{t:normal}", e.code(), e.what());
     if (!e.detail().empty())
         t.print("\n{fg:magenta}{}{t:normal}", e.detail());
     t.write_nl();

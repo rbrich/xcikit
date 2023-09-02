@@ -1171,7 +1171,7 @@ struct Action<Literal> : change_states< LiteralHelper > {
                     const auto v = std::get<int64_t>(helper.content);
                     using l = std::numeric_limits<uint8_t>;
                     if (v < l::min() || v > l::max())
-                        throw parse_error("Byte literal out of range", in);
+                        throw tao::pegtl::parse_error("Byte literal out of range", in);
                     value = TypedValue{value::Byte((uint8_t) v)};
                     break;
                 }
@@ -1266,7 +1266,7 @@ struct Action<Number> : change_states< NumberHelper > {
             uint64_t val;
             auto [end, ec] = std::from_chars(first, last, val, base);
             if (ec == std::errc::result_out_of_range)
-                throw parse_error("Integer literal out of range 64bit range", in);
+                throw tao::pegtl::parse_error("Integer literal out of range 64bit range", in);
             assert(end == last);
 
             if (n.suffix[0] == 'u') {
@@ -1279,9 +1279,9 @@ struct Action<Number> : change_states< NumberHelper > {
             } else {
                 using l = std::numeric_limits<int64_t>;
                 if (!minus_sign && val > uint64_t(l::max()))
-                    throw parse_error("Int64 literal out of range", in);
+                    throw tao::pegtl::parse_error("Int64 literal out of range", in);
                 if (minus_sign && val > uint64_t(l::max()) + 1)
-                    throw parse_error("Int64 literal out of range", in);
+                    throw tao::pegtl::parse_error("Int64 literal out of range", in);
 
                 n.num = minus_sign ? int64_t(~val+1) : int64_t(val);
             }
@@ -1415,9 +1415,9 @@ struct Control : normal< Rule >
     template< typename Input, typename... States >
     static void raise( const Input& in, States&&... /*unused*/ ) {
         if (!errmsg.second.empty())
-            throw parse_error( errmsg.first + std::string(errmsg.second), in );
+            throw tao::pegtl::parse_error( errmsg.first + std::string(errmsg.second), in );
         else
-            throw parse_error( errmsg.first, in );
+            throw tao::pegtl::parse_error( errmsg.first, in );
     }
 
 #ifdef XCI_SCRIPT_PARSER_TRACE
@@ -1560,14 +1560,14 @@ void Parser::parse(SourceId src_id, ast::Module& mod)
 
     try {
         if (!tao::pegtl::parse< Module, Action, Control >( in, mod ))
-            throw ParseError("input not matched");
+            throw xci::script::parse_error("input not matched");
         mod.body.finish();
     } catch (tao::pegtl::parse_error& e) {
         SourceLocation loc;
         loc.load(in, e.positions().front());
-        throw ParseError(e.message(), loc);
+        throw xci::script::parse_error(e.message(), loc);
     } catch( const std::exception& e ) {
-        throw ParseError(e.what());
+        throw xci::script::parse_error(e.what());
     }
 }
 

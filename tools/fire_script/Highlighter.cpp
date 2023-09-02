@@ -369,9 +369,9 @@ struct Control : normal< Rule >
     template< typename Input, typename... States >
     static void raise( const Input& in, States&&... ) {
 #ifndef NDEBUG
-        throw parse_error("parse error matching " + std::string( demangle< Rule >() ), in);
+        throw tao::pegtl::parse_error("parse error matching " + std::string( demangle< Rule >() ), in);
 #else
-        throw parse_error("parse error", in);
+        throw tao::pegtl::parse_error("parse error", in);
 #endif
     }
 };

@@ -484,7 +484,7 @@ static void introspect_module_by_name(Stack& stack, void*, void*)
     name.decref();
     const auto idx = stack.module().get_imported_module_index(name.value());
     if (idx == no_index)
-        throw RuntimeError("Imported module not found: " + std::string(name.value()));
+        throw module_not_found(name.value());
     stack.push(value::Module{stack.module().get_imported_module(idx)});
 }
 
