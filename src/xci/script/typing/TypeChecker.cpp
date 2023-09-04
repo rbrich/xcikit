@@ -137,19 +137,19 @@ auto TypeChecker::resolve(const TypeInfo& inferred, const SourceLocation& loc) -
     if (underlying.is_tuple()) {
         if (inferred.is_tuple()) {
             if (!match_tuple(inferred, underlying))
-                throw DefinitionTypeMismatch(ti, inferred, loc);
+                throw definition_type_mismatch(ti, inferred, loc);
             return std::move(eval_type());
         }
     }
     if (underlying.is_struct()) {
         if (inferred.is_struct()) {
             if (!match_struct(inferred, underlying))
-                throw DefinitionTypeMismatch(ti, inferred, loc);
+                throw definition_type_mismatch(ti, inferred, loc);
             return std::move(eval_type());
         }
         if (inferred.is_tuple()) {
             if (!match_tuple_to_struct(inferred, underlying))
-                throw DefinitionTypeMismatch(ti, inferred, loc);
+                throw definition_type_mismatch(ti, inferred, loc);
             TypeInfo res = std::move(eval_type());
             for (auto&& [st_item, inf_subtype] : zip(res.underlying().struct_items(), inferred.subtypes())) {
                 if (st_item.second.is_unspecified())
@@ -160,14 +160,14 @@ auto TypeChecker::resolve(const TypeInfo& inferred, const SourceLocation& loc) -
         if (underlying.struct_items().size() == 1) {
             // allow initializing a single-field struct with the value of first field (as there is no single-item tuple)
             if (!match_type(inferred, underlying.struct_items().front().second))
-                throw DefinitionTypeMismatch(ti, inferred, loc);
+                throw definition_type_mismatch(ti, inferred, loc);
             return std::move(eval_type());
         }
     }
     if (underlying.is_list()) {
         if (inferred.is_list()) {
             if (!match_type(inferred.elem_type(), underlying.elem_type()))
-                throw DefinitionTypeMismatch(ti, inferred, loc);
+                throw definition_type_mismatch(ti, inferred, loc);
             if (underlying.elem_type().has_unknown() && !inferred.elem_type().has_unknown())
                 return inferred;
             return std::move(eval_type());
@@ -177,7 +177,7 @@ auto TypeChecker::resolve(const TypeInfo& inferred, const SourceLocation& loc) -
     if (!m_spec)
         return inferred;
     if (!match_type(inferred, m_spec))
-        throw DefinitionTypeMismatch(m_spec, inferred, loc);
+        throw definition_type_mismatch(m_spec, inferred, loc);
     return std::move(m_spec);
 }
 
@@ -190,9 +190,9 @@ void TypeChecker::check_struct_item(const std::string& key, const TypeInfo& infe
                                     return spec.first == key;
                                 });
     if (spec_it == spec_items.end())
-        throw StructUnknownKey(eval_type(), key, loc);
+        throw struct_unknown_key(eval_type(), key, loc);
     if (!match_type(inferred, spec_it->second))
-        throw StructKeyTypeMismatch(eval_type(), spec_it->second, inferred, loc);
+        throw struct_key_type_mismatch(eval_type(), spec_it->second, inferred, loc);
 }
 
 

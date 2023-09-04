@@ -171,7 +171,7 @@ void Program::evaluate_input(std::string_view input)
             repl_command().eval(input.substr(1));
         } catch (const ScriptError& e) {
             auto& tout = ctx.term_out;
-            tout.print("{fg:red}Error: {t:bold}{}{t:normal}\n", e.what());
+            tout.print("{fg:red}{}: {t:bold}{}{t:normal}\n", e.code(), e.what());
             if (!e.detail().empty())
                 tout.print("{fg:magenta}{}{t:normal}\n", e.detail());
             tout.print("{fg:yellow}Help: .h | .help{t:normal}\n");

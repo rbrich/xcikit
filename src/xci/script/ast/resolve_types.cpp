@@ -106,13 +106,13 @@ public:
             } else {
                 // other items
                 if (elem_type != m_value_type)
-                    throw ListElemTypeMismatch(elem_type, m_value_type, item->source_loc);
+                    throw list_elem_type_mismatch(elem_type, m_value_type, item->source_loc);
             }
         }
         m_value_type = type_check.resolve(ti_list(std::move(elem_type)), v.source_loc);
         assert(m_value_type.is_list());
         if (m_value_type.elem_type().is_unspecified())
-            throw MissingExplicitType(v.source_loc);
+            throw missing_explicit_type(v.source_loc);
         v.ti = m_value_type;
     }
 
@@ -122,7 +122,7 @@ public:
         TypeChecker type_check(std::move(v.ti), std::move(m_cast_type));
         const auto& specified = type_check.eval_type().underlying();
         if (!specified.is_unknown() && !specified.is_struct())
-            throw StructTypeMismatch(specified, v.source_loc);
+            throw struct_type_mismatch(specified, v.source_loc);
         // build TypeInfo for the struct initializer
         TypeInfo::StructItems ti_items;
         ti_items.reserve(v.items.size());
@@ -172,18 +172,18 @@ public:
                 auto opcode = (Opcode) sym.index();
                 if (opcode <= Opcode::A0Last) {
                     if (!arg.type_info.is_void())
-                        throw UnexpectedArgumentType(ti_void(), arg.type_info, v.source_loc);
+                        throw unexpected_argument_type(ti_void(), arg.type_info, v.source_loc);
                 } else if (opcode <= Opcode::L1Last) {
                     if (!check_type(arg.type_info))
-                        throw UnexpectedArgumentType(ti_int32(), arg.type_info, arg.source_loc);
+                        throw unexpected_argument_type(ti_int32(), arg.type_info, arg.source_loc);
                 } else {
                     assert(opcode <= Opcode::L2Last);
                     if (!arg.type_info.is_tuple() || arg.type_info.subtypes().size() != 2)
-                        throw UnexpectedArgumentType(ti_tuple(ti_int32(), ti_int32()),
+                        throw unexpected_argument_type(ti_tuple(ti_int32(), ti_int32()),
                                                      arg.type_info, v.source_loc);
                     for (const auto& [i, ti] : arg.type_info.subtypes() | enumerate)
                         if (!check_type(ti))
-                            throw UnexpectedArgumentType(ti_int32(), ti,
+                            throw unexpected_argument_type(ti_int32(), ti,
                                                          ti_tuple(ti_int32(), ti_int32()), arg.type_info,
                                                          arg.source_loc);
                 }
@@ -283,9 +283,9 @@ public:
                 if (!m_call_sig.empty())
                     o_ftype << ' ' << m_call_sig.back().signature();
                 if (conflict)
-                    throw FunctionConflict(o_ftype.str(), o_candidates.str(), v.source_loc);
+                    throw function_conflict(o_ftype.str(), o_candidates.str(), v.source_loc);
                 else
-                    throw FunctionNotFound(o_ftype.str(), o_candidates.str(), v.source_loc);
+                    throw function_not_found(o_ftype.str(), o_candidates.str(), v.source_loc);
             }
             case Symbol::Module:
                 if (sym.index() == no_index) {
@@ -298,7 +298,7 @@ public:
                     // builtin __module
                     if (!arg.type_info.is_void() && arg.type_info.type() != Type::Int32) {
                         // the arg must be Int32 (index of imported module)
-                        throw UnexpectedArgumentType(ti_int32(), arg.type_info, arg.source_loc);
+                        throw unexpected_argument_type(ti_int32(), arg.type_info, arg.source_loc);
                     }
                     // cleanup - args are now fully processed
                     m_call_sig.clear();
@@ -323,7 +323,7 @@ public:
                 auto res = resolve_overload(v.sym_list, v.identifier, v.type_args_ti);
                 // The referenced function must have been defined
                 if (!res.type.effective_type())
-                    throw MissingExplicitType(v.identifier.name, v.identifier.source_loc);
+                    throw missing_explicit_type(v.identifier.name, v.identifier.source_loc);
 
                 v.identifier.symbol = res.symptr;
                 if (res.symptr->type() == Symbol::Function) {
@@ -364,7 +364,7 @@ public:
                         arg.type_info = ti_void();
                     if (arg.type_info.type() != Type::Int32) {
                         // the arg must be Int32 (index of imported module)
-                        throw UnexpectedArgumentType(ti_int32(), arg.type_info, arg.source_loc);
+                        throw unexpected_argument_type(ti_int32(), arg.type_info, arg.source_loc);
                     }
                     // cleanup - args are now fully processed
                     m_call_sig.clear();
@@ -419,7 +419,7 @@ public:
         v.callable->apply(*this);
 
         if (!m_value_type.is_callable() && !m_value_type.is_unknown() && !m_call_sig.empty()) {
-            throw UnexpectedArgument(m_value_type, m_call_sig.back().arg.source_loc);
+            throw unexpected_argument(m_value_type, m_call_sig.back().arg.source_loc);
         }
 
         if (m_value_type.is_callable()) {
@@ -461,7 +461,7 @@ public:
             m_cast_type = {};
             item.first->apply(*this);
             if (m_value_type != ti_bool())
-                throw ConditionNotBool();
+                throw condition_not_bool();
             m_cast_type = cast_type;
             item.second->apply(*this);
             all_literal = all_literal && m_value_type.is_literal();
@@ -470,14 +470,14 @@ public:
                 expr_type = m_value_type;
             } else {
                 if (expr_type != m_value_type)
-                    throw BranchTypeMismatch(expr_type, m_value_type);
+                    throw branch_type_mismatch(expr_type, m_value_type);
             }
         }
 
         m_cast_type = cast_type;
         v.else_expr->apply(*this);
         if (expr_type != m_value_type)
-            throw BranchTypeMismatch(expr_type, m_value_type);
+            throw branch_type_mismatch(expr_type, m_value_type);
 
         m_value_type.set_literal(all_literal && m_value_type.is_literal());
     }
@@ -694,13 +694,13 @@ private:
             o_ftype << ' ' << m_call_sig.back().signature();
         if (conflict) {
             // ERROR found multiple matching functions
-            throw FunctionConflict(o_ftype.str(), o_candidates.str(), identifier.source_loc);
+            throw function_conflict(o_ftype.str(), o_candidates.str(), identifier.source_loc);
         } else {
             // special case for StructItem, which is invisible in candidates - report as if the symbol wasn't resolved at all
             if (sym_list.size() == 1 && sym_list.front()->type() == Symbol::StructItem)
-                throw UndefinedName(identifier.name, identifier.source_loc);
+                throw undefined_name(identifier.name, identifier.source_loc);
             // ERROR couldn't find matching function for `args`
-            throw FunctionNotFound(o_ftype.str(), o_candidates.str(), identifier.source_loc);
+            throw function_not_found(o_ftype.str(), o_candidates.str(), identifier.source_loc);
         }
     }
 
@@ -736,7 +736,7 @@ private:
                 const auto& call_type = c_sig.param_type;
                 const auto m = match_type(call_type, sig_type);
                 if (!m)
-                    throw UnexpectedArgumentType(sig_type, sig_type, source_loc);
+                    throw unexpected_argument_type(sig_type, sig_type, source_loc);
                 if (m.is_coerce()) {
                     // Update type_info of the coerced literal argument
                     m_cast_type = sig_type;

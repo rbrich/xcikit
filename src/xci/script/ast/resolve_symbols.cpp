@@ -45,14 +45,14 @@ public:
             if (symptr->is_defined()
             || (!symptr->is_defined() && !dfn.expression)  // multiple forward declarations
             || (!m_class && !m_instance && symptr->type() == Symbol::Method))
-                throw RedefinedName(name, dfn.variable.identifier.source_loc);
+                throw redefined_name(name, dfn.variable.identifier.source_loc);
         }
 
         if (m_instance) {
             // resolve symbol with the class
             auto ref = m_instance->class_().symtab().find_by_name(name);
             if (!ref)
-                throw FunctionNotFoundInClass(name, m_instance->class_().name());
+                throw function_not_found_in_class(name, m_instance->class_().name());
             symptr->set_ref(ref);
         }
 
@@ -95,7 +95,7 @@ public:
     void visit(ast::Class& v) override {
         // check for name collision
         if (symtab().find_by_name(v.class_name.name))
-            throw RedefinedName(v.class_name.name, v.class_name.source_loc);
+            throw redefined_name(v.class_name.name, v.class_name.source_loc);
 
         // add child symbol table and scope for the class
         SymbolTable& cls_symtab = symtab().add_child(v.class_name.name);
@@ -126,7 +126,7 @@ public:
         // lookup class
         auto sym_class = resolve_symbol_of_type(v.class_name.name, Symbol::Class);
         if (!sym_class)
-            throw UndefinedTypeName(v.class_name.name, v.class_name.source_loc);
+            throw undefined_type_name(v.class_name.name, v.class_name.source_loc);
 
         // create symbol for the instance
         v.class_name.symbol = symtab().add({sym_class, Symbol::Instance});
@@ -169,7 +169,7 @@ public:
     void visit(ast::TypeDef& v) override {
         // check for name collision
         if (symtab().find_by_name(v.type_name.name))
-            throw RedefinedName(v.type_name.name, v.type_name.source_loc);
+            throw redefined_name(v.type_name.name, v.type_name.source_loc);
 
         // resolve the type
         v.type->apply(*this);
@@ -181,7 +181,7 @@ public:
     void visit(ast::TypeAlias& v) override {
         // check for name collision
         if (symtab().find_by_name(v.type_name.name))
-            throw RedefinedName(v.type_name.name, v.type_name.source_loc);
+            throw redefined_name(v.type_name.name, v.type_name.source_loc);
 
         // resolve the type
         v.type->apply(*this);
@@ -213,7 +213,7 @@ public:
             // check the key is not duplicate
             auto [_, ok] = keys.insert(item.first.name);
             if (!ok)
-                throw StructDuplicateKey(item.first.name, item.first.source_loc);
+                throw struct_duplicate_key(item.first.name, item.first.source_loc);
 
             item.second->apply(*this);
             item.first.symbol = add_struct_item(item.first.name, no_index);
@@ -224,7 +224,7 @@ public:
         auto& symptr = v.identifier.symbol;
         symptr = resolve_symbol(v.identifier.name);
         if (!symptr)
-            throw UndefinedName(v.identifier.name, v.source_loc);
+            throw undefined_name(v.identifier.name, v.source_loc);
         for (auto& type_arg : v.type_args)
             type_arg->apply(*this);
         if (symptr->type() == Symbol::Method) {
@@ -347,7 +347,7 @@ public:
         }
         t.symbol = resolve_symbol(t.name);
         if (!t.symbol)
-            throw UndefinedTypeName(t.name, t.source_loc);
+            throw undefined_type_name(t.name, t.source_loc);
     }
 
     void visit(ast::FunctionType& t) final {
@@ -399,7 +399,7 @@ public:
             // check the key is not duplicate
             auto [_, ok] = keys.insert(name);
             if (!ok)
-                throw StructDuplicateKey(name, st.identifier.source_loc);
+                throw struct_duplicate_key(name, st.identifier.source_loc);
 
             if (st.type) {
                 st.type->apply(*this);
@@ -548,7 +548,7 @@ private:
         std::set<std::string> unique;  // check uniqueness
         for (auto& tp : type_params) {
             if (unique.contains(tp.name))
-                throw RedefinedName(tp.name, tp.source_loc);
+                throw redefined_name(tp.name, tp.source_loc);
             unique.insert(tp.name);
             symtab().add({tp.name, Symbol::TypeVar, ++type_idx});
         }

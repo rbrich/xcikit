@@ -150,21 +150,21 @@ void resolve_return_type(Signature& sig, const TypeInfo& deduced,
     if (sig.return_type.has_unknown()) {
         if (deduced.is_unknown() && !deduced.has_generic()) {
             if (!sig.has_any_generic())
-                throw MissingExplicitType(loc);
+                throw missing_explicit_type(loc);
             return;  // nothing to resolve
         }
         if (deduced.is_callable() && &sig == &deduced.ul_signature())
-            throw MissingExplicitType(loc);  // the return type is recursive!
+            throw missing_explicit_type(loc);  // the return type is recursive!
         specialize_arg(sig.return_type, deduced, scope.type_args(),
                 [&loc](const TypeInfo& exp, const TypeInfo& got) {
-                    throw UnexpectedReturnType(exp, got, loc);
+                    throw unexpected_return_type(exp, got, loc);
                 });
         resolve_type_vars(sig, scope.type_args());  // fill in concrete types using new type var info
         sig.set_return_type(deduced);  // Unknown/var=0 not handled by resolve_type_vars
         return;
     }
     if (sig.return_type.effective_type() != deduced.effective_type())
-        throw UnexpectedReturnType(sig.return_type, deduced, loc);
+        throw unexpected_return_type(sig.return_type, deduced, loc);
 }
 
 

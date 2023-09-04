@@ -199,13 +199,13 @@ SymbolTable& Module::symtab_by_qualified_name(std::string_view name)
             if (module->name() == *part_it)
                 symtab = &module->symtab();
         if (symtab == nullptr)
-            throw UnresolvedSymbol(name);
+            throw unresolved_symbol(name);
     }
 
     while (++part_it != parts.end()) {
         symtab = symtab->find_child_by_name(*part_it);
         if (symtab == nullptr)
-            throw UnresolvedSymbol(name);
+            throw unresolved_symbol(name);
     }
     return *symtab;
 }

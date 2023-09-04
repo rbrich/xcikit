@@ -28,7 +28,7 @@ void Stack::push(const Value& v)
         return;
     if (m_stack_pointer < size) {
         if (grow() < size)
-            throw StackOverflow();
+            throw stack_overflow();
     }
     m_stack_pointer -= size;
     v.write(data());
@@ -106,7 +106,7 @@ void Stack::copy(StackRel pos, size_t size)
     assert(size > 0);
     if (m_stack_pointer < size) {
         if (grow() < size)
-            throw StackOverflow();
+            throw stack_overflow();
     }
     m_stack_pointer -= size;
     // copy the bytes
@@ -259,7 +259,7 @@ void Stack::push_type(const Value& v)
 void Stack::pop_type(const Value& v)
 {
     if (Stack::size() < v.size_on_stack())
-        throw StackUnderflow{};
+        throw stack_underflow();
 
     // check type(s) on stack
     if (v.type() == Type::Tuple) {

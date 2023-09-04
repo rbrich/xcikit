@@ -148,27 +148,27 @@ public:
                     assert(m_instruction_args.size() == 1);
                     auto arg = m_instruction_args[0].value().to_int64();
                     if (arg < 0 || arg >= 256)
-                        throw IntrinsicsFunctionError("arg value out of Byte range: "
-                                  + std::to_string(arg), v.source_loc);
+                        throw intrinsics_function_error("arg value out of Byte range: "
+                                                        + std::to_string(arg), v.source_loc);
                     code().add_B1(opcode, (uint8_t) arg);
                 } else if (opcode <= Opcode::L1Last) {
                     assert(m_instruction_args.size() == 1);
                     auto arg = m_instruction_args[0].value().to_int64();
                     if (arg < 0)
-                        throw IntrinsicsFunctionError("intrinsic argument is negative: "
-                                                      + std::to_string(arg), v.source_loc);
+                        throw intrinsics_function_error("intrinsic argument is negative: "
+                                                        + std::to_string(arg), v.source_loc);
                     code().add_L1(opcode, size_t(arg));
                 } else {
                     assert(opcode <= Opcode::L2Last);
                     assert(m_instruction_args.size() == 2);
                     auto arg1 = m_instruction_args[0].value().to_int64();
                     if (arg1 < 0)
-                        throw IntrinsicsFunctionError("intrinsic argument #1 is negative: "
-                                                      + std::to_string(arg1), v.source_loc);
+                        throw intrinsics_function_error("intrinsic argument #1 is negative: "
+                                                        + std::to_string(arg1), v.source_loc);
                     auto arg2 = m_instruction_args[1].value().to_int64();
                     if (arg2 < 0)
-                        throw IntrinsicsFunctionError("intrinsic argument #2 is negative: "
-                                                      + std::to_string(arg2), v.source_loc);
+                        throw intrinsics_function_error("intrinsic argument #2 is negative: "
+                                                        + std::to_string(arg2), v.source_loc);
                     code().add_L2(opcode, size_t(arg1), size_t(arg2));
                 }
                 break;
@@ -709,7 +709,7 @@ void Compiler::compile_function(Scope& scope, ast::Expression& body)
 
     if (fn.has_intrinsics()) {
         if (fn.intrinsics() != fn.asm_code().size())
-            throw IntrinsicsFunctionError(
+            throw intrinsics_function_error(
                     "cannot mix compiled code with intrinsics",
                     body.source_loc);
         // RET, do not add any DROP for intrinsics function

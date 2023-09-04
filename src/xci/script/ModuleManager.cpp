@@ -30,7 +30,7 @@ ModulePtr ModuleManager::import_module(const std::string& name)
         const std::string path = fmt::format("script/{}.fire", name);
         auto f = m_vfs.read_file(path);
         if (!f)
-            throw ImportError(name);
+            throw import_error(name);
         auto content = f.content();
         auto& source_manager = m_interpreter.source_manager();
         auto file_id = source_manager.add_source(path, content->string());

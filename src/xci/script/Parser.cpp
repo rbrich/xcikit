@@ -55,7 +55,7 @@ struct UnsafeType;
 struct Reference;
 
 // Spaces and comments
-struct LineComment: if_must< two<'/'>, until<eolf> > {};
+struct LineComment: seq< two<'/'>, until<eolf> > {};
 struct BlockComment: if_must< string<'/', '*'>, until< string<'*', '/'>, any > > {};
 struct EscapedNewline: seq< one<'\\'>, eol> {};
 struct SpaceOrComment: sor< blank, EscapedNewline, BlockComment> {};
@@ -98,9 +98,8 @@ struct Keyword: sor<KeywordFun, KeywordClass, KeywordInstance, KeywordType,
 
 // Literals
 struct BinDigit : one< '0', '1' > {};
-struct OctDigit : range< '0', '7' > {};
 struct BinNum: seq<one<'b'>, plus<BinDigit>> {};
-struct OctNum: if_must<one<'o'>, plus<OctDigit>> {};
+struct OctNum: if_must<one<'o'>, plus<odigit>> {};
 struct DecNumFrac: seq< one<'.'>, star<digit> > {};
 struct DecNum: seq< plus<digit>, opt<DecNumFrac> > {};
 struct HexNum: if_must<one<'x'>, plus<xdigit>> {};
@@ -127,18 +126,18 @@ struct Literal: sor< Char, RawString, String, Byte, RawBytes, Bytes, Number > {}
 
 // Types
 struct DeclParam: sor< Type, seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > > {};
-struct DeclResult: if_must< string<'-', '>'>, SC, Type, opt<SC, DeclResult> > {};
-struct TypeParams: if_must< one<'<'>, TypeName, SC, star_must<one<','>, SC, TypeName, SC>, one<'>'> > {};
+struct DeclResult: seq< string<'-', '>'>, SC, must<Type>, opt<SC, DeclResult> > {};
+struct TypeParams: seq< one<'<'>, must<TypeName>, SC, star<one<','>, SC, must<TypeName>, SC>, must<one<'>'>> > {};
 struct TypeConstraint: seq<TypeName, RS, SC, TypeName> {};
-struct TypeContext: if_must< one<'('>, SC, TypeConstraint, SC, star_must<one<','>, SC, TypeConstraint, SC>, one<')'> > {};
+struct TypeContext: seq< one<'('>, SC, must<TypeConstraint>, SC, star<one<','>, SC, must<TypeConstraint>, SC>, must<one<')'>> > {};
 struct FunctionType: seq< opt<TypeParams>, SC, DeclParam, SC, DeclResult > {};
-struct FunctionDecl: seq< opt<TypeParams>, SC, DeclParam, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
+struct FunctionDecl: seq< opt<TypeParams>, SC, DeclParam, SC, opt<DeclResult>, SC, opt<KeywordWith, SC, must<TypeContext>> > {};
 struct PlainTypeName: seq< TypeName, not_at<SC, one<','>> > {};  // not followed by comma (would be TupleType)
-struct ListType: if_must< one<'['>, SC, UnsafeType, SC, one<']'> > {};
+struct ListType: seq< one<'['>, SC, must<UnsafeType>, SC, must<one<']'>> > {};
 struct TupleType: seq< Type, plus<SC, one<','>, SC, Type> > {};
 struct StructItem: seq< Identifier, opt<SC, one<':'>, SC, must<Type>> > {};
 struct StructType: seq< StructItem, star<SC, opt<one<','>>, NSC, StructItem>, opt<SC, one<','>> > {};
-struct ParenthesizedType: if_must< one<'('>, NSC, opt<UnsafeType, NSC>, one<')'> > {};
+struct ParenthesizedType: seq< one<'('>, NSC, opt<UnsafeType, NSC>, must<one<')'>> > {};
 struct UnsafeType: sor<FunctionType, PlainTypeName, TupleType, StructType, ParenthesizedType, ListType> {};   // usable in context where Type is already expected
 struct Type: sor< ParenthesizedType, ListType, TypeName > {};
 
@@ -149,51 +148,53 @@ struct Type: sor< ParenthesizedType, ListType, TypeName > {};
 template<class S> struct CallRight: seq< RSP, S, ExprArgSafe > {};
 template<class S> struct Call: seq< ExprCallable, RSP, S, ExprArgSafe > {};
 template<class S> struct TypeDotCallRight: seq< Reference, opt<RSP, S, ExprArgSafe> > {};
-template<class S> struct ExprTypeDotCall: seq< TypeName, S, if_must< one<'.'>, SC, TypeDotCallRight<S> > > {};
+template<class S> struct ExprTypeDotCall: seq< TypeName, S, seq< one<'.'>, SC, must<TypeDotCallRight<S>> > > {};
 template<class S> struct ExprTypeInit: seq< TypeName, RSP, S, ExprArgSafe > {};
 template<class S> struct ExprOperand: sor<Call<S>, ExprArgSafe, ExprPrefix, ExprTypeInit<S>, ExprTypeDotCall<S>> {};
-template<class S> struct DotCallRight: seq< NSC, one<'.'>, SC, must<sor<TypeName, ExprOperand<S>>> > {};
+template<class S> struct DotCallRightExpr: sor<TypeName, ExprOperand<S>> {};
+template<class S> struct DotCallRight: seq< NSC, one<'.'>, SC, must<DotCallRightExpr<S>> > {};
 template<class S> struct ExprInfixRight: seq< sor< CallRight<S>, DotCallRight<S>,
                                 seq<S, InfixOperator, NSC, ExprOperand<S>> >, opt< ExprInfixRight<S> > > {};
 template<class S> struct TrailingComma: opt<S, one<','>> {};
 template<class S> struct ExprInfix: seq< ExprOperand<S>, opt<ExprInfixRight<S>>, TrailingComma<S> > {};
 template<class S> struct Expression: sor< ExprCond, ExprWith, ExprStruct, ExprInfix<S> > {};
 struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
-struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC, one<'}'>> > > {};
+struct Block: seq< one<'{'>, NSC, sor< one<'}'>, must<SepList<Statement>, NSC, one<'}'>> > > {};
 struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
-struct ParenthesizedExpr: if_must< one<'('>, NSC, opt<Expression<NSC>, NSC>, one<')'> > {};
-struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand<SC>, SC > {};
-struct TypeArgs: seq< one<'<'>, Type, SC, star_must<one<','>, SC, Type, SC>, one<'>'> > {};
+struct ParenthesizedExpr: seq< one<'('>, NSC, sor< one<')'>, must<Expression<NSC>, NSC, one<')'>> > > {};
+struct ExprPrefix: seq< PrefixOperator, SC, must<ExprOperand<SC>>, SC > {};
+struct TypeArgs: seq< one<'<'>, Type, SC, star<one<','>, SC, must<Type>, SC>, one<'>'> > {};
 struct Reference: seq<Identifier, opt<TypeArgs>, not_at<one<'"'>>> {};
-struct List: if_must< one<'['>, NSC, opt<ExprInfix<NSC>, NSC>, one<']'> > {};
+struct List: seq< one<'['>, NSC, sor< one<']'>, must<ExprInfix<NSC>, NSC, one<']'>> > > {};
 struct Cast: seq<SC, one<':'>, SC, Type> {};
 struct ExprCallable: sor< ParenthesizedExpr, Function, Reference> {};
 struct ExprArgSafe: seq< sor< ParenthesizedExpr, List, Function, Literal, Reference >, opt<Cast>> {};  // expressions which can be used as args in Call
-struct ExprCondThen: if_must<KeywordThen, NSC, Expression<SC>> {};
-struct ExprCondIf: if_must<KeywordIf, NSC, ExprInfix<NSC>, NSC, ExprCondThen> {};
-struct ExprCondElse: if_must<KeywordElse, NSC, Expression<SC>> {};
+struct ExprCondIf: if_must<KeywordIf, NSC, ExprInfix<NSC>, NSC, KeywordThen, NSC, Expression<SC>> {};
+struct ExprCondElse: seq< KeywordElse, NSC, must<Expression<SC>> > {};
 struct ExprCond: seq< plus< ExprCondIf, NSC >, ExprCondElse> {};
 struct ExprWith: if_must< KeywordWith, NSC, ExprArgSafe, NSC, Expression<SC> > {};  // could be parsed as a function, but that wouldn't allow newlines
 struct ExprStructItem: seq< Identifier, SC, one<'='>, not_at<one<'='>>, SC, must<ExprArgSafe> > {};
 struct ExprStruct: seq< ExprStructItem, star< SC, one<','>, SC, must<ExprStructItem> > > {};
 
 // Block-level statements
-struct Declaration: if_must< KeywordDecl, NSC, Variable > {};
+struct Declaration: seq< KeywordDecl, NSC, must<Variable> > {};
 struct Definition: seq< Variable, SC, seq<one<'='>, not_at<one<'='>>, NSC, must<Expression<SC>>> > {};  // must not match `var == ...`
 struct TypeAlias: seq< TypeName, NSC, one<'='>, not_at<one<'='>>, NSC, must<UnsafeType> > {};
 struct Statement: sor< Declaration, Definition, TypeAlias, Expression<SC> > {};
 
 // Module-level definitions
-struct ClassDeclaration: seq< Variable, SC, opt_must<one<'='>, SC, Expression<SC>> > {};  // with optional default definition
-struct DefClass: if_must< KeywordClass, NSC, TypeName, RS, SC, plus<TypeName, SC>, opt<TypeContext>, NSC,
-        one<'{'>, NSC, sor< one<'}'>, must<SepList<ClassDeclaration>, NSC, one<'}'>> > > {};
-struct DefInstance: if_must< KeywordInstance, SC, opt<TypeParams>, NSC, TypeName, RS, SC, plus<Type, SC>, opt<TypeContext>, NSC,
-        one<'{'>, NSC, sor< one<'}'>, must<SepList<Definition>, NSC, one<'}'>> > > {};
-struct DefType: if_must< KeywordType, NSC, TypeName, NSC, one<'='>, not_at<one<'='>>, NSC, UnsafeType > {};
+struct ClassDeclaration: seq< Variable, SC, opt<one<'='>, SC, must<Expression<SC>>> > {};  // with optional default definition
+struct DefClass: seq< KeywordClass, NSC, must<TypeName>, RS, SC, must<plus<TypeName, SC>>,
+                      opt<TypeContext>, NSC, must<one<'{'>>, NSC,
+                      sor< one<'}'>, must<SepList<ClassDeclaration>, NSC, one<'}'>> > > {};
+struct DefInstance: seq< KeywordInstance, SC, opt<TypeParams>, NSC, must<TypeName>, RS, SC,    // instance<T> Init
+                         must<plus<Type, SC>>, opt<TypeContext>, NSC, must<one<'{'>>, NSC,     // Int T (Eq T) {
+                         sor< one<'}'>, must<SepList<Definition>, NSC, one<'}'>> > > {};       // init = ... }
+struct DefType: if_must< KeywordType, NSC, TypeName, NSC, one<'='>, NSC, UnsafeType > {};
 struct TopLevelStatement: sor<DefClass, DefInstance, DefType, Statement> {};
 
 // Source module
-struct Module: must<NSC, opt<SepList<TopLevelStatement>, NSC>, eof> {};
+struct Module: seq<NSC, sor<eof, must<SepList<TopLevelStatement>, NSC, eof>>> {};
 
 
 // ----------------------------------------------------------------------------
@@ -1171,7 +1172,7 @@ struct Action<Literal> : change_states< LiteralHelper > {
                     const auto v = std::get<int64_t>(helper.content);
                     using l = std::numeric_limits<uint8_t>;
                     if (v < l::min() || v > l::max())
-                        throw parse_error("Byte literal out of range", in);
+                        throw tao::pegtl::parse_error("Byte literal out of range", in);
                     value = TypedValue{value::Byte((uint8_t) v)};
                     break;
                 }
@@ -1266,7 +1267,7 @@ struct Action<Number> : change_states< NumberHelper > {
             uint64_t val;
             auto [end, ec] = std::from_chars(first, last, val, base);
             if (ec == std::errc::result_out_of_range)
-                throw parse_error("Integer literal out of range 64bit range", in);
+                throw tao::pegtl::parse_error("Integer literal out of range 64bit range", in);
             assert(end == last);
 
             if (n.suffix[0] == 'u') {
@@ -1279,9 +1280,9 @@ struct Action<Number> : change_states< NumberHelper > {
             } else {
                 using l = std::numeric_limits<int64_t>;
                 if (!minus_sign && val > uint64_t(l::max()))
-                    throw parse_error("Int64 literal out of range", in);
+                    throw tao::pegtl::parse_error("Int64 literal out of range", in);
                 if (minus_sign && val > uint64_t(l::max()) + 1)
-                    throw parse_error("Int64 literal out of range", in);
+                    throw tao::pegtl::parse_error("Int64 literal out of range", in);
 
                 n.num = minus_sign ? int64_t(~val+1) : int64_t(val);
             }
@@ -1415,9 +1416,9 @@ struct Control : normal< Rule >
     template< typename Input, typename... States >
     static void raise( const Input& in, States&&... /*unused*/ ) {
         if (!errmsg.second.empty())
-            throw parse_error( errmsg.first + std::string(errmsg.second), in );
+            throw tao::pegtl::parse_error( errmsg.first + std::string(errmsg.second), in );
         else
-            throw parse_error( errmsg.first, in );
+            throw tao::pegtl::parse_error( errmsg.first, in );
     }
 
 #ifdef XCI_SCRIPT_PARSER_TRACE
@@ -1507,30 +1508,55 @@ struct Control : normal< Rule >
 
 template<> ErrMsg Control<eof>::errmsg = {"invalid syntax", {}};
 template<> ErrMsg Control<until< string<'*', '/'>, any >>::errmsg = {"unterminated comment", {}};
-template<> ErrMsg Control<one<']'>>::errmsg = {"expected ']'", {}};
-template<> ErrMsg Control<one<')'>>::errmsg = {"expected ')'", {}};
-template<> ErrMsg Control<one<'>'>>::errmsg = {"expected '>'", {}};
-template<> ErrMsg Control<one<'{'>>::errmsg = {"expected '{'", {}};
-template<> ErrMsg Control<one<'}'>>::errmsg = {"expected '}'", {}};
-template<> ErrMsg Control<one<'='>>::errmsg = {"expected '='", {}};
-template<> ErrMsg Control<one<'\''>>::errmsg = {"expected '\''", {}};
+template<> ErrMsg Control<plus<odigit>>::errmsg = {"expected oct digit", {}};
+template<> ErrMsg Control<xdigit>::errmsg = {"expected hex digit", {}};
+template<> ErrMsg Control<plus<xdigit>>::errmsg = {"expected hex digit", {}};
+template<> ErrMsg Control<rep_min_max<1,6,xdigit>>::errmsg = {"expected hex digit", {}};
+template<> ErrMsg Control<StringCh>::errmsg = {"invalid char literal", {}};
+template<> ErrMsg Control<StringChUni>::errmsg = {"invalid char literal", {}};
+template<> ErrMsg Control<StringChEscSpec>::errmsg = {"invalid escape sequence", {}};
+template<> ErrMsg Control<StringChUniEscSpec>::errmsg = {"invalid escape sequence", {}};
+template<> ErrMsg Control<one<']'>>::errmsg = {"expected `]`", {}};
+template<> ErrMsg Control<one<')'>>::errmsg = {"expected `)`", {}};
+template<> ErrMsg Control<one<'>'>>::errmsg = {"expected `>`", {}};
+template<> ErrMsg Control<one<'{'>>::errmsg = {"expected `{`", {}};
+template<> ErrMsg Control<one<'}'>>::errmsg = {"expected `}`", {}};
+template<> ErrMsg Control<one<'='>>::errmsg = {"expected `=`", {}};
+template<> ErrMsg Control<one<'\''>>::errmsg = {"expected `'`", {}};
 template<> ErrMsg Control<RS>::errmsg = {"expected a whitespace character", {}};
-template<> ErrMsg Control<SC>::errmsg = {"expected a whitespace character", {}};
 template<> ErrMsg Control<NSC>::errmsg = {"expected a whitespace character", {}};
-template<> ErrMsg Control<until<eolf>>::errmsg = {"unterminated comment", {}};
 template<> ErrMsg Control<Expression<SC>>::errmsg = {"expected expression", {}};
 template<> ErrMsg Control<Expression<NSC>>::errmsg = {"expected expression", {}};
+template<> ErrMsg Control<ExprOperand<SC>>::errmsg = {"expected expression", {}};
+template<> ErrMsg Control<ExprArgSafe>::errmsg = {"expected expression", {}};
+template<> ErrMsg Control<ExprInfix<NSC>>::errmsg = {"expected expression", {}};
 template<> ErrMsg Control<DeclParam>::errmsg = {"expected function parameter declaration", {}};
+template<> ErrMsg Control<Block>::errmsg = {"expected function body", {}};
 template<> ErrMsg Control<ExprCallable>::errmsg = {"expected callable", {}};
 template<> ErrMsg Control<ExprInfixRight<SC>>::errmsg = {"expected infix operator", {}};
 template<> ErrMsg Control<ExprInfixRight<NSC>>::errmsg = {"expected infix operator", {}};
+template<> ErrMsg Control<DotCallRightExpr<SC>>::errmsg = {"expected expression or typename (dot call)", {}};
+template<> ErrMsg Control<DotCallRightExpr<NSC>>::errmsg = {"expected expression or typename (dot call)", {}};
+template<> ErrMsg Control<TypeDotCallRight<SC>>::errmsg = {"expected funcrion call (type dot call)", {}};
+template<> ErrMsg Control<TypeDotCallRight<NSC>>::errmsg = {"expected funcrion call (type dot call)", {}};
 template<> ErrMsg Control<Variable>::errmsg = {"expected variable name", {}};
 template<> ErrMsg Control<UnsafeType>::errmsg = {"expected type", {}};
 template<> ErrMsg Control<Type>::errmsg = {"expected type", {}};
+template<> ErrMsg Control<plus<Type, SC>>::errmsg = {"expected type", {}};
 template<> ErrMsg Control<TypeName>::errmsg = {"expected type name", {}};
+template<> ErrMsg Control<plus<TypeName, SC>>::errmsg = {"expected type name", {}};
+template<> ErrMsg Control<TypeConstraint>::errmsg = {"expected type constraint", {}};
+template<> ErrMsg Control<TypeContext>::errmsg = {"expected type constraints", {}};
 template<> ErrMsg Control<StringContent>::errmsg = {"unclosed string literal", {}};
+template<> ErrMsg Control<BytesContent>::errmsg = {"unclosed bytes literal", {}};
 template<> ErrMsg Control<RawStringContent>::errmsg = {"unclosed raw string literal", {}};
 template<> ErrMsg Control<FunctionDecl>::errmsg = {"expected function declaration", {}};
+template<> ErrMsg Control<SepList<ClassDeclaration>>::errmsg = {"expected function declaration", {}};
+template<> ErrMsg Control<SepList<Definition>>::errmsg = {"expected function definition", {}};
+template<> ErrMsg Control<ExprStructItem>::errmsg = {"expected struct item", {}};
+template<> ErrMsg Control<KeywordThen>::errmsg = {"expected `then` expression", {}};
+template<> ErrMsg Control<SepList<Statement>>::errmsg = {"expected statement", {}};
+template<> ErrMsg Control<SepList<TopLevelStatement>>::errmsg = {"expected statement", {}};
 
 // default message
 #ifndef NDEBUG
@@ -1560,14 +1586,14 @@ void Parser::parse(SourceId src_id, ast::Module& mod)
 
     try {
         if (!tao::pegtl::parse< Module, Action, Control >( in, mod ))
-            throw ParseError("input not matched");
+            assert(!"input not matched");  // cannot happen, must<eof> always throws on unmatched input
         mod.body.finish();
     } catch (tao::pegtl::parse_error& e) {
         SourceLocation loc;
         loc.load(in, e.positions().front());
-        throw ParseError(e.message(), loc);
+        throw xci::script::parse_error(e.message(), loc);
     } catch( const std::exception& e ) {
-        throw ParseError(e.what());
+        throw xci::script::parse_error(e.what());
     }
 }
 
