@@ -368,7 +368,7 @@ struct Control : normal< Rule >
 {
     template< typename Input, typename... States >
     static void raise( const Input& in, States&&... ) {
-#ifndef NDEBUG
+#ifdef DEBUG_PEGTL_RULES
         throw tao::pegtl::parse_error("parse error matching " + std::string( demangle< Rule >() ), in);
 #else
         throw tao::pegtl::parse_error("parse error", in);

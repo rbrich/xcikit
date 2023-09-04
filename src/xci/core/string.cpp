@@ -152,6 +152,17 @@ std::string escape(string_view str, bool extended, bool utf8)
 
 
 #if XCI_WITH_PEGTL == 1
+// override control to avoid demangled rules appearing in binary static data
+// (even though they're never used, they don't get optimized away)
+template< typename Rule >
+struct UnescapeControl : tao::pegtl::normal< Rule >
+{
+    template< typename Input, typename... States >
+    static void raise( const Input& in, States&&...) {
+        throw tao::pegtl::parse_error( "parse error", in );
+    }
+};
+
 template<typename Rule>
 std::string gen_unescape(string_view str)
 {
@@ -164,7 +175,7 @@ std::string gen_unescape(string_view str)
     result.reserve(str.size());
 
     try {
-        auto matched = tao::pegtl::parse< Rule, parser::unescape::Action >( input, result );
+        auto matched = tao::pegtl::parse< Rule, parser::unescape::Action, UnescapeControl >( input, result );
         assert(matched);
         (void) matched;
     } catch (tao::pegtl::parse_error&) {

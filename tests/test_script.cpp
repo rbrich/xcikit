@@ -181,24 +181,32 @@ static std::string interpret_std(const std::string& input)
 
 class MatchScriptError : public Catch::Matchers::MatcherBase<ScriptError> {
     ErrorCode m_code;
+    std::string m_msg;
+    std::string m_filepos;
 public:
-    explicit MatchScriptError(ErrorCode code) : m_code(code) {}
+    explicit MatchScriptError(ErrorCode code, std::string msg={}, std::string filepos={})
+            : m_code(code), m_msg(std::move(msg)), m_filepos(std::move(filepos)) {}
 
     bool match(const ScriptError& exc) const override {
-        return exc.code() == m_code;
+        return exc.code() == m_code &&
+               (m_msg.empty() || m_msg == exc.msg()) &&
+               (m_filepos.empty() || m_filepos == exc.file());
     }
 
     std::string describe() const override {
         std::ostringstream ss;
-        ss << "code equals " << m_code;
+        ss << "\ncode equals " << m_code;
+        if (!m_msg.empty())
+           ss << "\nmsg equals \"" << m_msg << '"';
+        if (!m_filepos.empty())
+           ss << "\nfilepos equals \"" << m_filepos << '"';
         return ss.str();
     }
 };
 
 // Emulates CHECK_THROWS_AS, but checks ErrorCode inside ScriptError, instead of exception type
-#define CHECK_THROWS_EC(expr, code) \
-    CHECK_THROWS_MATCHES((expr), ScriptError, MatchScriptError(ErrorCode::code))
-
+#define CHECK_THROWS_EC(expr, code, ...) \
+    CHECK_THROWS_MATCHES((expr), ScriptError, MatchScriptError(ErrorCode::code, ##__VA_ARGS__))
 
 #ifndef NDEBUG
 TEST_CASE( "Analyze grammar", "[script][parser]" )
@@ -356,6 +364,27 @@ TEST_CASE( "Type argument or comparison?", "[script][parser]" )
     PARSE("1 < 2", "(1 < 2)");
     PARSE("a<b> 3", "((a < b) > 3)");
     PARSE("a<T> 3", "a<T> 3");
+}
+
+
+TEST_CASE( "Parse errors", "[script][parser]" )
+{
+    CHECK_THROWS_EC(parse("/* blah"), ParseError, "unterminated comment", "<input>:1:8");
+    CHECK_THROWS_EC(parse("0oF"), ParseError, "expected oct digit", "<input>:1:3");
+    CHECK_THROWS_EC(parse("0xZ"), ParseError, "expected hex digit", "<input>:1:3");
+    CHECK_THROWS_EC(parse("'abc'"), ParseError, "expected `'`", "<input>:1:3");
+    CHECK_THROWS_EC(parse("'\\z'"), ParseError, "invalid escape sequence", "<input>:1:3");
+    CHECK_THROWS_EC(parse("'\1'"), ParseError, "invalid char literal", "<input>:1:2");
+    CHECK_THROWS_EC(parse("\"abc"), ParseError, "unclosed string literal", "<input>:1:5");
+    CHECK_THROWS_EC(parse("b\"abc"), ParseError, "unclosed bytes literal", "<input>:1:6");
+    CHECK_THROWS_EC(parse("!$"), ParseError, "expected expression", "<input>:1:2");
+    CHECK_THROWS_EC(parse("0.9.*"), ParseError, "expected expression or typename (dot call)", "<input>:1:5");
+    CHECK_THROWS_EC(parse("(#)"), ParseError, "expected expression", "<input>:1:2");
+    CHECK_THROWS_EC(parse("[#]"), ParseError, "expected expression", "<input>:1:2");
+    CHECK_THROWS_EC(parse("$"), ParseError, "expected statement", "<input>:1:1");
+    CHECK_THROWS_EC(parse("class Ord T (x) {}"), ParseError, "expected type constraint", "<input>:1:14");
+    CHECK_THROWS_EC(parse("class Ord T (Eq T, x) {}"), ParseError, "expected type constraint", "<input>:1:20");
+    CHECK_THROWS_EC(parse("instance Cast String Int { x }"), ParseError, "expected function definition", "<input>:1:30");
 }
 
 
