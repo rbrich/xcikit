@@ -1,6 +1,44 @@
 import lldb
 
 
+class ChunkedStack_SyntheticChildrenProvider:
+    def __init__(self, valobj, _dict):
+        self.valobj = valobj
+        self.buckets = []  # list of (size, Bucket*)
+
+    def update(self):
+        tail = self.valobj.GetChildMemberWithName("m_tail")
+        bucket = tail.GetChildMemberWithName("next")
+        while True:
+            size = bucket.GetChildMemberWithName("count").GetValueAsUnsigned()
+            self.buckets.append((size, bucket))
+            if bucket.GetValueAsUnsigned() == tail.GetValueAsUnsigned():
+                break
+            bucket = bucket.GetChildMemberWithName("next")
+
+    def num_children(self):
+        return sum(size for size, _ in self.buckets)
+
+    def has_children(self):
+        # num of elems in first bucket is non-zero
+        return self.buckets[0][0] > 0
+
+    def get_child_at_index(self, index):
+        if index < 0 or index >= self.num_children():
+            return None
+        bucket_idx = 0
+        elem_idx = index
+        while True:
+            size, bucket = self.buckets[bucket_idx]
+            if elem_idx < size:
+                break
+            elem_idx -= size
+            bucket_idx += 1
+        items = bucket.GetChildMemberWithName("items")
+        elem = items.GetChildAtIndex(elem_idx, lldb.eNoDynamicValues, True)
+        return elem.Clone("[" + str(index) + "]")
+
+
 class IndexedMap_SyntheticChildrenProvider:
     def __init__(self, valobj, _dict):
         self.valobj = valobj
@@ -139,13 +177,13 @@ def SymbolPointer_Summary(valobj, _dict, _options):
     symbols = m_symbols.GetChildAtIndex(0)
     symbol_type = m_symbols.GetType().template_args[0]
     sym = symbols.CreateChildAtOffset("", symidx * symbol_type.size, symbol_type)
-    # print(sym)
     sym_name = sym.GetChildMemberWithName('m_name')
     return f"{unquote(symtab_name.summary)}::{unquote(sym_name.summary)}"
 
 
 def __lldb_init_module(debugger, dict):
     print("Loading xci::script formatters...")
+    debugger.HandleCommand("type synthetic add -x '^xci::core::ChunkedStack<' --python-class xci_script_lldb.ChunkedStack_SyntheticChildrenProvider --category xci")
     debugger.HandleCommand("type synthetic add -x '^xci::core::IndexedMap<' --python-class xci_script_lldb.IndexedMap_SyntheticChildrenProvider --category xci")
     debugger.HandleCommand("type summary add -x '^xci::core::IndexedMap<' --summary-string 'size=${var.m_size}' -w xci")
     debugger.HandleCommand("type synthetic add 'xci::script::TypeInfo' --python-class xci_script_lldb.TypeInfo_SyntheticChildrenProvider --category xci")
