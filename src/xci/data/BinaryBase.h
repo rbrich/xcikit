@@ -1,7 +1,7 @@
 // BinaryBase.h created on 2019-03-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019, 2020 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_DATA_BINARY_BASE_H
@@ -99,11 +99,11 @@ struct BinaryBase {
         Null        =  0 << 4,
         BoolFalse   =  1 << 4,
         BoolTrue    =  2 << 4,
-        Byte        =  3 << 4,
-        UInt32      =  4 << 4,
-        UInt64      =  5 << 4,
-        Int32       =  6 << 4,
-        Int64       =  7 << 4,
+        Fixed8      =  3 << 4,
+        Fixed16     =  4 << 4,
+        Fixed32     =  5 << 4,
+        Fixed64     =  6 << 4,
+        Fixed128    =  7 << 4,
         Float32     =  8 << 4,
         Float64     =  9 << 4,
         VarInt      = 10 << 4,
@@ -123,19 +123,19 @@ struct BinaryBase {
     static constexpr Type to_chunk_type() { return to_chunk_type<std::underlying_type_t<T>>(); }
 
     template<class T> requires (sizeof(T) == 1) && std::is_integral_v<T> && (!std::is_same_v<T, bool>)
-    static constexpr Type to_chunk_type() { return Type::Byte; }
+    static constexpr Type to_chunk_type() { return Type::Fixed8; }
 
-    template<class T> requires (sizeof(T) == 4) && std::is_integral_v<T> && std::is_unsigned_v<T>
-    static constexpr Type to_chunk_type() { return Type::UInt32; }
+    template<class T> requires (sizeof(T) == 2) && std::is_integral_v<T>
+    static constexpr Type to_chunk_type() { return Type::Fixed16; }
 
-    template<class T> requires (sizeof(T) == 8) && std::is_integral_v<T> && std::is_unsigned_v<T>
-    static constexpr Type to_chunk_type() { return Type::UInt64; }
+    template<class T> requires (sizeof(T) == 4) && std::is_integral_v<T>
+    static constexpr Type to_chunk_type() { return Type::Fixed32; }
 
-    template<class T> requires (sizeof(T) == 4) && std::is_integral_v<T> && std::is_signed_v<T>
-    static constexpr Type to_chunk_type() { return Type::Int32; }
+    template<class T> requires (sizeof(T) == 8) && std::is_integral_v<T>
+    static constexpr Type to_chunk_type() { return Type::Fixed64; }
 
-    template<class T> requires (sizeof(T) == 8) && std::is_integral_v<T> && std::is_signed_v<T>
-    static constexpr Type to_chunk_type() { return Type::Int64; }
+    template<class T> requires (sizeof(T) == 16) && std::is_integral_v<T>
+    static constexpr Type to_chunk_type() { return Type::Fixed128; }
 
     template<class T> requires std::is_same_v<T, float>
     static constexpr Type to_chunk_type() { return Type::Float32; }
@@ -149,16 +149,18 @@ struct BinaryBase {
             case BoolFalse:
             case BoolTrue:
                 return 0;
-            case Byte:
+            case Fixed8:
                 return 1;
-            case UInt32:
-            case Int32:
+            case Fixed16:
+                return 2;
+            case Fixed32:
             case Float32:
                 return 4;
-            case UInt64:
-            case Int64:
+            case Fixed64:
             case Float64:
                 return 8;
+            case Fixed128:
+                return 16;
             default:
                 return size_t(-1);
         }
