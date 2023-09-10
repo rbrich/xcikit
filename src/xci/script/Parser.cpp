@@ -97,19 +97,20 @@ struct Keyword: sor<KeywordFun, KeywordClass, KeywordInstance, KeywordType,
         KeywordDecl, KeywordWith, KeywordIf, KeywordThen, KeywordElse, KeywordMatch> {};
 
 // Literals
+template<class D> struct UPlus: seq< D, star<opt<one<'_'>>, D> > {};  // one or more digits D interleaved by underscores ('_')
 struct BinDigit : one< '0', '1' > {};
-struct BinNum: seq<one<'b'>, plus<BinDigit>> {};
-struct OctNum: if_must<one<'o'>, plus<odigit>> {};
-struct DecNumFrac: seq< one<'.'>, star<digit> > {};
-struct DecNum: seq< plus<digit>, opt<DecNumFrac> > {};
-struct HexNum: if_must<one<'x'>, plus<xdigit>> {};
+struct BinNum: seq<one<'b'>, UPlus<BinDigit>> {};
+struct OctNum: if_must<one<'o'>, UPlus<odigit>> {};
+struct DecNumFrac: seq< one<'.'>, opt<UPlus<digit>> > {};
+struct DecNum: seq< UPlus<digit>, opt<DecNumFrac> > {};
+struct HexNum: if_must<one<'x'>, UPlus<xdigit>> {};
 struct Sign: one<'-','+'> {};
 struct ZeroPrefixNum: seq< one<'0'>, sor<HexNum, OctNum, BinNum, DecNum> > {};
 struct NumSuffix: sor<
-        seq<one<'u', 'U'>, opt<one<'l', 'L'>>>,
-        seq<one<'l', 'L'>, opt<one<'u', 'U'>>>,
-        one<'f', 'F', 'b', 'B'> > {};
-struct Number: seq< opt<Sign>, sor<ZeroPrefixNum, DecNum>, opt<NumSuffix> > {};
+        seq<one<'u'>, sor<one<'h', 'd', 'l', 'L'>, opt<digit, opt<digit>, opt<digit>>>>,
+        seq<one<'i'>, opt<digit, opt<digit>, opt<digit>>>,
+        one<'f', 'F', 'b', 'c', 'h', 'd', 'l', 'L'> > {};
+struct Number: seq< opt<Sign>, sor<ZeroPrefixNum, DecNum>, opt<opt<one<'_'>>, NumSuffix> > {};
 
 struct Char: if_must< one<'\''>, StringChUni, one<'\''> > {};
 struct StringContent: until< one<'"'>, StringChUni > {};
@@ -206,9 +207,16 @@ struct LiteralHelper {
 };
 
 struct NumberHelper {
-    std::variant<double, int64_t, uint64_t> num;
-    bool is_float = false;
-    char suffix[2] = {0, 0};
+    union {
+        double f;  // any float
+        int64_t i;  // any int
+        uint64_t u;  // any unsigned int
+    };
+    uint8_t suffix_length = 0;
+    uint8_t bits = 64;
+    enum : uint8_t { Signed, Unsigned, Float } type = Signed;
+    bool is_float() const noexcept { return type == Float; }
+    bool is_unsigned() const noexcept { return type == Unsigned; }
 };
 
 // temporary specialized variant of ast::Call
@@ -1124,37 +1132,79 @@ struct Action<Literal> : change_states< LiteralHelper > {
             case ValueType::Unknown:
                 assert(!"Literal value not handled");
                 abort();
+            case ValueType::UInt8: {
+                if (std::holds_alternative<std::string>(helper.content))
+                    value = TypedValue{value::UInt8( std::get<std::string>(helper.content) )};
+                else {
+                    const auto v = std::get<uint64_t>(helper.content);
+                    using l = std::numeric_limits<uint8_t>;
+                    if (v > l::max())
+                        throw tao::pegtl::parse_error("Integer literal out of range (UInt8)", in);
+                    value = TypedValue{value::UInt8((uint8_t) v)};
+                    break;
+                }
+                break;
+            }
+            case ValueType::UInt16: {
+                const auto v = std::get<uint64_t>(helper.content);
+                using l = std::numeric_limits<uint16_t>;
+                if (v > l::max())
+                    throw tao::pegtl::parse_error("Integer literal out of range (UInt16)", in);
+                value = TypedValue{value::UInt16((uint16_t) v)};
+                break;
+            }
             case ValueType::UInt32: {
                 const auto v = std::get<uint64_t>(helper.content);
                 using l = std::numeric_limits<uint32_t>;
                 if (v > l::max())
-                    // The value can't fit in UInt32, make it UInt64 instead
-                    value = TypedValue{value::UInt64(v)};
-                else
-                    value = TypedValue{value::UInt32((uint32_t) v)};
+                    throw tao::pegtl::parse_error("Integer literal out of range (UInt32)", in);
+                value = TypedValue{value::UInt32((uint32_t) v)};
                 break;
             }
             case ValueType::UInt64:
                 value = TypedValue{value::UInt64( std::get<uint64_t>(helper.content) )};
                 break;
+            case ValueType::UInt128:
+                value = TypedValue{value::UInt128( std::get<uint64_t>(helper.content) )};
+                break;
+            case ValueType::Int8: {
+                const auto v = std::get<int64_t>(helper.content);
+                using l = std::numeric_limits<int8_t>;
+                if (v < l::min() || v > l::max())
+                    throw tao::pegtl::parse_error("Integer literal out of range (Int8)", in);
+                value = TypedValue{value::Int8((int8_t) v)};
+                break;
+            }
+            case ValueType::Int16: {
+                const auto v = std::get<int64_t>(helper.content);
+                using l = std::numeric_limits<int16_t>;
+                if (v < l::min() || v > l::max())
+                    throw tao::pegtl::parse_error("Integer literal out of range (Int16)", in);
+                value = TypedValue{value::Int16((int16_t) v)};
+                break;
+            }
             case ValueType::Int32: {
                 const auto v = std::get<int64_t>(helper.content);
                 using l = std::numeric_limits<int32_t>;
                 if (v < l::min() || v > l::max())
-                    // The value can't fit in Int32, make it Int64 instead
-                    value = TypedValue{value::Int64(v)};
-                else
-                    value = TypedValue{value::Int32((int32_t) v)};
+                    throw tao::pegtl::parse_error("Integer literal out of range (Int32)", in);
+                value = TypedValue{value::Int32((int32_t) v)};
                 break;
             }
             case ValueType::Int64:
                 value = TypedValue{value::Int64( std::get<int64_t>(helper.content) )};
+                break;
+            case ValueType::Int128:
+                value = TypedValue{value::Int128( std::get<int64_t>(helper.content) )};
                 break;
             case ValueType::Float32:
                 value = TypedValue{value::Float32( std::get<double>(helper.content) )};
                 break;
             case ValueType::Float64:
                 value = TypedValue{value::Float64( std::get<double>(helper.content) )};
+                break;
+            case ValueType::Float128:
+                value = TypedValue{value::Float128( std::get<double>(helper.content) )};
                 break;
             case ValueType::Char:
                 value = TypedValue{value::Char( std::get<std::string>(helper.content) )};
@@ -1165,19 +1215,6 @@ struct Action<Literal> : change_states< LiteralHelper > {
                 else
                     value = TypedValue{value::String( std::get<std::string_view>(helper.content) )};
                 break;
-            case ValueType::Byte: {
-                if (std::holds_alternative<std::string>(helper.content))
-                    value = TypedValue{value::Byte( std::get<std::string>(helper.content) )};
-                else {
-                    const auto v = std::get<int64_t>(helper.content);
-                    using l = std::numeric_limits<uint8_t>;
-                    if (v < l::min() || v > l::max())
-                        throw tao::pegtl::parse_error("Byte literal out of range", in);
-                    value = TypedValue{value::Byte((uint8_t) v)};
-                    break;
-                }
-                break;
-            }
             case ValueType::List: {  // [Byte]
                 auto& str = std::get<std::string>(helper.content);
                 std::span data{(const std::byte*) str.data(), str.size()};
@@ -1194,7 +1231,7 @@ template<>
 struct Action<DecNumFrac> {
     template<typename Input>
     static void apply(const Input &in, NumberHelper& n) {
-        n.is_float = true;
+        n.type = NumberHelper::Float;
     }
 };
 
@@ -1203,15 +1240,55 @@ template<>
 struct Action<NumSuffix> {
     template<typename Input>
     static void apply(const Input &in, NumberHelper& n) {
-        n.suffix[0] = tolower(in.peek_char());
-        if (in.size() == 2)
-            n.suffix[1] = tolower(in.peek_char(1));
-        if (n.suffix[0] == 'f')
-            n.is_float = true;
-        // lu -> ul
-        if (n.suffix[0] == 'l' && n.suffix[1] == 'u') {
-            n.suffix[0] = 'u';
-            n.suffix[1] = 'l';
+        std::string_view sv = in.string_view();
+        n.suffix_length = sv.size();
+        char suffix = sv.front();
+        sv.remove_prefix(1);
+        if (strchr("uibchdl", suffix) != nullptr) {
+            if (n.is_float())
+                throw tao::pegtl::parse_error("Integer suffix on float literal", in);
+            assert(n.type == NumberHelper::Signed);
+        }
+        if (suffix == 'u') {
+            n.type = NumberHelper::Unsigned;
+            if (!isdigit((int)(unsigned char)sv.front())) {
+                suffix = sv.front();
+                sv.remove_prefix(1);
+            }
+        }
+        switch (suffix) {
+            case 'u':
+            case 'i':
+                std::from_chars(sv.begin(), sv.end(), n.bits);
+                if (n.bits != 8 && n.bits != 16 && n.bits != 32 && n.bits != 64 && n.bits != 128)
+                    throw tao::pegtl::parse_error("Invalid bit length of integer literal", in);
+                break;
+            case 'b':
+                n.type = NumberHelper::Unsigned;
+                [[ fallthrough ]];
+            case 'c':
+                n.bits = 8;
+                break;
+            case 'h':
+                n.bits = 16;
+                break;
+            case 'd':
+                n.bits = 32;
+                break;
+            case 'l':
+                n.bits = 64;
+                break;
+            case 'L':
+                n.bits = 128;
+                break;
+            case 'f':
+                n.type = NumberHelper::Float;
+                n.bits = 32;
+                break;
+            case 'F':
+                n.type = NumberHelper::Float;
+                n.bits = 64;
+                break;
         }
     }
 };
@@ -1221,99 +1298,100 @@ template<>
 struct Action<Number> : change_states< NumberHelper > {
     template<typename Input>
     static void apply(const Input &in, NumberHelper& n) {
-        if (n.is_float) {
-            auto s = in.string();
-            if (n.suffix[0])
-                s.pop_back();
-            if (n.suffix[1])
-                s.pop_back();
+        auto s = in.string();
+        if (n.suffix_length != 0)
+            s.erase(s.size() - n.suffix_length);
+        std::erase(s, '_');
+
+        if (n.is_float()) {
             std::istringstream is(s);
-            double val;
-            is >> val;
+            is >> n.f;
             if (!is.eof()) {
-                throw std::runtime_error("Float not fully parsed.");
+                throw tao::pegtl::parse_error("Float not fully parsed.", in);
             }
-            n.num = val;
         } else {
-            const auto sv = in.string_view();
-            const char* first = &sv.front();
-            const char* last = &sv.back() + 1;
+            std::string_view sv = s;
 
             // skip optional + sign, which is not recognized by from_chars()
-            if (*first == '+')
-                ++first;
-
-            // skip suffix
-            if (n.suffix[0])
-                --last;
-            if (n.suffix[1])
-                --last;
+            if (sv.front() == '+')
+                sv.remove_prefix(1);
 
             bool minus_sign = false;
-            if (*first == '-') {
+            if (sv.front() == '-') {
                 minus_sign = true;
-                ++first;
+                sv.remove_prefix(1);
             }
 
             int base = 10;
-            if (last - first >= 2 && first[0] == '0') {
-                switch (first[1]) {
-                    case 'b': base = 2; first += 2; break;
-                    case 'o': base = 8; first += 2; break;
-                    case 'x': base = 16; first += 2; break;
+            if (sv.size() > 2 && sv[0] == '0') {
+                switch (sv[1]) {
+                    case 'b': base = 2; sv.remove_prefix(2); break;
+                    case 'o': base = 8; sv.remove_prefix(2); break;
+                    case 'x': base = 16; sv.remove_prefix(2); break;
                 }
             }
 
             uint64_t val;
-            auto [end, ec] = std::from_chars(first, last, val, base);
+            auto [end, ec] = std::from_chars(sv.begin(), sv.end(), val, base);
             if (ec == std::errc::result_out_of_range)
-                throw tao::pegtl::parse_error("Integer literal out of range 64bit range", in);
-            assert(end == last);
+                throw tao::pegtl::parse_error("Integer literal out of range", in);
+            assert(end == sv.end());
 
-            if (n.suffix[0] == 'u') {
-                if (n.suffix[1] == 'l')
-                    n.num = minus_sign ? -val : val;
-                else {
-                    // negative value overflows, crop it to 32bit so it doesn't overflow into 64bit
-                    n.num = minus_sign ? uint32_t(-val) : val;
-                }
+            if (n.is_unsigned()) {
+                // wraparound for minus sign, e.g. -1b = 255b
+                n.u = minus_sign ? (n.bits >= 64 ? -val : -val + (1ull << n.bits))
+                                 : val;
             } else {
                 using l = std::numeric_limits<int64_t>;
                 if (!minus_sign && val > uint64_t(l::max()))
-                    throw tao::pegtl::parse_error("Int64 literal out of range", in);
+                    throw tao::pegtl::parse_error("Integer literal out of range", in);
                 if (minus_sign && val > uint64_t(l::max()) + 1)
-                    throw tao::pegtl::parse_error("Int64 literal out of range", in);
+                    throw tao::pegtl::parse_error("Integer literal out of range", in);
 
-                n.num = minus_sign ? int64_t(~val+1) : int64_t(val);
+                n.i = minus_sign ? int64_t(~val+1) : int64_t(val);
             }
         }
     }
 
     template<typename Input>
     static void success(const Input &in, NumberHelper& n, LiteralHelper& lit) {
-        if (n.is_float) {
-            lit.type = (n.suffix[0] == 'f') ? ValueType::Float32 : ValueType::Float64;
-            lit.content = std::get<double>(n.num);
-        } else {
-            switch (n.suffix[0]) {
+        if (n.is_float()) {
+            switch (n.bits) {
+                case 128:
+                    lit.type = ValueType::Float128;
+                    break;
                 default:
-                case 0:
-                    lit.type = ValueType::Int32;
+                case 64:
+                    lit.type = ValueType::Float64;
                     break;
-                case 'l':
-                    lit.type = ValueType::Int64;
-                    break;
-                case 'u':
-                    lit.type = (n.suffix[1] == 'l') ? ValueType::UInt64 : ValueType::UInt32;
-                    break;
-                case 'b':
-                    lit.type = ValueType::Byte;
+                case 32:
+                    lit.type = ValueType::Float32;
                     break;
             }
-            if (n.suffix[0] == 'u')
-                lit.content = std::get<uint64_t>(n.num);
+            lit.content = n.f;
+        } else {
+            switch (n.bits) {
+                case 128:
+                    lit.type = n.is_unsigned() ? ValueType::UInt128 : ValueType::Int128;
+                    break;
+                default:
+                case 64:
+                    lit.type = n.is_unsigned() ? ValueType::UInt64 : ValueType::Int64;
+                    break;
+                case 32:
+                    lit.type = n.is_unsigned() ? ValueType::UInt32 : ValueType::Int32;
+                    break;
+                case 16:
+                    lit.type = n.is_unsigned() ? ValueType::UInt16 : ValueType::Int16;
+                    break;
+                case 8:
+                    lit.type = n.is_unsigned() ? ValueType::UInt8 : ValueType::Int8;
+                    break;
+            }
+            if (n.is_unsigned())
+                lit.content = n.u;
             else
-                lit.content = std::get<int64_t>(n.num);
+                lit.content = n.i;
         }
     }
 };
@@ -1508,9 +1586,9 @@ struct Control : normal< Rule >
 
 template<> ErrMsg Control<eof>::errmsg = {"invalid syntax", {}};
 template<> ErrMsg Control<until< string<'*', '/'>, any >>::errmsg = {"unterminated comment", {}};
-template<> ErrMsg Control<plus<odigit>>::errmsg = {"expected oct digit", {}};
+template<> ErrMsg Control<UPlus<odigit>>::errmsg = {"expected oct digit", {}};
 template<> ErrMsg Control<xdigit>::errmsg = {"expected hex digit", {}};
-template<> ErrMsg Control<plus<xdigit>>::errmsg = {"expected hex digit", {}};
+template<> ErrMsg Control<UPlus<xdigit>>::errmsg = {"expected hex digit", {}};
 template<> ErrMsg Control<rep_min_max<1,6,xdigit>>::errmsg = {"expected hex digit", {}};
 template<> ErrMsg Control<StringCh>::errmsg = {"invalid char literal", {}};
 template<> ErrMsg Control<StringChUni>::errmsg = {"invalid char literal", {}};

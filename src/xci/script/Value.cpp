@@ -44,7 +44,7 @@ Value create_value(const TypeInfo& type_info)
     const auto type = type_info.type();
     switch (type) {
         case Type::List:
-            if (type_info.elem_type() == TypeInfo{Type::Byte})
+            if (type_info.elem_type() == TypeInfo{Type::UInt8})
                 return value::Bytes();  // List subclass, with special output formatting
             else
                 return value::List();
@@ -70,14 +70,20 @@ Value create_value(Type type)
     switch (type) {
         case Type::Unknown: assert(!"Cannot create Value of Unknown type"); break;
         case Type::Bool: return value::Bool{};
-        case Type::Byte: return value::Byte{};
         case Type::Char: return value::Char{};
+        case Type::UInt8: return value::UInt8{};
+        case Type::UInt16: return value::UInt16{};
         case Type::UInt32: return value::UInt32{};
         case Type::UInt64: return value::UInt64{};
+        case Type::UInt128: return value::UInt128{};
+        case Type::Int8: return value::Int8{};
+        case Type::Int16: return value::Int16{};
         case Type::Int32: return value::Int32{};
         case Type::Int64: return value::Int64{};
+        case Type::Int128: return value::Int128{};
         case Type::Float32: return value::Float32{};
         case Type::Float64: return value::Float64{};
+        case Type::Float128: return value::Float128{};
         case Type::String: return value::String{};
         case Type::List: return value::List{};
         case Type::Tuple: return value::Tuple{};
@@ -243,7 +249,7 @@ void Value::apply(value::Visitor& visitor) const
         if constexpr (std::is_same_v<T, std::monostate>) {
             assert(!"Cannot apply Value of unknown type");  // Unknown
         } else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, StreamV>
-                || std::is_same_v<T, ModuleV> || std::is_same_v<T, TypeIndexV>)
+                || std::is_same_v<T, ModuleV>)
             visitor.visit(v.value());
         else
             visitor.visit(v);
@@ -256,14 +262,20 @@ Type Value::type() const
     return std::visit(overloaded {
             [](std::monostate) { return Type::Unknown; },
             [](bool) { return Type::Bool; },
-            [](byte) { return Type::Byte; },
             [](char32_t) { return Type::Char; },
+            [](uint8_t) { return Type::UInt8; },
+            [](uint16_t) { return Type::UInt16; },
             [](uint32_t) { return Type::UInt32; },
             [](uint64_t) { return Type::UInt64; },
+            [](uint128_t) { return Type::UInt128; },
+            [](int8_t) { return Type::Int8; },
+            [](int16_t) { return Type::Int16; },
             [](int32_t) { return Type::Int32; },
             [](int64_t) { return Type::Int64; },
+            [](int128_t) { return Type::Int128; },
             [](float) { return Type::Float32; },
             [](double) { return Type::Float64; },
+            [](long double) { return Type::Float128; },
             [](const StringV&) { return Type::String; },
             [](const ListV&) { return Type::List; },
             [](const TupleV&) { return Type::Tuple; },
@@ -281,9 +293,11 @@ bool Value::cast_from(const Value& src)
         using TTo = std::decay_t<decltype(to)>;
         using TFrom = std::decay_t<decltype(from)>;
 
-        // same types -> noop
-        if constexpr (std::is_same_v<TFrom, TTo>)
+        // same types
+        if constexpr (std::is_same_v<TFrom, TTo>) {
+            to = from;
             return true;
+        }
 
         // int/float -> int/float
         if constexpr
@@ -498,7 +512,7 @@ void ListV::set_value(size_t idx, const Value& v)
 }
 
 
-void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
+void ListV::slice(int64_t begin, int64_t end, int64_t step, const TypeInfo& elem_type)
 {
     const auto* data = slot.data();
     auto length = (int32_t) bit_read<uint32_t>(data);
@@ -510,13 +524,13 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
     // adjust indexes
     if (end < 0)
         end += length;  // -1 => length - 1
-    if (begin < 0 && begin != std::numeric_limits<int>::min())
+    if (begin < 0 && begin != std::numeric_limits<int64_t>::min())
         begin += length;  // -1 => length - 1
 
     // compute number of elements in the sliced list
     unsigned n_sliced = 0;
     if (step > 0) {
-        if (begin == std::numeric_limits<int>::min()) {
+        if (begin == std::numeric_limits<int64_t>::min()) {
             begin = 0;
         } else if (begin < 0) {
             // get closer to zero if still negative
@@ -530,12 +544,12 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
         auto i = begin;
         while (i < end) {
             ++ n_sliced;
-            if (i > std::numeric_limits<int>::max() - step)
+            if (i > std::numeric_limits<int64_t>::max() - step)
                 break;
             i += step;
         }
     } else if (step < 0) {
-        if (begin == std::numeric_limits<int>::max()) {
+        if (begin == std::numeric_limits<int64_t>::max()) {
             begin = length - 1;
         } else if (begin >= length) {
             // get closer to length
@@ -549,7 +563,7 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
         auto i = begin;
         while (i > end) {
             ++ n_sliced;
-            if (i < std::numeric_limits<int>::min() - step)
+            if (i < std::numeric_limits<int64_t>::min() - step)
                 break;
             i += step;
         }
@@ -580,7 +594,7 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
         while (orig_i < end) {
             std::memcpy(new_ptr, data + orig_i * elem_size, elem_size);
             new_ptr += elem_size;
-            if (orig_i > std::numeric_limits<int>::max() - step)
+            if (orig_i > std::numeric_limits<int64_t>::max() - step)
                 break;
             orig_i += step;
         }
@@ -590,7 +604,7 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
         while (orig_i > end) {
             std::memcpy(new_ptr, data + orig_i * elem_size, elem_size);
             new_ptr += elem_size;
-            if (orig_i < std::numeric_limits<int>::min() - step)
+            if (orig_i < std::numeric_limits<int64_t>::min() - step)
                 break;
             orig_i += step;
         }
@@ -803,15 +817,15 @@ TypedValue::TypedValue(Value value, TypeInfo type_info)
 
 
 // make sure float values don't look like integers (append .0 if needed)
-static void dump_float(std::ostream& os, /*std::floating_point*/ auto value)
+static std::ostream& dump_float(std::ostream& os, /*std::floating_point*/ auto value)
 {
     std::ostringstream sbuf;
     sbuf << value;
     auto str = sbuf.str();
     if (str.find('.') == std::string::npos)
-        os << str << ".0";
+        return os << str << ".0";
     else
-        os << str;
+        return os << str;
 }
 
 
@@ -819,23 +833,22 @@ class StreamVisitor: public value::Visitor {
 public:
     explicit StreamVisitor(std::ostream& os, const TypeInfo& type_info) : os(os), type_info(type_info) {}
     void visit(bool v) override { os << std::boolalpha << v; }
-    void visit(std::byte v) override {
-        os << "b'" << core::escape(std::string_view{(char*)&v, 1}) << "'";
-    }
     void visit(char32_t v) override {
         os << '\'' << core::escape_utf8(core::to_utf8(v)) << "'";
     }
-    void visit(uint32_t v) override { os << v << 'U'; }
-    void visit(uint64_t v) override { os << v << "UL"; }
-    void visit(int32_t v) override { os << v; }
-    void visit(int64_t v) override { os << v << 'L'; }
-    void visit(float v) override {
-        dump_float(os, v);
-        os << 'f';
-    }
-    void visit(double v) override {
-        dump_float(os, v);
-    }
+    void visit(uint8_t v) override { os << unsigned(v) << "b"; }
+    void visit(uint16_t v) override { os << v << "uh"; }
+    void visit(uint32_t v) override { os << v << "ud"; }
+    void visit(uint64_t v) override { os << v << "u"; }
+    void visit(uint128_t v) override { os << uint128_to_string(v) << "uL"; }
+    void visit(int8_t v) override { os << int(v) << "c"; }
+    void visit(int16_t v) override { os << v << "h"; }
+    void visit(int32_t v) override { os << v << "d"; }
+    void visit(int64_t v) override { os << v; }
+    void visit(int128_t v) override { os << int128_to_string(v) << "L"; }
+    void visit(float v) override { dump_float(os, v) << 'f'; }
+    void visit(double v) override { dump_float(os, v); }
+    void visit(long double v) override { dump_float(os, v) << 'L'; }
     void visit(std::string_view&& v) override {
         os << '"' << core::escape_utf8(v) << '"';
     }
@@ -919,7 +932,16 @@ public:
         os << "<stream:" << v << ">";
     }
     void visit(const TypeIndexV& v) override {
-        os << "<type_index:" << v.value() << ">";
+        os << "<type_index:";
+        if (v.value() == no_index)
+            os << "no_index";
+        else {
+            const auto module_index = v.value() % Index(128);
+            const auto type_index = v.value() / Index(128);
+            os << module_index << '/' << type_index;
+        }
+        //<< v.value()
+        os << ">";
     }
 private:
     std::ostream& os;
@@ -947,11 +969,11 @@ std::ostream& operator<<(std::ostream& os, const Value& o)
 namespace value {
 
 
-Byte::Byte(std::string_view str)
+UInt8::UInt8(std::string_view str)
 {
     if (str.size() != 1)
-        throw value_out_of_range("byte value out of range");
-    m_value = (byte) str.front();
+        throw value_out_of_range("Byte value out of range");
+    m_value = (uint8_t) str.front();
 }
 
 

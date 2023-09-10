@@ -84,17 +84,25 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__logical_or", Symbol::Instruction, Index(Opcode::LogicalOr)});
     symtab().add({"__logical_and", Symbol::Instruction, Index(Opcode::LogicalAnd)});
     symtab().add({"__bitwise_not_8", Symbol::Instruction, Index(Opcode::BitwiseNot_8)});
+    symtab().add({"__bitwise_not_16", Symbol::Instruction, Index(Opcode::BitwiseNot_16)});
     symtab().add({"__bitwise_not_32", Symbol::Instruction, Index(Opcode::BitwiseNot_32)});
     symtab().add({"__bitwise_not_64", Symbol::Instruction, Index(Opcode::BitwiseNot_64)});
+    symtab().add({"__bitwise_not_128", Symbol::Instruction, Index(Opcode::BitwiseNot_128)});
     symtab().add({"__bitwise_or_8", Symbol::Instruction, Index(Opcode::BitwiseOr_8)});
+    symtab().add({"__bitwise_or_16", Symbol::Instruction, Index(Opcode::BitwiseOr_16)});
     symtab().add({"__bitwise_or_32", Symbol::Instruction, Index(Opcode::BitwiseOr_32)});
     symtab().add({"__bitwise_or_64", Symbol::Instruction, Index(Opcode::BitwiseOr_64)});
+    symtab().add({"__bitwise_or_128", Symbol::Instruction, Index(Opcode::BitwiseOr_128)});
     symtab().add({"__bitwise_and_8", Symbol::Instruction, Index(Opcode::BitwiseAnd_8)});
+    symtab().add({"__bitwise_and_16", Symbol::Instruction, Index(Opcode::BitwiseAnd_16)});
     symtab().add({"__bitwise_and_32", Symbol::Instruction, Index(Opcode::BitwiseAnd_32)});
     symtab().add({"__bitwise_and_64", Symbol::Instruction, Index(Opcode::BitwiseAnd_64)});
+    symtab().add({"__bitwise_and_128", Symbol::Instruction, Index(Opcode::BitwiseAnd_128)});
     symtab().add({"__bitwise_xor_8", Symbol::Instruction, Index(Opcode::BitwiseXor_8)});
+    symtab().add({"__bitwise_xor_16", Symbol::Instruction, Index(Opcode::BitwiseXor_16)});
     symtab().add({"__bitwise_xor_32", Symbol::Instruction, Index(Opcode::BitwiseXor_32)});
     symtab().add({"__bitwise_xor_64", Symbol::Instruction, Index(Opcode::BitwiseXor_64)});
+    symtab().add({"__bitwise_xor_128", Symbol::Instruction, Index(Opcode::BitwiseXor_128)});
 
     // one arg
     symtab().add({"__equal", Symbol::Instruction, Index(Opcode::Equal)});
@@ -154,15 +162,26 @@ void BuiltinModule::add_types()
     symtab().add({"Bool", Symbol::TypeName, add_type(ti_bool())});
     symtab().add({"Byte", Symbol::TypeName, add_type(ti_byte())});
     symtab().add({"Char", Symbol::TypeName, add_type(ti_char())});
-    symtab().add({"UInt", Symbol::TypeName, add_type(ti_uint32())});
+
+    symtab().add({"UInt8", Symbol::TypeName, add_type(ti_uint8())});
+    symtab().add({"UInt16", Symbol::TypeName, add_type(ti_uint16())});
     symtab().add({"UInt32", Symbol::TypeName, add_type(ti_uint32())});
     symtab().add({"UInt64", Symbol::TypeName, add_type(ti_uint64())});
-    symtab().add({"Int", Symbol::TypeName, add_type(ti_int32())});
+    symtab().add({"UInt128", Symbol::TypeName, add_type(ti_uint128())});
+    symtab().add({"UInt", Symbol::TypeName, add_type(ti_uint())});
+
+    symtab().add({"Int8", Symbol::TypeName, add_type(ti_int8())});
+    symtab().add({"Int16", Symbol::TypeName, add_type(ti_int16())});
     symtab().add({"Int32", Symbol::TypeName, add_type(ti_int32())});
     symtab().add({"Int64", Symbol::TypeName, add_type(ti_int64())});
-    symtab().add({"Float", Symbol::TypeName, add_type(ti_float32())});
+    symtab().add({"Int128", Symbol::TypeName, add_type(ti_int128())});
+    symtab().add({"Int", Symbol::TypeName, add_type(ti_int())});
+
     symtab().add({"Float32", Symbol::TypeName, add_type(ti_float32())});
     symtab().add({"Float64", Symbol::TypeName, add_type(ti_float64())});
+    symtab().add({"Float128", Symbol::TypeName, add_type(ti_float128())});
+    symtab().add({"Float", Symbol::TypeName, add_type(ti_float())});
+
     symtab().add({"String", Symbol::TypeName, add_type(ti_string())});
     symtab().add({"Module", Symbol::TypeName, add_type(ti_module())});
     symtab().add({"TypeIndex", Symbol::TypeName, add_type(ti_type_index())});
@@ -230,14 +249,14 @@ static void string_compare(Stack& stack, void*, void*)
 {
     auto s1 = stack.pull<value::String>();
     auto s2 = stack.pull<value::String>();
-    int32_t res;
+    int res;
     if (s1.get<StringV>().slot == s2.get<StringV>().slot)
         res = 0;  // same instance on heap
     else
         res = s1.value().compare(s2.value());
     s1.decref();
     s2.decref();
-    stack.push(value::Int32(res));
+    stack.push(value::Int(res));
 }
 
 
@@ -249,7 +268,7 @@ void BuiltinModule::add_string_functions()
     add_native_function("cast_to_string", ti_bytes(), ti_string(), cast_bytes_to_string);
 
     add_native_function("string_equal", ti_tuple(ti_string(), ti_string()), ti_bool(), string_equal);
-    add_native_function("string_compare", ti_tuple(ti_string(), ti_string()), ti_int32(), string_compare);
+    add_native_function("string_compare", ti_tuple(ti_string(), ti_string()), ti_int(), string_compare);
     add_native_function("string_concat", [](std::string_view a, std::string_view b) -> std::string { return std::string(a) + std::string(b); });
 }
 
@@ -286,7 +305,7 @@ static void write_error(Stack& stack, void*, void*)
 
 static void read_string(Stack& stack, void*, void*)
 {
-    auto arg = stack.pull<value::Int32>();
+    auto arg = stack.pull<value::UInt>();
     auto s = stack.stream_in().read(arg.value());
     stack.push(value::String(s));
 }
@@ -406,7 +425,7 @@ void BuiltinModule::add_io_functions()
     add_native_function("write", ti_bytes(), ti_void(), write_bytes);
     add_native_function("flush", ti_void(), ti_void(), flush_out);
     add_native_function("error", ti_string(), ti_void(), write_error);
-    add_native_function("read", ti_int32(), ti_string(), read_string);
+    add_native_function("read", ti_uint(), ti_string(), read_string);
     add_native_function("open", ti_tuple(ti_string(), ti_string()), ti_stream(), open_file);
     add_native_function("__streams", ti_void(), TypeInfo(streams), internal_streams);
 
@@ -432,7 +451,7 @@ static const TypeInfo& read_type_index(Stack& stack)
 static void introspect_type_size(Stack& stack, void*, void*)
 {
     const TypeInfo& ti = read_type_index(stack);
-    stack.push(value::Int32{(int32_t)ti.size()});
+    stack.push(value::UInt{ti.size()});
 }
 
 
@@ -449,7 +468,7 @@ static void introspect_underlying_type(Stack& stack, void*, void*)
 {
     const TypeInfo& ti = read_type_index(stack);
     const ModuleManager& mm = stack.module_manager();
-    stack.push(value::TypeIndex{int32_t(get_type_index(mm, ti.underlying()))});
+    stack.push(value::TypeIndex{get_type_index(mm, ti.underlying())});
 }
 
 
@@ -491,13 +510,13 @@ static void introspect_module_by_name(Stack& stack, void*, void*)
 
 static void introspect_stack_n_frames(Stack& stack, void*, void*)
 {
-    stack.push(value::Int32{(int32_t)stack.n_frames()});
+    stack.push(value::UInt{stack.n_frames()});
 }
 
 
 void BuiltinModule::add_introspections()
 {
-    add_native_function("__type_size", ti_type_index(), ti_int32(), introspect_type_size);
+    add_native_function("__type_size", ti_type_index(), ti_uint(), introspect_type_size);
     add_native_function("__type_name", ti_type_index(), ti_string(), introspect_type_name);
     add_native_function("__underlying_type", ti_type_index(), ti_type_index(), introspect_underlying_type);
     add_native_function("__subtypes", ti_type_index(), ti_list(ti_type_index()), introspect_subtypes);
@@ -507,9 +526,9 @@ void BuiltinModule::add_introspections()
             this);
     add_native_function("__module_name", [](Module& m) -> std::string { return m.name(); });
     add_native_function("__module_by_name", ti_string(), ti_module(), introspect_module_by_name);
-    add_native_function("__n_fn", [](Module& m) { return (int) m.num_functions(); });
-    add_native_function("__n_types", [](Module& m) { return (int) m.num_types(); });
-    add_native_function("__n_frames", ti_void(), ti_int32(), introspect_stack_n_frames);
+    add_native_function("__n_fn", [](Module& m) { return (uint64_t) m.num_functions(); });
+    add_native_function("__n_types", [](Module& m) { return (uint64_t) m.num_types(); });
+    add_native_function("__n_frames", ti_void(), ti_uint(), introspect_stack_n_frames);
 }
 
 

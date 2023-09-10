@@ -25,14 +25,20 @@ enum class Type : uint8_t {
 
     // Primitive types
     Bool,
-    Byte,       // uint8
     Char,       // Unicode codepoint (char32)
+    UInt8,
+    UInt16,
     UInt32,
     UInt64,
+    UInt128,
+    Int8,
+    Int16,
     Int32,
     Int64,
+    Int128,
     Float32,
     Float64,
+    Float128,
 
     // Complex types
     String,     // special kind of list, behaves like [Char] but is compressed (UTF-8)
@@ -47,6 +53,12 @@ enum class Type : uint8_t {
     // Custom types
     Named,      // type NewType = ... (all other types are anonymous)
     Struct,     // a tuple with named members, similar to C struct
+
+    // Aliases:
+    Byte = UInt8,
+    Int = Int64,
+    UInt = UInt64,
+    Float = Float64,
 };
 
 
@@ -367,12 +379,22 @@ inline TypeInfo ti_void() { return TypeInfo(TypeInfo::tuple_of, {}); }
 inline TypeInfo ti_bool() { return TypeInfo(Type::Bool); }
 inline TypeInfo ti_byte() { return TypeInfo(Type::Byte); }
 inline TypeInfo ti_char() { return TypeInfo(Type::Char); }
+inline TypeInfo ti_uint() { return TypeInfo(Type::UInt); }
+inline TypeInfo ti_uint8() { return TypeInfo(Type::UInt8); }
+inline TypeInfo ti_uint16() { return TypeInfo(Type::UInt16); }
 inline TypeInfo ti_uint32() { return TypeInfo(Type::UInt32); }
 inline TypeInfo ti_uint64() { return TypeInfo(Type::UInt64); }
+inline TypeInfo ti_uint128() { return TypeInfo(Type::UInt128); }
+inline TypeInfo ti_int() { return TypeInfo(Type::Int); }
+inline TypeInfo ti_int8() { return TypeInfo(Type::Int8); }
+inline TypeInfo ti_int16() { return TypeInfo(Type::Int16); }
 inline TypeInfo ti_int32() { return TypeInfo(Type::Int32); }
 inline TypeInfo ti_int64() { return TypeInfo(Type::Int64); }
+inline TypeInfo ti_int128() { return TypeInfo(Type::Int128); }
+inline TypeInfo ti_float() { return TypeInfo(Type::Float); }
 inline TypeInfo ti_float32() { return TypeInfo(Type::Float32); }
 inline TypeInfo ti_float64() { return TypeInfo(Type::Float64); }
+inline TypeInfo ti_float128() { return TypeInfo(Type::Float128); }
 inline TypeInfo ti_string() { return TypeInfo(Type::String); }
 inline TypeInfo ti_stream() { return TypeInfo(Type::Stream); }
 inline TypeInfo ti_module() { return TypeInfo(Type::Module); }

@@ -134,13 +134,13 @@ struct BinaryBase {
     template<class T> requires (sizeof(T) == 8) && std::is_integral_v<T>
     static constexpr Type to_chunk_type() { return Type::Fixed64; }
 
-    template<class T> requires (sizeof(T) == 16) && std::is_integral_v<T>
+    template<class T> requires (sizeof(T) == 16) && (std::is_integral_v<T> || std::is_floating_point_v<T>)
     static constexpr Type to_chunk_type() { return Type::Fixed128; }
 
-    template<class T> requires std::is_same_v<T, float>
+    template<class T> requires (sizeof(T) == 4) && std::is_floating_point_v<T>
     static constexpr Type to_chunk_type() { return Type::Float32; }
 
-    template<class T> requires std::is_same_v<T, double>
+    template<class T> requires (sizeof(T) == 8) && std::is_floating_point_v<T>
     static constexpr Type to_chunk_type() { return Type::Float64; }
 
     static constexpr size_t size_by_type(uint8_t type) {

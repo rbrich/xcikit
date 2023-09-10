@@ -16,13 +16,19 @@ namespace xci::script {
 Type decode_arg_type(uint8_t arg)
 {
     switch (arg) {
-        case 1: return Type::Byte;
-        case 3: return Type::UInt32;
-        case 4: return Type::UInt64;
-        case 8: return Type::Int32;
-        case 9: return Type::Int64;
+        case 0x1: return Type::UInt8;
+        case 0x2: return Type::UInt16;
+        case 0x3: return Type::UInt32;
+        case 0x4: return Type::UInt64;
+        case 0x5: return Type::UInt128;
+        case 0x6: return Type::Int8;
+        case 0x7: return Type::Int16;
+        case 0x8: return Type::Int32;
+        case 0x9: return Type::Int64;
+        case 0xA: return Type::Int128;
         case 0xC: return Type::Float32;
         case 0xD: return Type::Float64;
+        case 0xE: return Type::Float128;
         default: return Type::Unknown;
     }
 }
@@ -37,8 +43,12 @@ size_t type_size_on_stack(Type type)
         case Type::Named:
             return 0;
         case Type::Bool:
-        case Type::Byte:
+        case Type::UInt8:
+        case Type::Int8:
             return 1;
+        case Type::UInt16:
+        case Type::Int16:
+            return 2;
         case Type::Char:
         case Type::UInt32:
         case Type::Int32:
@@ -49,6 +59,10 @@ size_t type_size_on_stack(Type type)
         case Type::Int64:
         case Type::Float64:
             return 8;
+        case Type::UInt128:
+        case Type::Int128:
+        case Type::Float128:
+            return 16;
         case Type::String:
         case Type::List:
         case Type::Function:
@@ -310,14 +324,20 @@ bool is_same_underlying(const TypeInfo& lhs, const TypeInfo& rhs)
         case Type::Named:
             return false;
         case Type::Bool:
-        case Type::Byte:
         case Type::Char:
+        case Type::UInt8:
+        case Type::UInt16:
         case Type::UInt32:
         case Type::UInt64:
+        case Type::UInt128:
+        case Type::Int8:
+        case Type::Int16:
         case Type::Int32:
         case Type::Int64:
+        case Type::Int128:
         case Type::Float32:
         case Type::Float64:
+        case Type::Float128:
         case Type::String:
         case Type::Module:
         case Type::Stream:

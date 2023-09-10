@@ -246,7 +246,7 @@ public:
             case Symbol::Value:
                 if (sym.index() == no_index) {
                     m_intrinsic = true;
-                    v.ti = ti_int32();
+                    v.ti = ti_int();
                 } else {
                     TypeChecker type_check(std::move(m_type_info));
                     auto inferred = symtab.module()->get_value(sym.index()).type_info();

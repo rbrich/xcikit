@@ -152,45 +152,94 @@ void Machine::run(const InvokeCallback& cb)
                 break;
             }
 
-            case Opcode::BitwiseOr_8:
-            case Opcode::BitwiseAnd_8:
+            case Opcode::BitwiseOr_8: {
+                auto lhs = m_stack.pull<value::UInt8>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
+                break;
+            }
+            case Opcode::BitwiseAnd_8: {
+                auto lhs = m_stack.pull<value::UInt8>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
+                break;
+            }
             case Opcode::BitwiseXor_8: {
-                auto lhs = m_stack.pull<value::Byte>();
-                auto rhs = m_stack.pull<value::Byte>();
-                switch (opcode) {
-                    case Opcode::BitwiseOr_8:   m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs)); break;
-                    case Opcode::BitwiseAnd_8:  m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs)); break;
-                    case Opcode::BitwiseXor_8:  m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs)); break;
-                    default: break;
-                }
+                auto lhs = m_stack.pull<value::UInt8>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
                 break;
             }
-
-            case Opcode::BitwiseOr_32:
-            case Opcode::BitwiseAnd_32:
+            case Opcode::BitwiseOr_16: {
+                auto lhs = m_stack.pull<value::UInt16>();
+                auto rhs = m_stack.pull<value::UInt16>();
+                m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
+                break;
+            }
+            case Opcode::BitwiseAnd_16: {
+                auto lhs = m_stack.pull<value::UInt16>();
+                auto rhs = m_stack.pull<value::UInt16>();
+                m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
+                break;
+            }
+            case Opcode::BitwiseXor_16: {
+                auto lhs = m_stack.pull<value::UInt16>();
+                auto rhs = m_stack.pull<value::UInt16>();
+                m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
+                break;
+            }
+            case Opcode::BitwiseOr_32: {
+                auto lhs = m_stack.pull<value::UInt32>();
+                auto rhs = m_stack.pull<value::UInt32>();
+                m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
+                break;
+            }
+            case Opcode::BitwiseAnd_32: {
+                auto lhs = m_stack.pull<value::UInt32>();
+                auto rhs = m_stack.pull<value::UInt32>();
+                m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
+                break;
+            }
             case Opcode::BitwiseXor_32: {
-                auto lhs = m_stack.pull<value::Int32>();
-                auto rhs = m_stack.pull<value::Int32>();
-                switch (opcode) {
-                    case Opcode::BitwiseOr_32:   m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs)); break;
-                    case Opcode::BitwiseAnd_32:  m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs)); break;
-                    case Opcode::BitwiseXor_32:  m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs)); break;
-                    default: break;
-                }
+                auto lhs = m_stack.pull<value::UInt32>();
+                auto rhs = m_stack.pull<value::UInt32>();
+                m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
                 break;
             }
-
-            case Opcode::BitwiseOr_64:
-            case Opcode::BitwiseAnd_64:
+            case Opcode::BitwiseOr_64: {
+                auto lhs = m_stack.pull<value::UInt64>();
+                auto rhs = m_stack.pull<value::UInt64>();
+                m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
+                break;
+            }
+            case Opcode::BitwiseAnd_64: {
+                auto lhs = m_stack.pull<value::UInt64>();
+                auto rhs = m_stack.pull<value::UInt64>();
+                m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
+                break;
+            }
             case Opcode::BitwiseXor_64: {
-                auto lhs = m_stack.pull<value::Int64>();
-                auto rhs = m_stack.pull<value::Int64>();
-                switch (opcode) {
-                    case Opcode::BitwiseOr_64:   m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs)); break;
-                    case Opcode::BitwiseAnd_64:  m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs)); break;
-                    case Opcode::BitwiseXor_64:  m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs)); break;
-                    default: break;
-                }
+                auto lhs = m_stack.pull<value::UInt64>();
+                auto rhs = m_stack.pull<value::UInt64>();
+                m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
+                break;
+            }
+            case Opcode::BitwiseOr_128: {
+                auto lhs = m_stack.pull<value::UInt128>();
+                auto rhs = m_stack.pull<value::UInt128>();
+                m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
+                break;
+            }
+            case Opcode::BitwiseAnd_128: {
+                auto lhs = m_stack.pull<value::UInt128>();
+                auto rhs = m_stack.pull<value::UInt128>();
+                m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
+                break;
+            }
+            case Opcode::BitwiseXor_128: {
+                auto lhs = m_stack.pull<value::UInt128>();
+                auto rhs = m_stack.pull<value::UInt128>();
+                m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
                 break;
             }
 
@@ -257,15 +306,19 @@ void Machine::run(const InvokeCallback& cb)
                 break;
 
             case Opcode::BitwiseNot_8:
-                m_stack.push(Value(~ m_stack.pull<value::Byte>().value()));
+                m_stack.push(Value(~ m_stack.pull<value::UInt8>().value()));
                 break;
-
+            case Opcode::BitwiseNot_16:
+                m_stack.push(Value(~ m_stack.pull<value::UInt16>().value()));
+                break;
             case Opcode::BitwiseNot_32:
-                m_stack.push(Value(~ m_stack.pull<value::Int32>().value()));
+                m_stack.push(Value(~ m_stack.pull<value::UInt32>().value()));
                 break;
-
             case Opcode::BitwiseNot_64:
-                m_stack.push(Value(~ m_stack.pull<value::Int64>().value()));
+                m_stack.push(Value(~ m_stack.pull<value::UInt64>().value()));
+                break;
+            case Opcode::BitwiseNot_128:
+                m_stack.push(Value(~ m_stack.pull<value::UInt128>().value()));
                 break;
 
             case Opcode::Neg: {
@@ -283,7 +336,7 @@ void Machine::run(const InvokeCallback& cb)
             case Opcode::ListSubscript: {
                 const auto& elem_ti = read_type_arg();
                 auto lhs = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
-                auto rhs = m_stack.pull<value::Int32>();
+                auto rhs = m_stack.pull<value::Int>();
                 auto idx = rhs.value();
                 auto len = lhs.get<ListV>().length();
                 if (idx < 0)
@@ -304,16 +357,16 @@ void Machine::run(const InvokeCallback& cb)
                 auto arg = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
                 auto len = arg.get<ListV>().length();
                 arg.decref();
-                m_stack.push(value::UInt32(uint32_t(len)));
+                m_stack.push(value::UInt(len));
                 break;
             }
 
             case Opcode::ListSlice: {
                 const auto& elem_ti = read_type_arg();
                 auto list = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
-                auto idx1 = m_stack.pull<value::Int32>().value();
-                auto idx2 = m_stack.pull<value::Int32>().value();
-                auto step = m_stack.pull<value::Int32>().value();
+                auto idx1 = m_stack.pull<value::Int>().value();
+                auto idx2 = m_stack.pull<value::Int>().value();
+                auto step = m_stack.pull<value::Int>().value();
                 list.get<ListV>().slice(idx1, idx2, step, elem_ti);
                 m_stack.push(list);
                 break;

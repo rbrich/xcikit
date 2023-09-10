@@ -29,17 +29,25 @@ enum class Opcode: uint8_t {
     LogicalAnd,
 
     BitwiseNot_8,
+    BitwiseNot_16,
     BitwiseNot_32,
     BitwiseNot_64,
+    BitwiseNot_128,
     BitwiseOr_8,
+    BitwiseOr_16,
     BitwiseOr_32,
     BitwiseOr_64,
+    BitwiseOr_128,
     BitwiseAnd_8,
+    BitwiseAnd_16,
     BitwiseAnd_32,
     BitwiseAnd_64,
+    BitwiseAnd_128,
     BitwiseXor_8,
+    BitwiseXor_16,
     BitwiseXor_32,
     BitwiseXor_64,
+    BitwiseXor_128,
 
     // Control flow
     Execute,                // pull closure from stack, unwrap it, call the contained function

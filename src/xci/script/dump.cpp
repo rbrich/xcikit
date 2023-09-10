@@ -1102,14 +1102,20 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
             return os << var->name();
         }
         case Type::Bool:        return os << "Bool";
-        case Type::Byte:        return os << "Byte";
         case Type::Char:        return os << "Char";
+        case Type::UInt8:       return os << "UInt8";
+        case Type::UInt16:      return os << "UInt16";
         case Type::UInt32:      return os << "UInt32";
         case Type::UInt64:      return os << "UInt64";
+        case Type::UInt128:     return os << "UInt128";
+        case Type::Int8:        return os << "Int8";
+        case Type::Int16:       return os << "Int16";
         case Type::Int32:       return os << "Int32";
         case Type::Int64:       return os << "Int64";
+        case Type::Int128:      return os << "Int128";
         case Type::Float32:     return os << "Float32";
         case Type::Float64:     return os << "Float64";
+        case Type::Float128:    return os << "Float128";
         case Type::String:      return os << "String";
         case Type::List:
             return os << "[" << v.elem_type() << "]";

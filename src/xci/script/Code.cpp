@@ -28,17 +28,25 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::LessThan:          return os << "LESS_THAN";
         case Opcode::GreaterThan:       return os << "GREATER_THAN";
         case Opcode::BitwiseNot_8:
+        case Opcode::BitwiseNot_16:
         case Opcode::BitwiseNot_32:
-        case Opcode::BitwiseNot_64:     return os << "BITWISE_NOT";
+        case Opcode::BitwiseNot_64:
+        case Opcode::BitwiseNot_128:     return os << "BITWISE_NOT";
         case Opcode::BitwiseOr_8:
+        case Opcode::BitwiseOr_16:
         case Opcode::BitwiseOr_32:
-        case Opcode::BitwiseOr_64:      return os << "BITWISE_OR";
+        case Opcode::BitwiseOr_64:
+        case Opcode::BitwiseOr_128:      return os << "BITWISE_OR";
         case Opcode::BitwiseAnd_8:
+        case Opcode::BitwiseAnd_16:
         case Opcode::BitwiseAnd_32:
-        case Opcode::BitwiseAnd_64:     return os << "BITWISE_AND";
+        case Opcode::BitwiseAnd_64:
+        case Opcode::BitwiseAnd_128:     return os << "BITWISE_AND";
         case Opcode::BitwiseXor_8:
+        case Opcode::BitwiseXor_16:
         case Opcode::BitwiseXor_32:
-        case Opcode::BitwiseXor_64:     return os << "BITWISE_XOR";
+        case Opcode::BitwiseXor_64:
+        case Opcode::BitwiseXor_128:     return os << "BITWISE_XOR";
         case Opcode::ShiftLeft:         return os << "SHIFT_LEFT";
         case Opcode::ShiftRight:        return os << "SHIFT_RIGHT";
         case Opcode::Neg:               return os << "NEG";

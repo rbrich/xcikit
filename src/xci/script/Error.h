@@ -287,9 +287,8 @@ ScriptError struct_key_type_mismatch(const TypeInfo& struct_type, const TypeInfo
                                      const TypeInfo& got, const SourceLocation& loc);
 
 
-inline ScriptError intrinsics_function_error(string_view message, const SourceLocation& loc) {
-    return ScriptError(ErrorCode::IntrinsicsFunctionError,
-                       fmt::format("intrinsics function: {}", message), loc);
+inline ScriptError intrinsics_function_error(std::string message, const SourceLocation& loc) {
+    return ScriptError(ErrorCode::IntrinsicsFunctionError, std::move(message), loc);
 }
 
 

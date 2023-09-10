@@ -78,16 +78,44 @@ typename std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, char16_t>
 make_type_info() { return TypeInfo{Type::Char}; }
 
 template<class T>
-typename std::enable_if_t<std::is_integral_v<T> && sizeof(T) == 1 && !std::is_same_v<T, char> && !std::is_same_v<T, bool>, TypeInfo>
-make_type_info() { return TypeInfo{Type::Byte}; }
+typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 1 && !std::is_same_v<T, char> && !std::is_same_v<T, bool>, TypeInfo>
+make_type_info() { return TypeInfo{Type::UInt8}; }
 
 template<class T>
-typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 4 && !std::is_same_v<T, char32_t>, TypeInfo>
+typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 2 && !std::is_same_v<T, char16_t>, TypeInfo>
+make_type_info() { return TypeInfo{Type::UInt16}; }
+
+template<class T>
+typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 4 && !std::is_same_v<T, char32_t>, TypeInfo>
+make_type_info() { return TypeInfo{Type::UInt32}; }
+
+template<class T>
+typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 8, TypeInfo>
+make_type_info() { return TypeInfo{Type::UInt64}; }
+
+template<class T>
+typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 16, TypeInfo>
+make_type_info() { return TypeInfo{Type::UInt128}; }
+
+template<class T>
+typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 1 && !std::is_same_v<T, char>, TypeInfo>
+make_type_info() { return TypeInfo{Type::Int8}; }
+
+template<class T>
+typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 2, TypeInfo>
+make_type_info() { return TypeInfo{Type::Int16}; }
+
+template<class T>
+typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 4, TypeInfo>
 make_type_info() { return TypeInfo{Type::Int32}; }
 
 template<class T>
 typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 8, TypeInfo>
 make_type_info() { return TypeInfo{Type::Int64}; }
+
+template<class T>
+typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 16, TypeInfo>
+make_type_info() { return TypeInfo{Type::Int128}; }
 
 template<class T>
 typename std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) == 4, TypeInfo>
@@ -96,6 +124,10 @@ make_type_info() { return TypeInfo{Type::Float32}; }
 template<class T>
 typename std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) == 8, TypeInfo>
 make_type_info() { return TypeInfo{Type::Float64}; }
+
+template<class T>
+typename std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) == 16, TypeInfo>
+make_type_info() { return TypeInfo{Type::Float128}; }
 
 template<class T>
 typename std::enable_if_t<std::is_constructible_v<value::String, T>, TypeInfo>
@@ -130,18 +162,55 @@ struct ValueType_s<T, typename std::enable_if_t<std::is_same_v<T, char> || std::
 };
 
 template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_same_v<T, byte> || (std::is_integral_v<T> && sizeof(T) == 1 && !std::is_same_v<T, char> && !std::is_same_v<T, bool>)>> {
-    using type = value::Byte;
+struct ValueType_s<T, typename std::enable_if_t<std::is_same_v<T, byte> ||
+                                                (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 1 &&
+                                                 !std::is_same_v<T, unsigned char> && !std::is_same_v<T, char> && !std::is_same_v<T, bool>)>> {
+    using type = value::UInt8;
 };
 
 template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 4 && !std::is_same_v<T, char32_t>>> {
+struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 2 && !std::is_same_v<T, char16_t>>> {
+    using type = value::UInt16;
+};
+
+template<class T>
+struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 4 && !std::is_same_v<T, char32_t>>> {
+    using type = value::UInt32;
+};
+
+template<class T>
+struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 8>> {
+    using type = value::UInt64;
+};
+
+template<class T>
+struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 16>> {
+    using type = value::UInt128;
+};
+
+template<class T>
+struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 1 && !std::is_same_v<T, signed char> && !std::is_same_v<T, char>>> {
+    using type = value::Int8;
+};
+
+template<class T>
+struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 2>> {
+    using type = value::Int16;
+};
+
+template<class T>
+struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 4>> {
     using type = value::Int32;
 };
 
 template<class T>
 struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 8>> {
     using type = value::Int64;
+};
+
+template<class T>
+struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 16>> {
+    using type = value::Int128;
 };
 
 template<class T>
@@ -152,6 +221,11 @@ struct ValueType_s<T, typename std::enable_if_t<std::is_floating_point_v<T> && s
 template<class T>
 struct ValueType_s<T, typename std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) == 8>> {
     using type = value::Float64;
+};
+
+template<class T>
+struct ValueType_s<T, typename std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) == 16>> {
+    using type = value::Float128;
 };
 
 template<>

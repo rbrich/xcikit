@@ -44,13 +44,14 @@ Literal syntax is derived from C++ and Python.
 
 [source,fire]
 ----
-123        // integer (32bit)
-123u       // unsigned integer
+123        // integer (64bit)
+123u       // unsigned integer (64bit)
 0b101101   // binary integer
 0o765      // octal integer
 0xBEEFED   // hexadecimal integer
-42L        // integer (64bit)
-42UL       // unsigned integer (64bit)
+42d        // integer (32bit)
+42h        // integer (16bit)
+42ud       // unsigned integer (32bit)
 12.3       // floating point (64bit)
 12.3f      // floating point (32bit)
 '@'        // unicode character
@@ -731,15 +732,54 @@ Primitive types:
 
 [source,fire]
 ----
-12     12:Int32     // Int32 (alias Int)
-12l    12:Int64     // Int64
-1.2f   1.2:Float32  // Float32 (alias Float)
-1.2    1.2:Float64  // Floaf64
-true   false        // Bool
-b'a'   'a':Byte     // Byte           -- ASCII
-27b    27:Byte      // Byte           -- binary 0..255
-'a'    97:Char      // Char           -- Unicode
+12d, 12:Int32       // Int32
+12, 12:Int64        // Int64 (alias Int)
+1.2f, 1.2:Float32   // Float32
+1.2, 1.2:Float64    // Floaf64 (alias Float)
+true, false         // Bool
+b'a', 'a':Byte      // Byte=UInt8     -- ASCII
+27b, 27:UInt8       // UInt8          -- binary 0..255
+'a', 97:Char        // Char          -- Unicode (32bit code point)
 ----
+
+.Numeric types
+|===
+| Type               | Literal                 | Description
+
+| `UInt8`, `Byte`    | `42u8`, `42b`, `b'@'`   | ASCII or binary byte (8bit)
+| `UInt16`           | `42u16`, `42uh`         | unsigned short int (16bit)
+| `UInt32`           | `42u32`, `42ud`         | unsigned int (32bit)
+| `UInt64`, `UInt`   | `42u64`, `42ul`, `42u`  | unsigned long int (64bit)
+| `UInt128`          | `42u128`, `42uL`        | unsigned wide int (128bit)
+| `Int8`             | `-42i8`, `-42c`         | signed byte (8bit)
+| `Int16`            | `-42i16`, `-42h`        | signed short int (16bit)
+| `Int32`            | `-42i32`, `-42d`        | signed int (32bit)
+| `Int64`, `Int`     | `-42i64`, `-42l`, `-42` | signed long int (64bit)
+| `Int128`           | `-42i128`, `42L`        | signed wide int (128bit)
+| `Float32`          | `4.2f`                  | float (32bit)
+| `Float64`, `Float` | `4.2F`, `4.2`           | double (64bit)
+| `Float128`         | `4.2L`                  | long double (128bit)
+|===
+
+Note: Some of the short suffixes cannot be used in specific contexts,
+for example in `0xFFb` the `b` is not interpreted as type modifier, but as a hex digit.
+Use long suffix instead: `0xFFu8`. Same applies to `c` and `i8`.
+Similarly, use `0xFFi32` instead of `0xFFd`. Note that `0xFFud` is fine.
+
+The `f` and `F` suffixes may convert integer literal to float: `12f` is same as `12.f` or `12.0f`.
+This does not work with `L`, which requires the decimal dot to distinguish between Int128 and Float128.
+
+.Numeric types for interfacing with C
+|===
+| Type           | C type                   | Description
+
+| `CInt`         | `int`                    | platform-dependent size
+| `CUInt`        | `unsigned int`           | platform-dependent size
+| `CSize`        | `size_t`                 | arch-dependent size (pointer-sized)
+| `COffset`      | `ssize_t`, `ptrdiff_t`   | arch-dependent size (pointer-sized)
+|===
+
+These types don't have their own literals.
 
 Composite types:
 
