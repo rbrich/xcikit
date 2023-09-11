@@ -842,15 +842,15 @@ public:
     void visit(uint16_t v) override { os << v << "uh"; }
     void visit(uint32_t v) override { os << v << "ud"; }
     void visit(uint64_t v) override { os << v << "u"; }
-    void visit(uint128 v) override { os << uint128_to_string(v) << "uL"; }
+    void visit(uint128 v) override { os << uint128_to_string(v) << "uq"; }
     void visit(int8_t v) override { os << int(v) << "c"; }
     void visit(int16_t v) override { os << v << "h"; }
     void visit(int32_t v) override { os << v << "d"; }
     void visit(int64_t v) override { os << v; }
-    void visit(int128 v) override { os << int128_to_string(v) << "L"; }
+    void visit(int128 v) override { os << int128_to_string(v) << "q"; }
     void visit(float v) override { dump_float(os, v) << 'f'; }
     void visit(double v) override { dump_float(os, v); }
-    void visit(float128 v) override { dump_float(os, v) << 'L'; }
+    void visit(float128 v) override { dump_float(os, v) << 'q'; }
     void visit(std::string_view&& v) override {
         os << '"' << core::escape_utf8(v) << '"';
     }

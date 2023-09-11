@@ -496,8 +496,8 @@ TEST_CASE( "Literals", "[script][interpreter]" )
     CHECK(interpret("42u") == "42u");
     CHECK(interpret("42ul") == "42u");
     CHECK(interpret("42u64") == "42u");
-    CHECK(interpret("42u128") == "42uL");
-    CHECK(interpret("42uL") == "42uL");
+    CHECK(interpret("42u128") == "42uq");
+    CHECK(interpret("42uq") == "42uq");
     CHECK(interpret("-42i8") == "-42c");
     CHECK(interpret("-42c") == "-42c");
     CHECK(interpret("-42i16") == "-42h");
@@ -507,12 +507,12 @@ TEST_CASE( "Literals", "[script][interpreter]" )
     CHECK(interpret("-42") == "-42");
     CHECK(interpret("-42l") == "-42");
     CHECK(interpret("-42i64") == "-42");
-    CHECK(interpret("-42i128") == "-42L");
-    CHECK(interpret("-42L") == "-42L");
+    CHECK(interpret("-42i128") == "-42q");
+    CHECK(interpret("-42q") == "-42q");
     CHECK(interpret("4.2f") == "4.2f");
-    CHECK(interpret("4.2F") == "4.2");
+    CHECK(interpret("4.2l") == "4.2");
     CHECK(interpret("4.2") == "4.2");
-    CHECK(interpret("4.2L") == "4.2L");
+    CHECK(interpret("4.2q") == "4.2q");
     // Underscores may be used for optical spacing
     CHECK(interpret("42_u16") == "42uh");
     CHECK(interpret("4_2_u16") == "42uh");
@@ -540,9 +540,9 @@ TEST_CASE( "Literals", "[script][interpreter]" )
     CHECK(interpret("-18446744073709551615u") == "1u");
     CHECK_THROWS_EC(interpret("-18446744073709551616u"), ParseError, "Integer literal out of range");
     // 128bit literals are also limited to 64bit range
-    CHECK_THROWS_EC(interpret("9223372036854775808L"), ParseError, "Integer literal out of range");
-    CHECK_THROWS_EC(interpret("-9223372036854775809L"), ParseError, "Integer literal out of range");
-    CHECK_THROWS_EC(interpret("18446744073709551616uL"), ParseError, "Integer literal out of range");
+    CHECK_THROWS_EC(interpret("9223372036854775808q"), ParseError, "Integer literal out of range");
+    CHECK_THROWS_EC(interpret("-9223372036854775809q"), ParseError, "Integer literal out of range");
+    CHECK_THROWS_EC(interpret("18446744073709551616uq"), ParseError, "Integer literal out of range");
     // Chars and strings (UTF-8)
     CHECK(interpret("b'@'") == "64b");
     CHECK(interpret("'@'") == "'@'");
@@ -1062,7 +1062,7 @@ TEST_CASE( "Casting", "[script][interpreter]" )
     CHECK(interpret_std("42:Int64") == "42");
     CHECK(interpret_std("42:Float32") == "42.0f");
     CHECK(interpret_std("42:Float64") == "42.0");
-    CHECK(interpret_std("42:Float128") == "42.0L");
+    CHECK(interpret_std("42:Float128") == "42.0q");
     CHECK(interpret_std("12.9:Int") == "12");
     CHECK(interpret_std("-12.9:Int") == "-12");
     CHECK(interpret_std("a = 42; a:Byte") == "42b");
@@ -1081,10 +1081,10 @@ TEST_CASE( "Casting", "[script][interpreter]" )
     CHECK(interpret_std("{23d}:Int") == "23");
     CHECK(interpret_std("min:Int32") == "-2147483648d");
     CHECK(interpret_std("max:UInt32") == "4294967295ud");
-    CHECK(interpret_std("min:UInt128") == "0uL");
-    CHECK(interpret_std("max:UInt128") == "340282366920938463463374607431768211455uL");
-    CHECK(interpret_std("min:Int128") == "-170141183460469231731687303715884105728L");
-    CHECK(interpret_std("max:Int128") == "170141183460469231731687303715884105727L");
+    CHECK(interpret_std("min:UInt128") == "0uq");
+    CHECK(interpret_std("max:UInt128") == "340282366920938463463374607431768211455uq");
+    CHECK(interpret_std("min:Int128") == "-170141183460469231731687303715884105728q");
+    CHECK(interpret_std("max:Int128") == "170141183460469231731687303715884105727q");
     CHECK(interpret_std("a:Int = min; a") == "-9223372036854775808");
     // [Char] <-> String
     CHECK(interpret_std("cast_to_string ['a','b','č']") == "\"abč\"");

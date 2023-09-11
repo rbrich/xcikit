@@ -750,15 +750,16 @@ b'a', 'a':Byte      // Byte=UInt8     -- ASCII
 | `UInt16`           | `42u16`, `42uh`         | unsigned short int (16bit)
 | `UInt32`           | `42u32`, `42ud`         | unsigned int (32bit)
 | `UInt64`, `UInt`   | `42u64`, `42ul`, `42u`  | unsigned long int (64bit)
-| `UInt128`          | `42u128`, `42uL`        | unsigned wide int (128bit)
+| `UInt128`          | `42u128`, `42uq`        | unsigned wide int (128bit)
 | `Int8`             | `-42i8`, `-42c`         | signed byte (8bit)
 | `Int16`            | `-42i16`, `-42h`        | signed short int (16bit)
 | `Int32`            | `-42i32`, `-42d`        | signed int (32bit)
 | `Int64`, `Int`     | `-42i64`, `-42l`, `-42` | signed long int (64bit)
-| `Int128`           | `-42i128`, `42L`        | signed wide int (128bit)
-| `Float32`          | `4.2f`                  | float (32bit)
-| `Float64`, `Float` | `4.2F`, `4.2`           | double (64bit)
-| `Float128`         | `4.2L`                  | long double (128bit)
+| `Int128`           | `-42i128`, `42q`        | signed wide int (128bit)
+| (`Float16`)        | (`4.2f16`, `4.2h`)      | (reserved) half-precision float (16bit)
+| `Float32`          | `4.2f32`, `4.2f`        | single-precision float (32bit)
+| `Float64`, `Float` | `4.2f64`, `4.2l`, `4.2` | double-precision float (64bit)
+| `Float128`         | `4.2f128`, `4.2q`       | quadruple-precision float (128bit)
 |===
 
 Note: Some of the short suffixes cannot be used in specific contexts,

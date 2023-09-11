@@ -494,7 +494,7 @@ instance Cast UInt64 Float32 { cast = { __cast 0x4C } }
 instance Cast UInt64 Float64 { cast = { __cast 0x4D } }
 instance Cast UInt64 Float128 { cast = { __cast 0x4E } }
 
-instance Cast UInt128 Bool { cast = fun x { x != 0uL } }
+instance Cast UInt128 Bool { cast = fun x { x != 0uq } }
 instance Cast UInt128 UInt8 { cast = { __cast 0x51 } }
 instance Cast UInt128 UInt16 { cast = { __cast 0x52 } }
 instance Cast UInt128 UInt32 { cast = { __cast 0x53 } }
@@ -564,7 +564,7 @@ instance Cast Int64 Float32 { cast = { __cast 0x9C } }
 instance Cast Int64 Float64 { cast = { __cast 0x9D } }
 instance Cast Int64 Float128 { cast = { __cast 0x9E } }
 
-instance Cast Int128 Bool { cast = fun x { x != 0L } }
+instance Cast Int128 Bool { cast = fun x { x != 0q } }
 instance Cast Int128 UInt8 { cast = { __cast 0xA1 } }
 instance Cast Int128 UInt16 { cast = { __cast 0xA2 } }
 instance Cast Int128 UInt32 { cast = { __cast 0xA3 } }
@@ -666,8 +666,8 @@ instance Bounded UInt128 {
 }
 
 instance Bounded Int128 {
-    min = { 1L << 127L }
-    max = { ~0L ^ (1L << 127L) }
+    min = { 1q << 127q }
+    max = { ~0q ^ (1q << 127q) }
 }
 
 

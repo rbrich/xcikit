@@ -107,9 +107,10 @@ struct HexNum: if_must<one<'x'>, UPlus<xdigit>> {};
 struct Sign: one<'-','+'> {};
 struct ZeroPrefixNum: seq< one<'0'>, sor<HexNum, OctNum, BinNum, DecNum> > {};
 struct NumSuffix: sor<
-        seq<one<'u'>, sor<one<'h', 'd', 'l', 'L'>, opt<digit, opt<digit>, opt<digit>>>>,
-        seq<one<'i'>, opt<digit, opt<digit>, opt<digit>>>,
-        one<'f', 'F', 'b', 'c', 'h', 'd', 'l', 'L'> > {};
+        seq<one<'u'>, sor<one<'h', 'd', 'l', 'q'>, opt<digit, opt<digit>, opt<digit>>>>,
+        seq<one<'i'>, seq<digit, opt<digit>, opt<digit>>>,
+        seq<one<'f'>, opt<digit, opt<digit>, opt<digit>>>,
+        one<'b', 'c', 'h', 'd', 'l', 'q'> > {};
 struct Number: seq< opt<Sign>, sor<ZeroPrefixNum, DecNum>, opt<opt<one<'_'>>, NumSuffix> > {};
 
 struct Char: if_must< one<'\''>, StringChUni, one<'\''> > {};
@@ -1244,7 +1245,7 @@ struct Action<NumSuffix> {
         n.suffix_length = uint8_t(sv.size());
         char suffix = sv.front();
         sv.remove_prefix(1);
-        if (strchr("uibchdl", suffix) != nullptr) {
+        if (strchr("uibchd", suffix) != nullptr) {
             if (n.is_float())
                 throw tao::pegtl::parse_error("Integer suffix on float literal", in);
             assert(n.type == NumberHelper::Signed);
@@ -1278,16 +1279,18 @@ struct Action<NumSuffix> {
             case 'l':
                 n.bits = 64;
                 break;
-            case 'L':
+            case 'q':
                 n.bits = 128;
                 break;
             case 'f':
                 n.type = NumberHelper::Float;
-                n.bits = 32;
-                break;
-            case 'F':
-                n.type = NumberHelper::Float;
-                n.bits = 64;
+                if (!sv.empty()) {
+                    std::from_chars(sv.data(), sv.data() + sv.size(), n.bits);
+                    if (n.bits != 32 && n.bits != 64 && n.bits != 128)
+                        throw tao::pegtl::parse_error("Invalid bit length of float literal", in);
+                } else {
+                    n.bits = 32;
+                }
                 break;
         }
     }
