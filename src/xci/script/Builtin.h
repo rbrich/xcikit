@@ -42,8 +42,16 @@ struct exp {
     constexpr auto operator()( T&& lhs, U&& rhs ) const
     noexcept(noexcept(std::forward<T>(lhs) + std::forward<U>(rhs)))
     -> decltype(std::forward<T>(lhs) + std::forward<U>(rhs))
-    { return (decltype(std::forward<T>(lhs) + std::forward<U>(rhs)))
-                std::pow(double(lhs), double(rhs)); }
+    {
+        using R = decltype(std::forward<T>(lhs) + std::forward<U>(rhs));
+#if defined(_MSC_VER)
+        // _Signed128 / _Unsigned128 don't support cast to double
+        if constexpr (!std::is_floating_point_v<T> || !std::is_floating_point_v<U>)
+            return (R)(int64_t) std::pow(double(int64_t(lhs)), double(int64_t(rhs)));
+        else
+#endif
+            return (R) std::pow(double(lhs), double(rhs));
+    }
 };
 
 const char* op_to_function_name(ast::Operator::Op op);

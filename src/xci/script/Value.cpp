@@ -301,8 +301,10 @@ bool Value::cast_from(const Value& src)
 
         // int/float -> int/float
         if constexpr
-                ((std::is_integral_v<TFrom> || std::is_floating_point_v<TFrom> || std::is_same_v<TFrom, byte>)
-                && (std::is_integral_v<TTo> || std::is_floating_point_v<TTo> || std::is_same_v<TTo, byte>))
+                ((std::is_integral_v<TFrom> || std::is_floating_point_v<TFrom>
+                        || std::is_same_v<TFrom, byte> || std::is_same_v<TFrom, float128>)
+                && (std::is_integral_v<TTo> || std::is_floating_point_v<TTo>
+                        || std::is_same_v<TTo, byte> || std::is_same_v<TTo, float128>))
         {
             to = static_cast<TTo>(from);  // NOLINT(bugprone-signed-char-misuse)
             return true;

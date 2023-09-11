@@ -862,7 +862,7 @@ static void dump_l1_instruction(std::ostream& os, Opcode opcode, size_t arg, con
     os << arg;
     switch (opcode) {
         case Opcode::LoadStatic: {
-            const auto& value = mod.get_value(arg);
+            const auto& value = mod.get_value(Index(arg));
             os << " (" << value << ':' << value.type_info() << ")";
             break;
         }
@@ -870,13 +870,13 @@ static void dump_l1_instruction(std::ostream& os, Opcode opcode, size_t arg, con
         case Opcode::MakeClosure:
         case Opcode::Call0:
         case Opcode::TailCall0: {
-            const auto& fn = mod.get_function(arg);
+            const auto& fn = mod.get_function(Module::FunctionIdx(arg));
             os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
             break;
         }
         case Opcode::Call1:
         case Opcode::TailCall1: {
-            const auto& fn = mod.get_imported_module(0).get_function(arg);
+            const auto& fn = mod.get_imported_module(0).get_function(Module::FunctionIdx(arg));
             os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
             break;
         }
@@ -885,7 +885,7 @@ static void dump_l1_instruction(std::ostream& os, Opcode opcode, size_t arg, con
         case Opcode::ListSlice:
         case Opcode::ListConcat:
         case Opcode::Invoke: {
-            const TypeInfo& ti = get_type_info(mod.module_manager(), arg);
+            const TypeInfo& ti = get_type_info(mod.module_manager(), Index(arg));
             os << " (" << ti << ")";
             break;
         }
@@ -896,16 +896,16 @@ static void dump_l1_instruction(std::ostream& os, Opcode opcode, size_t arg, con
 
 static void dump_l2_instruction(std::ostream& os, Opcode opcode, size_t arg1, size_t arg2, const Module& mod)
 {
-    os << static_cast<int>(arg1) << ' ' << static_cast<int>(arg2);
+    os << arg1 << ' ' << arg2;
     switch (opcode) {  // NOLINT
         case Opcode::Call:
         case Opcode::TailCall: {
-            const auto& fn = mod.get_imported_module(arg1).get_function(arg2);
+            const auto& fn = mod.get_imported_module(Index(arg1)).get_function(Module::FunctionIdx(arg2));
             os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
             break;
         }
         case Opcode::MakeList: {
-            const TypeInfo& ti = get_type_info(mod.module_manager(), arg2);
+            const TypeInfo& ti = get_type_info(mod.module_manager(), Index(arg2));
             os << " (" << ti << ")";
             break;
         }

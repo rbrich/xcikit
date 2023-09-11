@@ -1423,7 +1423,7 @@ TEST_CASE( "Native to Value mapping", "[script][native]" )
 }
 
 
-int test_fun1(int64_t a, int64_t b, int64_t c) { return (a - b) / c; }
+int64_t test_fun1(int64_t a, int64_t b, int64_t c) { return (a - b) / c; }
 
 TEST_CASE( "Native functions: free function", "[script][native]" )
 {
@@ -1442,8 +1442,8 @@ TEST_CASE( "Native functions: free function", "[script][native]" )
         (test_fun1a (10, 4, 2)     //  3
         + test_fun1b (0, 6, 3))    // -2
     )");
-    CHECK(result.type() == Type::Int32);
-    CHECK(result.get<int32_t>() == 1);
+    CHECK(result.type() == Type::Int64);
+    CHECK(result.get<int64_t>() == 1);
     ctx.interpreter.module_manager().clear();
 }
 

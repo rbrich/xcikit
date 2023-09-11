@@ -6,11 +6,17 @@
 
 // References:
 // - https://en.cppreference.com/w/cpp/types/floating-point (C++23 <stdfloat>)
+// - https://gcc.gnu.org/onlinedocs/gcc/Floating-Types.html
+// - https://en.wikipedia.org/wiki/Quadruple-precision_floating-point_format
 
 #ifndef XCI_COMPAT_FLOAT128_H
 #define XCI_COMPAT_FLOAT128_H
 
-#if defined(__GNUC__)
+#if defined(HAVE_GNU_EXT_FLOAT128)
+
+using float128 = __float128;
+
+#elif defined(__GNUC__)
 
 // Long double might be 80-bit or fake double-double, but it should be 128bits wide.
 // Let's wait for <stdfloat> for the proper thing.
