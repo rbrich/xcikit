@@ -1241,7 +1241,7 @@ struct Action<NumSuffix> {
     template<typename Input>
     static void apply(const Input &in, NumberHelper& n) {
         std::string_view sv = in.string_view();
-        n.suffix_length = sv.size();
+        n.suffix_length = uint8_t(sv.size());
         char suffix = sv.front();
         sv.remove_prefix(1);
         if (strchr("uibchdl", suffix) != nullptr) {
@@ -1251,7 +1251,7 @@ struct Action<NumSuffix> {
         }
         if (suffix == 'u') {
             n.type = NumberHelper::Unsigned;
-            if (!isdigit((int)(unsigned char)sv.front())) {
+            if (!sv.empty() && !isdigit((int)(unsigned char)sv.front())) {
                 suffix = sv.front();
                 sv.remove_prefix(1);
             }
@@ -1259,7 +1259,7 @@ struct Action<NumSuffix> {
         switch (suffix) {
             case 'u':
             case 'i':
-                std::from_chars(sv.begin(), sv.end(), n.bits);
+                std::from_chars(sv.data(), sv.data() + sv.size(), n.bits);
                 if (n.bits != 8 && n.bits != 16 && n.bits != 32 && n.bits != 64 && n.bits != 128)
                     throw tao::pegtl::parse_error("Invalid bit length of integer literal", in);
                 break;
@@ -1331,11 +1331,11 @@ struct Action<Number> : change_states< NumberHelper > {
                 }
             }
 
-            uint64_t val;
-            auto [end, ec] = std::from_chars(sv.begin(), sv.end(), val, base);
+            uint64_t val = 0;
+            auto [end, ec] = std::from_chars(sv.data(), sv.data() + sv.size(), val, base);
             if (ec == std::errc::result_out_of_range)
                 throw tao::pegtl::parse_error("Integer literal out of range", in);
-            assert(end == sv.end());
+            assert(end == sv.data() + sv.size());
 
             if (n.is_unsigned()) {
                 // wraparound for minus sign, e.g. -1b = 255b

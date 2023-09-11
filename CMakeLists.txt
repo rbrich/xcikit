@@ -66,7 +66,9 @@ option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 
 # Minimal requirement is (at least partial) C++20.
 set(XCI_CXX_STANDARD 20)
-set(CMAKE_CXX_EXTENSIONS ON)  # for __int128
+if (NOT WIN32)
+    set(CMAKE_CXX_EXTENSIONS ON)  # for __int128
+endif()
 
 set(XCIKIT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 

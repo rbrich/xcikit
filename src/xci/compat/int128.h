@@ -16,14 +16,14 @@
 
 #if defined(__GNUC__)
 
-using uint128_t = __uint128_t;
-using int128_t = __int128_t;
+using uint128 = __uint128_t;
+using int128 = __int128_t;
 
 #elif defined(_MSC_VER)
 
 #include <__msvc_int128.hpp>
-using uint128_t = std::_Unsigned128;
-using int128_t = std::_Signed128;
+using uint128 = std::_Unsigned128;
+using int128 = std::_Signed128;
 
 #else
 
@@ -34,12 +34,12 @@ using int128_t = std::_Signed128;
 // Inspired by Abseil
 // https://github.com/abseil/abseil-cpp/blob/master/absl/numeric/int128.cc
 
-inline std::string uint128_to_string(uint128_t v) {
+inline std::string uint128_to_string(uint128 v) {
     constexpr uint64_t divider = 10000000000000000000u;
     constexpr uint64_t zeros = 19;
-    uint64_t part3 = v % divider;
+    auto part3 = uint64_t(v % divider);
     v /= divider;
-    uint64_t part2 = v % divider;
+    auto part2 = uint64_t(v % divider);
     v /= divider;
     std::ostringstream os;
     if (v != 0) {
@@ -57,12 +57,12 @@ inline std::string uint128_to_string(uint128_t v) {
     return os.str();
 }
 
-inline std::string int128_to_string(int128_t v) {
+inline std::string int128_to_string(int128 v) {
     std::string res;
     const bool negative = v < 0;
     if (negative)
         res += '-';
-    res += uint128_to_string(negative? -uint128_t(v) : uint128_t(v));
+    res += uint128_to_string(negative? -uint128(v) : uint128(v));
     return res;
 }
 

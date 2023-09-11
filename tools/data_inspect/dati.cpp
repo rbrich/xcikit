@@ -66,7 +66,7 @@ static void print_data(TermCtl& term, uint8_t type, const std::byte* data, size_
         case BinaryBase::Fixed16:   term.print("{fg:magenta}{}{t:normal}", bit_copy<uint16_t>(data)); return;
         case BinaryBase::Fixed32:   term.print("{fg:magenta}{}{t:normal}", bit_copy<uint32_t>(data)); return;
         case BinaryBase::Fixed64:   term.print("{fg:magenta}{}{t:normal}", bit_copy<uint64_t>(data)); return;
-        case BinaryBase::Fixed128:  term.print("{fg:magenta}{}{t:normal}", bit_copy<uint128_t>(data)); return;
+        case BinaryBase::Fixed128:  term.print("{fg:magenta}{}{t:normal}", uint128_to_string(bit_copy<uint128>(data))); return;
         case BinaryBase::Float32:   term.print("{fg:magenta}{}{t:normal}", bit_copy<float>(data)); return;
         case BinaryBase::Float64:   term.print("{fg:magenta}{}{t:normal}", bit_copy<double>(data)); return;
         case BinaryBase::VarInt:    term.print("{fg:yellow}varint{t:normal}"); return;
@@ -142,7 +142,7 @@ int main(int argc, const char* argv[])
 
             bool eof = false;
             std::vector<const Schema::Struct*> struct_stack {&schema.struct_main()};
-            std::map<std::string, int> last_int_values;  // for variant index
+            std::map<std::string, int64_t> last_int_values;  // for variant index
             while (!eof) {
                 auto it = reader.generic_next();
                 const Schema::Member* schema_member = struct_stack.back() ?

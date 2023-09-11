@@ -26,6 +26,7 @@ Type decode_arg_type(uint8_t arg)
         case 0x8: return Type::Int32;
         case 0x9: return Type::Int64;
         case 0xA: return Type::Int128;
+        // 0xB is reserved for Float16
         case 0xC: return Type::Float32;
         case 0xD: return Type::Float64;
         case 0xE: return Type::Float128;

@@ -13,6 +13,7 @@
 #include "Code.h"
 
 #include <xci/compat/int128.h>
+#include <xci/compat/float128.h>
 
 #include <ostream>
 #include <utility>
@@ -49,15 +50,15 @@ public:
     virtual void visit(uint16_t) = 0;
     virtual void visit(uint32_t) = 0;
     virtual void visit(uint64_t) = 0;
-    virtual void visit(uint128_t) = 0;
+    virtual void visit(uint128) = 0;
     virtual void visit(int8_t) = 0;
     virtual void visit(int16_t) = 0;
     virtual void visit(int32_t) = 0;
     virtual void visit(int64_t) = 0;
-    virtual void visit(int128_t) = 0;
+    virtual void visit(int128) = 0;
     virtual void visit(float) = 0;
     virtual void visit(double) = 0;
-    virtual void visit(long double) = 0;
+    virtual void visit(float128) = 0;
     virtual void visit(std::string_view&&) = 0;
     virtual void visit(const ListV&) = 0;
     virtual void visit(const TupleV&) = 0;
@@ -74,15 +75,15 @@ class PartialVisitor : public Visitor {
     void visit(uint16_t) override {}
     void visit(uint32_t) override {}
     void visit(uint64_t) override {}
-    void visit(uint128_t) override {}
+    void visit(uint128) override {}
     void visit(int8_t) override {}
     void visit(int16_t) override {}
     void visit(int32_t) override {}
     void visit(int64_t) override {}
-    void visit(int128_t) override {}
+    void visit(int128) override {}
     void visit(float) override {}
     void visit(double) override {}
-    void visit(long double) override {}
+    void visit(float128) override {}
     void visit(std::string_view&&) override {}
     void visit(const ListV&) override {}
     void visit(const TupleV&) override {}
@@ -210,15 +211,15 @@ public:
     explicit Value(uint16_t v) : m_value(v) {}  // UInt16
     explicit Value(uint32_t v) : m_value(v) {}  // UInt32
     explicit Value(uint64_t v) : m_value(v) {}  // UInt64
-    explicit Value(uint128_t v) : m_value(v) {}  // UInt128
+    explicit Value(uint128 v) : m_value(v) {}  // UInt128
     explicit Value(int8_t v) : m_value(v) {}  // Int8
     explicit Value(int16_t v) : m_value(v) {}  // Int16
     explicit Value(int32_t v) : m_value(v) {}  // Int32
     explicit Value(int64_t v) : m_value(v) {}  // Int64
-    explicit Value(int128_t v) : m_value(v) {}  // Int128
+    explicit Value(int128 v) : m_value(v) {}  // Int128
     explicit Value(float v) : m_value(v) {}  // Float32
     explicit Value(double v) : m_value(v) {}  // Float64
-    explicit Value(long double v) : m_value(v) {}  // Float128
+    explicit Value(float128 v) : m_value(v) {}  // Float128
     explicit Value(StringTag) : m_value(StringV{}) {}  // String
     explicit Value(std::string_view v) : m_value(StringV{v}) {}  // String
     explicit Value(ListTag) : m_value(ListV{}) {}  // List
@@ -322,9 +323,9 @@ protected:
     using ValueVariant = std::variant<
             std::monostate,  // Unknown (invalid value)
             bool, char32_t,
-            uint8_t, uint16_t, uint32_t, uint64_t, uint128_t,
-            int8_t, int16_t, int32_t, int64_t, int128_t,
-            float, double, long double,
+            uint8_t, uint16_t, uint32_t, uint64_t, uint128,
+            int8_t, int16_t, int32_t, int64_t, int128,
+            float, double, float128,
             StringV, ListV, TupleV, ClosureV, StreamV, ModuleV, TypeIndexV
         >;
     ValueVariant m_value;
@@ -529,11 +530,11 @@ public:
 
 class UInt128: public Value {
 public:
-    UInt128() : Value(uint128_t(0)) {}
-    explicit UInt128(uint128_t v) : Value(v) {}
+    UInt128() : Value(uint128(0)) {}
+    explicit UInt128(uint128 v) : Value(v) {}
     TypeInfo type_info() const { return ti_uint128(); }
-    uint128_t value() const { return std::get<uint128_t>(m_value); }
-    void set_value(uint128_t v) { m_value = v; }
+    uint128 value() const { return std::get<uint128>(m_value); }
+    void set_value(uint128 v) { m_value = v; }
 };
 
 
@@ -579,11 +580,11 @@ public:
 
 class Int128: public Value {
 public:
-    Int128() : Value(int128_t(0)) {}
-    explicit Int128(int128_t v) : Value(v) {}
+    Int128() : Value(int128(0)) {}
+    explicit Int128(int128 v) : Value(v) {}
     TypeInfo type_info() const { return ti_int128(); }
-    int128_t value() const { return std::get<int128_t>(m_value); }
-    void set_value(int128_t v) { m_value = v; }
+    int128 value() const { return std::get<int128>(m_value); }
+    void set_value(int128 v) { m_value = v; }
 };
 
 
@@ -608,11 +609,11 @@ public:
 
 class Float128: public Value {
 public:
-    Float128() : Value((long double)(0.0)) {}
-    explicit Float128(long double v) : Value(v) {}
+    Float128() : Value((float128)(0.0)) {}
+    explicit Float128(float128 v) : Value(v) {}
     TypeInfo type_info() const { return TypeInfo{Type::Float128}; }
-    long double value() const { return std::get<long double>(m_value); }
-    void set_value(long double v) { m_value = v; }
+    float128 value() const { return std::get<float128>(m_value); }
+    void set_value(float128 v) { m_value = v; }
 };
 
 

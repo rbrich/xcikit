@@ -136,7 +136,7 @@ inline RuntimeError value_out_of_range(std::string msg) {
     return RuntimeError(ErrorCode::ValueOutOfRange, std::move(msg));
 }
 
-inline RuntimeError index_out_of_bounds(int idx, size_t len) {
+inline RuntimeError index_out_of_bounds(int64_t idx, size_t len) {
     return RuntimeError(ErrorCode::IndexOutOfBounds,
                         fmt::format("list index out of bounds: {} not in [0..{}]", idx, len-1));
 }

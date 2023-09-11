@@ -267,15 +267,15 @@ Type Value::type() const
             [](uint16_t) { return Type::UInt16; },
             [](uint32_t) { return Type::UInt32; },
             [](uint64_t) { return Type::UInt64; },
-            [](uint128_t) { return Type::UInt128; },
+            [](uint128) { return Type::UInt128; },
             [](int8_t) { return Type::Int8; },
             [](int16_t) { return Type::Int16; },
             [](int32_t) { return Type::Int32; },
             [](int64_t) { return Type::Int64; },
-            [](int128_t) { return Type::Int128; },
+            [](int128) { return Type::Int128; },
             [](float) { return Type::Float32; },
             [](double) { return Type::Float64; },
-            [](long double) { return Type::Float128; },
+            [](float128) { return Type::Float128; },
             [](const StringV&) { return Type::String; },
             [](const ListV&) { return Type::List; },
             [](const TupleV&) { return Type::Tuple; },
@@ -304,7 +304,7 @@ bool Value::cast_from(const Value& src)
                 ((std::is_integral_v<TFrom> || std::is_floating_point_v<TFrom> || std::is_same_v<TFrom, byte>)
                 && (std::is_integral_v<TTo> || std::is_floating_point_v<TTo> || std::is_same_v<TTo, byte>))
         {
-            to = static_cast<TTo>(from);
+            to = static_cast<TTo>(from);  // NOLINT(bugprone-signed-char-misuse)
             return true;
         }
 
@@ -312,7 +312,7 @@ bool Value::cast_from(const Value& src)
                 ((std::is_integral_v<TFrom> || std::is_same_v<TFrom, TypeIndexV>)
                  && (std::is_integral_v<TTo> || std::is_same_v<TTo, TypeIndexV>))
         {
-            to = static_cast<TTo>(from);
+            to = static_cast<TTo>(from);  // NOLINT(bugprone-signed-char-misuse)
             return true;
         }
 
@@ -840,15 +840,15 @@ public:
     void visit(uint16_t v) override { os << v << "uh"; }
     void visit(uint32_t v) override { os << v << "ud"; }
     void visit(uint64_t v) override { os << v << "u"; }
-    void visit(uint128_t v) override { os << uint128_to_string(v) << "uL"; }
+    void visit(uint128 v) override { os << uint128_to_string(v) << "uL"; }
     void visit(int8_t v) override { os << int(v) << "c"; }
     void visit(int16_t v) override { os << v << "h"; }
     void visit(int32_t v) override { os << v << "d"; }
     void visit(int64_t v) override { os << v; }
-    void visit(int128_t v) override { os << int128_to_string(v) << "L"; }
+    void visit(int128 v) override { os << int128_to_string(v) << "L"; }
     void visit(float v) override { dump_float(os, v) << 'f'; }
     void visit(double v) override { dump_float(os, v); }
-    void visit(long double v) override { dump_float(os, v) << 'L'; }
+    void visit(float128 v) override { dump_float(os, v) << 'L'; }
     void visit(std::string_view&& v) override {
         os << '"' << core::escape_utf8(v) << '"';
     }
