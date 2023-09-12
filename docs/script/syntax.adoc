@@ -767,20 +767,22 @@ for example in `0xFFb` the `b` is not interpreted as type modifier, but as a hex
 Use long suffix instead: `0xFFu8`. Same applies to `c` and `i8`.
 Similarly, use `0xFFi32` instead of `0xFFd`. Note that `0xFFud` is fine.
 
-The `f` and `F` suffixes may convert integer literal to float: `12f` is same as `12.f` or `12.0f`.
-This does not work with `L`, which requires the decimal dot to distinguish between Int128 and Float128.
+The `f` suffix may convert integer literal to float: `12f` is same as `12.f` or `12.0f`.
+This does not work with `l` or `q`, which require the decimal dot to distinguish between Int and Float.
 
-.Numeric types for interfacing with C
+.Type aliases for interfacing with C
 |===
-| Type           | C type                   | Description
+| Type alias        | C type                   | Description
 
-| `CInt`         | `int`                    | platform-dependent size
-| `CUInt`        | `unsigned int`           | platform-dependent size
-| `CSize`        | `size_t`                 | arch-dependent size (pointer-sized)
-| `COffset`      | `ssize_t`, `ptrdiff_t`   | arch-dependent size (pointer-sized)
+| (`CChar`)         | `char`                   | just use Int8 or Uint8
+| (`CShort`)        | `short`                  | just use Int16 or Uint16
+| `CInt`, `CUInt`   | `int`, `unsigned int`    | might be 16bit, but is always 32bit on modern platforms
+| `CSize`           | `size_t`, `uintptr_t`    | arch-dependent size (pointer-sized)
+| `COffset`         | `ssize_t`, `ptrdiff_t`   | arch-dependent size (pointer-sized)
 |===
 
-These types don't have their own literals.
+These types don't have their own literals. The types in parentheses are not available, because they
+are easily replaceable by basic types (see Description).
 
 Composite types:
 

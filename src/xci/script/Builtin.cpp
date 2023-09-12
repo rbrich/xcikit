@@ -185,6 +185,21 @@ void BuiltinModule::add_types()
     symtab().add({"String", Symbol::TypeName, add_type(ti_string())});
     symtab().add({"Module", Symbol::TypeName, add_type(ti_module())});
     symtab().add({"TypeIndex", Symbol::TypeName, add_type(ti_type_index())});
+
+    // Type aliases for interfacing with C
+    // Prove me wrong, but today `int` is basically always 32bit
+    static_assert(sizeof(int) == 4);
+    symtab().add({"CInt", Symbol::TypeName, add_type(ti_int32())});
+    symtab().add({"CUInt", Symbol::TypeName, add_type(ti_uint32())});
+#if UINTPTR_MAX == UINT64_MAX
+    static_assert(sizeof(size_t) == 8);
+    symtab().add({"COffset", Symbol::TypeName, add_type(ti_int64())});
+    symtab().add({"CSize", Symbol::TypeName, add_type(ti_uint64())});
+#else
+    static_assert(sizeof(size_t) == 4);
+    symtab().add({"COffset", Symbol::TypeName, add_type(ti_int32())});
+    symtab().add({"CSize", Symbol::TypeName, add_type(ti_uint32())});
+#endif
 }
 
 

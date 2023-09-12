@@ -822,7 +822,7 @@ TypedValue::TypedValue(Value value, TypeInfo type_info)
 static std::ostream& dump_float(std::ostream& os, /*std::floating_point*/ auto value)
 {
     std::ostringstream sbuf;
-    sbuf << value;
+    sbuf << std::setprecision(std::numeric_limits<decltype(value)>::digits10) << value;
     auto str = sbuf.str();
     if (str.find('.') == std::string::npos)
         return os << str << ".0";

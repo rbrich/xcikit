@@ -27,14 +27,25 @@ using float128 = long double;
 
 // Fake it, but make sure it's 128bits wide
 struct float128 {
+    using type = long double;
     union {
-        long double value;
+        type value;
         char __storage[16];
     };
 
     float128(double v) : value(v) {}
     operator double() const noexcept { return value; }
 };
+
+namespace std {
+template<> class numeric_limits<float128> {
+public:
+    using base = std::numeric_limits<float128::type>;
+    static constexpr int digits = base::digits;
+    static constexpr int digits10 = base::digits10;
+    static constexpr int max_digits10 = base::max_digits10;
+};
+}
 
 #else
 
