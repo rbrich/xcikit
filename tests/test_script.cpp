@@ -513,6 +513,8 @@ TEST_CASE( "Literals", "[script][interpreter]" )
     CHECK(interpret("4.2l") == "4.2");
     CHECK(interpret("4.2") == "4.2");
     CHECK(interpret("1.0q") == "1.0q");
+    CHECK(interpret("1e15") == "1e+15");
+    CHECK(interpret("1.1e9f") == "1.1e+09f");
     // Underscores may be used for optical spacing
     CHECK(interpret("42_u16") == "42uh");
     CHECK(interpret("4_2_u16") == "42uh");

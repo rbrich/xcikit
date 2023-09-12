@@ -98,13 +98,14 @@ struct Keyword: sor<KeywordFun, KeywordClass, KeywordInstance, KeywordType,
 
 // Literals
 template<class D> struct UPlus: seq< D, star<opt<one<'_'>>, D> > {};  // one or more digits D interleaved by underscores ('_')
+struct Sign: one<'-','+'> {};
 struct BinDigit : one< '0', '1' > {};
 struct BinNum: seq<one<'b'>, UPlus<BinDigit>> {};
 struct OctNum: if_must<one<'o'>, UPlus<odigit>> {};
 struct DecNumFrac: seq< one<'.'>, opt<UPlus<digit>> > {};
-struct DecNum: seq< UPlus<digit>, opt<DecNumFrac> > {};
+struct DecNumExp: seq< one<'e'>, opt<Sign>, must<UPlus<digit>> > {};
+struct DecNum: seq< UPlus<digit>, opt<DecNumFrac>, opt<DecNumExp> > {};
 struct HexNum: if_must<one<'x'>, UPlus<xdigit>> {};
-struct Sign: one<'-','+'> {};
 struct ZeroPrefixNum: seq< one<'0'>, sor<HexNum, OctNum, BinNum, DecNum> > {};
 struct NumSuffix: sor<
         seq<one<'u'>, sor<one<'h', 'd', 'l', 'q'>, opt<digit, opt<digit>, opt<digit>>>>,
@@ -1238,6 +1239,15 @@ struct Action<DecNumFrac> {
 
 
 template<>
+struct Action<DecNumExp> {
+    template<typename Input>
+    static void apply(const Input &in, NumberHelper& n) {
+        n.type = NumberHelper::Float;
+    }
+};
+
+
+template<>
 struct Action<NumSuffix> {
     template<typename Input>
     static void apply(const Input &in, NumberHelper& n) {
@@ -1589,6 +1599,7 @@ struct Control : normal< Rule >
 
 template<> ErrMsg Control<eof>::errmsg = {"invalid syntax", {}};
 template<> ErrMsg Control<until< string<'*', '/'>, any >>::errmsg = {"unterminated comment", {}};
+template<> ErrMsg Control<UPlus<digit>>::errmsg = {"expected digit", {}};
 template<> ErrMsg Control<UPlus<odigit>>::errmsg = {"expected oct digit", {}};
 template<> ErrMsg Control<xdigit>::errmsg = {"expected hex digit", {}};
 template<> ErrMsg Control<UPlus<xdigit>>::errmsg = {"expected hex digit", {}};

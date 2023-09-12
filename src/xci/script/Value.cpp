@@ -824,7 +824,7 @@ static std::ostream& dump_float(std::ostream& os, /*std::floating_point*/ auto v
     std::ostringstream sbuf;
     sbuf << std::setprecision(std::numeric_limits<decltype(value)>::digits10) << value;
     auto str = sbuf.str();
-    if (str.find('.') == std::string::npos)
+    if (str.find('.') == std::string::npos && str.find('e') == std::string::npos)
         return os << str << ".0";
     else
         return os << str;
