@@ -4,8 +4,12 @@ XCI Tools
 Command Line Tools
 ------------------
 
+General use:
 * [Find File (ff)](find_file/README.md) - `find` alternative
 * [Term Ctl (tc)](term_ctl/README.md) - (`setterm`), `tabs` alternative
+
+XCI specific:
+* [Data Inspector (dati)](data_inspect/README.md) - inspect xci binary data files
 
 Fire Script (fire)
 ------------------

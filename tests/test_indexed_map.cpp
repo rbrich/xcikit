@@ -1,7 +1,7 @@
 // test_indexed_map.cpp created on 2020-03-01 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <catch2/catch_test_macros.hpp>
@@ -55,4 +55,24 @@ TEST_CASE( "Sparse indexed map", "[IndexedMap]" )
     map2.clear();
     CHECK(map2.empty());
     CHECK(map2.capacity() == 0);
+}
+
+
+TEST_CASE( "Walk indexed map", "[IndexedMap]" )
+{
+    IndexedMap<std::string> map;
+    for (auto i = 0; i != 300; ++i) {
+        map.add(std::to_string(i));
+    }
+    size_t i = 0;
+    for (const auto& item : map) {
+        CHECK(item == std::to_string(i));
+        ++i;
+    }
+    const IndexedMap<std::string>& c_map = map;
+    i = 0;
+    for (const auto& item : c_map) {
+        CHECK(item == std::to_string(i));
+        ++i;
+    }
 }

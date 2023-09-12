@@ -28,5 +28,6 @@
 // Compatibility checks
 #cmakedefine HAVE_GNU_STRERROR_R
 #cmakedefine HAVE_XSI_STRERROR_R
+#cmakedefine HAVE_GNU_EXT_FLOAT128
 
 #endif //XCI_CONFIG_H

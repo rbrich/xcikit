@@ -25,36 +25,66 @@ class BitwiseXor T  { bit_xor : (T, T) -> T }
 class ShiftLeft  T  { shift_left  : (T, T) -> T }
 class ShiftRight T  { shift_right : (T, T) -> T }
 
-instance BitwiseNot Byte   { bit_not = { __bitwise_not_8  } }
+instance BitwiseNot UInt8 { bit_not = { __bitwise_not_8  } }
+instance BitwiseNot UInt16 { bit_not = { __bitwise_not_16  } }
 instance BitwiseNot UInt32 { bit_not = { __bitwise_not_32 } }
 instance BitwiseNot UInt64 { bit_not = { __bitwise_not_64 } }
-instance BitwiseNot Int32  { bit_not = { __bitwise_not_32 } }
-instance BitwiseNot Int64  { bit_not = { __bitwise_not_64 } }
-instance BitwiseOr  Byte   { bit_or  = { __bitwise_or_8   } }
+instance BitwiseNot UInt128 { bit_not = { __bitwise_not_128 } }
+instance BitwiseNot Int8 { bit_not = { __bitwise_not_8 } }
+instance BitwiseNot Int16 { bit_not = { __bitwise_not_16 } }
+instance BitwiseNot Int32 { bit_not = { __bitwise_not_32 } }
+instance BitwiseNot Int64 { bit_not = { __bitwise_not_64 } }
+instance BitwiseNot Int128 { bit_not = { __bitwise_not_128 } }
+instance BitwiseOr  UInt8 { bit_or  = { __bitwise_or_8   } }
+instance BitwiseOr  UInt16 { bit_or  = { __bitwise_or_16  } }
 instance BitwiseOr  UInt32 { bit_or  = { __bitwise_or_32  } }
 instance BitwiseOr  UInt64 { bit_or  = { __bitwise_or_64  } }
-instance BitwiseOr  Int32  { bit_or  = { __bitwise_or_32  } }
-instance BitwiseOr  Int64  { bit_or  = { __bitwise_or_64  } }
-instance BitwiseAnd Byte   { bit_and = { __bitwise_and_8  } }
+instance BitwiseOr  UInt128 { bit_or  = { __bitwise_or_128 } }
+instance BitwiseOr  Int8 { bit_or  = { __bitwise_or_8 } }
+instance BitwiseOr  Int16 { bit_or  = { __bitwise_or_16 } }
+instance BitwiseOr  Int32 { bit_or  = { __bitwise_or_32  } }
+instance BitwiseOr  Int64 { bit_or  = { __bitwise_or_64  } }
+instance BitwiseOr  Int128 { bit_or  = { __bitwise_or_128 } }
+instance BitwiseAnd UInt8 { bit_and = { __bitwise_and_8  } }
+instance BitwiseAnd UInt16 { bit_and = { __bitwise_and_16  } }
 instance BitwiseAnd UInt32 { bit_and = { __bitwise_and_32 } }
 instance BitwiseAnd UInt64 { bit_and = { __bitwise_and_64 } }
-instance BitwiseAnd Int32  { bit_and = { __bitwise_and_32 } }
-instance BitwiseAnd Int64  { bit_and = { __bitwise_and_64 } }
-instance BitwiseXor Byte   { bit_xor = { __bitwise_xor_8  } }
+instance BitwiseAnd UInt128 { bit_and = { __bitwise_and_128 } }
+instance BitwiseAnd Int8 { bit_and = { __bitwise_and_8 } }
+instance BitwiseAnd Int16 { bit_and = { __bitwise_and_16 } }
+instance BitwiseAnd Int32 { bit_and = { __bitwise_and_32 } }
+instance BitwiseAnd Int64 { bit_and = { __bitwise_and_64 } }
+instance BitwiseAnd Int128 { bit_and = { __bitwise_and_128 } }
+instance BitwiseXor UInt8 { bit_xor = { __bitwise_xor_8  } }
+instance BitwiseXor UInt16 { bit_xor = { __bitwise_xor_16  } }
 instance BitwiseXor UInt32 { bit_xor = { __bitwise_xor_32 } }
 instance BitwiseXor UInt64 { bit_xor = { __bitwise_xor_64 } }
-instance BitwiseXor Int32  { bit_xor = { __bitwise_xor_32 } }
-instance BitwiseXor Int64  { bit_xor = { __bitwise_xor_64 } }
-instance ShiftLeft  Byte   { shift_left  = { __shift_left 0x11 } }
-instance ShiftLeft  UInt32 { shift_left  = { __shift_left 0x33 } }
-instance ShiftLeft  UInt64 { shift_left  = { __shift_left 0x44 } }
-instance ShiftLeft  Int32  { shift_left  = { __shift_left 0x88 } }
-instance ShiftLeft  Int64  { shift_left  = { __shift_left 0x99 } }
-instance ShiftRight Byte   { shift_right = { __shift_right 0x11 } }
+instance BitwiseXor UInt128 { bit_xor = { __bitwise_xor_128 } }
+instance BitwiseXor Int8 { bit_xor = { __bitwise_xor_8 } }
+instance BitwiseXor Int16 { bit_xor = { __bitwise_xor_16 } }
+instance BitwiseXor Int32 { bit_xor = { __bitwise_xor_32 } }
+instance BitwiseXor Int64 { bit_xor = { __bitwise_xor_64 } }
+instance BitwiseXor Int128 { bit_xor = { __bitwise_xor_128 } }
+instance ShiftLeft  UInt8 { shift_left = { __shift_left 0x11 } }
+instance ShiftLeft  UInt16 { shift_left = { __shift_left 0x22 } }
+instance ShiftLeft  UInt32 { shift_left = { __shift_left 0x33 } }
+instance ShiftLeft  UInt64 { shift_left = { __shift_left 0x44 } }
+instance ShiftLeft  UInt128 { shift_left = { __shift_left 0x55 } }
+instance ShiftLeft  Int8 { shift_left = { __shift_left 0x66 } }
+instance ShiftLeft  Int16 { shift_left = { __shift_left 0x77 } }
+instance ShiftLeft  Int32 { shift_left = { __shift_left 0x88 } }
+instance ShiftLeft  Int64 { shift_left = { __shift_left 0x99 } }
+instance ShiftLeft  Int128 { shift_left = { __shift_left 0xAA } }
+instance ShiftRight UInt8 { shift_right = { __shift_right 0x11 } }
+instance ShiftRight UInt16 { shift_right = { __shift_right 0x22 } }
 instance ShiftRight UInt32 { shift_right = { __shift_right 0x33 } }
 instance ShiftRight UInt64 { shift_right = { __shift_right 0x44 } }
-instance ShiftRight Int32  { shift_right = { __shift_right 0x88 } }
-instance ShiftRight Int64  { shift_right = { __shift_right 0x99 } }
+instance ShiftRight UInt128 { shift_right = { __shift_right 0x55 } }
+instance ShiftRight Int8 { shift_right = { __shift_right 0x66 } }
+instance ShiftRight Int16 { shift_right = { __shift_right 0x77 } }
+instance ShiftRight Int32 { shift_right = { __shift_right 0x88 } }
+instance ShiftRight Int64 { shift_right = { __shift_right 0x99 } }
+instance ShiftRight Int128 { shift_right = { __shift_right 0xAA } }
 
 
 // Arithmetic operators
@@ -67,53 +97,94 @@ class Div T  { div : (T, T) -> T }
 class Mod T  { mod : (T, T) -> T }
 class Exp T  { exp : (T, T) -> T }
 
-instance Neg Byte  { neg = { __neg 0x11 } }
+instance Neg UInt8 { neg = { __neg 0x11 } }
+instance Neg UInt16 { neg = { __neg 0x22 } }
 instance Neg UInt32 { neg = { __neg 0x33 } }
 instance Neg UInt64 { neg = { __neg 0x44 } }
+instance Neg UInt128 { neg = { __neg 0x55 } }
+instance Neg Int8 { neg = { __neg 0x66 } }
+instance Neg Int16 { neg = { __neg 0x77 } }
 instance Neg Int32 { neg = { __neg 0x88 } }
 instance Neg Int64 { neg = { __neg 0x99 } }
+instance Neg Int128 { neg = { __neg 0xAA } }
 instance Neg Float32 { neg = { __neg 0xCC } }
 instance Neg Float64 { neg = { __neg 0xDD } }
-instance Add Byte  { add = { __add 0x11 } }
+instance Neg Float128 { neg = { __neg 0xEE } }
+instance Add UInt8 { add = { __add 0x11 } }
+instance Add UInt16 { add = { __add 0x22 } }
 instance Add UInt32 { add = { __add 0x33 } }
 instance Add UInt64 { add = { __add 0x44 } }
+instance Add UInt128 { add = { __add 0x55 } }
+instance Add Int8 { add = { __add 0x66 } }
+instance Add Int16 { add = { __add 0x77 } }
 instance Add Int32 { add = { __add 0x88 } }
 instance Add Int64 { add = { __add 0x99 } }
+instance Add Int128 { add = { __add 0xAA } }
 instance Add Float32 { add = { __add 0xCC } }
 instance Add Float64 { add = { __add 0xDD } }
-instance Sub Byte  { sub = { __sub 0x11 } }
+instance Add Float128 { add = { __add 0xEE } }
+instance Sub UInt8 { sub = { __sub 0x11 } }
+instance Sub UInt16 { sub = { __sub 0x22 } }
 instance Sub UInt32 { sub = { __sub 0x33 } }
 instance Sub UInt64 { sub = { __sub 0x44 } }
+instance Sub UInt128 { sub = { __sub 0x55 } }
+instance Sub Int8 { sub = { __sub 0x66 } }
+instance Sub Int16 { sub = { __sub 0x77 } }
 instance Sub Int32 { sub = { __sub 0x88 } }
 instance Sub Int64 { sub = { __sub 0x99 } }
+instance Sub Int128 { sub = { __sub 0xAA } }
 instance Sub Float32 { sub = { __sub 0xCC } }
 instance Sub Float64 { sub = { __sub 0xDD } }
-instance Mul Byte  { mul = { __mul 0x11 } }
+instance Sub Float128 { sub = { __sub 0xEE } }
+instance Mul UInt8  { mul = { __mul 0x11 } }
+instance Mul UInt16  { mul = { __mul 0x22 } }
 instance Mul UInt32 { mul = { __mul 0x33 } }
 instance Mul UInt64 { mul = { __mul 0x44 } }
+instance Mul UInt128 { mul = { __mul 0x55 } }
+instance Mul Int8 { mul = { __mul 0x66 } }
+instance Mul Int16 { mul = { __mul 0x77 } }
 instance Mul Int32 { mul = { __mul 0x88 } }
 instance Mul Int64 { mul = { __mul 0x99 } }
+instance Mul Int128 { mul = { __mul 0xAA } }
 instance Mul Float32 { mul = { __mul 0xCC } }
 instance Mul Float64 { mul = { __mul 0xDD } }
-instance Div Byte  { div = { __div 0x11 } }
+instance Mul Float128 { mul = { __mul 0xEE } }
+instance Div UInt8 { div = { __div 0x11 } }
+instance Div UInt16 { div = { __div 0x22 } }
 instance Div UInt32 { div = { __div 0x33 } }
 instance Div UInt64 { div = { __div 0x44 } }
+instance Div UInt128 { div = { __div 0x55 } }
+instance Div Int8 { div = { __div 0x66 } }
+instance Div Int16 { div = { __div 0x77 } }
 instance Div Int32 { div = { __div 0x88 } }
 instance Div Int64 { div = { __div 0x99 } }
+instance Div Int128 { div = { __div 0xAA } }
 instance Div Float32 { div = { __div 0xCC } }
 instance Div Float64 { div = { __div 0xDD } }
-instance Mod Byte  { mod = { __mod 0x11 } }
+instance Div Float128 { div = { __div 0xEE } }
+instance Mod UInt8 { mod = { __mod 0x11 } }
+instance Mod UInt16 { mod = { __mod 0x22 } }
 instance Mod UInt32 { mod = { __mod 0x33 } }
 instance Mod UInt64 { mod = { __mod 0x44 } }
+instance Mod UInt128 { mod = { __mod 0x55 } }
+instance Mod Int8 { mod = { __mod 0x66 } }
+instance Mod Int16 { mod = { __mod 0x77 } }
 instance Mod Int32 { mod = { __mod 0x88 } }
 instance Mod Int64 { mod = { __mod 0x99 } }
-instance Exp Byte  { exp = { __exp 0x11 } }
+instance Mod Int128 { mod = { __mod 0xAA } }
+instance Exp UInt8 { exp = { __exp 0x11 } }
+instance Exp UInt16 { exp = { __exp 0x22 } }
 instance Exp UInt32 { exp = { __exp 0x33 } }
 instance Exp UInt64 { exp = { __exp 0x44 } }
+instance Exp UInt128 { exp = { __exp 0x55 } }
+instance Exp Int8 { exp = { __exp 0x66 } }
+instance Exp Int16 { exp = { __exp 0x77 } }
 instance Exp Int32 { exp = { __exp 0x88 } }
 instance Exp Int64 { exp = { __exp 0x99 } }
+instance Exp Int128 { exp = { __exp 0xAA } }
 instance Exp Float32 { exp = { __exp 0xCC } }
 instance Exp Float64 { exp = { __exp 0xDD } }
+instance Exp Float128 { exp = { __exp 0xEE } }
 
 // Add strings, lists => concatenate
 instance Add String { add = fun (a, b) { string_concat (a, b) } }
@@ -139,14 +210,19 @@ instance Eq Bool {
     ne = { __not_equal 0x11 }
 }
 
-instance Eq Byte {
+instance Eq Char {
+    eq = { __equal 0x33 }
+    ne = { __not_equal 0x33 }
+}
+
+instance Eq UInt8 {
     eq = { __equal 0x11 }
     ne = { __not_equal 0x11 }
 }
 
-instance Eq Char {
-    eq = { __equal 0x33 }
-    ne = { __not_equal 0x33 }
+instance Eq UInt16 {
+    eq = { __equal 0x22 }
+    ne = { __not_equal 0x22 }
 }
 
 instance Eq UInt32 {
@@ -159,6 +235,21 @@ instance Eq UInt64 {
     ne = { __not_equal 0x44 }
 }
 
+instance Eq UInt128 {
+    eq = { __equal 0x55 }
+    ne = { __not_equal 0x55 }
+}
+
+instance Eq Int8 {
+    eq = { __equal 0x66 }
+    ne = { __not_equal 0x66 }
+}
+
+instance Eq Int16 {
+    eq = { __equal 0x77 }
+    ne = { __not_equal 0x77 }
+}
+
 instance Eq Int32 {
     eq = { __equal 0x88 }
     ne = { __not_equal 0x88 }
@@ -169,6 +260,11 @@ instance Eq Int64 {
     ne = { __not_equal 0x99 }
 }
 
+instance Eq Int128 {
+    eq = { __equal 0xAA }
+    ne = { __not_equal 0xAA }
+}
+
 instance Eq Float32 {
     eq = { __equal 0xCC }
     ne = { __not_equal 0xCC }
@@ -177,6 +273,11 @@ instance Eq Float32 {
 instance Eq Float64 {
     eq = { __equal 0xDD }
     ne = { __not_equal 0xDD }
+}
+
+instance Eq Float128 {
+    eq = { __equal 0xEE }
+    ne = { __not_equal 0xEE }
 }
 
 instance Eq String {
@@ -203,18 +304,25 @@ instance Eq [T] ( Eq T ) {
 */
 
 
-instance Ord Byte {
+instance Ord Char {
+    lt = { __less_than 0x33 }
+    gt = { __greater_than 0x33 }
+    le = { __less_equal 0x33 }
+    ge = { __greater_equal 0x33 }
+}
+
+instance Ord UInt8 {
     lt = { __less_than 0x11 }
     gt = { __greater_than 0x11 }
     le = { __less_equal 0x11 }
     ge = { __greater_equal 0x11 }
 }
 
-instance Ord Char {
-    lt = { __less_than 0x33 }
-    gt = { __greater_than 0x33 }
-    le = { __less_equal 0x33 }
-    ge = { __greater_equal 0x33 }
+instance Ord UInt16 {
+    lt = { __less_than 0x22 }
+    gt = { __greater_than 0x22 }
+    le = { __less_equal 0x22 }
+    ge = { __greater_equal 0x22 }
 }
 
 instance Ord UInt32 {
@@ -231,6 +339,27 @@ instance Ord UInt64 {
     ge = { __greater_equal 0x44 }
 }
 
+instance Ord UInt128 {
+    lt = { __less_than 0x55 }
+    gt = { __greater_than 0x55 }
+    le = { __less_equal 0x55 }
+    ge = { __greater_equal 0x55 }
+}
+
+instance Ord Int8 {
+    lt = { __less_than 0x66 }
+    gt = { __greater_than 0x66 }
+    le = { __less_equal 0x66 }
+    ge = { __greater_equal 0x66 }
+}
+
+instance Ord Int16 {
+    lt = { __less_than 0x77 }
+    gt = { __greater_than 0x77 }
+    le = { __less_equal 0x77 }
+    ge = { __greater_equal 0x77 }
+}
+
 instance Ord Int32 {
     lt = { __less_than 0x88 }
     gt = { __greater_than 0x88 }
@@ -245,6 +374,13 @@ instance Ord Int64 {
     ge = { __greater_equal 0x99 }
 }
 
+instance Ord Int128 {
+    lt = { __less_than 0xAA }
+    gt = { __greater_than 0xAA }
+    le = { __less_equal 0xAA }
+    ge = { __greater_equal 0xAA }
+}
+
 instance Ord Float32 {
     lt = { __less_than 0xCC }
     gt = { __greater_than 0xCC }
@@ -257,6 +393,13 @@ instance Ord Float64 {
     gt = { __greater_than 0xDD }
     le = { __less_equal 0xDD }
     ge = { __greater_equal 0xDD }
+}
+
+instance Ord Float128 {
+    lt = { __less_than 0xEE }
+    gt = { __greater_than 0xEE }
+    le = { __less_equal 0xEE }
+    ge = { __greater_equal 0xEE }
 }
 
 instance Ord String {
@@ -282,6 +425,7 @@ class Ord <T> (Eq T) { }
 
 
 // cast value of type T to type R: `value : R`
+// TODO: generate into separate file, textual include or module import
 class Cast T R {
     cast : T -> R
 }
@@ -289,61 +433,171 @@ class Cast T R {
 instance<T> Cast T Void { cast = {} }
 instance<T> Cast T T { cast = { __noop } }
 
-instance Cast Bool Byte { cast = { __noop } }
+instance Cast Bool UInt8 { cast = { __noop } }
+instance Cast Bool UInt16 { cast = { __cast 0x12 } }
 instance Cast Bool UInt32 { cast = { __cast 0x13 } }
 instance Cast Bool UInt64 { cast = { __cast 0x14 } }
+instance Cast Bool UInt128 { cast = { __cast 0x15 } }
+instance Cast Bool Int8 { cast = { __cast 0x16 } }
+instance Cast Bool Int16 { cast = { __cast 0x17 } }
 instance Cast Bool Int32 { cast = { __cast 0x18 } }
 instance Cast Bool Int64 { cast = { __cast 0x19 } }
+instance Cast Bool Int128 { cast = { __cast 0x1A } }
 
-instance Cast Byte Bool { cast = fun x { x != b'\0' } }
-instance Cast Byte UInt32 { cast = { __cast 0x13 } }
-instance Cast Byte UInt64 { cast = { __cast 0x14 } }
-instance Cast Byte Int32 { cast = { __cast 0x18 } }
-instance Cast Byte Int64 { cast = { __cast 0x19 } }
+instance Cast UInt8 Bool { cast = fun x { x != 0b } }
+instance Cast UInt8 UInt16 { cast = { __cast 0x12 } }
+instance Cast UInt8 UInt32 { cast = { __cast 0x13 } }
+instance Cast UInt8 UInt64 { cast = { __cast 0x14 } }
+instance Cast UInt8 UInt128 { cast = { __cast 0x15 } }
+instance Cast UInt8 Int8 { cast = { __cast 0x16 } }
+instance Cast UInt8 Int16 { cast = { __cast 0x17 } }
+instance Cast UInt8 Int32 { cast = { __cast 0x18 } }
+instance Cast UInt8 Int64 { cast = { __cast 0x19 } }
+instance Cast UInt8 Int128 { cast = { __cast 0x1A } }
 
-instance Cast UInt32 Bool { cast = fun x { x != 0U } }
-instance Cast UInt32 Byte { cast = { __cast 0x31 } }
+instance Cast UInt16 Bool { cast = fun x { x != 0uh } }
+instance Cast UInt16 UInt8 { cast = { __cast 0x21 } }
+instance Cast UInt16 UInt32 { cast = { __cast 0x23 } }
+instance Cast UInt16 UInt64 { cast = { __cast 0x24 } }
+instance Cast UInt16 UInt128 { cast = { __cast 0x25 } }
+instance Cast UInt16 Int8 { cast = { __cast 0x26 } }
+instance Cast UInt16 Int16 { cast = { __cast 0x27 } }
+instance Cast UInt16 Int32 { cast = { __cast 0x28 } }
+instance Cast UInt16 Int64 { cast = { __cast 0x29 } }
+instance Cast UInt16 Int128 { cast = { __cast 0x2A } }
+
+instance Cast UInt32 Bool { cast = fun x { x != 0ud } }
+instance Cast UInt32 UInt8 { cast = { __cast 0x31 } }
+instance Cast UInt32 UInt16 { cast = { __cast 0x32 } }
 instance Cast UInt32 UInt64 { cast = { __cast 0x34 } }
+instance Cast UInt32 UInt128 { cast = { __cast 0x35 } }
+instance Cast UInt32 Int8 { cast = { __cast 0x36 } }
+instance Cast UInt32 Int16 { cast = { __cast 0x37 } }
 instance Cast UInt32 Int32 { cast = { __cast 0x38 } }
 instance Cast UInt32 Int64 { cast = { __cast 0x39 } }
-instance Cast UInt32 Float32 { cast = { __cast 0x3c } }
-instance Cast UInt32 Float64 { cast = { __cast 0x3d } }
+instance Cast UInt32 Int128 { cast = { __cast 0x3A } }
+instance Cast UInt32 Float32 { cast = { __cast 0x3C } }
+instance Cast UInt32 Float64 { cast = { __cast 0x3D } }
+instance Cast UInt32 Float128 { cast = { __cast 0x3E } }
 
-instance Cast UInt64 Bool { cast = fun x { x != 0UL } }
-instance Cast UInt64 Byte { cast = { __cast 0x41 } }
+instance Cast UInt64 Bool { cast = fun x { x != 0ul } }
+instance Cast UInt64 UInt8 { cast = { __cast 0x41 } }
+instance Cast UInt64 UInt16 { cast = { __cast 0x42 } }
 instance Cast UInt64 UInt32 { cast = { __cast 0x43 } }
+instance Cast UInt64 UInt128 { cast = { __cast 0x45 } }
+instance Cast UInt64 Int8 { cast = { __cast 0x46 } }
+instance Cast UInt64 Int16 { cast = { __cast 0x47 } }
 instance Cast UInt64 Int32 { cast = { __cast 0x48 } }
 instance Cast UInt64 Int64 { cast = { __cast 0x49 } }
+instance Cast UInt64 Int128 { cast = { __cast 0x4A } }
 instance Cast UInt64 Float32 { cast = { __cast 0x4C } }
 instance Cast UInt64 Float64 { cast = { __cast 0x4D } }
+instance Cast UInt64 Float128 { cast = { __cast 0x4E } }
 
-instance Cast Int32 Bool { cast = fun x { x != 0 } }
-instance Cast Int32 Byte { cast = { __cast 0x81 } }
+instance Cast UInt128 Bool { cast = fun x { x != 0uq } }
+instance Cast UInt128 UInt8 { cast = { __cast 0x51 } }
+instance Cast UInt128 UInt16 { cast = { __cast 0x52 } }
+instance Cast UInt128 UInt32 { cast = { __cast 0x53 } }
+instance Cast UInt128 UInt64 { cast = { __cast 0x54 } }
+instance Cast UInt128 Int8 { cast = { __cast 0x56 } }
+instance Cast UInt128 Int16 { cast = { __cast 0x57 } }
+instance Cast UInt128 Int32 { cast = { __cast 0x58 } }
+instance Cast UInt128 Int64 { cast = { __cast 0x59 } }
+instance Cast UInt128 Int128 { cast = { __cast 0x5A } }
+instance Cast UInt128 Float32 { cast = { __cast 0x5C } }
+instance Cast UInt128 Float64 { cast = { __cast 0x5D } }
+instance Cast UInt128 Float128 { cast = { __cast 0x5E } }
+
+instance Cast Int8 Bool { cast = fun x { x != 0c } }
+instance Cast Int8 UInt8 { cast = { __cast 0x61 } }
+instance Cast Int8 UInt16 { cast = { __cast 0x62 } }
+instance Cast Int8 UInt32 { cast = { __cast 0x63 } }
+instance Cast Int8 UInt64 { cast = { __cast 0x64 } }
+instance Cast Int8 UInt128 { cast = { __cast 0x65 } }
+instance Cast Int8 Int16 { cast = { __cast 0x67 } }
+instance Cast Int8 Int32 { cast = { __cast 0x68 } }
+instance Cast Int8 Int64 { cast = { __cast 0x69 } }
+instance Cast Int8 Int128 { cast = { __cast 0x6A } }
+instance Cast Int8 Float32 { cast = { __cast 0x6C } }
+instance Cast Int8 Float64 { cast = { __cast 0x6D } }
+instance Cast Int8 Float128 { cast = { __cast 0x6E } }
+
+instance Cast Int16 Bool { cast = fun x { x != 0h } }
+instance Cast Int16 UInt8 { cast = { __cast 0x71 } }
+instance Cast Int16 UInt16 { cast = { __cast 0x72 } }
+instance Cast Int16 UInt32 { cast = { __cast 0x73 } }
+instance Cast Int16 UInt64 { cast = { __cast 0x74 } }
+instance Cast Int16 UInt128 { cast = { __cast 0x75 } }
+instance Cast Int16 Int8 { cast = { __cast 0x76 } }
+instance Cast Int16 Int32 { cast = { __cast 0x78 } }
+instance Cast Int16 Int64 { cast = { __cast 0x79 } }
+instance Cast Int16 Int128 { cast = { __cast 0x7A } }
+instance Cast Int16 Float32 { cast = { __cast 0x7C } }
+instance Cast Int16 Float64 { cast = { __cast 0x7D } }
+instance Cast Int16 Float128 { cast = { __cast 0x7E } }
+
+instance Cast Int32 Bool { cast = fun x { x != 0d } }
+instance Cast Int32 UInt8 { cast = { __cast 0x81 } }
+instance Cast Int32 UInt16 { cast = { __cast 0x82 } }
 instance Cast Int32 UInt32 { cast = { __cast 0x83 } }
 instance Cast Int32 UInt64 { cast = { __cast 0x84 } }
+instance Cast Int32 UInt128 { cast = { __cast 0x85 } }
+instance Cast Int32 Int8 { cast = { __cast 0x86 } }
+instance Cast Int32 Int16 { cast = { __cast 0x87 } }
 instance Cast Int32 Int64 { cast = { __cast 0x89 } }
-instance Cast Int32 Float32 { cast = { __cast 0x8c } }
-instance Cast Int32 Float64 { cast = { __cast 0x8d } }
+instance Cast Int32 Int128 { cast = { __cast 0x8A } }
+instance Cast Int32 Float32 { cast = { __cast 0x8C } }
+instance Cast Int32 Float64 { cast = { __cast 0x8D } }
+instance Cast Int32 Float128 { cast = { __cast 0x8E } }
 
-instance Cast Int64 Bool { cast = fun x { x != 0L } }
-instance Cast Int64 Byte { cast = { __cast 0x91 } }
+instance Cast Int64 Bool { cast = fun x { x != 0l } }
+instance Cast Int64 UInt8 { cast = { __cast 0x91 } }
+instance Cast Int64 UInt16 { cast = { __cast 0x92 } }
 instance Cast Int64 UInt32 { cast = { __cast 0x93 } }
 instance Cast Int64 UInt64 { cast = { __cast 0x94 } }
+instance Cast Int64 UInt128 { cast = { __cast 0x95 } }
+instance Cast Int64 Int8 { cast = { __cast 0x96 } }
+instance Cast Int64 Int16 { cast = { __cast 0x97 } }
 instance Cast Int64 Int32 { cast = { __cast 0x98 } }
+instance Cast Int64 Int128 { cast = { __cast 0x9A } }
 instance Cast Int64 Float32 { cast = { __cast 0x9C } }
 instance Cast Int64 Float64 { cast = { __cast 0x9D } }
+instance Cast Int64 Float128 { cast = { __cast 0x9E } }
+
+instance Cast Int128 Bool { cast = fun x { x != 0q } }
+instance Cast Int128 UInt8 { cast = { __cast 0xA1 } }
+instance Cast Int128 UInt16 { cast = { __cast 0xA2 } }
+instance Cast Int128 UInt32 { cast = { __cast 0xA3 } }
+instance Cast Int128 UInt64 { cast = { __cast 0xA4 } }
+instance Cast Int128 UInt128 { cast = { __cast 0xA5 } }
+instance Cast Int128 Int8 { cast = { __cast 0xA6 } }
+instance Cast Int128 Int16 { cast = { __cast 0xA7 } }
+instance Cast Int128 Int32 { cast = { __cast 0xA8 } }
+instance Cast Int128 Int64 { cast = { __cast 0xA9 } }
+instance Cast Int128 Float32 { cast = { __cast 0xAC } }
+instance Cast Int128 Float64 { cast = { __cast 0xAD } }
+instance Cast Int128 Float128 { cast = { __cast 0xAE } }
 
 instance Cast Float32 UInt32 { cast = { __cast 0xC3 } }
 instance Cast Float32 UInt64 { cast = { __cast 0xC4 } }
 instance Cast Float32 Int32 { cast = { __cast 0xC8 } }
 instance Cast Float32 Int64 { cast = { __cast 0xC9 } }
 instance Cast Float32 Float64 { cast = { __cast 0xCD } }
+instance Cast Float32 Float128 { cast = { __cast 0xCE } }
 
 instance Cast Float64 UInt32 { cast = { __cast 0xD3 } }
 instance Cast Float64 UInt64 { cast = { __cast 0xD4 } }
 instance Cast Float64 Int32 { cast = { __cast 0xD8 } }
 instance Cast Float64 Int64 { cast = { __cast 0xD9 } }
 instance Cast Float64 Float32 { cast = { __cast 0xDC } }
+instance Cast Float64 Float128 { cast = { __cast 0xDE } }
+
+instance Cast Float128 UInt32 { cast = { __cast 0xE3 } }
+instance Cast Float128 UInt64 { cast = { __cast 0xE4 } }
+instance Cast Float128 Int32 { cast = { __cast 0xE8 } }
+instance Cast Float128 Int64 { cast = { __cast 0xE9 } }
+instance Cast Float128 Float32 { cast = { __cast 0xEC } }
+instance Cast Float128 Float64 { cast = { __cast 0xED } }
 
 instance Cast String [Char] { cast = cast_to_chars }
 instance Cast String [Byte] { cast = cast_to_bytes }
@@ -366,14 +620,54 @@ class Bounded T {
     max : Void -> T
 }
 
+instance Bounded UInt8 {
+    min = { 0u8 }
+    max = { 0xFFu8 }
+}
+
+instance Bounded Int8 {
+    min = { -0x80i8 }
+    max = { +0x7Fi8 }
+}
+
+instance Bounded UInt16 {
+    min = { 0u16 }
+    max = { 0xFFFFu16 }
+}
+
+instance Bounded Int16 {
+    min = { -0x8000i16 }
+    max = { +0x7FFFi16 }
+}
+
 instance Bounded UInt32 {
-    min = { 0u }
-    max = { 0xFFFFFFFFu }
+    min = { 0u32 }
+    max = { 0xFFFFFFFFu32 }
 }
 
 instance Bounded Int32 {
-    min = { -2147483648 }
-    max = { +2147483647 }
+    min = { -0x80000000i32 }
+    max = { +0x7FFFFFFFi32 }
+}
+
+instance Bounded UInt64 {
+    min = { 0u64 }
+    max = { 0xFFFFFFFFFFFFFFFFu64 }
+}
+
+instance Bounded Int64 {
+    min = { -0x8000000000000000i64 }
+    max = { +0x7FFFFFFFFFFFFFFFi64 }
+}
+
+instance Bounded UInt128 {
+    min = { 0u128 }
+    max = { ~0u128 }  // literals are only 64bit, so this must be an expression
+}
+
+instance Bounded Int128 {
+    min = { 1q << 127q }
+    max = { ~0q ^ (1q << 127q) }
 }
 
 
@@ -423,7 +717,7 @@ from_string = fun<T> x:String -> T { parse (x, ()) }
 // Type introspection
 
 class TypeInfo T {
-    size : T -> Int
+    size : T -> UInt
     name : T -> String
     underlying : T -> T
     subtypes : T -> [T]
@@ -438,7 +732,7 @@ instance TypeInfo TypeIndex {
 
 type_index = fun<T> Void -> TypeIndex { __type_index<T> }
 type_index_of = fun<T> a:T -> TypeIndex { __type_index<T> }
-type_size = fun<T> Void -> Int { __type_index<T>.__type_size }
+type_size = fun<T> Void -> UInt { __type_index<T>.__type_size }
 type_name = fun<T> Void -> String { __type_index<T>.__type_name }
 
 

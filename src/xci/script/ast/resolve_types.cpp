@@ -166,7 +166,7 @@ public:
                 // check type of args (they must be Int, TypeIndex or Byte)
                 auto check_type = [](const TypeInfo& ti) -> bool {
                     const Type t = ti.type();
-                    return t == Type::Unknown || t == Type::Byte || t == Type::Int32 || t == Type::TypeIndex;
+                    return t == Type::Unknown || t == Type::Byte || t == Type::Int || t == Type::TypeIndex;
                 };
                 // check args - their number and type depends on Opcode
                 auto opcode = (Opcode) sym.index();
@@ -175,16 +175,16 @@ public:
                         throw unexpected_argument_type(ti_void(), arg.type_info, v.source_loc);
                 } else if (opcode <= Opcode::L1Last) {
                     if (!check_type(arg.type_info))
-                        throw unexpected_argument_type(ti_int32(), arg.type_info, arg.source_loc);
+                        throw unexpected_argument_type(ti_int(), arg.type_info, arg.source_loc);
                 } else {
                     assert(opcode <= Opcode::L2Last);
                     if (!arg.type_info.is_tuple() || arg.type_info.subtypes().size() != 2)
-                        throw unexpected_argument_type(ti_tuple(ti_int32(), ti_int32()),
+                        throw unexpected_argument_type(ti_tuple(ti_int(), ti_int()),
                                                      arg.type_info, v.source_loc);
                     for (const auto& [i, ti] : arg.type_info.subtypes() | enumerate)
                         if (!check_type(ti))
-                            throw unexpected_argument_type(ti_int32(), ti,
-                                                         ti_tuple(ti_int32(), ti_int32()), arg.type_info,
+                            throw unexpected_argument_type(ti_int(), ti,
+                                                         ti_tuple(ti_int(), ti_int()), arg.type_info,
                                                          arg.source_loc);
                 }
                 // cleanup - args are now fully processed
@@ -296,9 +296,9 @@ public:
                     else
                         arg.type_info = ti_void();
                     // builtin __module
-                    if (!arg.type_info.is_void() && arg.type_info.type() != Type::Int32) {
-                        // the arg must be Int32 (index of imported module)
-                        throw unexpected_argument_type(ti_int32(), arg.type_info, arg.source_loc);
+                    if (!arg.type_info.is_void() && arg.type_info.type() != Type::Int) {
+                        // the arg must be Int (index of imported module)
+                        throw unexpected_argument_type(ti_int(), arg.type_info, arg.source_loc);
                     }
                     // cleanup - args are now fully processed
                     m_call_sig.clear();
@@ -354,22 +354,15 @@ public:
             }
             case Symbol::Value:
                 if (sym.index() == no_index) {
-                    assert(m_call_sig.size() == 1);
                     // Intrinsics
-                    // __value - expects a single Int32 parameter
+                    // __value - expects a literal parameter
                     CallArg arg;
-                    if (!m_call_sig.empty())
-                        arg = std::move(m_call_sig.back().arg);
-                    else
-                        arg.type_info = ti_void();
-                    if (arg.type_info.type() != Type::Int32) {
-                        // the arg must be Int32 (index of imported module)
-                        throw unexpected_argument_type(ti_int32(), arg.type_info, arg.source_loc);
-                    }
+                    if (m_call_sig.empty())
+                        throw intrinsics_function_error("__value requires an argument", arg.source_loc);
                     // cleanup - args are now fully processed
                     m_call_sig.clear();
-                    // __value returns index (Int32)
-                    m_value_type = ti_int32();
+                    // __value returns index (Int)
+                    m_value_type = ti_int();
                 } else {
                     m_value_type = v.ti;
                 }

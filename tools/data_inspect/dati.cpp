@@ -1,7 +1,7 @@
 // data_inspect.cpp created on 2020-08-15 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2022 Radek Brich
+// Copyright 2020–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// Data Inspector (dati) command line tool
@@ -15,6 +15,7 @@
 #include <xci/core/TermCtl.h>
 #include <xci/core/string.h>
 #include <xci/core/bit.h>
+#include <xci/compat/int128.h>
 
 #include <fstream>
 #include <vector>
@@ -31,11 +32,11 @@ static const char* type_to_cstr(uint8_t type)
         case BinaryBase::Null:      return "Null";
         case BinaryBase::BoolFalse: return "Bool";
         case BinaryBase::BoolTrue:  return "Bool";
-        case BinaryBase::Byte:      return "Byte";
-        case BinaryBase::UInt32:    return "UInt32";
-        case BinaryBase::UInt64:    return "UInt64";
-        case BinaryBase::Int32:     return "Int32";
-        case BinaryBase::Int64:     return "Int64";
+        case BinaryBase::Fixed8:    return "Fixed8";
+        case BinaryBase::Fixed16:   return "Fixed16";
+        case BinaryBase::Fixed32:   return "Fixed32";
+        case BinaryBase::Fixed64:   return "Fixed64";
+        case BinaryBase::Fixed128:  return "Fixed128";
         case BinaryBase::Float32:   return "Float32";
         case BinaryBase::Float64:   return "Float64";
         case BinaryBase::VarInt:    return "Varint";
@@ -61,11 +62,11 @@ static void print_data(TermCtl& term, uint8_t type, const std::byte* data, size_
         case BinaryBase::Null:      term.print("{fg:yellow}null{t:normal}"); return;
         case BinaryBase::BoolFalse: term.print("{fg:yellow}false{t:normal}"); return;
         case BinaryBase::BoolTrue:  term.print("{fg:yellow}true{t:normal}"); return;
-        case BinaryBase::Byte:      term.print("{fg:magenta}{}{t:normal}", int(*data)); return;
-        case BinaryBase::UInt32:    term.print("{fg:magenta}{}{t:normal}", bit_copy<uint32_t>(data)); return;
-        case BinaryBase::UInt64:    term.print("{fg:magenta}{}{t:normal}", bit_copy<uint64_t>(data)); return;
-        case BinaryBase::Int32:     term.print("{fg:magenta}{}{t:normal}", bit_copy<int32_t>(data)); return;
-        case BinaryBase::Int64:     term.print("{fg:magenta}{}{t:normal}", bit_copy<int64_t>(data)); return;
+        case BinaryBase::Fixed8:    term.print("{fg:magenta}{}{t:normal}", unsigned(*data)); return;
+        case BinaryBase::Fixed16:   term.print("{fg:magenta}{}{t:normal}", bit_copy<uint16_t>(data)); return;
+        case BinaryBase::Fixed32:   term.print("{fg:magenta}{}{t:normal}", bit_copy<uint32_t>(data)); return;
+        case BinaryBase::Fixed64:   term.print("{fg:magenta}{}{t:normal}", bit_copy<uint64_t>(data)); return;
+        case BinaryBase::Fixed128:  term.print("{fg:magenta}{}{t:normal}", uint128_to_string(bit_copy<uint128>(data))); return;
         case BinaryBase::Float32:   term.print("{fg:magenta}{}{t:normal}", bit_copy<float>(data)); return;
         case BinaryBase::Float64:   term.print("{fg:magenta}{}{t:normal}", bit_copy<double>(data)); return;
         case BinaryBase::VarInt:    term.print("{fg:yellow}varint{t:normal}"); return;
@@ -83,14 +84,13 @@ static void print_data(TermCtl& term, uint8_t type, const std::byte* data, size_
 }
 
 
-static std::optional<int> int_value(uint8_t type, const std::byte* data, size_t size)
+static std::optional<int64_t> int_value(uint8_t type, const std::byte* data, size_t size)
 {
     switch (type) {
-        case BinaryBase::Byte:      return int(*data);
-        case BinaryBase::UInt32:    return (int) bit_copy<uint32_t>(data);
-        case BinaryBase::UInt64:    return (int) bit_copy<uint64_t>(data);
-        case BinaryBase::Int32:     return (int) bit_copy<int32_t>(data);
-        case BinaryBase::Int64:     return (int) bit_copy<int64_t>(data);
+        case BinaryBase::Fixed8:    return int64_t(*data);
+        case BinaryBase::Fixed16:   return (int64_t) bit_copy<int16_t>(data);
+        case BinaryBase::Fixed32:   return (int64_t) bit_copy<int32_t>(data);
+        case BinaryBase::Fixed64:   return (int64_t) bit_copy<int64_t>(data);
         default:                    return {};
     }
 }
@@ -142,7 +142,7 @@ int main(int argc, const char* argv[])
 
             bool eof = false;
             std::vector<const Schema::Struct*> struct_stack {&schema.struct_main()};
-            std::map<std::string, int> last_int_values;  // for variant index
+            std::map<std::string, int64_t> last_int_values;  // for variant index
             while (!eof) {
                 auto it = reader.generic_next();
                 const Schema::Member* schema_member = struct_stack.back() ?
@@ -194,7 +194,7 @@ int main(int argc, const char* argv[])
                         }
                         print_data(term, it.type, it.data.get(), it.size);
                         if (it.what == What::MetadataItem) {
-                            if (it.key == 1 && it.type == BinaryBase::UInt32) {
+                            if (it.key == 1 && it.type == BinaryBase::Fixed32) {
                                 uint32_t stored_crc = 0;
                                 std::memcpy(&stored_crc, it.data.get(), it.size);
                                 if (reader.crc() == stored_crc)

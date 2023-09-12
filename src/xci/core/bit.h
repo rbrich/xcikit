@@ -1,7 +1,7 @@
 // bit.h created on 2018-11-11 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 //
 // ------------------------------------------------------------------
@@ -15,6 +15,7 @@
 #ifndef XCI_COMPAT_BIT_H
 #define XCI_COMPAT_BIT_H
 
+#include <xci/compat/int128.h>
 #include <type_traits>
 #include <iterator>
 #include <cstring>
@@ -36,7 +37,7 @@ namespace xci::core {
 template <class To, class From>
 typename std::enable_if<
         std::is_trivially_copyable<From>::value &&
-        std::is_trivial<To>::value &&
+        (std::is_trivial<To>::value || std::is_same_v<To, uint128>) &&
         !std::is_pointer<From>::value &&
         (sizeof(From) == 1 || sizeof(From) == sizeof(To)),
         To>::type

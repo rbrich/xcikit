@@ -136,7 +136,7 @@ inline RuntimeError value_out_of_range(std::string msg) {
     return RuntimeError(ErrorCode::ValueOutOfRange, std::move(msg));
 }
 
-inline RuntimeError index_out_of_bounds(int idx, size_t len) {
+inline RuntimeError index_out_of_bounds(int64_t idx, size_t len) {
     return RuntimeError(ErrorCode::IndexOutOfBounds,
                         fmt::format("list index out of bounds: {} not in [0..{}]", idx, len-1));
 }
@@ -287,9 +287,8 @@ ScriptError struct_key_type_mismatch(const TypeInfo& struct_type, const TypeInfo
                                      const TypeInfo& got, const SourceLocation& loc);
 
 
-inline ScriptError intrinsics_function_error(string_view message, const SourceLocation& loc) {
-    return ScriptError(ErrorCode::IntrinsicsFunctionError,
-                       fmt::format("intrinsics function: {}", message), loc);
+inline ScriptError intrinsics_function_error(std::string message, const SourceLocation& loc) {
+    return ScriptError(ErrorCode::IntrinsicsFunctionError, std::move(message), loc);
 }
 
 

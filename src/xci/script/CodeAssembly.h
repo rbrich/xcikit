@@ -33,6 +33,12 @@ public:
         uint8_t arg_B1() const { return static_cast<uint8_t>(args.first); }
 
         bool operator==(const Instruction& rhs) const { return opcode == rhs.opcode && args == rhs.args; }
+
+        template<class Archive>
+        void serialize(Archive& ar) {
+            ar("opcode", opcode);
+            ar("args", args);
+        }
     };
 
     /// Translate to binary representation and append to Code
@@ -72,6 +78,11 @@ public:
     void remove(size_t idx, size_t count) { m_instr.erase(m_instr.begin() + idx, m_instr.begin() + idx + count); }
 
     bool operator==(const CodeAssembly& rhs) const { return m_instr == rhs.m_instr; }
+
+    template<class Archive>
+    void serialize(Archive& ar) {
+        ar("instr", m_instr);
+    }
 
 private:
     struct Label {

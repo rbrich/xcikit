@@ -51,7 +51,7 @@ Index Module::import_module(const std::string& name)
         return no_index;
 
     m_modules.push_back(m_module_manager->import_module(name));
-    const Index index = m_modules.size() - 1;
+    const Index index = Index(m_modules.size() - 1);
     m_symtab.add({name, Symbol::Module, index});
     return index;
 }
@@ -60,7 +60,7 @@ Index Module::import_module(const std::string& name)
 Index Module::add_imported_module(std::shared_ptr<Module> mod)
 {
     m_modules.push_back(std::move(mod));
-    const Index index = m_modules.size() - 1;
+    const Index index = Index(m_modules.size() - 1);
     m_symtab.add({m_modules.back()->name(), Symbol::Module, index});
     return index;
 }

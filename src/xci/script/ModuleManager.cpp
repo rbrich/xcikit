@@ -35,7 +35,7 @@ ModulePtr ModuleManager::import_module(const std::string& name)
         auto& source_manager = m_interpreter.source_manager();
         auto file_id = source_manager.add_source(path, content->string());
         m_modules.emplace_back(m_interpreter.build_module(name, file_id));
-        it.first->second = m_modules.size() - 1;
+        it.first->second = Index(m_modules.size() - 1);
         return m_modules.back();
     }
     // already existed
@@ -55,7 +55,7 @@ Index ModuleManager::replace_module(const std::string& name, ModulePtr mod)  // 
     if (it.second) {
         // added
         m_modules.emplace_back(std::move(mod));
-        it.first->second = m_modules.size() - 1;
+        it.first->second = Index(m_modules.size() - 1);
         return it.first->second;
     }
     // already existed

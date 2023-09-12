@@ -126,8 +126,13 @@ public:
         bool operator==(const AssemblyBody& rhs) const { return code == rhs.code; }
 
         template<class Archive>
-        void serialize(Archive&) {
-            throw std::runtime_error("Function with CodeAssembly cannot be serialized");
+        void save(Archive& ar) const {
+            ar("code_asm", code);
+        }
+
+        template<class Archive>
+        void load(Archive& ar) {
+            throw std::runtime_error("CodeAssembly function cannot be deserialized");
         }
 
         CodeAssembly code;

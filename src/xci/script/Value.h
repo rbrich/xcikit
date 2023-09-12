@@ -12,6 +12,9 @@
 #include "Stream.h"
 #include "Code.h"
 
+#include <xci/compat/int128.h>
+#include <xci/compat/float128.h>
+
 #include <ostream>
 #include <utility>
 #include <vector>
@@ -37,31 +40,25 @@ class Module;
 
 namespace value {
 
-class Bool;
-class Byte;
-class Char;
-class Int32;
-class Int64;
-class Float32;
-class Float64;
-class Bytes;
-class String;
-class List;
 class Tuple;
-class Closure;
-class Module;
 
 class Visitor {
 public:
     virtual void visit(bool) = 0;
-    virtual void visit(std::byte) = 0;
     virtual void visit(char32_t) = 0;
+    virtual void visit(uint8_t) = 0;
+    virtual void visit(uint16_t) = 0;
     virtual void visit(uint32_t) = 0;
     virtual void visit(uint64_t) = 0;
+    virtual void visit(uint128) = 0;
+    virtual void visit(int8_t) = 0;
+    virtual void visit(int16_t) = 0;
     virtual void visit(int32_t) = 0;
     virtual void visit(int64_t) = 0;
+    virtual void visit(int128) = 0;
     virtual void visit(float) = 0;
     virtual void visit(double) = 0;
+    virtual void visit(float128) = 0;
     virtual void visit(std::string_view&&) = 0;
     virtual void visit(const ListV&) = 0;
     virtual void visit(const TupleV&) = 0;
@@ -73,14 +70,20 @@ public:
 
 class PartialVisitor : public Visitor {
     void visit(bool) override {}
-    void visit(std::byte) override {}
     void visit(char32_t) override {}
+    void visit(uint8_t) override {}
+    void visit(uint16_t) override {}
     void visit(uint32_t) override {}
     void visit(uint64_t) override {}
+    void visit(uint128) override {}
+    void visit(int8_t) override {}
+    void visit(int16_t) override {}
     void visit(int32_t) override {}
     void visit(int64_t) override {}
+    void visit(int128) override {}
     void visit(float) override {}
     void visit(double) override {}
+    void visit(float128) override {}
     void visit(std::string_view&&) override {}
     void visit(const ListV&) override {}
     void visit(const TupleV&) override {}
@@ -117,7 +120,7 @@ struct ListV {
     /// Slice the list. Indexes work similarly to Python.
     /// Automatically copies the list on heap when it has more than 1 reference.
     /// Works in-place otherwise.
-    void slice(int begin, int end, int step, const TypeInfo& elem_type);
+    void slice(int64_t begin, int64_t end, int64_t step, const TypeInfo& elem_type);
 
     /// Extend this list by concatenating another list (of same type).
     /// Automatically copies the list on heap when it has more than 1 reference.
@@ -182,13 +185,13 @@ struct ModuleV {
 
 struct TypeIndexV {
     TypeIndexV() = default;
-    explicit TypeIndexV(int32_t v) : type_index(v) {}
+    explicit TypeIndexV(Index v) : type_index(v) {}
 
     bool operator ==(const TypeIndexV& rhs) const { return value() == rhs.value(); }
-    operator int32_t() const { return type_index; }
-    int32_t value() const { return type_index; }
+    operator Index() const { return type_index; }
+    Index value() const { return type_index; }
 
-    int32_t type_index = -1;
+    Index type_index = no_index;
 };
 
 
@@ -203,15 +206,20 @@ public:
 
     Value() = default;  // Unknown (invalid value)
     explicit Value(bool v) : m_value(v) {}  // Bool
-    explicit Value(std::byte v) : m_value(v) {}  // Byte
-    explicit Value(uint8_t v) : m_value(std::byte(v)) {}  // Byte
     explicit Value(char32_t v) : m_value(v) {}  // Char
+    explicit Value(uint8_t v) : m_value(v) {}  // UInt8
+    explicit Value(uint16_t v) : m_value(v) {}  // UInt16
     explicit Value(uint32_t v) : m_value(v) {}  // UInt32
     explicit Value(uint64_t v) : m_value(v) {}  // UInt64
+    explicit Value(uint128 v) : m_value(v) {}  // UInt128
+    explicit Value(int8_t v) : m_value(v) {}  // Int8
+    explicit Value(int16_t v) : m_value(v) {}  // Int16
     explicit Value(int32_t v) : m_value(v) {}  // Int32
     explicit Value(int64_t v) : m_value(v) {}  // Int64
+    explicit Value(int128 v) : m_value(v) {}  // Int128
     explicit Value(float v) : m_value(v) {}  // Float32
     explicit Value(double v) : m_value(v) {}  // Float64
+    explicit Value(float128 v) : m_value(v) {}  // Float128
     explicit Value(StringTag) : m_value(StringV{}) {}  // String
     explicit Value(std::string_view v) : m_value(StringV{v}) {}  // String
     explicit Value(ListTag) : m_value(ListV{}) {}  // List
@@ -228,7 +236,7 @@ public:
     explicit Value(ModuleTag) : m_value(ModuleV{}) {}  // Module
     explicit Value(script::Module& v) : m_value(ModuleV{v}) {}  // Module
     explicit Value(TypeIndexTag) : m_value(TypeIndexV{}) {}  // TypeIndex
-    explicit Value(TypeIndexTag, int32_t v) : m_value(TypeIndexV{v}) {}  // TypeIndex
+    explicit Value(TypeIndexTag, Index v) : m_value(TypeIndexV{v}) {}  // TypeIndex
 
     bool operator ==(const Value& rhs) const;
 
@@ -273,10 +281,8 @@ public:
                 // Cannot use '&&', because VS 17 then tries to evaluate TBinFun for double, and fails
                 if constexpr (!bitwise) if constexpr (std::is_floating_point_v<TLhs>)
                     return Value(TBinFun{}(l, r));
-                if constexpr (std::is_integral_v<TLhs> && !std::is_same_v<TLhs, bool>)
+                if constexpr ((std::is_integral_v<TLhs> || std::is_same_v<TLhs, uint128> || std::is_same_v<TLhs, int128>) && !std::is_same_v<TLhs, bool>)
                     return Value(TBinFun{}(l, r));
-                if constexpr (std::is_same_v<TLhs, std::byte>)
-                    return Value(TBinFun{}(uint8_t(l), uint8_t(r)));
             }
 
             return {};
@@ -314,7 +320,10 @@ public:
 protected:
     using ValueVariant = std::variant<
             std::monostate,  // Unknown (invalid value)
-            bool, std::byte, char32_t, uint32_t, uint64_t, int32_t, int64_t, float, double,
+            bool, char32_t,
+            uint8_t, uint16_t, uint32_t, uint64_t, uint128,
+            int8_t, int16_t, int32_t, int64_t, int128,
+            float, double, float128,
             StringV, ListV, TupleV, ClosureV, StreamV, ModuleV, TypeIndexV
         >;
     ValueVariant m_value;
@@ -462,19 +471,6 @@ public:
 };
 
 
-class Byte: public Value {
-public:
-    Byte() : Value(std::byte(0)) {}
-    explicit Byte(std::byte v) : Value(v) {}
-    explicit Byte(uint8_t v) : Value(std::byte(v)) {}
-    explicit Byte(std::string_view str);
-    TypeInfo type_info() const { return TypeInfo{Type::Byte}; }
-    uint8_t value() const { return (uint8_t) std::get<std::byte>(m_value); }
-    void set_value(std::byte v) { m_value = v; }
-    void set_value(uint8_t v) { m_value = std::byte(v); }
-};
-
-
 class Char: public Value {
 public:
     Char() : Value(char32_t(0)) {}
@@ -483,6 +479,30 @@ public:
     TypeInfo type_info() const { return TypeInfo{Type::Char}; }
     char32_t value() const { return std::get<char32_t>(m_value); }
     void set_value(char32_t v) { m_value = v; }
+};
+
+
+
+class UInt8: public Value {
+public:
+    UInt8() : Value(uint8_t(0)) {}
+    explicit UInt8(std::byte v) : Value(uint8_t(v)) {}
+    explicit UInt8(uint8_t v) : Value(v) {}
+    explicit UInt8(std::string_view str);
+    TypeInfo type_info() const { return TypeInfo{Type::UInt8}; }
+    uint8_t value() const { return std::get<uint8_t>(m_value); }
+    void set_value(std::byte v) { m_value = uint8_t(v); }
+    void set_value(uint8_t v) { m_value = v; }
+};
+
+
+class UInt16: public Value {
+public:
+    UInt16() : Value(uint16_t(0)) {}
+    explicit UInt16(uint16_t v) : Value(v) {}
+    TypeInfo type_info() const { return ti_uint16(); }
+    uint16_t value() const { return std::get<uint16_t>(m_value); }
+    void set_value(uint16_t v) { m_value = v; }
 };
 
 
@@ -506,6 +526,36 @@ public:
 };
 
 
+class UInt128: public Value {
+public:
+    UInt128() : Value(uint128(0)) {}
+    explicit UInt128(uint128 v) : Value(v) {}
+    TypeInfo type_info() const { return ti_uint128(); }
+    uint128 value() const { return std::get<uint128>(m_value); }
+    void set_value(uint128 v) { m_value = v; }
+};
+
+
+class Int8: public Value {
+public:
+    Int8() : Value(int8_t(0)) {}
+    explicit Int8(int8_t v) : Value(v) {}
+    TypeInfo type_info() const { return ti_int8(); }
+    int8_t value() const { return std::get<int8_t>(m_value); }
+    void set_value(int8_t v) { m_value = v; }
+};
+
+
+class Int16: public Value {
+public:
+    Int16() : Value(int16_t(0)) {}
+    explicit Int16(int16_t v) : Value(v) {}
+    TypeInfo type_info() const { return ti_int16(); }
+    int16_t value() const { return std::get<int16_t>(m_value); }
+    void set_value(int16_t v) { m_value = v; }
+};
+
+
 class Int32: public Value {
 public:
     Int32() : Value(int32_t(0)) {}
@@ -523,6 +573,16 @@ public:
     TypeInfo type_info() const { return ti_int64(); }
     int64_t value() const { return std::get<int64_t>(m_value); }
     void set_value(int64_t v) { m_value = v; }
+};
+
+
+class Int128: public Value {
+public:
+    Int128() : Value(int128(0)) {}
+    explicit Int128(int128 v) : Value(v) {}
+    TypeInfo type_info() const { return ti_int128(); }
+    int128 value() const { return std::get<int128>(m_value); }
+    void set_value(int128 v) { m_value = v; }
 };
 
 
@@ -545,6 +605,19 @@ public:
     void set_value(double v) { m_value = v; }
 };
 
+class Float128: public Value {
+public:
+    Float128() : Value((float128)(0.0)) {}
+    explicit Float128(float128 v) : Value(v) {}
+    TypeInfo type_info() const { return TypeInfo{Type::Float128}; }
+    float128 value() const { return std::get<float128>(m_value); }
+    void set_value(float128 v) { m_value = v; }
+};
+
+
+using Int = Int64;
+using UInt = UInt64;
+using Float = Float64;
 
 // ------------- //
 // Complex types //
@@ -641,10 +714,10 @@ public:
 class TypeIndex: public Value {
 public:
     TypeIndex() : Value(Value::TypeIndexTag{}) {}
-    explicit TypeIndex(int32_t v) : Value(Value::TypeIndexTag{}, v) {}
+    explicit TypeIndex(Index v) : Value(Value::TypeIndexTag{}, v) {}
     TypeInfo type_info() const { return ti_type_index(); }
-    int32_t value() const { return std::get<TypeIndexV>(m_value).value(); }
-    void set_value(int32_t v) { m_value = TypeIndexV{v}; }
+    Index value() const { return std::get<TypeIndexV>(m_value).value(); }
+    void set_value(Index v) { m_value = TypeIndexV{v}; }
 };
 
 

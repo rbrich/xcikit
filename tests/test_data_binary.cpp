@@ -1,7 +1,7 @@
 // test_data_binary.cpp created on 2020-06-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <catch2/catch_test_macros.hpp>
@@ -60,10 +60,12 @@ TEST_CASE( "BinaryWriter", "[data]" )
         expected.append(1, '\x12');  // SIZE=18 (5+9+1+1+2)
 
         uint32_t x = 123;
-        expected.append(1, '\x40');  // TYPE=4, KEY=0
+        static_assert(BinaryBase::to_chunk_type<decltype(x)>() == 5<<4);
+        expected.append(1, '\x50');  // TYPE=5, KEY=0
         expected.append((char*)&x, 4);
 
         double f = 3.14;
+        static_assert(BinaryBase::to_chunk_type<decltype(f)>() == 9<<4);
         expected.append(1, '\x91');  // TYPE=9, KEY=1
         expected.append((char*)&f, 8);
 
@@ -95,7 +97,8 @@ TEST_CASE( "BinaryWriter", "[data]" )
         expected.append("\xE0\x06");  // TYPE=14, KEY=0; LEN=6
 
         // int32_t id
-        expected.append(1, '\x60');  // TYPE=6, KEY=0
+        static_assert(BinaryBase::to_chunk_type<decltype(rec.id)>() == 5<<4);
+        expected.append(1, '\x50');  // TYPE=5, KEY=0
         expected.append((char*)&rec.id, 4);
 
         // bool flag
@@ -121,12 +124,12 @@ TEST_CASE( "BinaryWriter", "[data]" )
         expected.append("\xE0\x10");  // TYPE=14, KEY=0; LEN=16 (2*8)
 
         // rec1
-        expected.append("\xE0\x06\x60");
+        expected.append("\xE0\x06\x50");
         expected.append((char*)&rec.rec1.id, 4);
         expected.append("\x11");
 
         // rec2
-        expected.append("\xE1\x06\x60");
+        expected.append("\xE1\x06\x50");
         expected.append((char*)&rec.rec2.id, 4);
         expected.append("\x21");  // NOLINT
 
@@ -139,7 +142,7 @@ TEST_CASE( "BinaryWriter", "[data]" )
         }
 
         Crc32 crc;
-        expected.append(1, '\x41');
+        expected.append(1, '\x51');
         crc.feed(expected.data(), expected.size());
         expected.append((char*)&crc, sizeof(crc));
 
@@ -181,10 +184,12 @@ TEST_CASE( "BinaryReader", "[data]" )
         input.append(1, '\x12');  // SIZE=18 (5+9+1+1+2)
 
         uint32_t in_x = 123;
-        input.append(1, '\x40');  // TYPE=4, KEY=0
+        static_assert(BinaryBase::to_chunk_type<decltype(in_x)>() == 5<<4);
+        input.append(1, '\x50');  // TYPE=5, KEY=0
         input.append((char*)&in_x, 4);
 
         double in_f = 3.14;
+        static_assert(BinaryBase::to_chunk_type<decltype(in_f)>() == 9<<4);
         input.append(1, '\x91');  // TYPE=9, KEY=1
         input.append((char*)&in_f, 8);
 
@@ -192,6 +197,7 @@ TEST_CASE( "BinaryReader", "[data]" )
         input.append(1, '\x03');  // TYPE=0 (null), KEY=3
 
         std::byte in_z {42};
+        static_assert(BinaryBase::to_chunk_type<decltype(in_z)>() == 3<<4);
         input.append(1, '\x34');  // TYPE=3, KEY=4
         input.append((char*)&in_z, 1);
         buf.str(input);
@@ -221,7 +227,8 @@ TEST_CASE( "BinaryReader", "[data]" )
         Record rec = {91, true};
 
         // feed input
-        input.append("\x08\xE0\x06\x60", 4);  // SIZE=8, group 0 start, LEN=6, chunk Int32/0
+        static_assert(BinaryBase::to_chunk_type<decltype(rec.id)>() == 5<<4);
+        input.append("\x08\xE0\x06\x50", 4);  // SIZE=8, group 0 start, LEN=6, chunk Fixed32/0
         input.append((char*)&rec.id, 4);
         input.append(1, '\x21');  // flag = true
         buf.str(input);
@@ -255,17 +262,17 @@ TEST_CASE( "BinaryReader", "[data]" )
         input.append("\xE0\x10");  // TYPE=14, KEY=0; LEN=16 (2*8)
 
         // rec1
-        input.append("\xE0\x06\x60", 3);
+        input.append("\xE0\x06\x50", 3);
         input.append((char*)&id1, 4);
         input.append("\x11");  // flag = false
 
         // rec2
-        input.append("\xE1\x06\x60", 3);
+        input.append("\xE1\x06\x50", 3);
         input.append((char*)&id2, 4);
         input.append("\x21");  // NOLINT; flag = true
 
         // Control: metadata, CRC32 head
-        input.append("\xF0\x41", 2);
+        input.append("\xF0\x51", 2);
 
         Crc32 crc;
         crc.feed(input.data(), input.size());

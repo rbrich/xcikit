@@ -11,3 +11,5 @@ if (NOT HAVE_GNU_STRERROR_R)
     int main() { char buf[100]; is_int(strerror_r(0, buf, 100)); }
     " HAVE_XSI_STRERROR_R)
 endif()
+
+check_cxx_source_compiles("using float128 = __float128; int main() {}" HAVE_GNU_EXT_FLOAT128)

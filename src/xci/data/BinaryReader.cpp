@@ -1,7 +1,7 @@
 // BinaryReader.cpp created on 2019-03-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019, 2020 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "BinaryReader.h"
@@ -50,7 +50,7 @@ void BinaryReaderImpl::read_footer()
         read_with_crc(b);
         const uint8_t chunk_key = b & KeyMask;
         const uint8_t chunk_type = b & TypeMask;
-        if (has_crc() && chunk_key == 1 && chunk_type == UInt32) {
+        if (has_crc() && chunk_key == 1 && chunk_type == Fixed32) {
             // stop feeding CRC
             m_flags = 0;
             // check CRC
@@ -103,7 +103,7 @@ auto BinaryReaderImpl::generic_next() -> GenericNext
         return {GenericNext::LeaveMetadata, chunk_type, chunk_key};
     }
 
-    if (group_buffer().metadata && has_crc() && chunk_key == 1 && chunk_type == UInt32) {
+    if (group_buffer().metadata && has_crc() && chunk_key == 1 && chunk_type == Fixed32) {
         // stop feeding CRC
         m_flags = 0;
     }

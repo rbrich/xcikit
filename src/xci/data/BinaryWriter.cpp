@@ -1,7 +1,7 @@
 // BinaryWriter.cpp created on 2019-03-13 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019, 2020 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "BinaryWriter.h"
@@ -62,7 +62,7 @@ void BinaryWriter::write_content()
     crc(meta_intro);
 
     // Write checksum
-    const uint8_t crc_intro = (Type::UInt32 | 1);
+    const uint8_t crc_intro = (Type::Fixed32 | 1);
     m_stream.put(crc_intro);
     crc(crc_intro);
     m_stream.write((const char*)crc.data(), crc.size());

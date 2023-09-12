@@ -146,8 +146,8 @@ public:
         WeakIndex weak_index() const { return {index(), tenant()}; }
 
     private:
-        explicit iterator(const std::vector<Chunk>& chunk) : m_chunk(&chunk) {}
-        explicit iterator(const std::vector<Chunk>& chunk, Index) : m_chunk(&chunk), m_chunk_idx(0), m_slot_idx(0) {
+        explicit iterator(std::vector<Chunk>& chunk) : m_chunk(&chunk) {}
+        explicit iterator(std::vector<Chunk>& chunk, Index) : m_chunk(&chunk), m_chunk_idx(0), m_slot_idx(0) {
             jump_to_next();
         }
 
@@ -438,6 +438,11 @@ auto IndexedMap<T>::acquire_slot(Index& index) -> Slot&
 template<class T>
 void IndexedMap<T>::iterator::jump_to_next()
 {
+    if (m_slot_idx == chunk_size) {
+        // end of chunk
+        m_slot_idx = 0;
+        ++m_chunk_idx;
+    }
     while (m_chunk_idx < m_chunk->size()) {
         const Chunk& chunk = (*m_chunk)[m_chunk_idx];
         while ((chunk.free_map & (uint64_t{1} << m_slot_idx)) == 0) {
@@ -467,6 +472,11 @@ void IndexedMap<T>::iterator::jump_to_next()
 template<class T>
 void IndexedMap<T>::const_iterator::jump_to_next()
 {
+    if (m_slot_idx == chunk_size) {
+        // end of chunk
+        m_slot_idx = 0;
+        ++m_chunk_idx;
+    }
     while (m_chunk_idx < m_chunk->size()) {
         const Chunk& chunk = (*m_chunk)[m_chunk_idx];
         while ((chunk.free_map & (uint64_t{1} << m_slot_idx)) == 0) {
