@@ -49,6 +49,26 @@ enum class Opcode: uint8_t {
     BitwiseXor_64,
     BitwiseXor_128,
 
+    // Bitwise shift
+    // Second argument (number of bits) is always UInt8.
+    // ShiftLeft is same for signed/unsigned types.
+    // ShiftRightSE does sign extension for signed types.
+    ShiftLeft_8,  // SHL
+    ShiftLeft_16,
+    ShiftLeft_32,
+    ShiftLeft_64,
+    ShiftLeft_128,
+    ShiftRight_8,  // SHR
+    ShiftRight_16,
+    ShiftRight_32,
+    ShiftRight_64,
+    ShiftRight_128,
+    ShiftRightSE_8,  // SAR (shift-right with sign extension)
+    ShiftRightSE_16,
+    ShiftRightSE_32,
+    ShiftRightSE_64,
+    ShiftRightSE_128,
+
     // Control flow
     Execute,                // pull closure from stack, unwrap it, call the contained function
 
@@ -62,9 +82,9 @@ enum class Opcode: uint8_t {
     // Casting rules are based on the C++ implementation (static_cast).
     //
     // Type numbers:
-    // * unsigned integers: 1 = 8bit, (2 = 16bit), 3 = 32bit, 4 = 64bit, (5 = 128bit)
-    // * signed integers: (6 = 8bit, 7 = 16bit), 8 = 32bit, 9 = 64bit, (A = 128bit)
-    // * floats: (B = 16bit), C = 32bit, D = 64bit, (E = 128bit)
+    // * unsigned integers: 1 = 8bit, 2 = 16bit, 3 = 32bit, 4 = 64bit, 5 = 128bit
+    // * signed integers: 6 = 8bit, 7 = 16bit, 8 = 32bit, 9 = 64bit, A = 128bit
+    // * floats: (B = 16bit), C = 32bit, D = 64bit, E = 128bit
     Cast,
 
     // Comparison instructions
@@ -94,15 +114,6 @@ enum class Opcode: uint8_t {
     Div,
     Mod,
     Exp,
-
-    // Bitwise shift
-    // Operand: 4/4 bit split, high half = left-hand type, low half = right-hand type
-    // Only pairs of same types are defined, operations on distinct types are reserved.
-    // Defined only for integer types. ShiftLeft is same for signed/unsigned types.
-    // ShiftRight does sign extension for signed types.
-    // Type numbers are the same as for cast instruction above.
-    ShiftLeft,
-    ShiftRight,
 
     Jump,                   // operand = relative jump (+N instructions) - unconditional
     JumpIfNot,              // pull a bool from stack, operand = relative jump (+N instructions) if cond is false

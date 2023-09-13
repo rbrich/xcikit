@@ -103,6 +103,21 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__bitwise_xor_32", Symbol::Instruction, Index(Opcode::BitwiseXor_32)});
     symtab().add({"__bitwise_xor_64", Symbol::Instruction, Index(Opcode::BitwiseXor_64)});
     symtab().add({"__bitwise_xor_128", Symbol::Instruction, Index(Opcode::BitwiseXor_128)});
+    symtab().add({"__shift_left_8", Symbol::Instruction, Index(Opcode::ShiftLeft_8)});
+    symtab().add({"__shift_left_16", Symbol::Instruction, Index(Opcode::ShiftLeft_16)});
+    symtab().add({"__shift_left_32", Symbol::Instruction, Index(Opcode::ShiftLeft_32)});
+    symtab().add({"__shift_left_64", Symbol::Instruction, Index(Opcode::ShiftLeft_64)});
+    symtab().add({"__shift_left_128", Symbol::Instruction, Index(Opcode::ShiftLeft_128)});
+    symtab().add({"__shift_right_8", Symbol::Instruction, Index(Opcode::ShiftRight_8)});
+    symtab().add({"__shift_right_16", Symbol::Instruction, Index(Opcode::ShiftRight_16)});
+    symtab().add({"__shift_right_32", Symbol::Instruction, Index(Opcode::ShiftRight_32)});
+    symtab().add({"__shift_right_64", Symbol::Instruction, Index(Opcode::ShiftRight_64)});
+    symtab().add({"__shift_right_128", Symbol::Instruction, Index(Opcode::ShiftRight_128)});
+    symtab().add({"__shift_right_se_8", Symbol::Instruction, Index(Opcode::ShiftRightSE_8)});
+    symtab().add({"__shift_right_se_16", Symbol::Instruction, Index(Opcode::ShiftRightSE_16)});
+    symtab().add({"__shift_right_se_32", Symbol::Instruction, Index(Opcode::ShiftRightSE_32)});
+    symtab().add({"__shift_right_se_64", Symbol::Instruction, Index(Opcode::ShiftRightSE_64)});
+    symtab().add({"__shift_right_se_128", Symbol::Instruction, Index(Opcode::ShiftRightSE_128)});
 
     // one arg
     symtab().add({"__equal", Symbol::Instruction, Index(Opcode::Equal)});
@@ -111,8 +126,6 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__greater_equal", Symbol::Instruction, Index(Opcode::GreaterEqual)});
     symtab().add({"__less_than", Symbol::Instruction, Index(Opcode::LessThan)});
     symtab().add({"__greater_than", Symbol::Instruction, Index(Opcode::GreaterThan)});
-    symtab().add({"__shift_left", Symbol::Instruction, Index(Opcode::ShiftLeft)});
-    symtab().add({"__shift_right", Symbol::Instruction, Index(Opcode::ShiftRight)});
     symtab().add({"__neg", Symbol::Instruction, Index(Opcode::Neg)});
     symtab().add({"__add", Symbol::Instruction, Index(Opcode::Add)});
     symtab().add({"__sub", Symbol::Instruction, Index(Opcode::Sub)});

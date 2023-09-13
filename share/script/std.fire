@@ -22,8 +22,8 @@ class BitwiseNot T  { bit_not : T -> T }
 class BitwiseOr  T  { bit_or  : (T, T) -> T }
 class BitwiseAnd T  { bit_and : (T, T) -> T }
 class BitwiseXor T  { bit_xor : (T, T) -> T }
-class ShiftLeft  T  { shift_left  : (T, T) -> T }
-class ShiftRight T  { shift_right : (T, T) -> T }
+class ShiftLeft  T C  { shift_left  : (T, C) -> T }
+class ShiftRight T C  { shift_right : (T, C) -> T }
 
 instance BitwiseNot UInt8 { bit_not = { __bitwise_not_8  } }
 instance BitwiseNot UInt16 { bit_not = { __bitwise_not_16  } }
@@ -65,26 +65,26 @@ instance BitwiseXor Int16 { bit_xor = { __bitwise_xor_16 } }
 instance BitwiseXor Int32 { bit_xor = { __bitwise_xor_32 } }
 instance BitwiseXor Int64 { bit_xor = { __bitwise_xor_64 } }
 instance BitwiseXor Int128 { bit_xor = { __bitwise_xor_128 } }
-instance ShiftLeft  UInt8 { shift_left = { __shift_left 0x11 } }
-instance ShiftLeft  UInt16 { shift_left = { __shift_left 0x22 } }
-instance ShiftLeft  UInt32 { shift_left = { __shift_left 0x33 } }
-instance ShiftLeft  UInt64 { shift_left = { __shift_left 0x44 } }
-instance ShiftLeft  UInt128 { shift_left = { __shift_left 0x55 } }
-instance ShiftLeft  Int8 { shift_left = { __shift_left 0x66 } }
-instance ShiftLeft  Int16 { shift_left = { __shift_left 0x77 } }
-instance ShiftLeft  Int32 { shift_left = { __shift_left 0x88 } }
-instance ShiftLeft  Int64 { shift_left = { __shift_left 0x99 } }
-instance ShiftLeft  Int128 { shift_left = { __shift_left 0xAA } }
-instance ShiftRight UInt8 { shift_right = { __shift_right 0x11 } }
-instance ShiftRight UInt16 { shift_right = { __shift_right 0x22 } }
-instance ShiftRight UInt32 { shift_right = { __shift_right 0x33 } }
-instance ShiftRight UInt64 { shift_right = { __shift_right 0x44 } }
-instance ShiftRight UInt128 { shift_right = { __shift_right 0x55 } }
-instance ShiftRight Int8 { shift_right = { __shift_right 0x66 } }
-instance ShiftRight Int16 { shift_right = { __shift_right 0x77 } }
-instance ShiftRight Int32 { shift_right = { __shift_right 0x88 } }
-instance ShiftRight Int64 { shift_right = { __shift_right 0x99 } }
-instance ShiftRight Int128 { shift_right = { __shift_right 0xAA } }
+instance ShiftLeft  UInt8 UInt8 { shift_left = { __shift_left_8 } }
+instance ShiftLeft  UInt16 UInt8 { shift_left = { __shift_left_16 } }
+instance ShiftLeft  UInt32 UInt8 { shift_left = { __shift_left_32 } }
+instance ShiftLeft  UInt64 UInt8 { shift_left = { __shift_left_64 } }
+instance ShiftLeft  UInt128 UInt8 { shift_left = { __shift_left_128 } }
+instance ShiftLeft  Int8 UInt8 { shift_left = { __shift_left_8 } }
+instance ShiftLeft  Int16 UInt8 { shift_left = { __shift_left_16 } }
+instance ShiftLeft  Int32 UInt8 { shift_left = { __shift_left_32 } }
+instance ShiftLeft  Int64 UInt8 { shift_left = { __shift_left_64 } }
+instance ShiftLeft  Int128 UInt8 { shift_left = { __shift_left_128 } }
+instance ShiftRight UInt8 UInt8 { shift_right = { __shift_right_8 } }
+instance ShiftRight UInt16 UInt8 { shift_right = { __shift_right_16 } }
+instance ShiftRight UInt32 UInt8 { shift_right = { __shift_right_32 } }
+instance ShiftRight UInt64 UInt8 { shift_right = { __shift_right_64 } }
+instance ShiftRight UInt128 UInt8 { shift_right = { __shift_right_128 } }
+instance ShiftRight Int8 UInt8 { shift_right = { __shift_right_se_8 } }
+instance ShiftRight Int16 UInt8 { shift_right = { __shift_right_se_16 } }
+instance ShiftRight Int32 UInt8 { shift_right = { __shift_right_se_32 } }
+instance ShiftRight Int64 UInt8 { shift_right = { __shift_right_se_64 } }
+instance ShiftRight Int128 UInt8 { shift_right = { __shift_right_se_128 } }
 
 
 // Arithmetic operators
@@ -666,8 +666,8 @@ instance Bounded UInt128 {
 }
 
 instance Bounded Int128 {
-    min = { 1q << 127q }
-    max = { ~0q ^ (1q << 127q) }
+    min = { 1q << 127b }
+    max = { ~0q ^ (1q << 127b) }
 }
 
 

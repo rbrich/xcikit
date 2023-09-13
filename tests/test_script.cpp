@@ -599,14 +599,28 @@ TEST_CASE( "Expressions", "[script][interpreter]" )
     CHECK(interpret_std("1+1, {2+2}") == "(2, 4)");
     CHECK(interpret_std("f=fun a:Int {a+1}; [1, f 2]") == "[1, 3]");
 
-    CHECK(interpret_std("16 >> 2") == "4");
-    CHECK(interpret_std("-16 >> 2") == "-4");
-    CHECK(interpret_std("16 << 3") == "128");
-    CHECK(interpret_std("-16 << 3") == "-128");
-    CHECK(interpret_std("32u >> 3u") == "4u");
-    CHECK(interpret_std("4u << 3u") == "32u");
-    CHECK(interpret_std("-1ud >> 20ud") == "4095ud");  // -1ud = 2**32-1
-    CHECK(interpret_std("-1ud << 31ud") == "2147483648ud");
+    CHECK(interpret_std("16 >> 2b") == "4");
+    CHECK(interpret_std("-16 >> 2b") == "-4");
+    CHECK(interpret_std("16 << 3b") == "128");
+    CHECK(interpret_std("-16 << 3b") == "-128");
+    CHECK(interpret_std("-16 >> 3b") == "-2");
+    CHECK(interpret_std("32u >> 3b") == "4u");
+    CHECK(interpret_std("4u << 3b") == "32u");
+    CHECK(interpret_std("-1ud >> 20b") == "4095ud");  // -1ud = 2**32-1
+    CHECK(interpret_std("-1ud << 31b") == "2147483648ud");
+    // UB in C++, but well-defined here - shifting by too many bits always gives 0 / -1
+    // (-1 only for shift right of negative signed int)
+    CHECK(interpret_std("-1ud << 32b") == "0ud");
+    CHECK(interpret_std("-1ud >> 32b") == "0ud");
+    CHECK(interpret_std("-1d << 127b") == "0d");
+    CHECK(interpret_std("-1d >> 127b") == "-1d");
+    CHECK(interpret_std("-2147483648d >> 30b") == "-2d");
+    CHECK(interpret_std("-2147483648d >> 31b") == "-1d");
+    CHECK(interpret_std("-2147483648d >> 32b") == "-1d");
+    CHECK(interpret_std("-1d >> 1b") == "-1d");
+    CHECK(interpret_std("-1d << 31b") == "-2147483648d");
+    CHECK(interpret_std("-1d << 32b") == "0d");
+    CHECK(interpret_std("-2147483648d << 1b") == "0d");
 
     CHECK(interpret_std("sign -32") == "-1");
     CHECK(interpret_std("32 .sign") == "1");

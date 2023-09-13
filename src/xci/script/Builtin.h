@@ -12,28 +12,37 @@
 #include "ast/AST.h"
 #include "Code.h"
 #include <cmath>
+#include <limits>
 
 namespace xci::script {
 
 
 namespace builtin {
 
-// shift_left operator is missing in <functional>
+// Safe shift_left operator - shifting by too many bits gives 0
 struct shift_left {
-    template<class T, class U>
-    constexpr auto operator()( T&& lhs, U&& rhs ) const
-    noexcept(noexcept(std::forward<T>(lhs) + std::forward<U>(rhs)))
-    -> decltype(std::forward<T>(lhs) + std::forward<U>(rhs))
-    { return std::forward<T>(lhs) << std::forward<U>(rhs); }
+    template<class T>
+    constexpr T operator()( T&& lhs, uint8_t rhs ) const noexcept {
+        if (rhs >= std::numeric_limits<xci::make_unsigned_t<T>>::digits)
+             return T(0);
+        return std::forward<T>(lhs) << rhs;
+    }
 };
 
-// shift_right operator is missing in <functional>
+// Safe shift_right operator - shifting by too many bits gives 0 for unsigned
+// or signed positive, -1 for signed negative (infinite sign extension).
 struct shift_right {
-    template<class T, class U>
-    constexpr auto operator()( T&& lhs, U&& rhs ) const
-    noexcept(noexcept(std::forward<T>(lhs) + std::forward<U>(rhs)))
-    -> decltype(std::forward<T>(lhs) + std::forward<U>(rhs))
-    { return std::forward<T>(lhs) >> std::forward<U>(rhs); }
+    template<class T>
+    constexpr T operator()( T&& lhs, uint8_t rhs ) const noexcept {
+        if (rhs >= std::numeric_limits<xci::make_unsigned_t<T>>::digits) {
+             if constexpr (std::is_signed_v<T>) {
+                return lhs < 0 ? T(-1) : T(0);
+             } else {
+                return T(0);
+             }
+        }
+        return std::forward<T>(lhs) >> rhs;
+    }
 };
 
 // exp operator is missing in <functional>
