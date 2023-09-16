@@ -269,7 +269,6 @@ public:
     bool cast_from(const Value& src);
 
     bool negate();  // unary minus op
-    bool modulus(const Value& rhs);
 
     template <class TBinFun, bool bitwise=false>
     Value binary_op(const Value& rhs) {

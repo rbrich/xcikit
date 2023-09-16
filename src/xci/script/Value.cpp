@@ -341,29 +341,6 @@ bool Value::negate()
 }
 
 
-bool Value::modulus(const Value& rhs)
-{
-    return std::visit([](auto& l, const auto& r) -> bool {
-        using TLhs = std::decay_t<decltype(l)>;
-        using TRhs = std::decay_t<decltype(r)>;
-
-        if constexpr (std::is_same_v<TLhs, TRhs> && std::is_integral_v<TLhs>
-                && !std::is_same_v<TLhs, bool>)
-        {
-            l = std::modulus<>{}(l, r);
-            return true;
-        }
-
-        if constexpr (std::is_same_v<TLhs, TRhs> && std::is_same_v<TLhs, byte>) {
-            l = (byte) std::modulus<>{}(uint8_t(l), uint8_t(r));
-            return true;
-        }
-
-        return false;
-    }, m_value, rhs.m_value);
-}
-
-
 int64_t Value::to_int64() const
 {
     value::Int64 to_val;

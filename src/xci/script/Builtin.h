@@ -9,6 +9,7 @@
 
 #include "Value.h"
 #include "Module.h"
+#include "Error.h"
 #include "ast/AST.h"
 #include "Code.h"
 #include <cmath>
@@ -19,34 +20,121 @@ namespace xci::script {
 
 namespace builtin {
 
+
 // Safe shift_left operator - shifting by too many bits gives 0
-struct shift_left {
-    template<class T>
-    constexpr T operator()( T&& lhs, uint8_t rhs ) const noexcept {
-        if (rhs >= std::numeric_limits<xci::make_unsigned_t<T>>::digits)
-             return T(0);
-        return std::forward<T>(lhs) << rhs;
-    }
-};
+template<class T>
+constexpr T shift_left( T&& lhs, uint8_t rhs ) noexcept {
+    if (rhs >= std::numeric_limits<xci::make_unsigned_t<T>>::digits)
+        return T(0);
+    return std::forward<T>(lhs) << rhs;
+}
 
 // Safe shift_right operator - shifting by too many bits gives 0 for unsigned
 // or signed positive, -1 for signed negative (infinite sign extension).
-struct shift_right {
-    template<class T>
-    constexpr T operator()( T&& lhs, uint8_t rhs ) const noexcept {
-        if (rhs >= std::numeric_limits<xci::make_unsigned_t<T>>::digits) {
-             if constexpr (std::is_signed_v<T>) {
-                return lhs < 0 ? T(-1) : T(0);
-             } else {
-                return T(0);
-             }
+template<class T>
+constexpr T shift_right( T&& lhs, uint8_t rhs ) noexcept {
+    if (rhs >= std::numeric_limits<xci::make_unsigned_t<T>>::digits) {
+        if constexpr (std::is_signed_v<T>) {
+            return lhs < 0 ? T(-1) : T(0);
+        } else {
+            return T(0);
         }
-        return std::forward<T>(lhs) >> rhs;
+    }
+    return std::forward<T>(lhs) >> rhs;
+}
+
+// Similar to std::plus, but with a single type (especially the return type is not promoted)
+struct Add {
+    template<class T>
+    constexpr T operator()(const T& lhs, const T& rhs ) const { return lhs + rhs; }
+};
+
+struct Sub {
+    template<class T>
+    constexpr T operator()(const T& lhs, const T& rhs ) const { return lhs - rhs; }
+};
+
+struct Mul {
+    template<class T>
+    constexpr T operator()(const T& lhs, const T& rhs ) const { return lhs * rhs; }
+};
+
+struct Div {
+    template<class T>
+    constexpr T operator()(const T& lhs, const T& rhs ) const { return lhs / rhs; }
+};
+
+struct Mod {
+    template<class T>
+    constexpr T operator()(const T& lhs, const T& rhs ) const {
+        if constexpr (std::is_integral_v<T> || std::is_same_v<T, uint128> || std::is_same_v<T, int128>) {
+            return lhs % rhs;
+        } else
+            return fmod(lhs, rhs);
+    }
+};
+
+// Safe add with overflow check
+struct AddCk {
+    template<class T>
+    constexpr T operator()(const T& lhs, const T& rhs ) const {
+#if defined(__GNUC__)
+        if constexpr (std::is_integral_v<T>) {
+            T r;
+            if (__builtin_add_overflow(lhs, rhs, &r))
+                throw value_out_of_range("Integer overflow");
+            return r;
+        } else
+#endif
+             return lhs + rhs;
+    }
+};
+
+struct SubCk {
+    template<class T>
+    constexpr T operator()(const T& lhs, const T& rhs ) const {
+#if defined(__GNUC__)
+        if constexpr (std::is_integral_v<T>) {
+             T r;
+             if (__builtin_sub_overflow(lhs, rhs, &r))
+                throw value_out_of_range("Integer overflow");
+             return r;
+        } else
+#endif
+             return lhs - rhs;
+    }
+};
+
+struct MulCk {
+    template<class T>
+    constexpr T operator()(const T& lhs, const T& rhs ) const {
+#if defined(__GNUC__)
+        // Note: fails to link with int128 on Linux with Clang (undefined reference to `__muloti4')
+        if constexpr (std::is_integral_v<T> && sizeof(T) <= 8) {
+             T r;
+             if (__builtin_mul_overflow(lhs, rhs, &r))
+                throw value_out_of_range("Integer overflow");
+             return r;
+        } else
+#endif
+             return lhs * rhs;
+    }
+};
+
+struct DivCk {
+    template<class T>
+    constexpr T operator()(const T& lhs, const T& rhs ) const {
+        if constexpr (std::is_integral_v<T>) {
+             if (rhs == 0)
+                throw value_out_of_range("Division by zero");
+             return lhs / rhs;
+        } else
+             return lhs / rhs;
     }
 };
 
 // exp operator is missing in <functional>
-struct exp {
+struct Exp {
     template<class T, class U>
     constexpr auto operator()( T&& lhs, U&& rhs ) const
     noexcept(noexcept(std::forward<T>(lhs) + std::forward<U>(rhs)))
@@ -78,6 +166,12 @@ private:
     void add_string_functions();
     void add_io_functions();
     void add_introspections();
+
+    Index add_named_type(const char* name, TypeInfo&& ti) {
+        const auto index = add_type(TypeInfo{name, std::move(ti)});
+        symtab().add({name, Symbol::TypeName, index});
+        return index;
+    }
 };
 
 } // namespace xci::script

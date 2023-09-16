@@ -69,6 +69,10 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::Div:               return os << "DIV";
         case Opcode::Mod:               return os << "MOD";
         case Opcode::Exp:               return os << "EXP";
+        case Opcode::AddCk:             return os << "ADD_CK";
+        case Opcode::SubCk:             return os << "SUB_CK";
+        case Opcode::MulCk:             return os << "MUL_CK";
+        case Opcode::DivCk:             return os << "DIV_CK";
         case Opcode::ListSubscript:     return os << "LIST_SUBSCRIPT";
         case Opcode::ListLength:        return os << "LIST_LENGTH";
         case Opcode::ListSlice:         return os << "LIST_SLICE";

@@ -133,6 +133,10 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__div", Symbol::Instruction, Index(Opcode::Div)});
     symtab().add({"__mod", Symbol::Instruction, Index(Opcode::Mod)});
     symtab().add({"__exp", Symbol::Instruction, Index(Opcode::Exp)});
+    symtab().add({"__add_ck", Symbol::Instruction, Index(Opcode::AddCk)});
+    symtab().add({"__sub_ck", Symbol::Instruction, Index(Opcode::SubCk)});
+    symtab().add({"__mul_ck", Symbol::Instruction, Index(Opcode::MulCk)});
+    symtab().add({"__div_ck", Symbol::Instruction, Index(Opcode::DivCk)});
     symtab().add({"__load_static", Symbol::Instruction, Index(Opcode::LoadStatic)});
     symtab().add({"__list_subscript", Symbol::Instruction, Index(Opcode::ListSubscript)});
     symtab().add({"__list_length", Symbol::Instruction, Index(Opcode::ListLength)});
@@ -199,19 +203,31 @@ void BuiltinModule::add_types()
     symtab().add({"Module", Symbol::TypeName, add_type(ti_module())});
     symtab().add({"TypeIndex", Symbol::TypeName, add_type(ti_type_index())});
 
-    // Type aliases for interfacing with C
-    // Prove me wrong, but today `int` is basically always 32bit
+    // -------------------------------------------------------------------------
+    // Types for interfacing with C
+
+    // These types also carry the C-like unsafe behavior, e.g. unchecked integer overflow.
+    [[maybe_unused]] Index cuint8 = add_named_type("CUInt8", ti_uint8());
+    [[maybe_unused]] Index cuint16 = add_named_type("CUInt16", ti_uint16());
+    [[maybe_unused]] Index cuint32 = add_named_type("CUInt32", ti_uint32());
+    [[maybe_unused]] Index cuint64 = add_named_type("CUInt64", ti_uint64());
+    [[maybe_unused]] Index cint8 = add_named_type("CInt8", ti_int8());
+    [[maybe_unused]] Index cint16 = add_named_type("CInt16", ti_int16());
+    [[maybe_unused]] Index cint32 = add_named_type("CInt32", ti_int32());
+    [[maybe_unused]] Index cint64 = add_named_type("CInt64", ti_int64());
+
+    // Variably-sized type aliases
     static_assert(sizeof(int) == 4);
-    symtab().add({"CInt", Symbol::TypeName, add_type(ti_int32())});
-    symtab().add({"CUInt", Symbol::TypeName, add_type(ti_uint32())});
+    symtab().add({"CInt", Symbol::TypeName, cint32});
+    symtab().add({"CUInt", Symbol::TypeName, cuint32});
 #if UINTPTR_MAX == UINT64_MAX
     static_assert(sizeof(size_t) == 8);
-    symtab().add({"COffset", Symbol::TypeName, add_type(ti_int64())});
-    symtab().add({"CSize", Symbol::TypeName, add_type(ti_uint64())});
+    symtab().add({"COffset", Symbol::TypeName, cint64});
+    symtab().add({"CSize", Symbol::TypeName, cuint64});
 #else
     static_assert(sizeof(size_t) == 4);
-    symtab().add({"COffset", Symbol::TypeName, add_type(ti_int32())});
-    symtab().add({"CSize", Symbol::TypeName, add_type(ti_uint32())});
+    symtab().add({"COffset", Symbol::TypeName, cint32});
+    symtab().add({"CSize", Symbol::TypeName, cuint32});
 #endif
 }
 

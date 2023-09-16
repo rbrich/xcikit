@@ -27,7 +27,7 @@ using std::string_view;
 enum ErrorCode {
     // RuntimeError
     NotImplemented,
-    ValueOutOfRange,
+    ValueOutOfRange,  // could be split off: IntegerOverflow, DivisionByZero
     IndexOutOfBounds,
     ModuleNotFound,
     BadInstruction,
