@@ -64,9 +64,14 @@ option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
 option(XCI_DEBUG_TRACE "Enable trace log messages." OFF)
 option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 
+include(XciBuildOptions)
+
+# Run configuration checks
+include(XciBuildChecks)
+
 # Minimal requirement is (at least partial) C++20.
 set(XCI_CXX_STANDARD 20)
-if (NOT WIN32)
+if (HAVE_LIBSTDCXX)
     set(CMAKE_CXX_EXTENSIONS ON)  # for __int128
 endif()
 
@@ -77,8 +82,6 @@ if (CMAKE_CROSSCOMPILING)
     list(APPEND CMAKE_FIND_ROOT_PATH "/")
 endif()
 set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
-
-include(XciBuildOptions)
 
 
 # ------------ #
@@ -129,9 +132,6 @@ find_package(Doxygen)
 if (XCI_WITH_TERMINFO)
     find_package(Terminfo)
 endif ()
-
-# Run configuration checks
-include(XciBuildChecks)
 
 
 # ------------ #

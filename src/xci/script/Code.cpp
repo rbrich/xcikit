@@ -47,8 +47,21 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::BitwiseXor_32:
         case Opcode::BitwiseXor_64:
         case Opcode::BitwiseXor_128:     return os << "BITWISE_XOR";
-        case Opcode::ShiftLeft:         return os << "SHIFT_LEFT";
-        case Opcode::ShiftRight:        return os << "SHIFT_RIGHT";
+        case Opcode::ShiftLeft_8:
+        case Opcode::ShiftLeft_16:
+        case Opcode::ShiftLeft_32:
+        case Opcode::ShiftLeft_64:
+        case Opcode::ShiftLeft_128:     return os << "SHIFT_LEFT";
+        case Opcode::ShiftRight_8:
+        case Opcode::ShiftRight_16:
+        case Opcode::ShiftRight_32:
+        case Opcode::ShiftRight_64:
+        case Opcode::ShiftRight_128:    return os << "SHIFT_RIGHT";
+        case Opcode::ShiftRightSE_8:
+        case Opcode::ShiftRightSE_16:
+        case Opcode::ShiftRightSE_32:
+        case Opcode::ShiftRightSE_64:
+        case Opcode::ShiftRightSE_128:  return os << "SHIFT_RIGHT_SE";
         case Opcode::Neg:               return os << "NEG";
         case Opcode::Add:               return os << "ADD";
         case Opcode::Sub:               return os << "SUB";
@@ -56,6 +69,11 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::Div:               return os << "DIV";
         case Opcode::Mod:               return os << "MOD";
         case Opcode::Exp:               return os << "EXP";
+        case Opcode::UnsafeAdd:         return os << "UNSAFE_ADD";
+        case Opcode::UnsafeSub:         return os << "UNSAFE_SUB";
+        case Opcode::UnsafeMul:         return os << "UNSAFE_MUL";
+        case Opcode::UnsafeDiv:         return os << "UNSAFE_DIV";
+        case Opcode::UnsafeMod:         return os << "UNSAFE_MOD";
         case Opcode::ListSubscript:     return os << "LIST_SUBSCRIPT";
         case Opcode::ListLength:        return os << "LIST_LENGTH";
         case Opcode::ListSlice:         return os << "LIST_SLICE";

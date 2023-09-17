@@ -341,29 +341,6 @@ bool Value::negate()
 }
 
 
-bool Value::modulus(const Value& rhs)
-{
-    return std::visit([](auto& l, const auto& r) -> bool {
-        using TLhs = std::decay_t<decltype(l)>;
-        using TRhs = std::decay_t<decltype(r)>;
-
-        if constexpr (std::is_same_v<TLhs, TRhs> && std::is_integral_v<TLhs>
-                && !std::is_same_v<TLhs, bool>)
-        {
-            l = std::modulus<>{}(l, r);
-            return true;
-        }
-
-        if constexpr (std::is_same_v<TLhs, TRhs> && std::is_same_v<TLhs, byte>) {
-            l = (byte) std::modulus<>{}(uint8_t(l), uint8_t(r));
-            return true;
-        }
-
-        return false;
-    }, m_value, rhs.m_value);
-}
-
-
 int64_t Value::to_int64() const
 {
     value::Int64 to_val;
@@ -824,7 +801,7 @@ static std::ostream& dump_float(std::ostream& os, /*std::floating_point*/ auto v
     std::ostringstream sbuf;
     sbuf << std::setprecision(std::numeric_limits<decltype(value)>::digits10) << value;
     auto str = sbuf.str();
-    if (str.find('.') == std::string::npos && str.find('e') == std::string::npos)
+    if (str.find_first_of(".en") == std::string::npos)  // 'n' is for "inf" and "nan"
         return os << str << ".0";
     else
         return os << str;

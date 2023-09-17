@@ -58,6 +58,65 @@ private:
 
 namespace native {
 
+template<typename T>
+concept ToVoid = std::is_void_v<T>;
+
+template<typename T>
+concept ToBool = std::is_same_v<T, bool>;
+
+template<typename T>
+concept ToChar = std::is_same_v<T, char> || std::is_same_v<T, char16_t> || std::is_same_v<T, char32_t>;
+
+template<typename T>
+concept ToUInt8 = std::is_same_v<T, byte> ||
+                  (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 1 &&
+                   !std::is_same_v<T, char> && !std::is_same_v<T, bool>);
+
+template<typename T>
+concept ToUInt16 = std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 2 &&
+                   !std::is_same_v<T, char16_t>;
+
+template<typename T>
+concept ToUInt32 = std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 4 &&
+                   !std::is_same_v<T, char32_t>;
+
+template<typename T>
+concept ToUInt64 = std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 8;
+
+template<typename T>
+concept ToUInt128 = std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 16;
+
+template<typename T>
+concept ToInt8 = std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 1 &&
+                 !std::is_same_v<T, char>;
+
+template<typename T>
+concept ToInt16 = std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 2;
+
+template<typename T>
+concept ToInt32 = std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 4;
+
+template<typename T>
+concept ToInt64 = std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 8;
+
+template<typename T>
+concept ToInt128 = std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 16;
+
+template<typename T>
+concept ToFloat32 = std::is_floating_point_v<T> && sizeof(T) == 4;
+
+template<typename T>
+concept ToFloat64 = std::is_floating_point_v<T> && sizeof(T) == 8;
+
+template<typename T>
+concept ToFloat128 = std::is_floating_point_v<T> && sizeof(T) == 16;
+
+template<typename T>
+concept ToString = std::is_constructible_v<value::String, T>;
+
+template<typename T>
+concept ToModule = std::is_same_v<T, Module&>;
+
 
 /// Convert native type to `script::TypeInfo`:
 ///
@@ -65,77 +124,59 @@ namespace native {
 ///     auto params = make_type_info_list<int, string>();
 ///
 
-template<class T>
-typename std::enable_if_t<std::is_void_v<T>, TypeInfo>
-make_type_info() { return TypeInfo{Type::Tuple}; }
+template<ToVoid T>
+TypeInfo make_type_info() { return TypeInfo{Type::Tuple}; }
 
-template<class T>
-typename std::enable_if_t<std::is_same_v<T, bool>, TypeInfo>
-make_type_info() { return TypeInfo{Type::Bool}; }
+template<ToBool T>
+TypeInfo make_type_info() { return TypeInfo{Type::Bool}; }
 
-template<class T>
-typename std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, char16_t> || std::is_same_v<T, char32_t>, TypeInfo>
-make_type_info() { return TypeInfo{Type::Char}; }
+template<ToChar T>
+TypeInfo make_type_info() { return TypeInfo{Type::Char}; }
 
-template<class T>
-typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 1 && !std::is_same_v<T, char> && !std::is_same_v<T, bool>, TypeInfo>
-make_type_info() { return TypeInfo{Type::UInt8}; }
+template<ToUInt8 T>
+TypeInfo make_type_info() { return TypeInfo{Type::UInt8}; }
 
-template<class T>
-typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 2 && !std::is_same_v<T, char16_t>, TypeInfo>
-make_type_info() { return TypeInfo{Type::UInt16}; }
+template<ToUInt16 T>
+TypeInfo make_type_info() { return TypeInfo{Type::UInt16}; }
 
-template<class T>
-typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 4 && !std::is_same_v<T, char32_t>, TypeInfo>
-make_type_info() { return TypeInfo{Type::UInt32}; }
+template<ToUInt32 T>
+TypeInfo make_type_info() { return TypeInfo{Type::UInt32}; }
 
-template<class T>
-typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 8, TypeInfo>
-make_type_info() { return TypeInfo{Type::UInt64}; }
+template<ToUInt64 T>
+TypeInfo make_type_info() { return TypeInfo{Type::UInt64}; }
 
-template<class T>
-typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 16, TypeInfo>
-make_type_info() { return TypeInfo{Type::UInt128}; }
+template<ToUInt128 T>
+TypeInfo make_type_info() { return TypeInfo{Type::UInt128}; }
 
-template<class T>
-typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 1 && !std::is_same_v<T, char>, TypeInfo>
-make_type_info() { return TypeInfo{Type::Int8}; }
+template<ToInt8 T>
+TypeInfo make_type_info() { return TypeInfo{Type::Int8}; }
 
-template<class T>
-typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 2, TypeInfo>
-make_type_info() { return TypeInfo{Type::Int16}; }
+template<ToInt16 T>
+TypeInfo make_type_info() { return TypeInfo{Type::Int16}; }
 
-template<class T>
-typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 4, TypeInfo>
-make_type_info() { return TypeInfo{Type::Int32}; }
+template<ToInt32 T>
+TypeInfo make_type_info() { return TypeInfo{Type::Int32}; }
 
-template<class T>
-typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 8, TypeInfo>
-make_type_info() { return TypeInfo{Type::Int64}; }
+template<ToInt64 T>
+TypeInfo make_type_info() { return TypeInfo{Type::Int64}; }
 
-template<class T>
-typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 16, TypeInfo>
-make_type_info() { return TypeInfo{Type::Int128}; }
+template<ToInt128 T>
+TypeInfo make_type_info() { return TypeInfo{Type::Int128}; }
 
-template<class T>
-typename std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) == 4, TypeInfo>
-make_type_info() { return TypeInfo{Type::Float32}; }
+template<ToFloat32 T>
+TypeInfo make_type_info() { return TypeInfo{Type::Float32}; }
 
-template<class T>
-typename std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) == 8, TypeInfo>
-make_type_info() { return TypeInfo{Type::Float64}; }
+template<ToFloat64 T>
+TypeInfo make_type_info() { return TypeInfo{Type::Float64}; }
 
-template<class T>
-typename std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) == 16, TypeInfo>
-make_type_info() { return TypeInfo{Type::Float128}; }
+template<ToFloat128 T>
+TypeInfo make_type_info() { return TypeInfo{Type::Float128}; }
 
-template<class T>
-typename std::enable_if_t<std::is_constructible_v<value::String, T>, TypeInfo>
-make_type_info() { return TypeInfo{Type::String}; }
+template<ToString T>
+TypeInfo make_type_info() { return TypeInfo{Type::String}; }
 
-template<class T>
-typename std::enable_if_t<std::is_same_v<T, Module&>, TypeInfo>
-make_type_info() { return TypeInfo{Type::Module}; }
+template<ToModule T>
+TypeInfo make_type_info() { return TypeInfo{Type::Module}; }
 
 
 /// Convert native type to `script::Value` subtype:
@@ -143,103 +184,96 @@ make_type_info() { return TypeInfo{Type::Module}; }
 ///     using T = ValueType<std::string>;
 ///
 
-template<class T, class U = void>
+template<class T>
 struct ValueType_s;
 
-template<>
-struct ValueType_s<void> {
+template<ToVoid T>
+struct ValueType_s<T> {
     using type = value::Tuple;
 };
 
-template<>
-struct ValueType_s<bool> {
+template<ToBool T>
+struct ValueType_s<T> {
     using type = value::Bool;
 };
 
-template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, char16_t> || std::is_same_v<T, char32_t>>> {
+template<ToChar T>
+struct ValueType_s<T> {
     using type = value::Char;
 };
 
-template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_same_v<T, byte> ||
-                                                (std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 1 &&
-                                                 !std::is_same_v<T, unsigned char> && !std::is_same_v<T, char> && !std::is_same_v<T, bool>)>> {
+template<ToUInt8 T>
+struct ValueType_s<T> {
     using type = value::UInt8;
 };
 
-template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 2 && !std::is_same_v<T, char16_t>>> {
+template<ToUInt16 T>
+struct ValueType_s<T> {
     using type = value::UInt16;
 };
 
-template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 4 && !std::is_same_v<T, char32_t>>> {
+template<ToUInt32 T>
+struct ValueType_s<T> {
     using type = value::UInt32;
 };
 
-template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 8>> {
+template<ToUInt64 T>
+struct ValueType_s<T> {
     using type = value::UInt64;
 };
 
-template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_unsigned_v<T> && sizeof(T) == 16>> {
+template<ToUInt128 T>
+struct ValueType_s<T> {
     using type = value::UInt128;
 };
 
-template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 1 && !std::is_same_v<T, signed char> && !std::is_same_v<T, char>>> {
+template<ToInt8 T>
+struct ValueType_s<T> {
     using type = value::Int8;
 };
 
-template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 2>> {
+template<ToInt16 T>
+struct ValueType_s<T> {
     using type = value::Int16;
 };
 
-template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 4>> {
+template<ToInt32 T>
+struct ValueType_s<T> {
     using type = value::Int32;
 };
 
-template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 8>> {
+template<ToInt64 T>
+struct ValueType_s<T> {
     using type = value::Int64;
 };
 
-template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 16>> {
+template<ToInt128 T>
+struct ValueType_s<T> {
     using type = value::Int128;
 };
 
-template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) == 4>> {
+template<ToFloat32 T>
+struct ValueType_s<T> {
     using type = value::Float32;
 };
 
-template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) == 8>> {
+template<ToFloat64 T>
+struct ValueType_s<T> {
     using type = value::Float64;
 };
 
-template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) == 16>> {
+template<ToFloat128 T>
+struct ValueType_s<T> {
     using type = value::Float128;
 };
 
-template<>
-struct ValueType_s<std::string_view> {
+template<ToString T>
+struct ValueType_s<T> {
     using type = value::String;
 };
 
-template<>
-struct ValueType_s<std::string> {
-    using type = value::String;
-};
-
-template<>
-struct ValueType_s<xci::script::Module&> {
+template<ToModule T>
+struct ValueType_s<T> {
     using type = value::Module;
 };
 

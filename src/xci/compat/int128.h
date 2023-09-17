@@ -13,6 +13,15 @@
 #include <string>
 #include <sstream>
 #include <iomanip>
+#include <type_traits>
+
+namespace xci {
+template<class T>
+struct make_unsigned {
+    using type = std::make_unsigned_t<T>;
+};
+template <class T> using make_unsigned_t = typename make_unsigned<T>::type;
+} // namespace xci
 
 #if defined(__GNUC__)
 
@@ -24,6 +33,17 @@ using int128 = __int128_t;
 #include <__msvc_int128.hpp>
 using uint128 = std::_Unsigned128;
 using int128 = std::_Signed128;
+
+namespace xci {
+template<> class make_unsigned<int128> {
+public:
+    using type = uint128;
+};
+template<> class make_unsigned<uint128> {
+public:
+    using type = uint128;
+};
+} // namespace xci
 
 #else
 

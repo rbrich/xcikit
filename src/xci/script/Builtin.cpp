@@ -103,6 +103,21 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__bitwise_xor_32", Symbol::Instruction, Index(Opcode::BitwiseXor_32)});
     symtab().add({"__bitwise_xor_64", Symbol::Instruction, Index(Opcode::BitwiseXor_64)});
     symtab().add({"__bitwise_xor_128", Symbol::Instruction, Index(Opcode::BitwiseXor_128)});
+    symtab().add({"__shift_left_8", Symbol::Instruction, Index(Opcode::ShiftLeft_8)});
+    symtab().add({"__shift_left_16", Symbol::Instruction, Index(Opcode::ShiftLeft_16)});
+    symtab().add({"__shift_left_32", Symbol::Instruction, Index(Opcode::ShiftLeft_32)});
+    symtab().add({"__shift_left_64", Symbol::Instruction, Index(Opcode::ShiftLeft_64)});
+    symtab().add({"__shift_left_128", Symbol::Instruction, Index(Opcode::ShiftLeft_128)});
+    symtab().add({"__shift_right_8", Symbol::Instruction, Index(Opcode::ShiftRight_8)});
+    symtab().add({"__shift_right_16", Symbol::Instruction, Index(Opcode::ShiftRight_16)});
+    symtab().add({"__shift_right_32", Symbol::Instruction, Index(Opcode::ShiftRight_32)});
+    symtab().add({"__shift_right_64", Symbol::Instruction, Index(Opcode::ShiftRight_64)});
+    symtab().add({"__shift_right_128", Symbol::Instruction, Index(Opcode::ShiftRight_128)});
+    symtab().add({"__shift_right_se_8", Symbol::Instruction, Index(Opcode::ShiftRightSE_8)});
+    symtab().add({"__shift_right_se_16", Symbol::Instruction, Index(Opcode::ShiftRightSE_16)});
+    symtab().add({"__shift_right_se_32", Symbol::Instruction, Index(Opcode::ShiftRightSE_32)});
+    symtab().add({"__shift_right_se_64", Symbol::Instruction, Index(Opcode::ShiftRightSE_64)});
+    symtab().add({"__shift_right_se_128", Symbol::Instruction, Index(Opcode::ShiftRightSE_128)});
 
     // one arg
     symtab().add({"__equal", Symbol::Instruction, Index(Opcode::Equal)});
@@ -111,8 +126,6 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__greater_equal", Symbol::Instruction, Index(Opcode::GreaterEqual)});
     symtab().add({"__less_than", Symbol::Instruction, Index(Opcode::LessThan)});
     symtab().add({"__greater_than", Symbol::Instruction, Index(Opcode::GreaterThan)});
-    symtab().add({"__shift_left", Symbol::Instruction, Index(Opcode::ShiftLeft)});
-    symtab().add({"__shift_right", Symbol::Instruction, Index(Opcode::ShiftRight)});
     symtab().add({"__neg", Symbol::Instruction, Index(Opcode::Neg)});
     symtab().add({"__add", Symbol::Instruction, Index(Opcode::Add)});
     symtab().add({"__sub", Symbol::Instruction, Index(Opcode::Sub)});
@@ -120,6 +133,11 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__div", Symbol::Instruction, Index(Opcode::Div)});
     symtab().add({"__mod", Symbol::Instruction, Index(Opcode::Mod)});
     symtab().add({"__exp", Symbol::Instruction, Index(Opcode::Exp)});
+    symtab().add({"__unsafe_add", Symbol::Instruction, Index(Opcode::UnsafeAdd)});
+    symtab().add({"__unsafe_sub", Symbol::Instruction, Index(Opcode::UnsafeSub)});
+    symtab().add({"__unsafe_mul", Symbol::Instruction, Index(Opcode::UnsafeMul)});
+    symtab().add({"__unsafe_div", Symbol::Instruction, Index(Opcode::UnsafeDiv)});
+    symtab().add({"__unsafe_mod", Symbol::Instruction, Index(Opcode::UnsafeMod)});
     symtab().add({"__load_static", Symbol::Instruction, Index(Opcode::LoadStatic)});
     symtab().add({"__list_subscript", Symbol::Instruction, Index(Opcode::ListSubscript)});
     symtab().add({"__list_length", Symbol::Instruction, Index(Opcode::ListLength)});
@@ -186,19 +204,31 @@ void BuiltinModule::add_types()
     symtab().add({"Module", Symbol::TypeName, add_type(ti_module())});
     symtab().add({"TypeIndex", Symbol::TypeName, add_type(ti_type_index())});
 
-    // Type aliases for interfacing with C
-    // Prove me wrong, but today `int` is basically always 32bit
+    // -------------------------------------------------------------------------
+    // Types for interfacing with C
+
+    // These types also carry the C-like unsafe behavior, e.g. unchecked integer overflow.
+    [[maybe_unused]] Index cuint8 = add_named_type("CUInt8", ti_uint8());
+    [[maybe_unused]] Index cuint16 = add_named_type("CUInt16", ti_uint16());
+    [[maybe_unused]] Index cuint32 = add_named_type("CUInt32", ti_uint32());
+    [[maybe_unused]] Index cuint64 = add_named_type("CUInt64", ti_uint64());
+    [[maybe_unused]] Index cint8 = add_named_type("CInt8", ti_int8());
+    [[maybe_unused]] Index cint16 = add_named_type("CInt16", ti_int16());
+    [[maybe_unused]] Index cint32 = add_named_type("CInt32", ti_int32());
+    [[maybe_unused]] Index cint64 = add_named_type("CInt64", ti_int64());
+
+    // Variably-sized type aliases
     static_assert(sizeof(int) == 4);
-    symtab().add({"CInt", Symbol::TypeName, add_type(ti_int32())});
-    symtab().add({"CUInt", Symbol::TypeName, add_type(ti_uint32())});
+    symtab().add({"CInt", Symbol::TypeName, cint32});
+    symtab().add({"CUInt", Symbol::TypeName, cuint32});
 #if UINTPTR_MAX == UINT64_MAX
     static_assert(sizeof(size_t) == 8);
-    symtab().add({"COffset", Symbol::TypeName, add_type(ti_int64())});
-    symtab().add({"CSize", Symbol::TypeName, add_type(ti_uint64())});
+    symtab().add({"COffset", Symbol::TypeName, cint64});
+    symtab().add({"CSize", Symbol::TypeName, cuint64});
 #else
     static_assert(sizeof(size_t) == 4);
-    symtab().add({"COffset", Symbol::TypeName, add_type(ti_int32())});
-    symtab().add({"CSize", Symbol::TypeName, add_type(ti_uint32())});
+    symtab().add({"COffset", Symbol::TypeName, cint32});
+    symtab().add({"CSize", Symbol::TypeName, cuint32});
 #endif
 }
 

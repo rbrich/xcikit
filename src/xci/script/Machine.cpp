@@ -243,21 +243,94 @@ void Machine::run(const InvokeCallback& cb)
                 break;
             }
 
-            case Opcode::ShiftLeft:
-            case Opcode::ShiftRight: {
-                const auto arg = *it++;
-                const auto lhs_type = decode_arg_type(arg >> 4);
-                const auto rhs_type = decode_arg_type(arg & 0xf);
-                if (lhs_type == Type::Unknown || rhs_type == Type::Unknown || lhs_type != rhs_type)
-                    throw not_implemented(format("opcode: {} lhs type: {:x} rhs type: {:x}",
-                            opcode, arg >> 4, arg & 0xf));
-                auto lhs = m_stack.pull(TypeInfo{lhs_type});
-                auto rhs = m_stack.pull(TypeInfo{rhs_type});
-                switch (opcode) {
-                    case Opcode::ShiftLeft: m_stack.push(lhs.binary_op<builtin::shift_left, true>(rhs)); break;
-                    case Opcode::ShiftRight: m_stack.push(lhs.binary_op<builtin::shift_right, true>(rhs)); break;
-                    default: XCI_UNREACHABLE;
-                }
+            case Opcode::ShiftLeft_8: {
+                auto lhs = m_stack.pull<value::UInt8>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(Value(builtin::shift_left(lhs.value(), rhs.value())));
+                break;
+            }
+            case Opcode::ShiftRight_8: {
+                auto lhs = m_stack.pull<value::UInt8>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
+                break;
+            }
+            case Opcode::ShiftRightSE_8: {
+                auto lhs = m_stack.pull<value::Int8>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
+                break;
+            }
+            case Opcode::ShiftLeft_16: {
+                auto lhs = m_stack.pull<value::UInt16>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(Value(builtin::shift_left(lhs.value(), rhs.value())));
+                break;
+            }
+            case Opcode::ShiftRight_16: {
+                auto lhs = m_stack.pull<value::UInt16>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
+                break;
+            }
+            case Opcode::ShiftRightSE_16: {
+                auto lhs = m_stack.pull<value::Int16>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
+                break;
+            }
+            case Opcode::ShiftLeft_32: {
+                auto lhs = m_stack.pull<value::UInt32>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(Value(builtin::shift_left(lhs.value(), rhs.value())));
+                break;
+            }
+            case Opcode::ShiftRight_32: {
+                auto lhs = m_stack.pull<value::UInt32>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
+                break;
+            }
+            case Opcode::ShiftRightSE_32: {
+                auto lhs = m_stack.pull<value::Int32>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
+                break;
+            }
+            case Opcode::ShiftLeft_64: {
+                auto lhs = m_stack.pull<value::UInt64>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(Value(builtin::shift_left(lhs.value(), rhs.value())));
+                break;
+            }
+            case Opcode::ShiftRight_64: {
+                auto lhs = m_stack.pull<value::UInt64>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
+                break;
+            }
+            case Opcode::ShiftRightSE_64: {
+                auto lhs = m_stack.pull<value::Int64>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
+                break;
+            }
+            case Opcode::ShiftLeft_128: {
+                auto lhs = m_stack.pull<value::UInt128>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(Value(builtin::shift_left(lhs.value(), rhs.value())));
+                break;
+            }
+            case Opcode::ShiftRight_128: {
+                auto lhs = m_stack.pull<value::UInt128>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
+                break;
+            }
+            case Opcode::ShiftRightSE_128: {
+                auto lhs = m_stack.pull<value::Int128>();
+                auto rhs = m_stack.pull<value::UInt8>();
+                m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
                 break;
             }
 
@@ -265,7 +338,13 @@ void Machine::run(const InvokeCallback& cb)
             case Opcode::Sub:
             case Opcode::Mul:
             case Opcode::Div:
-            case Opcode::Exp: {
+            case Opcode::Mod:
+            case Opcode::Exp:
+            case Opcode::UnsafeAdd:
+            case Opcode::UnsafeSub:
+            case Opcode::UnsafeMul:
+            case Opcode::UnsafeDiv:
+            case Opcode::UnsafeMod: {
                 const auto arg = *it++;
                 const auto lhs_type = decode_arg_type(arg >> 4);
                 const auto rhs_type = decode_arg_type(arg & 0xf);
@@ -275,29 +354,19 @@ void Machine::run(const InvokeCallback& cb)
                 auto lhs = m_stack.pull(TypeInfo{lhs_type});
                 auto rhs = m_stack.pull(TypeInfo{rhs_type});
                 switch (opcode) {
-                    case Opcode::Add: m_stack.push(lhs.binary_op<std::plus<>>(rhs)); break;
-                    case Opcode::Sub: m_stack.push(lhs.binary_op<std::minus<>>(rhs)); break;
-                    case Opcode::Mul: m_stack.push(lhs.binary_op<std::multiplies<>>(rhs)); break;
-                    case Opcode::Div: m_stack.push(lhs.binary_op<std::divides<>>(rhs)); break;
-                    case Opcode::Exp: m_stack.push(lhs.binary_op<builtin::exp>(rhs)); break;
+                    case Opcode::Add: m_stack.push(lhs.binary_op<builtin::Add>(rhs)); break;
+                    case Opcode::Sub: m_stack.push(lhs.binary_op<builtin::Sub>(rhs)); break;
+                    case Opcode::Mul: m_stack.push(lhs.binary_op<builtin::Mul>(rhs)); break;
+                    case Opcode::Div: m_stack.push(lhs.binary_op<builtin::Div>(rhs)); break;
+                    case Opcode::Mod: m_stack.push(lhs.binary_op<builtin::Mod>(rhs)); break;
+                    case Opcode::Exp: m_stack.push(lhs.binary_op<builtin::Exp>(rhs)); break;
+                    case Opcode::UnsafeAdd: m_stack.push(lhs.binary_op<builtin::UnsafeAdd>(rhs)); break;
+                    case Opcode::UnsafeSub: m_stack.push(lhs.binary_op<builtin::UnsafeSub>(rhs)); break;
+                    case Opcode::UnsafeMul: m_stack.push(lhs.binary_op<builtin::UnsafeMul>(rhs)); break;
+                    case Opcode::UnsafeDiv: m_stack.push(lhs.binary_op<builtin::UnsafeDiv>(rhs)); break;
+                    case Opcode::UnsafeMod: m_stack.push(lhs.binary_op<builtin::UnsafeMod>(rhs)); break;
                     default: XCI_UNREACHABLE;
                 }
-                break;
-            }
-
-            case Opcode::Mod: {
-                const auto arg = *it++;
-                const auto lhs_type = decode_arg_type(arg >> 4);
-                const auto rhs_type = decode_arg_type(arg & 0xf);
-                if (lhs_type == Type::Unknown || rhs_type == Type::Unknown || lhs_type != rhs_type)
-                    throw not_implemented(format("modulus lhs: {:x} rhs: {:x}",
-                            arg >> 4, arg & 0xf));
-                auto lhs = m_stack.pull(TypeInfo{lhs_type});
-                auto rhs = m_stack.pull(TypeInfo{rhs_type});
-                if (!lhs.modulus(rhs))
-                    throw not_implemented(format("modulus lhs: {:x} rhs: {:x}",
-                            arg >> 4, arg & 0xf));
-                m_stack.push(lhs);
                 break;
             }
 
