@@ -13,3 +13,10 @@ if (NOT HAVE_GNU_STRERROR_R)
 endif()
 
 check_cxx_source_compiles("using float128 = __float128; int main() {}" HAVE_GNU_EXT_FLOAT128)
+
+check_cxx_source_compiles("
+#include <string>
+#ifdef __GLIBCXX__
+int main() {}
+#endif
+" HAVE_LIBSTDCXX)
