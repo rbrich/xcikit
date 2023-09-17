@@ -21,6 +21,22 @@ namespace xci::script {
 using xci::data::leb128_decode;
 using fmt::format;
 
+#ifdef XCI_SCRIPT_COMPUTED_GOTO
+    #define OP_LOOP         op_loop:
+    #define OP_SWITCH(op)   goto *g_op_labels[(size_t)op];
+    #define OP_CASE(op)     op_ ## op
+    #define OP_DEFAULT      op_default
+    #define OP_BREAK        goto op_loop;
+    #define OP_RETURN       op_return:
+#else
+    #define OP_LOOP         for (;;)
+    #define OP_SWITCH(op)   switch (op)
+    #define OP_CASE(op)     case Opcode::op
+    #define OP_DEFAULT      default
+    #define OP_BREAK        break;
+    #define OP_RETURN
+#endif
+
 
 void Machine::call(const Function& function, const Machine::InvokeCallback& cb)
 {
@@ -38,6 +54,110 @@ void Machine::call(const Function& function, const Machine::InvokeCallback& cb)
 
 void Machine::run(const InvokeCallback& cb)
 {
+#ifdef XCI_SCRIPT_COMPUTED_GOTO
+    static void* g_op_labels[] = {
+        [(size_t) Opcode::Noop] = &&op_Noop,
+        [(size_t) Opcode::LogicalNot] = &&op_LogicalNot,
+        [(size_t) Opcode::LogicalOr] = &&op_LogicalOr,
+        [(size_t) Opcode::LogicalAnd] = &&op_LogicalAnd,
+
+        [(size_t) Opcode::BitwiseNot_8] = &&op_BitwiseNot_8,
+        [(size_t) Opcode::BitwiseNot_16] = &&op_BitwiseNot_16,
+        [(size_t) Opcode::BitwiseNot_32] = &&op_BitwiseNot_32,
+        [(size_t) Opcode::BitwiseNot_64] = &&op_BitwiseNot_64,
+        [(size_t) Opcode::BitwiseNot_128] = &&op_BitwiseNot_128,
+        [(size_t) Opcode::BitwiseOr_8] = &&op_BitwiseOr_8,
+        [(size_t) Opcode::BitwiseOr_16] = &&op_BitwiseOr_16,
+        [(size_t) Opcode::BitwiseOr_32] = &&op_BitwiseOr_32,
+        [(size_t) Opcode::BitwiseOr_64] = &&op_BitwiseOr_64,
+        [(size_t) Opcode::BitwiseOr_128] = &&op_BitwiseOr_128,
+        [(size_t) Opcode::BitwiseAnd_8] = &&op_BitwiseAnd_8,
+        [(size_t) Opcode::BitwiseAnd_16] = &&op_BitwiseAnd_16,
+        [(size_t) Opcode::BitwiseAnd_32] = &&op_BitwiseAnd_32,
+        [(size_t) Opcode::BitwiseAnd_64] = &&op_BitwiseAnd_64,
+        [(size_t) Opcode::BitwiseAnd_128] = &&op_BitwiseAnd_128,
+        [(size_t) Opcode::BitwiseXor_8] = &&op_BitwiseXor_8,
+        [(size_t) Opcode::BitwiseXor_16] = &&op_BitwiseXor_16,
+        [(size_t) Opcode::BitwiseXor_32] = &&op_BitwiseXor_32,
+        [(size_t) Opcode::BitwiseXor_64] = &&op_BitwiseXor_64,
+        [(size_t) Opcode::BitwiseXor_128] = &&op_BitwiseXor_128,
+
+        [(size_t) Opcode::ShiftLeft_8] = &&op_ShiftLeft_8,
+        [(size_t) Opcode::ShiftLeft_16] = &&op_ShiftLeft_16,
+        [(size_t) Opcode::ShiftLeft_32] = &&op_ShiftLeft_32,
+        [(size_t) Opcode::ShiftLeft_64] = &&op_ShiftLeft_64,
+        [(size_t) Opcode::ShiftLeft_128] = &&op_ShiftLeft_128,
+        [(size_t) Opcode::ShiftRight_8] = &&op_ShiftRight_8,
+        [(size_t) Opcode::ShiftRight_16] = &&op_ShiftRight_16,
+        [(size_t) Opcode::ShiftRight_32] = &&op_ShiftRight_32,
+        [(size_t) Opcode::ShiftRight_64] = &&op_ShiftRight_64,
+        [(size_t) Opcode::ShiftRight_128] = &&op_ShiftRight_128,
+        [(size_t) Opcode::ShiftRightSE_8] = &&op_ShiftRightSE_8,
+        [(size_t) Opcode::ShiftRightSE_16] = &&op_ShiftRightSE_16,
+        [(size_t) Opcode::ShiftRightSE_32] = &&op_ShiftRightSE_32,
+        [(size_t) Opcode::ShiftRightSE_64] = &&op_ShiftRightSE_64,
+        [(size_t) Opcode::ShiftRightSE_128] = &&op_ShiftRightSE_128,
+
+        [(size_t) Opcode::Execute] = &&op_Execute,
+        [(size_t) Opcode::Ret] = &&op_Ret,
+
+        [(size_t) Opcode::Cast] = &&op_Cast,
+        [(size_t) Opcode::Equal] = &&op_Equal,
+        [(size_t) Opcode::NotEqual] = &&op_NotEqual,
+        [(size_t) Opcode::LessEqual] = &&op_LessEqual,
+        [(size_t) Opcode::GreaterEqual] = &&op_GreaterEqual,
+        [(size_t) Opcode::LessThan] = &&op_LessThan,
+        [(size_t) Opcode::GreaterThan] = &&op_GreaterThan,
+
+        [(size_t) Opcode::Neg] = &&op_Neg,
+        [(size_t) Opcode::Add] = &&op_Add,
+        [(size_t) Opcode::Sub] = &&op_Sub,
+        [(size_t) Opcode::Mul] = &&op_Mul,
+        [(size_t) Opcode::Div] = &&op_Div,
+        [(size_t) Opcode::Mod] = &&op_Mod,
+        [(size_t) Opcode::Exp] = &&op_Exp,
+
+        [(size_t) Opcode::UnsafeAdd] = &&op_UnsafeAdd,
+        [(size_t) Opcode::UnsafeSub] = &&op_UnsafeSub,
+        [(size_t) Opcode::UnsafeMul] = &&op_UnsafeMul,
+        [(size_t) Opcode::UnsafeDiv] = &&op_UnsafeDiv,
+        [(size_t) Opcode::UnsafeMod] = &&op_UnsafeMod,
+
+        [(size_t) Opcode::Jump] = &&op_Jump,
+        [(size_t) Opcode::JumpIfNot] = &&op_JumpIfNot,
+
+        [(size_t) Opcode::LoadStatic] = &&op_LoadStatic,
+        [(size_t) Opcode::LoadModule] = &&op_LoadModule,
+        [(size_t) Opcode::LoadFunction] = &&op_LoadFunction,
+
+        [(size_t) Opcode::Call0] = &&op_Call0,
+        [(size_t) Opcode::TailCall0] = &&op_TailCall0,
+        [(size_t) Opcode::Call1] = &&op_Call1,
+        [(size_t) Opcode::TailCall1] = &&op_TailCall1,
+
+        [(size_t) Opcode::MakeClosure] = &&op_MakeClosure,
+        [(size_t) Opcode::SetBase] = &&op_SetBase,
+        [(size_t) Opcode::IncRef] = &&op_IncRef,
+        [(size_t) Opcode::DecRef] = &&op_DecRef,
+
+        [(size_t) Opcode::ListSubscript] = &&op_ListSubscript,
+        [(size_t) Opcode::ListLength] = &&op_ListLength,
+        [(size_t) Opcode::ListSlice] = &&op_ListSlice,
+        [(size_t) Opcode::ListConcat] = &&op_ListConcat,
+
+        [(size_t) Opcode::Invoke] = &&op_Invoke,
+
+        [(size_t) Opcode::Call] = &&op_Call,
+        [(size_t) Opcode::TailCall] = &&op_TailCall,
+        [(size_t) Opcode::MakeList] = &&op_MakeList,
+        [(size_t) Opcode::Copy] = &&op_Copy,
+        [(size_t) Opcode::Drop] = &&op_Drop,
+        [(size_t) Opcode::Swap] = &&op_Swap,
+
+        [(size_t) Opcode::Annotation] = &&op_default,
+    };
+#endif
+
     // Avoid double-recursion - move these pointers instead (we already have a stack)
     const Function* function = &m_stack.frame().function;
     assert(function->is_bytecode());
@@ -81,21 +201,24 @@ void Machine::run(const InvokeCallback& cb)
     };
 
     // Run function code
+    Opcode opcode;
     if (m_call_enter_cb)
         m_call_enter_cb(*function);
-    for (;;) {
-        if (it == function->bytecode().end())
+    OP_LOOP {
+        if (it == function->bytecode().end()) {
+            [[unlikely]]
             throw bad_instruction("reached end of code (missing RET)");
+        }
 
         if (m_bytecode_trace_cb)
             m_bytecode_trace_cb(*function, it);
 
-        auto opcode = static_cast<Opcode>(*it++);
-        switch (opcode) {
-            case Opcode::Noop:
-                break;
+        opcode = static_cast<Opcode>(*it++);
+        OP_SWITCH (opcode) {
+            OP_CASE(Noop):
+                OP_BREAK
 
-            case Opcode::Ret:
+            OP_CASE(Ret):
                 // return from function
                 if (m_call_exit_cb)
                     m_call_exit_cb(*function);
@@ -112,10 +235,10 @@ void Machine::run(const InvokeCallback& cb)
                 function = &m_stack.frame().function;
                 it = function->bytecode().begin() + (std::ptrdiff_t) m_stack.frame().instruction;
                 base = m_stack.frame().base;
-                break;
+                OP_BREAK
 
-            case Opcode::LogicalOr:
-            case Opcode::LogicalAnd: {
+            OP_CASE(LogicalOr):
+            OP_CASE(LogicalAnd): {
                 auto lhs = m_stack.pull<value::Bool>();
                 auto rhs = m_stack.pull<value::Bool>();
                 switch (opcode) {
@@ -123,15 +246,14 @@ void Machine::run(const InvokeCallback& cb)
                     case Opcode::LogicalAnd:  m_stack.push(lhs.binary_op<std::logical_and<>, true>(rhs)); break;
                     default: break;
                 }
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::Equal:
-            case Opcode::NotEqual:
-            case Opcode::LessEqual:
-            case Opcode::GreaterEqual:
-            case Opcode::LessThan:
-            case Opcode::GreaterThan: {
+            OP_CASE(Equal):
+            OP_CASE(NotEqual):
+            OP_CASE(LessEqual):
+            OP_CASE(GreaterEqual):
+            OP_CASE(LessThan):
+            OP_CASE(GreaterThan): {
                 const auto arg = *it++;
                 const auto lhs_type = decode_arg_type(arg >> 4);
                 const auto rhs_type = decode_arg_type(arg & 0xf);
@@ -149,202 +271,171 @@ void Machine::run(const InvokeCallback& cb)
                     case Opcode::GreaterThan: m_stack.push(lhs.binary_op<std::greater<>>(rhs)); break;
                     default: break;
                 }
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::BitwiseOr_8: {
+            OP_CASE(BitwiseOr_8): {
                 auto lhs = m_stack.pull<value::UInt8>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseAnd_8: {
+            } OP_BREAK
+            OP_CASE(BitwiseAnd_8): {
                 auto lhs = m_stack.pull<value::UInt8>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseXor_8: {
+            } OP_BREAK
+            OP_CASE(BitwiseXor_8): {
                 auto lhs = m_stack.pull<value::UInt8>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseOr_16: {
+            } OP_BREAK
+            OP_CASE(BitwiseOr_16): {
                 auto lhs = m_stack.pull<value::UInt16>();
                 auto rhs = m_stack.pull<value::UInt16>();
                 m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseAnd_16: {
+            } OP_BREAK
+            OP_CASE(BitwiseAnd_16): {
                 auto lhs = m_stack.pull<value::UInt16>();
                 auto rhs = m_stack.pull<value::UInt16>();
                 m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseXor_16: {
+            } OP_BREAK
+            OP_CASE(BitwiseXor_16): {
                 auto lhs = m_stack.pull<value::UInt16>();
                 auto rhs = m_stack.pull<value::UInt16>();
                 m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseOr_32: {
+            } OP_BREAK
+            OP_CASE(BitwiseOr_32): {
                 auto lhs = m_stack.pull<value::UInt32>();
                 auto rhs = m_stack.pull<value::UInt32>();
                 m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseAnd_32: {
+            } OP_BREAK
+            OP_CASE(BitwiseAnd_32): {
                 auto lhs = m_stack.pull<value::UInt32>();
                 auto rhs = m_stack.pull<value::UInt32>();
                 m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseXor_32: {
+            } OP_BREAK
+            OP_CASE(BitwiseXor_32): {
                 auto lhs = m_stack.pull<value::UInt32>();
                 auto rhs = m_stack.pull<value::UInt32>();
                 m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseOr_64: {
+            } OP_BREAK
+            OP_CASE(BitwiseOr_64): {
                 auto lhs = m_stack.pull<value::UInt64>();
                 auto rhs = m_stack.pull<value::UInt64>();
                 m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseAnd_64: {
+            } OP_BREAK
+            OP_CASE(BitwiseAnd_64): {
                 auto lhs = m_stack.pull<value::UInt64>();
                 auto rhs = m_stack.pull<value::UInt64>();
                 m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseXor_64: {
+            } OP_BREAK
+            OP_CASE(BitwiseXor_64): {
                 auto lhs = m_stack.pull<value::UInt64>();
                 auto rhs = m_stack.pull<value::UInt64>();
                 m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseOr_128: {
+            } OP_BREAK
+            OP_CASE(BitwiseOr_128): {
                 auto lhs = m_stack.pull<value::UInt128>();
                 auto rhs = m_stack.pull<value::UInt128>();
                 m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseAnd_128: {
+            } OP_BREAK
+            OP_CASE(BitwiseAnd_128): {
                 auto lhs = m_stack.pull<value::UInt128>();
                 auto rhs = m_stack.pull<value::UInt128>();
                 m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseXor_128: {
+            } OP_BREAK
+            OP_CASE(BitwiseXor_128): {
                 auto lhs = m_stack.pull<value::UInt128>();
                 auto rhs = m_stack.pull<value::UInt128>();
                 m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::ShiftLeft_8: {
+            OP_CASE(ShiftLeft_8): {
                 auto lhs = m_stack.pull<value::UInt8>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(Value(builtin::shift_left(lhs.value(), rhs.value())));
-                break;
-            }
-            case Opcode::ShiftRight_8: {
+            } OP_BREAK
+            OP_CASE(ShiftRight_8): {
                 auto lhs = m_stack.pull<value::UInt8>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
-                break;
-            }
-            case Opcode::ShiftRightSE_8: {
+            } OP_BREAK
+            OP_CASE(ShiftRightSE_8): {
                 auto lhs = m_stack.pull<value::Int8>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
-                break;
-            }
-            case Opcode::ShiftLeft_16: {
+            } OP_BREAK
+            OP_CASE(ShiftLeft_16): {
                 auto lhs = m_stack.pull<value::UInt16>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(Value(builtin::shift_left(lhs.value(), rhs.value())));
-                break;
-            }
-            case Opcode::ShiftRight_16: {
+            } OP_BREAK
+            OP_CASE(ShiftRight_16): {
                 auto lhs = m_stack.pull<value::UInt16>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
-                break;
-            }
-            case Opcode::ShiftRightSE_16: {
+            } OP_BREAK
+            OP_CASE(ShiftRightSE_16): {
                 auto lhs = m_stack.pull<value::Int16>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
-                break;
-            }
-            case Opcode::ShiftLeft_32: {
+            } OP_BREAK
+            OP_CASE(ShiftLeft_32): {
                 auto lhs = m_stack.pull<value::UInt32>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(Value(builtin::shift_left(lhs.value(), rhs.value())));
-                break;
-            }
-            case Opcode::ShiftRight_32: {
+            } OP_BREAK
+            OP_CASE(ShiftRight_32): {
                 auto lhs = m_stack.pull<value::UInt32>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
-                break;
-            }
-            case Opcode::ShiftRightSE_32: {
+            } OP_BREAK
+            OP_CASE(ShiftRightSE_32): {
                 auto lhs = m_stack.pull<value::Int32>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
-                break;
-            }
-            case Opcode::ShiftLeft_64: {
+            } OP_BREAK
+            OP_CASE(ShiftLeft_64): {
                 auto lhs = m_stack.pull<value::UInt64>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(Value(builtin::shift_left(lhs.value(), rhs.value())));
-                break;
-            }
-            case Opcode::ShiftRight_64: {
+            } OP_BREAK
+            OP_CASE(ShiftRight_64): {
                 auto lhs = m_stack.pull<value::UInt64>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
-                break;
-            }
-            case Opcode::ShiftRightSE_64: {
+            } OP_BREAK
+            OP_CASE(ShiftRightSE_64): {
                 auto lhs = m_stack.pull<value::Int64>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
-                break;
-            }
-            case Opcode::ShiftLeft_128: {
+            } OP_BREAK
+            OP_CASE(ShiftLeft_128): {
                 auto lhs = m_stack.pull<value::UInt128>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(Value(builtin::shift_left(lhs.value(), rhs.value())));
-                break;
-            }
-            case Opcode::ShiftRight_128: {
+            } OP_BREAK
+            OP_CASE(ShiftRight_128): {
                 auto lhs = m_stack.pull<value::UInt128>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
-                break;
-            }
-            case Opcode::ShiftRightSE_128: {
+            } OP_BREAK
+            OP_CASE(ShiftRightSE_128): {
                 auto lhs = m_stack.pull<value::Int128>();
                 auto rhs = m_stack.pull<value::UInt8>();
                 m_stack.push(Value(builtin::shift_right(lhs.value(), rhs.value())));
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::Add:
-            case Opcode::Sub:
-            case Opcode::Mul:
-            case Opcode::Div:
-            case Opcode::Mod:
-            case Opcode::Exp:
-            case Opcode::UnsafeAdd:
-            case Opcode::UnsafeSub:
-            case Opcode::UnsafeMul:
-            case Opcode::UnsafeDiv:
-            case Opcode::UnsafeMod: {
+            OP_CASE(Add):
+            OP_CASE(Sub):
+            OP_CASE(Mul):
+            OP_CASE(Div):
+            OP_CASE(Mod):
+            OP_CASE(Exp):
+            OP_CASE(UnsafeAdd):
+            OP_CASE(UnsafeSub):
+            OP_CASE(UnsafeMul):
+            OP_CASE(UnsafeDiv):
+            OP_CASE(UnsafeMod): {
                 const auto arg = *it++;
                 const auto lhs_type = decode_arg_type(arg >> 4);
                 const auto rhs_type = decode_arg_type(arg & 0xf);
@@ -367,30 +458,29 @@ void Machine::run(const InvokeCallback& cb)
                     case Opcode::UnsafeMod: m_stack.push(lhs.binary_op<builtin::UnsafeMod>(rhs)); break;
                     default: XCI_UNREACHABLE;
                 }
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::LogicalNot:
+            OP_CASE(LogicalNot):
                 m_stack.push(Value(! m_stack.pull<value::Bool>().value()));
-                break;
+                OP_BREAK
 
-            case Opcode::BitwiseNot_8:
+            OP_CASE(BitwiseNot_8):
                 m_stack.push(Value(~ m_stack.pull<value::UInt8>().value()));
-                break;
-            case Opcode::BitwiseNot_16:
+                OP_BREAK
+            OP_CASE(BitwiseNot_16):
                 m_stack.push(Value(~ m_stack.pull<value::UInt16>().value()));
-                break;
-            case Opcode::BitwiseNot_32:
+                OP_BREAK
+            OP_CASE(BitwiseNot_32):
                 m_stack.push(Value(~ m_stack.pull<value::UInt32>().value()));
-                break;
-            case Opcode::BitwiseNot_64:
+                OP_BREAK
+            OP_CASE(BitwiseNot_64):
                 m_stack.push(Value(~ m_stack.pull<value::UInt64>().value()));
-                break;
-            case Opcode::BitwiseNot_128:
+                OP_BREAK
+            OP_CASE(BitwiseNot_128):
                 m_stack.push(Value(~ m_stack.pull<value::UInt128>().value()));
-                break;
+                OP_BREAK
 
-            case Opcode::Neg: {
+            OP_CASE(Neg): {
                 const auto arg = *it++;
                 const auto type = decode_arg_type(arg & 0xf);
                 if (type == Type::Unknown)
@@ -399,10 +489,9 @@ void Machine::run(const InvokeCallback& cb)
                 auto v = m_stack.pull(TypeInfo{type});
                 v.negate();
                 m_stack.push(v);
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::ListSubscript: {
+            OP_CASE(ListSubscript): {
                 const auto& elem_ti = read_type_arg();
                 auto lhs = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
                 auto rhs = m_stack.pull<value::Int>();
@@ -418,19 +507,17 @@ void Machine::run(const InvokeCallback& cb)
                 item.incref();
                 lhs.decref();
                 m_stack.push(item);
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::ListLength: {
+            OP_CASE(ListLength): {
                 const auto& elem_ti = read_type_arg();
                 auto arg = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
                 auto len = arg.get<ListV>().length();
                 arg.decref();
                 m_stack.push(value::UInt(len));
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::ListSlice: {
+            OP_CASE(ListSlice): {
                 const auto& elem_ti = read_type_arg();
                 auto list = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
                 auto idx1 = m_stack.pull<value::Int>().value();
@@ -438,20 +525,18 @@ void Machine::run(const InvokeCallback& cb)
                 auto step = m_stack.pull<value::Int>().value();
                 list.get<ListV>().slice(idx1, idx2, step, elem_ti);
                 m_stack.push(list);
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::ListConcat: {
+            OP_CASE(ListConcat): {
                 const auto& elem_ti = read_type_arg();
                 auto lhs = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
                 auto rhs = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
                 lhs.get<ListV>().extend(rhs.get<ListV>(), elem_ti);
                 rhs.decref();
                 m_stack.push(lhs);
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::Cast: {
+            OP_CASE(Cast): {
                 // TODO: possible optimization when truncating integers
                 //       or extending unsigned integers: do not pull the value,
                 //       but truncate or extend it directly in the stack
@@ -468,16 +553,14 @@ void Machine::run(const InvokeCallback& cb)
                     throw not_implemented(format("cast {} to {}",
                                          TypeInfo{from_type}, TypeInfo{to_type}));
                 m_stack.push(to);
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::Invoke: {
+            OP_CASE(Invoke): {
                 const auto& type_info = read_type_arg();
                 cb(m_stack.pull_typed(type_info));
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::Execute: {
+            OP_CASE(Execute): {
                 auto o = m_stack.pull<value::Closure>();
                 auto closure = o.closure();
                 for (size_t i = closure.length(); i != 0;) {
@@ -485,65 +568,57 @@ void Machine::run(const InvokeCallback& cb)
                 }
                 call_fun(*o.function());
                 o.decref();
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::LoadStatic: {
+            OP_CASE(LoadStatic): {
                 auto arg = leb128_decode<Index>(it);
                 const auto& o = function->module().get_value(arg);
                 m_stack.push(o);
                 o.incref();
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::LoadFunction: {
+            OP_CASE(LoadFunction): {
                 auto arg = leb128_decode<Index>(it);
                 auto& fn = function->module().get_function(arg);
                 m_stack.push(value::Closure(fn));
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::LoadModule: {
+            OP_CASE(LoadModule): {
                 auto arg = leb128_decode<Index>(it);
                 auto& mod = (arg == no_index)? function->module() : function->module().get_imported_module(arg);
                 m_stack.push(value::Module(mod));
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::SetBase: {
+            OP_CASE(SetBase): {
                 const auto level = leb128_decode<size_t>(it);
                 base = m_stack.frame(m_stack.n_frames() - 1 - level).base;
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::Copy: {
+            OP_CASE(Copy): {
                 const auto arg1 = leb128_decode<size_t>(it);
                 const auto addr = arg1 + m_stack.to_rel(base); // arg1 + base
                 const auto size = leb128_decode<size_t>(it); // arg2
                 m_stack.copy(addr, size);
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::Drop: {
+            OP_CASE(Drop): {
                 const auto addr = leb128_decode<size_t>(it);
                 const auto size = leb128_decode<size_t>(it);
                 m_stack.drop(addr, size);
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::Swap: {
+            OP_CASE(Swap): {
                 const auto arg1 = leb128_decode<size_t>(it);
                 const auto arg2 = leb128_decode<size_t>(it);
                 m_stack.swap(arg1, arg2);
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::Call0:
-            case Opcode::Call1:
-            case Opcode::Call:
-            case Opcode::TailCall0:
-            case Opcode::TailCall1:
-            case Opcode::TailCall: {
+            OP_CASE(Call0):
+            OP_CASE(Call1):
+            OP_CASE(Call):
+            OP_CASE(TailCall0):
+            OP_CASE(TailCall1):
+            OP_CASE(TailCall): {
                 // get the function's module
                 Module* module;
                 if (opcode == Opcode::Call0 || opcode == Opcode::TailCall0) {
@@ -565,10 +640,9 @@ void Machine::run(const InvokeCallback& cb)
                     tail_call_fun(fn);
                 else
                     call_fun(fn);
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::MakeList: {
+            OP_CASE(MakeList): {
                 const auto num_elems = leb128_decode<uint32_t>(it);
                 const auto& elem_ti = read_type_arg();
                 // move list contents from stack to heap
@@ -576,10 +650,9 @@ void Machine::run(const InvokeCallback& cb)
                 m_stack.drop(0, num_elems * elem_ti.size());
                 // push list handle back to stack
                 m_stack.push(Value{std::move(list)});
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::MakeClosure: {
+            OP_CASE(MakeClosure): {
                 auto arg = leb128_decode<Index>(it);
                 // get function
                 auto& fn = function->module().get_function(arg);
@@ -591,40 +664,35 @@ void Machine::run(const InvokeCallback& cb)
                 }
                 // push closure
                 m_stack.push(value::Closure{fn, std::move(closure)});
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::IncRef: {
+            OP_CASE(IncRef): {
                 auto arg = leb128_decode<Stack::StackRel>(it);
                 const HeapSlot slot {static_cast<byte*>(m_stack.get_ptr(arg))};
                 slot.incref();
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::DecRef: {
+            OP_CASE(DecRef): {
                 auto arg = leb128_decode<Stack::StackRel>(it);
                 const HeapSlot slot {static_cast<byte*>(m_stack.get_ptr(arg))};
                 if (slot.decref())
                     m_stack.clear_ptr(arg);  // without this, stack dump would read after use
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::Jump: {
+            OP_CASE(Jump): {
                 auto arg = *it++;
                 it += arg;
-                break;
-            }
+            } OP_BREAK
 
-            case Opcode::JumpIfNot: {
+            OP_CASE(JumpIfNot): {
                 auto arg = *it++;
                 auto cond = m_stack.pull<value::Bool>();
                 if (!cond.value()) {
                     it += arg;
                 }
-                break;
-            }
+            } OP_BREAK
 
-            default:
+            OP_DEFAULT:
                 throw not_implemented(format("opcode {}", opcode));
         }
     }

@@ -6,6 +6,8 @@
 
 #include <benchmark/benchmark.h>
 #include <xci/script/Parser.h>
+#include <xci/script/Module.h>
+#include <xci/script/Machine.h>
 #include <xci/script/ast/fold_tuple.h>
 
 using namespace xci::script;
@@ -115,6 +117,34 @@ static void bm_parser_toplevel_expr(benchmark::State& state) {
     }
 }
 BENCHMARK(bm_parser_toplevel_expr)->Range(1, 1<<8);
+
+
+static void bm_script_basic_arith(benchmark::State& state) {
+    Machine machine;
+    Module mod;
+    Function fn(mod, mod.symtab().add_child("fn"));
+    fn.set_assembly();
+    fn.asm_code().add_L1(Opcode::LoadStatic, mod.add_value(TypedValue(value::Int(42))));
+    for (int i = 1; i < state.range(0); ++i) {
+        fn.asm_code().add_L1(Opcode::LoadStatic, mod.add_value(TypedValue(value::Int(2))));
+        fn.asm_code().add_B1(Opcode::Mul, 0x99);
+        fn.asm_code().add_L1(Opcode::LoadStatic, mod.add_value(TypedValue(value::Int(12))));
+        fn.asm_code().add_B1(Opcode::Sub, 0x99);
+        fn.asm_code().add_L1(Opcode::LoadStatic, mod.add_value(TypedValue(value::Int(i))));
+        fn.asm_code().add_B1(Opcode::Add, 0x99);
+        fn.asm_code().add_L1(Opcode::LoadStatic, mod.add_value(TypedValue(value::Int(2))));
+        fn.asm_code().add_B1(Opcode::Div, 0x99);
+    }
+    fn.asm_code().add(Opcode::Ret);
+    fn.assembly_to_bytecode();
+
+    for (auto _ : state) {
+        machine.call(fn);
+        auto result = machine.stack().pull_typed(fn.effective_return_type());
+        benchmark::DoNotOptimize(result);
+    }
+}
+BENCHMARK(bm_script_basic_arith)->Range(1, 1<<8);
 
 
 BENCHMARK_MAIN();

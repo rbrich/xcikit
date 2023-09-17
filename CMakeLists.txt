@@ -59,6 +59,7 @@ option(XCI_INSTALL_SHARE_DAR "Install runtime data as DAR archive (share.dar)" O
 option(XCI_INSTALL_SHARE_ZIP "Install runtime data as ZIP archive (share.zip)" OFF)
 
 option(XCI_LISTDIR_GETDENTS "Use getdents syscall instead of readdir for tools/find_file." ${NOT_EMSCRIPTEN})
+option(XCI_SCRIPT_COMPUTED_GOTO "Use computed goto instead of switch statement for implementation of xci::script::Machine." OFF)
 
 option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
 option(XCI_DEBUG_TRACE "Enable trace log messages." OFF)

@@ -19,6 +19,7 @@
 
 // Alternative implementations
 #cmakedefine XCI_LISTDIR_GETDENTS
+#cmakedefine XCI_SCRIPT_COMPUTED_GOTO
 
 // Debugging
 #cmakedefine XCI_DEBUG_TRACE
