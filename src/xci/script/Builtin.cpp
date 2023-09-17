@@ -133,10 +133,11 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__div", Symbol::Instruction, Index(Opcode::Div)});
     symtab().add({"__mod", Symbol::Instruction, Index(Opcode::Mod)});
     symtab().add({"__exp", Symbol::Instruction, Index(Opcode::Exp)});
-    symtab().add({"__add_ck", Symbol::Instruction, Index(Opcode::AddCk)});
-    symtab().add({"__sub_ck", Symbol::Instruction, Index(Opcode::SubCk)});
-    symtab().add({"__mul_ck", Symbol::Instruction, Index(Opcode::MulCk)});
-    symtab().add({"__div_ck", Symbol::Instruction, Index(Opcode::DivCk)});
+    symtab().add({"__unsafe_add", Symbol::Instruction, Index(Opcode::UnsafeAdd)});
+    symtab().add({"__unsafe_sub", Symbol::Instruction, Index(Opcode::UnsafeSub)});
+    symtab().add({"__unsafe_mul", Symbol::Instruction, Index(Opcode::UnsafeMul)});
+    symtab().add({"__unsafe_div", Symbol::Instruction, Index(Opcode::UnsafeDiv)});
+    symtab().add({"__unsafe_mod", Symbol::Instruction, Index(Opcode::UnsafeMod)});
     symtab().add({"__load_static", Symbol::Instruction, Index(Opcode::LoadStatic)});
     symtab().add({"__list_subscript", Symbol::Instruction, Index(Opcode::ListSubscript)});
     symtab().add({"__list_length", Symbol::Instruction, Index(Opcode::ListLength)});

@@ -69,10 +69,11 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::Div:               return os << "DIV";
         case Opcode::Mod:               return os << "MOD";
         case Opcode::Exp:               return os << "EXP";
-        case Opcode::AddCk:             return os << "ADD_CK";
-        case Opcode::SubCk:             return os << "SUB_CK";
-        case Opcode::MulCk:             return os << "MUL_CK";
-        case Opcode::DivCk:             return os << "DIV_CK";
+        case Opcode::UnsafeAdd:         return os << "UNSAFE_ADD";
+        case Opcode::UnsafeSub:         return os << "UNSAFE_SUB";
+        case Opcode::UnsafeMul:         return os << "UNSAFE_MUL";
+        case Opcode::UnsafeDiv:         return os << "UNSAFE_DIV";
+        case Opcode::UnsafeMod:         return os << "UNSAFE_MOD";
         case Opcode::ListSubscript:     return os << "LIST_SUBSCRIPT";
         case Opcode::ListLength:        return os << "LIST_LENGTH";
         case Opcode::ListSlice:         return os << "LIST_SLICE";

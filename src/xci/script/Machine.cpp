@@ -340,10 +340,11 @@ void Machine::run(const InvokeCallback& cb)
             case Opcode::Div:
             case Opcode::Mod:
             case Opcode::Exp:
-            case Opcode::AddCk:
-            case Opcode::SubCk:
-            case Opcode::MulCk:
-            case Opcode::DivCk: {
+            case Opcode::UnsafeAdd:
+            case Opcode::UnsafeSub:
+            case Opcode::UnsafeMul:
+            case Opcode::UnsafeDiv:
+            case Opcode::UnsafeMod: {
                 const auto arg = *it++;
                 const auto lhs_type = decode_arg_type(arg >> 4);
                 const auto rhs_type = decode_arg_type(arg & 0xf);
@@ -359,10 +360,11 @@ void Machine::run(const InvokeCallback& cb)
                     case Opcode::Div: m_stack.push(lhs.binary_op<builtin::Div>(rhs)); break;
                     case Opcode::Mod: m_stack.push(lhs.binary_op<builtin::Mod>(rhs)); break;
                     case Opcode::Exp: m_stack.push(lhs.binary_op<builtin::Exp>(rhs)); break;
-                    case Opcode::AddCk: m_stack.push(lhs.binary_op<builtin::AddCk>(rhs)); break;
-                    case Opcode::SubCk: m_stack.push(lhs.binary_op<builtin::SubCk>(rhs)); break;
-                    case Opcode::MulCk: m_stack.push(lhs.binary_op<builtin::MulCk>(rhs)); break;
-                    case Opcode::DivCk: m_stack.push(lhs.binary_op<builtin::DivCk>(rhs)); break;
+                    case Opcode::UnsafeAdd: m_stack.push(lhs.binary_op<builtin::UnsafeAdd>(rhs)); break;
+                    case Opcode::UnsafeSub: m_stack.push(lhs.binary_op<builtin::UnsafeSub>(rhs)); break;
+                    case Opcode::UnsafeMul: m_stack.push(lhs.binary_op<builtin::UnsafeMul>(rhs)); break;
+                    case Opcode::UnsafeDiv: m_stack.push(lhs.binary_op<builtin::UnsafeDiv>(rhs)); break;
+                    case Opcode::UnsafeMod: m_stack.push(lhs.binary_op<builtin::UnsafeMod>(rhs)); break;
                     default: XCI_UNREACHABLE;
                 }
                 break;

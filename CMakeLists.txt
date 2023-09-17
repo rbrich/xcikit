@@ -66,7 +66,7 @@ option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 
 # Minimal requirement is (at least partial) C++20.
 set(XCI_CXX_STANDARD 20)
-if (NOT WIN32)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     set(CMAKE_CXX_EXTENSIONS ON)  # for __int128
 endif()
 

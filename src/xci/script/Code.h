@@ -106,10 +106,7 @@ enum class Opcode: uint8_t {
     // for possible future optimization. (The machine would coerce types by itself,
     // but the caller would need to know the result of coercion.)
     // Type numbers are the same as for cast instruction above.
-    // These instructions are unsafe, the effects are same as in C:
-    // * unsigned overflow wraps
-    // * signed overflow is UB, usually it wraps
-    // * division by zero causes abnormal program termination (SIGFPE)
+    // These instructions will throw exception in case of overflow, division by zero etc.
 
     Neg,
     Add,
@@ -119,12 +116,16 @@ enum class Opcode: uint8_t {
     Mod,
     Exp,
 
-    // Checked arithmetic instructions
-    // These will throw exception in case of overflow, division by zero etc.
-    AddCk,
-    SubCk,
-    MulCk,
-    DivCk,
+    // Unchecked arithmetic instructions
+    // These instructions are unsafe, the effects are same as in C:
+    // * unsigned overflow wraps
+    // * signed overflow is UB, usually it wraps
+    // * division by zero causes abnormal program termination (SIGFPE)
+    UnsafeAdd,
+    UnsafeSub,
+    UnsafeMul,
+    UnsafeDiv,
+    UnsafeMod,
 
     Jump,                   // operand = relative jump (+N instructions) - unconditional
     JumpIfNot,              // pull a bool from stack, operand = relative jump (+N instructions) if cond is false
