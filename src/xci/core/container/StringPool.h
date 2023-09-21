@@ -38,8 +38,6 @@ public:
     using Id = uint32_t;
     static constexpr Id empty_string = 0u;
 
-    static uint32_t hash(const char* str);
-
     Id add(const char* str);
 
     // Id taken by ref so the result can point into it
