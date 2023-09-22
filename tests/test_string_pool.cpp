@@ -11,10 +11,9 @@
 using namespace xci::core;
 
 
-void check_add_retrieve(StringPool& pool, const char* str) {
+void check_add_retrieve(StringPool& pool, std::string_view str) {
     auto id = pool.add(str);
-    const char* got = pool.get(id);
-    CHECK(std::string(str) == got);
+    CHECK(pool.view(id) == str);
 }
 
 
@@ -28,16 +27,29 @@ TEST_CASE( "Add and retrive strings", "[StringPool]" )
     CHECK(pool.add("T") == 84u);
     CHECK(pool.add("abc") == (97u | 98u << 8 | 99u << 16));
 
+    check_add_retrieve(pool, "");
+    check_add_retrieve(pool, "_");
+    check_add_retrieve(pool, "_0");
+    check_add_retrieve(pool, "123");
+    check_add_retrieve(pool, "1234");
+
+    // Everything above is stored directly in StringPool::Id (SSO)
+    CHECK(pool.occupancy() == 0);
+
+    check_add_retrieve(pool, "§§§§");  // out of 7bit ASCII range, cannot store in Id
+    CHECK(pool.occupancy() == 1);
+
     auto id = pool.add("interned string");
-    CHECK(pool.get(id) == std::string("interned string"));
+    CHECK(pool.view(id) == "interned string");
     CHECK(pool.add("interned string") == id);  // found previous
 
-    check_add_retrieve(pool, "");
     check_add_retrieve(pool, "abcde");
     check_add_retrieve(pool, "Hello world!");
     check_add_retrieve(pool, "Lorem ipsum dolor sit amet");
 
     CHECK(pool.add("interned string") == id);  // still found previous
+
+    CHECK(pool.occupancy() == 5);
 }
 
 

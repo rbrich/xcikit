@@ -37,8 +37,9 @@ static void bm_string_pool_nodup(benchmark::State& state)
     for (auto _ : state) {
         StringPool pool;
         for (int i = 0; i < state.range(0); ++i) {
-            auto str = "string number " + std::to_string(i);
-            auto id = pool.add(str.c_str());
+            std::string str = "string number ";
+            str += std::to_string(i);
+            auto id = pool.add(str);
             benchmark::DoNotOptimize(id);
         }
     }

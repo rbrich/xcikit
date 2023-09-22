@@ -11,6 +11,7 @@
 #define XCI_CORE_STRING_POOL_H
 
 #include <vector>
+#include <string_view>
 #include <bit>
 #include <cstdint>
 #include <cassert>
@@ -31,17 +32,19 @@ public:
 
     // The scheme of string ID:
     // * 0 = empty string
-    // * rightmost bit = embed or pool:
-    //   - 0 = 0..3 chars, no pool, the chars are stored directly in leftmost bytes (0-padded, 0-terminated)
-    //   - 1 = string stored in `strings`, the ID minus 1 is byte offset (i.e. it's always aligned to 2 byte offset),
-    //         the string is zero-terminated
+    // * leftmost bit = embed or pool:
+    //   - 0 = 0..4 chars, no pool, the chars are stored directly in the bytes
+    //         (0-padded, the leftmost byte must be in 7-bit range)
+    //   - 1 = string stored in `strings`, the ID with leftmost bit set to 0 is `strings` byte offset
+    //         (the string at the offset is zero-terminated, size computed with strlen)
     using Id = uint32_t;
     static constexpr Id empty_string = 0u;
 
-    Id add(const char* str);
+    Id add(std::string_view str);
 
-    // Id taken by ref so the result can point into it
-    const char* get(const Id& id) const;
+    // Return view of the string from internal storage.
+    // Caution: Short strings (4 chars) are copied to TLS variable and live only until next call of view().
+    std::string_view view(Id id) const;
 
     size_t occupancy() const { return m_occupied; }
 
@@ -51,7 +54,7 @@ private:
     static constexpr Id free_slot = 0u;
     struct Slot {
         uint32_t hash = 0;
-        Id id = free_slot;  // (id - 1) = offset into m_strings
+        Id id = free_slot;  // (id - 2**31) = offset into m_strings
     };
     std::vector<Slot> m_hash_table;  // hash % size => Slot
     std::vector<char> m_strings;  // pooled zero-terminated strings

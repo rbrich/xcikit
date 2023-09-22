@@ -54,22 +54,26 @@ static XCI_INLINE uint32_t murmur3_32(const uint8_t* key, size_t len)
 
 // -----------------------------------------------------------------------------
 
+static constexpr uint32_t pool_mask = 0x8000'0000;  // the pooling bit (0=embed, 1=pool)
+static constexpr uint32_t offset_mask = 0x7fff'ffff;
 
-auto StringPool::add(const char* str) -> Id
+static XCI_INLINE StringPool::Id offset(StringPool::Id id) {
+    return id & offset_mask;
+}
+
+auto StringPool::add(std::string_view str) -> Id
 {
-    unsigned size = -1u;
-    for (unsigned i = 0; i != 4; ++i) {
-        if (str[i] == 0)
-            size = i;
-    }
-    if (size < 4) {
+    if (str.size() <= 4) {
+        // Small string optimization - up to 4 chars long
         Id res = 0;
-        std::memcpy(&res, str, size);
-        return res;
+        std::memcpy(&res, str.data(), str.size());
+        // little endian - the last char in 4-char string must be in 7-bit range
+        // big endian - the first char must be in 7-bit range
+        if ((res & pool_mask) == 0)
+            return res;
     }
 
-    size = strlen(str);
-    const auto hash = murmur3_32((const uint8_t*)str, size);
+    const auto hash = murmur3_32((const uint8_t*)str.data(), str.size());
     auto slot_i = hash % m_hash_table.size();
     for (;;) {
         const Slot& slot = m_hash_table[slot_i];
@@ -77,18 +81,17 @@ auto StringPool::add(const char* str) -> Id
             break;
         if (slot.hash == hash) {
             // The existing string might be the same, compare it
-            assert(m_strings.size() > slot.id - 1);
-            const char* existing = m_strings.data() + slot.id - 1;
-            if (strcmp(str, existing) == 0)
+            assert(m_strings.size() > offset(slot.id));
+            const char* existing = m_strings.data() + offset(slot.id);
+            if (str == existing)
                 return slot.id;
         }
         slot_i = (slot_i + 1) % m_hash_table.size();
     }
 
-    if (m_strings.size() & 1)
-        m_strings.push_back(0);
-    Id id = m_strings.size() + 1;
-    m_strings.insert(m_strings.end(), str, str + size + 1);
+    Id id = m_strings.size() | pool_mask;
+    m_strings.insert(m_strings.end(), str.begin(), str.end());
+    m_strings.push_back(0);
     m_hash_table[slot_i] = {hash, id};
     if (++m_occupied > 0.7 * m_hash_table.size())
         grow_hash_table();
@@ -96,13 +99,18 @@ auto StringPool::add(const char* str) -> Id
 }
 
 
-const char* StringPool::get(const Id& id) const
+std::string_view StringPool::view(Id id) const
 {
-    if (id & 1) {
-        assert(m_strings.size() > id - 1);
-        return m_strings.data() + id - 1;
+    if (id & pool_mask) {
+        assert(m_strings.size() > offset(id));
+        return m_strings.data() + offset(id);
     }
-    return (const char*)&id;
+    static thread_local char str[4];
+    std::memcpy(str, &id, 4);
+    if (str[3] == 0)
+        return str;
+    else
+        return {str, 4};
 }
 
 
