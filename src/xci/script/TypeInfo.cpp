@@ -93,11 +93,11 @@ TypeInfoUnion::TypeInfoUnion(StructTag, StructItems items)
 }
 
 
-TypeInfoUnion::TypeInfoUnion(std::string name, TypeInfo&& type_info)
+TypeInfoUnion::TypeInfoUnion(NameId name, TypeInfo&& type_info)
         : m_type(Type::Named)
 {
     std::construct_at(&m_named_type_ptr,
-                      std::make_shared<NamedType>(NamedType{std::move(name), std::move(type_info)}));
+                      std::make_shared<NamedType>(NamedType{name, std::move(type_info)}));
 }
 
 
@@ -442,10 +442,10 @@ auto TypeInfo::elem_type() const -> const TypeInfo&
 }
 
 
-const TypeInfo* TypeInfo::struct_item_by_name(const std::string& name) const
+const TypeInfo* TypeInfo::struct_item_by_name(NameId name) const
 {
     const auto& items = struct_items();
-    auto it = std::find_if(items.begin(), items.end(), [&name](const StructItem& item) {
+    auto it = std::find_if(items.begin(), items.end(), [name](const StructItem& item) {
          return item.first == name;
     });
     if (it == items.end())
@@ -468,7 +468,7 @@ auto TypeInfo::struct_or_tuple_subtypes() const -> Subtypes
 }
 
 
-std::string TypeInfo::name() const
+NameId TypeInfo::name() const
 {
     return named_type().name;
 }

@@ -207,7 +207,7 @@ private:
     Function& function() const { return m_scope.function(); }
 
     SymbolPointer add_nonlocal_symbol(Scope& scope, SymbolPointer symptr,
-                                      const std::string& name, const TypeInfo& ti,
+                                      NameId name, const TypeInfo& ti,
                                       Index fn_scope_idx = no_index)
     {
         auto& my_symtab = scope.function().symtab();

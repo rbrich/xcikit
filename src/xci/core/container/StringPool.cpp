@@ -89,7 +89,7 @@ auto StringPool::add(std::string_view str) -> Id
         slot_i = (slot_i + 1) % m_hash_table.size();
     }
 
-    Id id = m_strings.size() | pool_mask;
+    Id id = Id(m_strings.size()) | pool_mask;
     m_strings.insert(m_strings.end(), str.begin(), str.end());
     m_strings.push_back(0);
     m_hash_table[slot_i] = {hash, id};

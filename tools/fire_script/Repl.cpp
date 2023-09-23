@@ -25,7 +25,7 @@ using ranges::cpp20::views::reverse;
 using std::endl;
 
 
-bool Repl::evaluate(const std::string& module_name, std::string module_source, EvalMode mode)
+bool Repl::evaluate(NameId module_name, std::string module_source, EvalMode mode)
 {
     core::TermCtl& t = m_ctx.term_out;
     auto& source_manager = m_ctx.interpreter.source_manager();
@@ -82,7 +82,7 @@ bool Repl::evaluate(const std::string& module_name, std::string module_source, E
 }
 
 
-std::shared_ptr<Module> Repl::prepare_module(const std::string& module_name)
+std::shared_ptr<Module> Repl::prepare_module(NameId module_name)
 {
     auto module = std::make_shared<Module>(m_ctx.interpreter.module_manager(), module_name);
     ResourceUsage rusage;

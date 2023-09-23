@@ -7,11 +7,11 @@
 #ifndef XCI_SCRIPT_SYMBOL_TABLE_H
 #define XCI_SCRIPT_SYMBOL_TABLE_H
 
+#include "NameId.h"
 #include <xci/core/container/ChunkedStack.h>
 #include <xci/core/mixin.h>
 #include <vector>
 #include <string>
-#include <string_view>
 
 namespace xci::script {
 
@@ -111,37 +111,39 @@ public:
     };
 
     Symbol() = default;  // only for deserialization
-    explicit Symbol(std::string name) : m_name(std::move(name)) {}
-    Symbol(std::string name, Type type) : m_name(std::move(name)), m_type(type) {}
-    Symbol(std::string name, Type type, Index idx) : m_name(std::move(name)), m_type(type), m_index(idx) {}
-    Symbol(std::string name, Type type, Index idx, size_t depth)
-        : m_name(std::move(name)), m_type(type), m_index(idx), m_depth(depth) {}
+    explicit Symbol(NameId name) : m_name(name) {}
+    Symbol(NameId name, Type type, Index idx = no_index, unsigned depth = 0)
+        : m_name(name), m_type(type), m_index(idx), m_depth(depth) {}
     Symbol(const SymbolPointer& ref, Type type)
             : m_name(ref->name()), m_type(type), m_ref(ref) {}
-    Symbol(const SymbolPointer& ref, Type type, Index idx, size_t depth)
+    Symbol(const SymbolPointer& ref, Type type, Index idx, unsigned depth)
             : m_name(ref->name()), m_type(type), m_index(idx),
               m_depth(depth), m_ref(ref) {}
 
     bool operator==(const Symbol&) const = default;
 
-    const std::string& name() const { return m_name; }
+    NameId name() const { return m_name; }
     Type type() const { return m_type; }
     Index index() const { return m_index; }
-    size_t depth() const { return m_depth; }
+    unsigned depth() const { return m_depth; }
     SymbolPointer ref() const { return m_ref; }
     bool is_callable() const { return m_is_callable; }
     bool is_defined() const { return m_is_defined; }
+    bool is_implicit() const { return m_is_implicit; }
 
     Symbol& set_type(Type type) { m_type = type; return *this; }
     Symbol& set_index(Index idx) { m_index = idx; return *this; }
-    Symbol& set_depth(size_t depth) { m_depth = depth; return *this; }
+    Symbol& set_depth(unsigned depth) { m_depth = depth; return *this; }
     Symbol& set_ref(const SymbolPointer& ref) { m_ref = ref; return *this; }
-    Symbol& set_callable(bool callable) { m_is_callable = callable; return *this; }
-    Symbol& set_defined(bool defined) { m_is_defined = defined; return *this; }
+    Symbol& set_callable(bool callable = true) { m_is_callable = callable; return *this; }
+    Symbol& set_defined(bool defined = true) { m_is_defined = defined; return *this; }
+    Symbol& set_implicit(bool implicit = true) { m_is_implicit = implicit; return *this; }
 
     template<class Archive>
     void save(Archive& ar) const {
-        uint8_t flags = uint8_t(m_is_callable) | uint8_t(unsigned(m_is_defined) << 1);
+        uint8_t flags = uint8_t(m_is_callable)
+                      | uint8_t(unsigned(m_is_defined) << 1)
+                      | uint8_t(unsigned(m_is_implicit) << 2);
         ar ("name", m_name) ("type", m_type) ("index", m_index) ("depth", m_depth) ("flags", flags);
     }
 
@@ -151,16 +153,18 @@ public:
         ar(m_name)(m_type)(m_index)(m_depth)(flags);
         m_is_callable = bool(flags & 0x01);
         m_is_defined = bool(flags & 0x02);
+        m_is_implicit = bool(flags & 0x04);
     }
 
 private:
-    std::string m_name;
+    NameId m_name;
     Type m_type = Unresolved;
     Index m_index = no_index;
-    size_t m_depth = 0;  // 1 = parent, 2 = parent of parent, ...
+    unsigned m_depth = 0;  // 1 = parent, 2 = parent of parent, ...
     SymbolPointer m_ref;
     bool m_is_callable: 1 = false;
     bool m_is_defined: 1 = false;  // only declared / already defined
+    bool m_is_implicit: 1 = false;  // TypeVar beginning with '$'
 };
 
 
@@ -174,13 +178,13 @@ private:
 class SymbolTable: private core::NonCopyable {
 public:
     SymbolTable() = default;
-    explicit SymbolTable(std::string name, SymbolTable* parent = nullptr);
+    explicit SymbolTable(NameId name, SymbolTable* parent = nullptr);
 
-    void set_name(const std::string& name) { m_name = name; }
-    const std::string& name() const { return m_name; }
+    void set_name(NameId name) { m_name = name; }
+    NameId name() const { return m_name; }
     std::string qualified_name() const;
 
-    SymbolTable& add_child(const std::string& name);
+    SymbolTable& add_child(NameId name);
     SymbolTable* parent() const { return m_parent; }
     unsigned level() const { return depth(nullptr) - 1; }  // number of parents above this symtab
     unsigned depth(const SymbolTable* p_symtab) const;  // number of parents up to `p_symtab`
@@ -209,13 +213,13 @@ public:
 
     // find symbol in this table
     SymbolPointer find(const Symbol& symbol);
-    SymbolPointer find_by_name(std::string_view name);
+    SymbolPointer find_by_name(NameId name);
     SymbolPointer find_by_index(Symbol::Type type, Index index);
-    SymbolPointer find_last_of(const std::string& name, Symbol::Type type);
+    SymbolPointer find_last_of(NameId name, Symbol::Type type);
     SymbolPointer find_last_of(Symbol::Type type);
 
     SymbolPointerList filter(Symbol::Type type);
-    SymbolPointerList filter(const std::string& name, Symbol::Type type);
+    SymbolPointerList filter(NameId name, Symbol::Type type);
 
     Size count(Symbol::Type type) const;
 
@@ -252,7 +256,7 @@ public:
     };
 
     Children children() const { return Children{*this}; }
-    SymbolTable* find_child_by_name(std::string_view name);
+    SymbolTable* find_child_by_name(NameId name);
 
     template<class Archive>
     void save(Archive& ar) const {
@@ -268,7 +272,7 @@ public:
     }
 
 private:
-    std::string m_name;
+    NameId m_name;
     SymbolTable* m_parent = nullptr;
     Scope* m_scope = nullptr;
     Function* m_function = nullptr;

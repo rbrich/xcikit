@@ -21,7 +21,7 @@ public:
     Class(Class&& rhs) noexcept;
     Class& operator =(Class&&) = delete;
 
-    const std::string& name() const { return m_symtab.name(); }
+    NameId name() const { return m_symtab.name(); }
 
     // symbol table associated with the class
     // (contains type_var and function prototypes)

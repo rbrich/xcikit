@@ -12,7 +12,6 @@
 #include <xci/script/Value.h>
 #include <cstdint>
 #include <vector>
-#include <string>
 #include <string_view>
 #include <memory>
 #include <utility>
@@ -193,11 +192,11 @@ public:
 
 struct Identifier {
     Identifier() = default;
-    explicit Identifier(std::string s) : name(std::move(s)) {}
-    explicit Identifier(std::string s, const SourceLocation& loc) : name(std::move(s)), source_loc(loc) {}
-    explicit operator bool() const { return !name.empty(); }
+    explicit Identifier(NameId s) : name(s) {}
+    explicit Identifier(NameId s, const SourceLocation& loc) : name(s), source_loc(loc) {}
+    explicit operator bool() const { return bool(name); }
 
-    std::string name;
+    NameId name;
     SourceLocation source_loc;
 
     // resolved symbol:
@@ -217,13 +216,13 @@ struct Type {
 
 struct TypeName: public Type {
     TypeName() = default;
-    explicit TypeName(std::string s) : name(std::move(s)) {}
+    explicit TypeName(NameId s) : name(s) {}
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Type> make_copy() const override { return std::make_unique<TypeName>(*this); }
-    explicit operator bool() const { return !name.empty(); }
+    explicit operator bool() const { return bool(name); }
 
-    std::string name;
+    NameId name;
 
     // resolved symbol:
     SymbolPointer symbol;

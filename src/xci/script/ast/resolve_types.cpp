@@ -279,7 +279,7 @@ public:
                                  << c.type.signature() << std::endl;
                 }
                 stringstream o_ftype;
-                o_ftype << v.identifier.name;
+                o_ftype << v.identifier.name.view();
                 if (!m_call_sig.empty())
                     o_ftype << ' ' << m_call_sig.back().signature();
                 if (conflict)
@@ -597,7 +597,7 @@ private:
                     unsigned i = 0;
                     bool compatible = true;
                     for (auto var : fn.symtab().filter(Symbol::TypeVar)) {
-                        if (var->name().front() == '$')
+                        if (var->is_implicit())
                             continue;
                         set_type_arg(var, type_args[i], res_type_args,
                                      [&compatible](const TypeInfo& exp, const TypeInfo& got)
@@ -673,7 +673,7 @@ private:
             o_candidates << c.type.signature() << std::endl;
         }
         stringstream o_ftype;
-        o_ftype << identifier.name;
+        o_ftype << identifier.name.view();
         if (!type_args.empty()) {
             o_ftype << '<';
             for (const auto& type_arg : type_args) {

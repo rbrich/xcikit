@@ -182,11 +182,11 @@ auto TypeChecker::resolve(const TypeInfo& inferred, const SourceLocation& loc) -
 }
 
 
-void TypeChecker::check_struct_item(const std::string& key, const TypeInfo& inferred, const SourceLocation& loc) const
+void TypeChecker::check_struct_item(NameId key, const TypeInfo& inferred, const SourceLocation& loc) const
 {
     const auto& spec_items = eval_type().underlying().struct_items();
     auto spec_it = std::find_if(spec_items.begin(), spec_items.end(),
-                                [&key](const TypeInfo::StructItem& spec) {
+                                [key](const TypeInfo::StructItem& spec) {
                                     return spec.first == key;
                                 });
     if (spec_it == spec_items.end())

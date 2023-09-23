@@ -26,7 +26,7 @@ public:
 
     void visit(ast::Definition& dfn) override {
         // check for name collision
-        const auto& name = dfn.variable.identifier.name;
+        const auto name = dfn.variable.identifier.name;
         auto symptr = symtab().find_by_name(name);
 
         // allow overloading in some cases
@@ -149,8 +149,8 @@ public:
                 inst_names << ' ';
             inst_names << *t;
         }
-        inst_symtab.set_name(fmt::format("{} ({})",
-                v.class_name.name, inst_names.str()));
+        const auto inst_name = fmt::format("{} ({})", v.class_name.name, inst_names.str());
+        inst_symtab.set_name(intern(inst_name));
 
         // add new instance to the module
         Instance inst {sym_class.get_class(), inst_symtab};
@@ -201,14 +201,14 @@ public:
     void visit(ast::List& v) override {
         if (v.items.empty()) {
             // Create implicit type var for empty list literal: `[]`
-            v.ti = ti_list(TypeInfo(allocate_type_var("$L")));
+            v.ti = ti_list(TypeInfo(create_implicit_type_var(intern("$L"))));
         } else for (auto& item : v.items) {
             item->apply(*this);
         }
     }
 
     void visit(ast::StructInit& v) override {
-        std::set<std::string> keys;
+        std::set<NameId> keys;
         for (auto& item : v.items) {
             // check the key is not duplicate
             auto [_, ok] = keys.insert(item.first.name);
@@ -273,7 +273,8 @@ public:
 
     void visit(ast::OpCall& v) override {
         assert(!v.right_tmp);
-        v.callable = std::make_unique<ast::Reference>(ast::Identifier{builtin::op_to_function_name(v.op.op), v.source_loc});
+        const auto fn_name = intern(builtin::op_to_function_name(v.op.op));
+        v.callable = std::make_unique<ast::Reference>(ast::Identifier{fn_name, v.source_loc});
         visit(*static_cast<ast::Call*>(&v));
     }
 
@@ -288,10 +289,10 @@ public:
     void visit(ast::WithContext& v) override {
         v.context->apply(*this);
         v.expression->apply(*this);
-        v.enter_function = ast::Reference{ast::Identifier{"enter"}};
+        v.enter_function = ast::Reference{ast::Identifier{intern("enter")}};
         v.enter_function.source_loc = v.source_loc;
         v.enter_function.apply(*this);
-        v.leave_function = ast::Reference{ast::Identifier{"leave"}};
+        v.leave_function = ast::Reference{ast::Identifier{intern("leave")}};
         v.leave_function.source_loc = v.source_loc;
         v.leave_function.apply(*this);
     }
@@ -310,7 +311,7 @@ public:
                 name = fmt::format("<block_{}>", num);
             else
                 name = fmt::format("<lambda_{}>", num);
-            std::tie(v.symbol, v.scope_index) = create_function(name);
+            std::tie(v.symbol, v.scope_index) = create_function(intern(name));
         }
         auto& scope = module().get_scope(v.scope_index);
         Function& fn = scope.function();
@@ -333,16 +334,17 @@ public:
     void visit(ast::Cast& v) override {
         v.expression->apply(*this);
         v.type->apply(*this);
-        v.cast_function = std::make_unique<ast::Reference>(ast::Identifier{v.is_init ? "init" : "cast"});
+        const auto fn_name = intern(v.is_init ? "init" : "cast");
+        v.cast_function = std::make_unique<ast::Reference>(ast::Identifier{fn_name});
         v.cast_function->source_loc = v.source_loc;
         v.cast_function->apply(*this);
     }
 
     void visit(ast::TypeName& t) final {
         assert(!t.name.empty());  // can't occur in parsed code
-        if (t.name.empty() || t.name[0] == '$') {
+        if (t.name.view()[0] == '$') {
             // anonymous generic type
-            t.symbol = allocate_type_var(t.name);
+            t.symbol = create_implicit_type_var(t.name);
             return;
         }
         t.symbol = resolve_symbol(t.name);
@@ -362,7 +364,8 @@ public:
             auto& p = t.param;
             if (!p.type) {
                 // '$P' is internal prefix for untyped function args
-                p.type = std::make_unique<ast::TypeName>("$P" + p.identifier.name);
+                const auto type_name = intern(fmt::format("$P{}", p.identifier.name));
+                p.type = std::make_unique<ast::TypeName>(type_name);
             }
             p.type->apply(*this);
             // Special case for unnamed struct parameter - create Parameter symbols for subtypes
@@ -377,7 +380,7 @@ public:
             m_parameter = false;
         }
         if (!t.return_type && !m_instance)
-            t.return_type = std::make_unique<ast::TypeName>("$R");
+            t.return_type = std::make_unique<ast::TypeName>(intern("$R"));
         if (t.return_type)
             t.return_type->apply(*this);
     }
@@ -392,9 +395,9 @@ public:
     }
 
     void visit(ast::StructType& t) final {
-        std::set<std::string> keys;
+        std::set<NameId> keys;
         for (auto& st : t.subtypes) {
-            const auto& name = st.identifier.name;
+            const NameId name = st.identifier.name;
 
             // check the key is not duplicate
             auto [_, ok] = keys.insert(name);
@@ -404,7 +407,7 @@ public:
             if (st.type) {
                 st.type->apply(*this);
             } else if (m_parameter) {
-                st.type = std::make_unique<ast::TypeName>(std::string("$T") + name);
+                st.type = std::make_unique<ast::TypeName>(intern(fmt::format("$T{}", name)));
                 st.type->apply(*this);
             }
             st.identifier.symbol = add_struct_item(name, no_index);
@@ -416,7 +419,7 @@ private:
     Function& function() { return m_scope.function(); }
     SymbolTable& symtab() { return *m_symtab; }
 
-    std::pair<SymbolPointer, Index> create_function(const std::string& name) {
+    std::pair<SymbolPointer, Index> create_function(NameId name) {
         SymbolTable& fn_symtab = symtab().add_child(name);
         auto fn_idx = module().add_function(Function{module(), fn_symtab}).index;
         auto scope_idx = module().add_scope(Scope{module(), fn_idx, symtab().scope()});
@@ -426,7 +429,7 @@ private:
         return {symptr, scope_idx};
     }
 
-    SymbolPointer add_struct_item(const std::string& name, Index idx) {
+    SymbolPointer add_struct_item(NameId name, Index idx) {
         auto& symtab = module().symtab();
         // Deduplicate StructItem symbols - they don't carry any information
         // other than the name may be a struct member
@@ -438,20 +441,23 @@ private:
         return symtab.add({name, Symbol::StructItem, idx});
     }
 
-    SymbolPointer allocate_type_var(const std::string& name = "") {
+    SymbolPointer create_implicit_type_var(NameId name) {
         Index idx = 1;
         auto last_var = symtab().find_last_of(Symbol::TypeVar);
         if (last_var)
             idx = last_var->index() + 1;
-        return symtab().add({name, Symbol::TypeVar, idx});
+        auto symptr = symtab().add({name, Symbol::TypeVar, idx});
+        symptr->set_implicit();
+        return symptr;
     }
 
-    SymbolPointer resolve_symbol(const std::string& name) {
+    SymbolPointer resolve_symbol(NameId name) {
         // lookup intrinsics in builtin module first
         // (this is just an optimization, the same lookup is repeated below)
-        if (name.size() > 3 && name[0] == '_' && name[1] == '_') {
+        auto name_view = name.view();
+        if (name_view.size() > 3 && name_view[0] == '_' && name_view[1] == '_') {
             auto& builtin_mod = module().get_imported_module(0);
-            assert(builtin_mod.name() == "builtin");
+            assert(builtin_mod.name().view() == "builtin");
             auto symptr = builtin_mod.symtab().find_by_name(name);
             if (symptr)
                 return symptr;
@@ -459,7 +465,7 @@ private:
         // local functions and parameters
         {
             // lookup in this and parent scopes
-            size_t depth = 0;
+            unsigned depth = 0;
             for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
                 if (auto symptr = p_symtab->find_by_name(name); symptr)
                     return symptr;
@@ -494,7 +500,7 @@ private:
         return {};
     }
 
-    SymbolPointer resolve_symbol_of_type(const std::string& name, Symbol::Type type) {
+    SymbolPointer resolve_symbol_of_type(NameId name, Symbol::Type type) {
         // lookup in this and parent scopes (including this module scope)
         for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
             auto symptr = p_symtab->find_last_of(name, type);
@@ -511,7 +517,7 @@ private:
         return {};
     }
 
-    SymbolPointerList find_all_symbols_of_type(const std::string& name, Symbol::Type type) {
+    SymbolPointerList find_all_symbols_of_type(NameId name, Symbol::Type type) {
         SymbolPointerList res;
         // lookup in this module
         {
@@ -526,7 +532,7 @@ private:
         return res;
     }
 
-    SymbolPointerList find_function_overloads(const std::string& name) {
+    SymbolPointerList find_function_overloads(NameId name) {
         // lookup in this and parent scopes (including this module scope)
         for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
             auto sym_list = p_symtab->filter(name, Symbol::Function);
@@ -545,7 +551,7 @@ private:
 
     void load_type_params(const std::vector<ast::TypeName>& type_params) {
         Index type_idx = 0;
-        std::set<std::string> unique;  // check uniqueness
+        std::set<NameId> unique;  // check uniqueness
         for (auto& tp : type_params) {
             if (unique.contains(tp.name))
                 throw redefined_name(tp.name, tp.source_loc);

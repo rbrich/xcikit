@@ -57,15 +57,15 @@ const char* builtin::op_to_function_name(ast::Operator::Op op)
 }
 
 
-BuiltinModule::BuiltinModule(ModuleManager& module_manager) : Module(module_manager, "builtin")
+BuiltinModule::BuiltinModule(ModuleManager& module_manager) : Module(module_manager, intern("builtin"))
 {
     get_main_function().signature().set_parameter(ti_void());
     get_main_function().signature().set_return_type(ti_void());
     get_main_function().set_bytecode();
     get_main_function().bytecode().add_opcode(Opcode::Ret);
-    symtab().add({"void", Symbol::Value, add_value(TypedValue{ti_void()})});
-    symtab().add({"false", Symbol::Value, add_value(TypedValue{value::Bool(false)})});
-    symtab().add({"true", Symbol::Value, add_value(TypedValue{value::Bool(true)})});
+    add_symbol("void", Symbol::Value, add_value(TypedValue{ti_void()}));
+    add_symbol("false", Symbol::Value, add_value(TypedValue{value::Bool(false)}));
+    add_symbol("true", Symbol::Value, add_value(TypedValue{value::Bool(true)}));
     add_intrinsics();
     add_types();
     add_string_functions();
@@ -79,130 +79,131 @@ void BuiltinModule::add_intrinsics()
     // directly write instructions to function code
 
     // no args
-    symtab().add({"__noop", Symbol::Instruction, Index(Opcode::Noop)});
-    symtab().add({"__logical_not", Symbol::Instruction, Index(Opcode::LogicalNot)});
-    symtab().add({"__logical_or", Symbol::Instruction, Index(Opcode::LogicalOr)});
-    symtab().add({"__logical_and", Symbol::Instruction, Index(Opcode::LogicalAnd)});
-    symtab().add({"__bitwise_not_8", Symbol::Instruction, Index(Opcode::BitwiseNot_8)});
-    symtab().add({"__bitwise_not_16", Symbol::Instruction, Index(Opcode::BitwiseNot_16)});
-    symtab().add({"__bitwise_not_32", Symbol::Instruction, Index(Opcode::BitwiseNot_32)});
-    symtab().add({"__bitwise_not_64", Symbol::Instruction, Index(Opcode::BitwiseNot_64)});
-    symtab().add({"__bitwise_not_128", Symbol::Instruction, Index(Opcode::BitwiseNot_128)});
-    symtab().add({"__bitwise_or_8", Symbol::Instruction, Index(Opcode::BitwiseOr_8)});
-    symtab().add({"__bitwise_or_16", Symbol::Instruction, Index(Opcode::BitwiseOr_16)});
-    symtab().add({"__bitwise_or_32", Symbol::Instruction, Index(Opcode::BitwiseOr_32)});
-    symtab().add({"__bitwise_or_64", Symbol::Instruction, Index(Opcode::BitwiseOr_64)});
-    symtab().add({"__bitwise_or_128", Symbol::Instruction, Index(Opcode::BitwiseOr_128)});
-    symtab().add({"__bitwise_and_8", Symbol::Instruction, Index(Opcode::BitwiseAnd_8)});
-    symtab().add({"__bitwise_and_16", Symbol::Instruction, Index(Opcode::BitwiseAnd_16)});
-    symtab().add({"__bitwise_and_32", Symbol::Instruction, Index(Opcode::BitwiseAnd_32)});
-    symtab().add({"__bitwise_and_64", Symbol::Instruction, Index(Opcode::BitwiseAnd_64)});
-    symtab().add({"__bitwise_and_128", Symbol::Instruction, Index(Opcode::BitwiseAnd_128)});
-    symtab().add({"__bitwise_xor_8", Symbol::Instruction, Index(Opcode::BitwiseXor_8)});
-    symtab().add({"__bitwise_xor_16", Symbol::Instruction, Index(Opcode::BitwiseXor_16)});
-    symtab().add({"__bitwise_xor_32", Symbol::Instruction, Index(Opcode::BitwiseXor_32)});
-    symtab().add({"__bitwise_xor_64", Symbol::Instruction, Index(Opcode::BitwiseXor_64)});
-    symtab().add({"__bitwise_xor_128", Symbol::Instruction, Index(Opcode::BitwiseXor_128)});
-    symtab().add({"__shift_left_8", Symbol::Instruction, Index(Opcode::ShiftLeft_8)});
-    symtab().add({"__shift_left_16", Symbol::Instruction, Index(Opcode::ShiftLeft_16)});
-    symtab().add({"__shift_left_32", Symbol::Instruction, Index(Opcode::ShiftLeft_32)});
-    symtab().add({"__shift_left_64", Symbol::Instruction, Index(Opcode::ShiftLeft_64)});
-    symtab().add({"__shift_left_128", Symbol::Instruction, Index(Opcode::ShiftLeft_128)});
-    symtab().add({"__shift_right_8", Symbol::Instruction, Index(Opcode::ShiftRight_8)});
-    symtab().add({"__shift_right_16", Symbol::Instruction, Index(Opcode::ShiftRight_16)});
-    symtab().add({"__shift_right_32", Symbol::Instruction, Index(Opcode::ShiftRight_32)});
-    symtab().add({"__shift_right_64", Symbol::Instruction, Index(Opcode::ShiftRight_64)});
-    symtab().add({"__shift_right_128", Symbol::Instruction, Index(Opcode::ShiftRight_128)});
-    symtab().add({"__shift_right_se_8", Symbol::Instruction, Index(Opcode::ShiftRightSE_8)});
-    symtab().add({"__shift_right_se_16", Symbol::Instruction, Index(Opcode::ShiftRightSE_16)});
-    symtab().add({"__shift_right_se_32", Symbol::Instruction, Index(Opcode::ShiftRightSE_32)});
-    symtab().add({"__shift_right_se_64", Symbol::Instruction, Index(Opcode::ShiftRightSE_64)});
-    symtab().add({"__shift_right_se_128", Symbol::Instruction, Index(Opcode::ShiftRightSE_128)});
+    add_symbol("__noop", Symbol::Instruction, Index(Opcode::Noop));
+    add_symbol("__logical_not", Symbol::Instruction, Index(Opcode::LogicalNot));
+    add_symbol("__logical_or", Symbol::Instruction, Index(Opcode::LogicalOr));
+    add_symbol("__logical_and", Symbol::Instruction, Index(Opcode::LogicalAnd));
+    add_symbol("__bitwise_not_8", Symbol::Instruction, Index(Opcode::BitwiseNot_8));
+    add_symbol("__bitwise_not_16", Symbol::Instruction, Index(Opcode::BitwiseNot_16));
+    add_symbol("__bitwise_not_32", Symbol::Instruction, Index(Opcode::BitwiseNot_32));
+    add_symbol("__bitwise_not_64", Symbol::Instruction, Index(Opcode::BitwiseNot_64));
+    add_symbol("__bitwise_not_128", Symbol::Instruction, Index(Opcode::BitwiseNot_128));
+    add_symbol("__bitwise_or_8", Symbol::Instruction, Index(Opcode::BitwiseOr_8));
+    add_symbol("__bitwise_or_16", Symbol::Instruction, Index(Opcode::BitwiseOr_16));
+    add_symbol("__bitwise_or_32", Symbol::Instruction, Index(Opcode::BitwiseOr_32));
+    add_symbol("__bitwise_or_64", Symbol::Instruction, Index(Opcode::BitwiseOr_64));
+    add_symbol("__bitwise_or_128", Symbol::Instruction, Index(Opcode::BitwiseOr_128));
+    add_symbol("__bitwise_and_8", Symbol::Instruction, Index(Opcode::BitwiseAnd_8));
+    add_symbol("__bitwise_and_16", Symbol::Instruction, Index(Opcode::BitwiseAnd_16));
+    add_symbol("__bitwise_and_32", Symbol::Instruction, Index(Opcode::BitwiseAnd_32));
+    add_symbol("__bitwise_and_64", Symbol::Instruction, Index(Opcode::BitwiseAnd_64));
+    add_symbol("__bitwise_and_128", Symbol::Instruction, Index(Opcode::BitwiseAnd_128));
+    add_symbol("__bitwise_xor_8", Symbol::Instruction, Index(Opcode::BitwiseXor_8));
+    add_symbol("__bitwise_xor_16", Symbol::Instruction, Index(Opcode::BitwiseXor_16));
+    add_symbol("__bitwise_xor_32", Symbol::Instruction, Index(Opcode::BitwiseXor_32));
+    add_symbol("__bitwise_xor_64", Symbol::Instruction, Index(Opcode::BitwiseXor_64));
+    add_symbol("__bitwise_xor_128", Symbol::Instruction, Index(Opcode::BitwiseXor_128));
+    add_symbol("__shift_left_8", Symbol::Instruction, Index(Opcode::ShiftLeft_8));
+    add_symbol("__shift_left_16", Symbol::Instruction, Index(Opcode::ShiftLeft_16));
+    add_symbol("__shift_left_32", Symbol::Instruction, Index(Opcode::ShiftLeft_32));
+    add_symbol("__shift_left_64", Symbol::Instruction, Index(Opcode::ShiftLeft_64));
+    add_symbol("__shift_left_128", Symbol::Instruction, Index(Opcode::ShiftLeft_128));
+    add_symbol("__shift_right_8", Symbol::Instruction, Index(Opcode::ShiftRight_8));
+    add_symbol("__shift_right_16", Symbol::Instruction, Index(Opcode::ShiftRight_16));
+    add_symbol("__shift_right_32", Symbol::Instruction, Index(Opcode::ShiftRight_32));
+    add_symbol("__shift_right_64", Symbol::Instruction, Index(Opcode::ShiftRight_64));
+    add_symbol("__shift_right_128", Symbol::Instruction, Index(Opcode::ShiftRight_128));
+    add_symbol("__shift_right_se_8", Symbol::Instruction, Index(Opcode::ShiftRightSE_8));
+    add_symbol("__shift_right_se_16", Symbol::Instruction, Index(Opcode::ShiftRightSE_16));
+    add_symbol("__shift_right_se_32", Symbol::Instruction, Index(Opcode::ShiftRightSE_32));
+    add_symbol("__shift_right_se_64", Symbol::Instruction, Index(Opcode::ShiftRightSE_64));
+    add_symbol("__shift_right_se_128", Symbol::Instruction, Index(Opcode::ShiftRightSE_128));
 
     // one arg
-    symtab().add({"__equal", Symbol::Instruction, Index(Opcode::Equal)});
-    symtab().add({"__not_equal", Symbol::Instruction, Index(Opcode::NotEqual)});
-    symtab().add({"__less_equal", Symbol::Instruction, Index(Opcode::LessEqual)});
-    symtab().add({"__greater_equal", Symbol::Instruction, Index(Opcode::GreaterEqual)});
-    symtab().add({"__less_than", Symbol::Instruction, Index(Opcode::LessThan)});
-    symtab().add({"__greater_than", Symbol::Instruction, Index(Opcode::GreaterThan)});
-    symtab().add({"__neg", Symbol::Instruction, Index(Opcode::Neg)});
-    symtab().add({"__add", Symbol::Instruction, Index(Opcode::Add)});
-    symtab().add({"__sub", Symbol::Instruction, Index(Opcode::Sub)});
-    symtab().add({"__mul", Symbol::Instruction, Index(Opcode::Mul)});
-    symtab().add({"__div", Symbol::Instruction, Index(Opcode::Div)});
-    symtab().add({"__mod", Symbol::Instruction, Index(Opcode::Mod)});
-    symtab().add({"__exp", Symbol::Instruction, Index(Opcode::Exp)});
-    symtab().add({"__unsafe_add", Symbol::Instruction, Index(Opcode::UnsafeAdd)});
-    symtab().add({"__unsafe_sub", Symbol::Instruction, Index(Opcode::UnsafeSub)});
-    symtab().add({"__unsafe_mul", Symbol::Instruction, Index(Opcode::UnsafeMul)});
-    symtab().add({"__unsafe_div", Symbol::Instruction, Index(Opcode::UnsafeDiv)});
-    symtab().add({"__unsafe_mod", Symbol::Instruction, Index(Opcode::UnsafeMod)});
-    symtab().add({"__load_static", Symbol::Instruction, Index(Opcode::LoadStatic)});
-    symtab().add({"__list_subscript", Symbol::Instruction, Index(Opcode::ListSubscript)});
-    symtab().add({"__list_length", Symbol::Instruction, Index(Opcode::ListLength)});
-    symtab().add({"__list_slice", Symbol::Instruction, Index(Opcode::ListSlice)});
-    symtab().add({"__list_concat", Symbol::Instruction, Index(Opcode::ListConcat)});
-    symtab().add({"__cast", Symbol::Instruction, Index(Opcode::Cast)});
+    add_symbol("__equal", Symbol::Instruction, Index(Opcode::Equal));
+    add_symbol("__not_equal", Symbol::Instruction, Index(Opcode::NotEqual));
+    add_symbol("__less_equal", Symbol::Instruction, Index(Opcode::LessEqual));
+    add_symbol("__greater_equal", Symbol::Instruction, Index(Opcode::GreaterEqual));
+    add_symbol("__less_than", Symbol::Instruction, Index(Opcode::LessThan));
+    add_symbol("__greater_than", Symbol::Instruction, Index(Opcode::GreaterThan));
+    add_symbol("__neg", Symbol::Instruction, Index(Opcode::Neg));
+    add_symbol("__add", Symbol::Instruction, Index(Opcode::Add));
+    add_symbol("__sub", Symbol::Instruction, Index(Opcode::Sub));
+    add_symbol("__mul", Symbol::Instruction, Index(Opcode::Mul));
+    add_symbol("__div", Symbol::Instruction, Index(Opcode::Div));
+    add_symbol("__mod", Symbol::Instruction, Index(Opcode::Mod));
+    add_symbol("__exp", Symbol::Instruction, Index(Opcode::Exp));
+    add_symbol("__unsafe_add", Symbol::Instruction, Index(Opcode::UnsafeAdd));
+    add_symbol("__unsafe_sub", Symbol::Instruction, Index(Opcode::UnsafeSub));
+    add_symbol("__unsafe_mul", Symbol::Instruction, Index(Opcode::UnsafeMul));
+    add_symbol("__unsafe_div", Symbol::Instruction, Index(Opcode::UnsafeDiv));
+    add_symbol("__unsafe_mod", Symbol::Instruction, Index(Opcode::UnsafeMod));
+    add_symbol("__load_static", Symbol::Instruction, Index(Opcode::LoadStatic));
+    add_symbol("__list_subscript", Symbol::Instruction, Index(Opcode::ListSubscript));
+    add_symbol("__list_length", Symbol::Instruction, Index(Opcode::ListLength));
+    add_symbol("__list_slice", Symbol::Instruction, Index(Opcode::ListSlice));
+    add_symbol("__list_concat", Symbol::Instruction, Index(Opcode::ListConcat));
+    add_symbol("__cast", Symbol::Instruction, Index(Opcode::Cast));
 
     // two args
-    symtab().add({"__copy", Symbol::Instruction, Index(Opcode::Copy)});
-    symtab().add({"__drop", Symbol::Instruction, Index(Opcode::Drop)});
+    add_symbol("__copy", Symbol::Instruction, Index(Opcode::Copy));
+    add_symbol("__drop", Symbol::Instruction, Index(Opcode::Drop));
     /*
     // not yet found any use for these, uncomment when needed
-    symtab().add({"__execute", Symbol::Instruction, Index(Opcode::Execute)});
-    symtab().add({"__load_module", Symbol::Instruction, Index(Opcode::LoadModule)});
-    symtab().add({"__load_function", Symbol::Instruction, Index(Opcode::LoadFunction)});
-    symtab().add({"__call0", Symbol::Instruction, Index(Opcode::Call0)});
-    symtab().add({"__call1", Symbol::Instruction, Index(Opcode::Call1)});
-    symtab().add({"__make_closure", Symbol::Instruction, Index(Opcode::MakeClosure)});
-    symtab().add({"__inc_ref", Symbol::Instruction, Index(Opcode::IncRef)});
-    symtab().add({"__dec_ref", Symbol::Instruction, Index(Opcode::DecRef)});
-    symtab().add({"__jump", Symbol::Instruction, Index(Opcode::Jump)});
-    symtab().add({"__jump_if_not", Symbol::Instruction, Index(Opcode::JumpIfNot)});
-    symtab().add({"__invoke", Symbol::Instruction, Index(Opcode::Invoke)});
-    symtab().add({"__call", Symbol::Instruction, Index(Opcode::Call)});
-    symtab().add({"__make_list", Symbol::Instruction, Index(Opcode::MakeList)});
+    add_symbol("__execute", Symbol::Instruction, Index(Opcode::Execute));
+    add_symbol("__load_module", Symbol::Instruction, Index(Opcode::LoadModule));
+    add_symbol("__load_function", Symbol::Instruction, Index(Opcode::LoadFunction));
+    add_symbol("__call0", Symbol::Instruction, Index(Opcode::Call0));
+    add_symbol("__call1", Symbol::Instruction, Index(Opcode::Call1));
+    add_symbol("__make_closure", Symbol::Instruction, Index(Opcode::MakeClosure));
+    add_symbol("__inc_ref", Symbol::Instruction, Index(Opcode::IncRef));
+    add_symbol("__dec_ref", Symbol::Instruction, Index(Opcode::DecRef));
+    add_symbol("__jump", Symbol::Instruction, Index(Opcode::Jump));
+    add_symbol("__jump_if_not", Symbol::Instruction, Index(Opcode::JumpIfNot));
+    add_symbol("__invoke", Symbol::Instruction, Index(Opcode::Invoke));
+    add_symbol("__call", Symbol::Instruction, Index(Opcode::Call));
+    add_symbol("__make_list", Symbol::Instruction, Index(Opcode::MakeList));
     */
 
     // `__module` is current Module, `__module 1` is imported module by index 1
-    symtab().add({"__module", Symbol::Module});
+    add_symbol("__module", Symbol::Module);
     // `__type_index<Int>` is index of Int type
-    symtab().add({"__type_index", Symbol::TypeIndex});
+    add_symbol("__type_index", Symbol::TypeIndex);
     // `__value 42` is index of static value 42 (e.g. `__load_static (__value 42)`)
-    symtab().add({"__value", Symbol::Value});
+    add_symbol("__value", Symbol::Value);
 }
 
 
 void BuiltinModule::add_types()
 {
-    symtab().add({"Void", Symbol::TypeName, add_type(ti_void())});
-    symtab().add({"Bool", Symbol::TypeName, add_type(ti_bool())});
-    symtab().add({"Byte", Symbol::TypeName, add_type(ti_byte())});
-    symtab().add({"Char", Symbol::TypeName, add_type(ti_char())});
+    add_symbol("Void", Symbol::TypeName, add_type(ti_void()));
+    add_symbol("Bool", Symbol::TypeName, add_type(ti_bool()));
+    add_symbol("Byte", Symbol::TypeName, add_type(ti_byte()));
+    add_symbol("Char", Symbol::TypeName, add_type(ti_char()));
 
-    symtab().add({"UInt8", Symbol::TypeName, add_type(ti_uint8())});
-    symtab().add({"UInt16", Symbol::TypeName, add_type(ti_uint16())});
-    symtab().add({"UInt32", Symbol::TypeName, add_type(ti_uint32())});
-    symtab().add({"UInt64", Symbol::TypeName, add_type(ti_uint64())});
-    symtab().add({"UInt128", Symbol::TypeName, add_type(ti_uint128())});
-    symtab().add({"UInt", Symbol::TypeName, add_type(ti_uint())});
+    add_symbol("UInt8", Symbol::TypeName, add_type(ti_uint8()));
+    add_symbol("UInt16", Symbol::TypeName, add_type(ti_uint16()));
+    add_symbol("UInt32", Symbol::TypeName, add_type(ti_uint32()));
+    add_symbol("UInt64", Symbol::TypeName, add_type(ti_uint64()));
+    add_symbol("UInt128", Symbol::TypeName, add_type(ti_uint128()));
+    add_symbol("UInt", Symbol::TypeName, add_type(ti_uint()));
 
-    symtab().add({"Int8", Symbol::TypeName, add_type(ti_int8())});
-    symtab().add({"Int16", Symbol::TypeName, add_type(ti_int16())});
-    symtab().add({"Int32", Symbol::TypeName, add_type(ti_int32())});
-    symtab().add({"Int64", Symbol::TypeName, add_type(ti_int64())});
-    symtab().add({"Int128", Symbol::TypeName, add_type(ti_int128())});
-    symtab().add({"Int", Symbol::TypeName, add_type(ti_int())});
+    add_symbol("Int8", Symbol::TypeName, add_type(ti_int8()));
+    add_symbol("Int16", Symbol::TypeName, add_type(ti_int16()));
+    add_symbol("Int32", Symbol::TypeName, add_type(ti_int32()));
+    add_symbol("Int64", Symbol::TypeName, add_type(ti_int64()));
+    add_symbol("Int128", Symbol::TypeName, add_type(ti_int128()));
+    add_symbol("Int", Symbol::TypeName, add_type(ti_int()));
 
-    symtab().add({"Float32", Symbol::TypeName, add_type(ti_float32())});
-    symtab().add({"Float64", Symbol::TypeName, add_type(ti_float64())});
-    symtab().add({"Float128", Symbol::TypeName, add_type(ti_float128())});
-    symtab().add({"Float", Symbol::TypeName, add_type(ti_float())});
+    add_symbol("Float32", Symbol::TypeName, add_type(ti_float32()));
+    add_symbol("Float64", Symbol::TypeName, add_type(ti_float64()));
+    add_symbol("Float128", Symbol::TypeName, add_type(ti_float128()));
+    add_symbol("Float", Symbol::TypeName, add_type(ti_float()));
 
-    symtab().add({"String", Symbol::TypeName, add_type(ti_string())});
-    symtab().add({"Module", Symbol::TypeName, add_type(ti_module())});
-    symtab().add({"TypeIndex", Symbol::TypeName, add_type(ti_type_index())});
+    add_symbol("String", Symbol::TypeName, add_type(ti_string()));
+    add_symbol("Bytes", Symbol::TypeName, add_type(ti_bytes()));
+    add_symbol("Module", Symbol::TypeName, add_type(ti_module()));
+    add_symbol("TypeIndex", Symbol::TypeName, add_type(ti_type_index()));
 
     // -------------------------------------------------------------------------
     // Types for interfacing with C
@@ -219,16 +220,16 @@ void BuiltinModule::add_types()
 
     // Variably-sized type aliases
     static_assert(sizeof(int) == 4);
-    symtab().add({"CInt", Symbol::TypeName, cint32});
-    symtab().add({"CUInt", Symbol::TypeName, cuint32});
+    add_symbol("CInt", Symbol::TypeName, cint32);
+    add_symbol("CUInt", Symbol::TypeName, cuint32);
 #if UINTPTR_MAX == UINT64_MAX
     static_assert(sizeof(size_t) == 8);
-    symtab().add({"COffset", Symbol::TypeName, cint64});
-    symtab().add({"CSize", Symbol::TypeName, cuint64});
+    add_symbol("COffset", Symbol::TypeName, cint64);
+    add_symbol("CSize", Symbol::TypeName, cuint64);
 #else
     static_assert(sizeof(size_t) == 4);
-    symtab().add({"COffset", Symbol::TypeName, cint32});
-    symtab().add({"CSize", Symbol::TypeName, cuint32});
+    add_symbol("COffset", Symbol::TypeName, cint32);
+    add_symbol("CSize", Symbol::TypeName, cuint32);
 #endif
 }
 
@@ -453,17 +454,17 @@ void BuiltinModule::add_io_functions()
 {
     // types
     auto streams = ti_struct({
-            {"in", ti_stream()},
-            {"out", ti_stream()},
-            {"err", ti_stream()}
+            {intern("in"), ti_stream()},
+            {intern("out"), ti_stream()},
+            {intern("err"), ti_stream()}
     });
-    symtab().add({"Streams", Symbol::TypeName, add_type(streams)});
+    add_symbol("Streams", Symbol::TypeName, add_type(streams));
 
     // values
-    symtab().add({"stdin", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::default_stdin())})});
-    symtab().add({"stdout", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::default_stdout())})});
-    symtab().add({"stderr", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::default_stderr())})});
-    symtab().add({"null", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::null())})});
+    add_symbol("stdin", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::default_stdin())}));
+    add_symbol("stdout", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::default_stdout())}));
+    add_symbol("stderr", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::default_stderr())}));
+    add_symbol("null", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::null())}));
 
     // functions
     add_native_function("write", ti_string(), ti_void(), write_string);
@@ -546,7 +547,7 @@ static void introspect_module_by_name(Stack& stack, void*, void*)
 {
     auto name = stack.pull<value::String>();
     name.decref();
-    const auto idx = stack.module().get_imported_module_index(name.value());
+    const auto idx = stack.module().get_imported_module_index(intern(name.value()));
     if (idx == no_index)
         throw module_not_found(name.value());
     stack.push(value::Module{stack.module().get_imported_module(idx)});
@@ -569,7 +570,7 @@ void BuiltinModule::add_introspections()
     add_native_function("__builtin",
             [](void* m) -> Module& { return *static_cast<Module*>(m); },
             this);
-    add_native_function("__module_name", [](Module& m) -> std::string { return m.name(); });
+    add_native_function("__module_name", [](Module& m) -> std::string { return m.name().str(); });
     add_native_function("__module_by_name", ti_string(), ti_module(), introspect_module_by_name);
     add_native_function("__n_fn", [](Module& m) { return (uint64_t) m.num_functions(); });
     add_native_function("__n_types", [](Module& m) { return (uint64_t) m.num_types(); });

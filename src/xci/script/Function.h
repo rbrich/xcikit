@@ -49,7 +49,7 @@ public:
 
     bool operator==(const Function& rhs) const;
 
-    const std::string& name() const { return m_symtab->name(); }
+    NameId name() const { return m_symtab->name(); }
     std::string qualified_name() const { return m_symtab == nullptr ? "" : m_symtab->qualified_name(); }
 
     // module containing this function

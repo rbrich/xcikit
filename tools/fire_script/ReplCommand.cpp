@@ -56,8 +56,7 @@ static void cmd_dump_info() {
 static void print_module_header(const Module& mod)
 {
     TermCtl& t = xci::core::TermCtl::stdout_instance();
-    t.stream() << "Module \"" << mod.name() << '"'
-         << " (" << std::hex << intptr_t(&mod.symtab()) << std::dec << ')' << std::endl;
+    t.stream() << fmt::format("Module \"{}\" ({:x})", mod.name(), intptr_t(&mod.symtab())) << std::endl;
 }
 
 
@@ -89,12 +88,13 @@ const Module* ReplCommand::module_by_name(std::string_view mod_name) {
     if (mod_name == ".")
         return m_module.get();
 
+    const auto name_id = intern(mod_name);
     for (const auto& m : m_ctx.input_modules | reverse) {
-        if (m->name() == mod_name)
+        if (m->name() == name_id)
             return m.get();
         for (Index i = 0; i != m->num_imported_modules(); ++i) {
             const auto& imp_mod = m->get_imported_module(i);
-            if (imp_mod.name() == mod_name)
+            if (imp_mod.name() == name_id)
                 return &imp_mod;
         }
     }
@@ -177,8 +177,9 @@ void ReplCommand::cmd_dump_function(std::string_view fun_name) {
     size_t mod_idx = m_ctx.input_modules.size() - 1;
     const auto& mod = *m_ctx.input_modules[mod_idx];
 
+    const auto fun_name_id = intern(fun_name);
     for (Index i = 0; i != mod.num_functions(); ++i) {
-        if (mod.get_function(i).name() == fun_name) {
+        if (mod.get_function(i).name() == fun_name_id) {
             dump_function(mod, i);
             return;
         }
@@ -197,8 +198,9 @@ void ReplCommand::cmd_dump_function(std::string_view fun_name, std::string_view 
         return;
 
     // lookup function
+    const auto fun_name_id = intern(fun_name);
     for (Index i = 0; i != mod->num_functions(); ++i) {
-        if (mod->get_function(i).name() == fun_name) {
+        if (mod->get_function(i).name() == fun_name_id) {
             dump_function(*mod, i);
             return;
         }
@@ -232,13 +234,14 @@ void ReplCommand::cmd_dump_function(Index fun_idx, Index mod_idx)
 void ReplCommand::cmd_describe(std::string_view name) {
     TermCtl& t = m_ctx.term_out;
 
+    const auto name_id = intern(name);
     for (const auto& mod : m_ctx.input_modules | reverse) {
-        if (mod->name() == name) {
+        if (mod->name() == name_id) {
             t.print("Module {}: ", name);
             t.stream() << mod->get_main_function().signature() << std::endl;
             return;
         }
-        auto sym_ptr = mod->symtab().find_by_name(name);
+        auto sym_ptr = mod->symtab().find_by_name(name_id);
         if (!sym_ptr)
             continue;
         switch (sym_ptr->type()) {
@@ -256,7 +259,7 @@ void ReplCommand::cmd_describe(std::string_view name) {
             }
             case Symbol::TypeName: {
                 const auto& ti = mod->get_type(sym_ptr->index());
-                if (ti.is_named() && ti.name() == name) {
+                if (ti.is_named() && ti.name() == name_id) {
                     t.print("Named type {} = ", name);
                     t.stream() << ti.underlying() << std::endl;
                 } else {

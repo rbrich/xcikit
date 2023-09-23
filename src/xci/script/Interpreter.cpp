@@ -19,7 +19,7 @@ Interpreter::Interpreter(const core::Vfs& vfs, Compiler::Flags flags)
 {}
 
 
-std::shared_ptr<Module> Interpreter::build_module(const std::string& name, SourceId source_id)
+std::shared_ptr<Module> Interpreter::build_module(NameId name, SourceId source_id)
 {
     // setup module
     auto module = std::make_shared<Module>(m_module_manager, name);
@@ -79,7 +79,7 @@ TypedValue Interpreter::eval(std::shared_ptr<Module> mod, std::string input, con
 
 TypedValue Interpreter::eval(std::string input, bool import_std, const Interpreter::InvokeCallback& cb)
 {
-    auto module_name = fmt::format("<input{}>", m_input_num++);
+    const auto module_name = intern(fmt::format("<input{}>", m_input_num++));
     auto src_id = m_source_manager.add_source(module_name, std::move(input));
     auto mod_idx = m_module_manager.replace_module(module_name);
     auto main = m_module_manager.get_module(mod_idx);
