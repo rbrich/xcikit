@@ -13,7 +13,6 @@
 #include "ast/AST.h"
 #include "Code.h"
 #include <cmath>
-#include <ctgmath>  // powl, fmodl
 #include <limits>
 
 namespace xci::script {

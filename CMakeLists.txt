@@ -91,7 +91,12 @@ set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
 add_subdirectory(third_party)
 
 # Threads (always from system)
-find_package(Threads REQUIRED)
+if (NOT WIN32)
+    find_package(Threads REQUIRED)
+else()
+    # Dummy target - workaround for failing find_package(Threads) on Windows with conan_provider.cmake
+    add_library(Threads::Threads INTERFACE IMPORTED)
+endif()
 
 # PEGTL
 if (XCI_WITH_PEGTL)
