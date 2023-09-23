@@ -100,7 +100,7 @@ requirements:
       - tests
   benchmark:
     cmake: "benchmark/1.5.0"
-    conan: "benchmark/1.8.2"
+    conan: "benchmark/1.8.3"
     prereq:
       - benchmarks
   incbin:
