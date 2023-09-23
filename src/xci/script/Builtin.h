@@ -203,9 +203,14 @@ private:
     void add_introspections();
 
     Index add_named_type(const char* name, TypeInfo&& ti) {
-        const auto index = add_type(TypeInfo{name, std::move(ti)});
-        symtab().add({name, Symbol::TypeName, index});
+        const auto id = intern(name);
+        const auto index = add_type(TypeInfo{id, std::move(ti)});
+        symtab().add({id, Symbol::TypeName, index});
         return index;
+    }
+
+    void add_symbol(const char* name, Symbol::Type type, Index idx = no_index) {
+        symtab().add({intern(name), type, idx});
     }
 };
 

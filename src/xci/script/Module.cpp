@@ -31,8 +31,7 @@ Module::~Module()
 
 
 SymbolPointer Module::add_native_function(
-        std::string&& name, TypeInfo&& param, TypeInfo&& retval,
-        NativeDelegate native)
+        NameId name, TypeInfo&& param, TypeInfo&& retval, NativeDelegate native)
 {
     Function fn {*this, symtab().add_child(name)};
     fn.signature().set_parameter(ti_normalize(std::move(param)));
@@ -41,11 +40,11 @@ SymbolPointer Module::add_native_function(
     auto fn_idx = add_function(std::move(fn)).index;
     auto scope_idx = add_scope(Scope{*this, fn_idx, symtab().scope()});
     auto subscope_i = symtab().scope()->add_subscope(scope_idx);
-    return symtab().add({std::move(name), Symbol::Function, subscope_i});
+    return symtab().add({name, Symbol::Function, subscope_i});
 }
 
 
-Index Module::import_module(const std::string& name)
+Index Module::import_module(NameId name)
 {
     if (m_module_manager == nullptr)
         return no_index;
@@ -76,7 +75,7 @@ Index Module::get_imported_module_index(Module* mod) const
 }
 
 
-Index Module::get_imported_module_index(std::string_view name) const
+Index Module::get_imported_module_index(NameId name) const
 {
     auto it = find_if(m_modules.begin(), m_modules.end(),
                       [name](const std::shared_ptr<Module>& a){ return name == a->name(); });
@@ -92,7 +91,7 @@ auto Module::add_function(Function&& fn) -> WeakFunctionId
 }
 
 
-auto Module::find_function(std::string_view name) const -> WeakFunctionId
+auto Module::find_function(NameId name) const -> WeakFunctionId
 {
     auto it = std::find_if(m_functions.begin(), m_functions.end(),
                            [name](const Function& fn) { return fn.name() == name; });
@@ -190,20 +189,21 @@ SymbolTable& Module::symtab_by_qualified_name(std::string_view name)
     auto part_it = parts.begin();
 
     SymbolTable* symtab = nullptr;
-    if (*part_it == m_symtab.name()) {
+    NameId part_name = intern(*part_it);
+    if (part_name == m_symtab.name()) {
         // a symbol from this module
         symtab = &m_symtab;
     } else {
         // a symbol from an imported module
         for (const auto& module : m_modules)
-            if (module->name() == *part_it)
+            if (module->name() == part_name)
                 symtab = &module->symtab();
         if (symtab == nullptr)
             throw unresolved_symbol(name);
     }
 
     while (++part_it != parts.end()) {
-        symtab = symtab->find_child_by_name(*part_it);
+        symtab = symtab->find_child_by_name(intern(*part_it));
         if (symtab == nullptr)
             throw unresolved_symbol(name);
     }

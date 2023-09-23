@@ -25,7 +25,6 @@ std::ostream& operator<<(std::ostream& os, ErrorCode v)
         case ErrorCode::UndefinedTypeName:          return os << "UndefinedTypeName";
         case ErrorCode::RedefinedName:              return os << "RedefinedName";
         case ErrorCode::UnsupportedOperandsError:   return os << "UnsupportedOperandsError";
-        case ErrorCode::UnknownTypeName:            return os << "UnknownTypeName";
         case ErrorCode::UnexpectedArgument:         return os << "UnexpectedArgument";
         case ErrorCode::UnexpectedArgumentType:     return os << "UnexpectedArgumentType";
         case ErrorCode::UnexpectedReturnType:       return os << "UnexpectedReturnType";
@@ -140,7 +139,7 @@ ScriptError struct_type_mismatch(const TypeInfo& got, const SourceLocation& loc)
 }
 
 
-ScriptError struct_unknown_key(const TypeInfo& struct_type, const std::string& key,
+ScriptError struct_unknown_key(const TypeInfo& struct_type, NameId key,
                                const SourceLocation& loc) {
     return ScriptError(ErrorCode::StructUnknownKey,
                        fmt::format("struct key \"{}\" doesn't match struct type {}",

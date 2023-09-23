@@ -858,7 +858,7 @@ public:
     }
     void visit(const TupleV& v) override {
         if (type_info.is_named())
-            os << type_info.name();
+            os << type_info.name().view();
         const auto& underlying = type_info.underlying();
         os << '(';
         if (underlying.is_tuple()) {
@@ -873,7 +873,7 @@ public:
             for (Value* it = v.values.get(); !it->is_unknown(); ++it) {
                 if (it != v.values.get())
                     os << ", ";
-                os << ti_iter->first << '=' << TypedValue(*it, ti_iter->second);
+                os << ti_iter->first.view() << '=' << TypedValue(*it, ti_iter->second);
                 ++ti_iter;
             }
         } else {
@@ -888,7 +888,7 @@ public:
     }
     void visit(const ClosureV& v) override {
         const auto& fn = *v.function();
-        os << fn.name() << ' ' << fn.signature();
+        fmt::print(os, "{} {}", fn.name(), fn.signature());
         const auto& nonlocals = v.closure();
         if (!nonlocals.empty()) {
             auto ti_iter = fn.nonlocals().begin();

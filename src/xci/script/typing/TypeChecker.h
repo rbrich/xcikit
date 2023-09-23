@@ -105,7 +105,7 @@ public:
 
     TypeInfo resolve(const TypeInfo& inferred, const SourceLocation& loc);
 
-    void check_struct_item(const std::string& key, const TypeInfo& inferred, const SourceLocation& loc) const;
+    void check_struct_item(NameId key, const TypeInfo& inferred, const SourceLocation& loc) const;
 
     const TypeInfo& spec() const { return m_spec; }
     TypeInfo&& spec() { return std::move(m_spec); }

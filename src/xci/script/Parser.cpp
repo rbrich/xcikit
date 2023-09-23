@@ -6,7 +6,6 @@
 
 #include "Parser.h"
 #include "Error.h"
-#include "TypeInfo.h"
 #include "parser/raw_string.h"
 #include <xci/core/parser/unescape_rules.h>
 
@@ -726,33 +725,33 @@ template<>
 struct Action<Identifier> : change_states< ast::Identifier > {
     template<typename Input>
     static void apply(const Input &in, ast::Identifier& ident) {
-        ident.name = in.string();
+        ident.name = intern(in.string());
         ident.source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
     static void success(const Input &in, ast::Identifier& ident, ast::StructItem& item) {
-        item.identifier = std::move(ident);
+        item.identifier = ident;
     }
 
     template<typename Input>
     static void success(const Input &in, ast::Identifier& ident, ast::Variable& var) {
-        var.identifier = std::move(ident);
+        var.identifier = ident;
     }
 
     template<typename Input>
     static void success(const Input &in, ast::Identifier& ident, ast::Parameter& par) {
-        par.identifier = std::move(ident);
+        par.identifier = ident;
     }
 
     template<typename Input>
     static void success(const Input &in, ast::Identifier& ident, ast::Reference& ref) {
-        ref.identifier = std::move(ident);
+        ref.identifier = ident;
     }
 
     template<typename Input>
     static void success(const Input &in, ast::Identifier& ident, ast::StructInit& node) {
-        node.items.emplace_back(std::move(ident), std::unique_ptr<ast::Expression>{});
+        node.items.emplace_back(ident, std::unique_ptr<ast::Expression>{});
     }
 };
 
@@ -800,7 +799,7 @@ template<>
 struct Action<TypeName> : change_states< ast::TypeName > {
     template<typename Input>
     static void apply(const Input &in, ast::TypeName& tname) {
-        tname.name = in.string();
+        tname.name = intern(in.string());
         tname.source_loc.load(in.input(), in.position());
     }
 

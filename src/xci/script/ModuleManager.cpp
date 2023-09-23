@@ -18,11 +18,11 @@ ModuleManager::ModuleManager(const core::Vfs& vfs, Interpreter& interpreter)
         : m_vfs(vfs), m_interpreter(interpreter)
 {
     m_modules.emplace_back(std::make_shared<BuiltinModule>(*this));
-    m_module_names.try_emplace("builtin", 0);
+    m_module_names.try_emplace(intern("builtin"), 0);
 }
 
 
-ModulePtr ModuleManager::import_module(const std::string& name)
+ModulePtr ModuleManager::import_module(NameId name)
 {
     auto it = m_module_names.try_emplace(name, 0);
     if (it.second) {
@@ -43,13 +43,13 @@ ModulePtr ModuleManager::import_module(const std::string& name)
 }
 
 
-Index ModuleManager::replace_module(const std::string& name)
+Index ModuleManager::replace_module(NameId name)
 {
     return replace_module(name, std::make_shared<Module>(*this, name));
 }
 
 
-Index ModuleManager::replace_module(const std::string& name, ModulePtr mod)  // NOLINT(performance-unnecessary-value-param)
+Index ModuleManager::replace_module(NameId name, ModulePtr mod)  // NOLINT(performance-unnecessary-value-param)
 {
     auto it = m_module_names.try_emplace(name, 0);
     if (it.second) {
@@ -78,13 +78,14 @@ void ModuleManager::clear(bool keep_std)
 {
     ModulePtr builtin = std::move(m_modules[0]);
     ModulePtr std;
-    if (keep_std && m_module_names.contains("std"))
-        std = std::move(m_modules[m_module_names["std"]]);
+    const auto std_name = intern("std");
+    if (keep_std && m_module_names.contains(std_name))
+        std = std::move(m_modules[m_module_names[std_name]]);
     m_modules.clear();
     m_module_names.clear();
     replace_module("builtin", std::move(builtin));
     if (std)
-        replace_module("std", std::move(std));
+        replace_module(std_name, std::move(std));
 }
 
 

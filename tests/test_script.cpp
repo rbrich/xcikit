@@ -120,22 +120,25 @@ static std::string optimize(const std::string& input)
 
 static std::string optimize_code(Compiler::Flags opt, const std::string& input, std::string_view fn_name = "main")
 {
+    const auto fn_name_id = intern(fn_name);
+    const auto module_name_id = intern("main");
+
     SourceManager src_man;
-    auto src_id = src_man.add_source("<input>", input);
+    auto src_id = src_man.add_source(module_name_id, input);
 
     ast::Module ast;
     Parser parser {src_man};
     parser.parse(src_id, ast);
 
     Context& ctx = context();
-    Module module {ctx.interpreter.module_manager(), "main"};
+    Module module {ctx.interpreter.module_manager(), module_name_id};
     module.import_module("builtin");
     module.import_module("std");
 
     Compiler compiler(opt | (Compiler::Flags::Mandatory & ~Compiler::Flags::AssembleFunctions));
     compiler.compile(module.get_main_scope(), ast);
 
-    const Function* fn = module.get_function(module.find_function(fn_name));
+    const Function* fn = module.get_function(module.find_function(fn_name_id));
     REQUIRE(fn);
 
     std::ostringstream os;
@@ -457,16 +460,16 @@ TEST_CASE( "SymbolTable", "[script][compiler]" )
 {
     SymbolTable symtab;
 
-    auto alpha = symtab.add({"alpha", Symbol::Value});
-    auto beta = symtab.add({"beta", Symbol::Value});
-    auto gamma = symtab.add({"Gamma", Symbol::Instance});
-    auto delta = symtab.add({"delta", Symbol::Value});
+    auto alpha = symtab.add({intern("alpha"), Symbol::Value});
+    auto beta = symtab.add({intern("beta"), Symbol::Value});
+    auto gamma = symtab.add({intern("Gamma"), Symbol::Instance});
+    auto delta = symtab.add({intern("delta"), Symbol::Value});
 
-    CHECK(alpha == symtab.find_last_of("alpha", Symbol::Value));
-    CHECK(beta == symtab.find_last_of("beta", Symbol::Value));
-    CHECK(gamma == symtab.find_last_of("Gamma", Symbol::Instance));
-    CHECK(delta == symtab.find_last_of("delta", Symbol::Value));
-    CHECK(! symtab.find_last_of("zeta", Symbol::Value));
+    CHECK(alpha == symtab.find_last_of(intern("alpha"), Symbol::Value));
+    CHECK(beta == symtab.find_last_of(intern("beta"), Symbol::Value));
+    CHECK(gamma == symtab.find_last_of(intern("Gamma"), Symbol::Instance));
+    CHECK(delta == symtab.find_last_of(intern("delta"), Symbol::Value));
+    CHECK(! symtab.find_last_of(intern("zeta"), Symbol::Value));
 }
 
 

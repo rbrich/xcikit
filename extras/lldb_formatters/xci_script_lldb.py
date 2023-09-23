@@ -131,6 +131,23 @@ def unquote(v):
     return v.removeprefix('"').removesuffix('"')
 
 
+def quote(v):
+    return '"' + v + '"'
+
+
+def NameId_Summary(valobj, _dict, _options):
+    pool_mask = 0x8000_0000
+    offset_mask = 0x7fff_ffff
+    m_id = valobj.GetChildMemberWithName('m_id').GetValueAsUnsigned()
+    if m_id & pool_mask:
+        string_pool = valobj.EvaluateExpression("NameId::string_pool()")
+        m_strings = string_pool.GetChildMemberWithName('m_strings')
+        offset = m_id & offset_mask
+        return m_strings.GetChildAtIndex(offset).AddressOf().summary
+    else:
+        return quote((m_id.to_bytes(4, 'little') + b'\0').split(b'\0', 1)[0].decode())
+
+
 def TypeInfo_Summary(valobj, _dict, _options):
     m_type = valobj.GetChildMemberWithName('m_type')
     type_ = m_type.value
@@ -170,8 +187,11 @@ def Signature_Summary(valobj, _dict, _options):
 
 
 def SymbolPointer_Summary(valobj, _dict, _options):
-    symtab = valobj.GetChildMemberWithName('m_symtab').Dereference()
+    p_symtab = valobj.GetChildMemberWithName('m_symtab')
     symidx = valobj.GetChildMemberWithName('m_symidx').GetValueAsUnsigned()
+    if p_symtab.GetValueAsUnsigned() == 0 or symidx == 0xFFFF_FFFF:
+        return "null"
+    symtab = p_symtab.Dereference()
     symtab_name = symtab.GetChildMemberWithName('m_name')
     m_symbols = symtab.GetChildMemberWithName('m_symbols')
     symbols = m_symbols.GetChildAtIndex(0)
@@ -181,12 +201,13 @@ def SymbolPointer_Summary(valobj, _dict, _options):
     return f"{unquote(symtab_name.summary)}::{unquote(sym_name.summary)}"
 
 
-def __lldb_init_module(debugger, dict):
+def __lldb_init_module(debugger, _dict):
     print("Loading xci::script formatters...")
     debugger.HandleCommand("type synthetic add -x '^xci::core::ChunkedStack<' --python-class xci_script_lldb.ChunkedStack_SyntheticChildrenProvider --category xci")
     debugger.HandleCommand("type synthetic add -x '^xci::core::IndexedMap<' --python-class xci_script_lldb.IndexedMap_SyntheticChildrenProvider --category xci")
     debugger.HandleCommand("type summary add -x '^xci::core::IndexedMap<' --summary-string 'size=${var.m_size}' -w xci")
     debugger.HandleCommand("type synthetic add 'xci::script::TypeInfo' --python-class xci_script_lldb.TypeInfo_SyntheticChildrenProvider --category xci")
+    debugger.HandleCommand("type summary add 'xci::script::NameId' --python-function xci_script_lldb.NameId_Summary -w xci")
     debugger.HandleCommand("type summary add 'xci::script::TypeInfo' --python-function xci_script_lldb.TypeInfo_Summary -w xci")
     debugger.HandleCommand("type summary add 'xci::script::Signature' --python-function xci_script_lldb.Signature_Summary -w xci")
     debugger.HandleCommand("type summary add 'xci::script::SymbolPointer' --python-function xci_script_lldb.SymbolPointer_Summary -w xci")

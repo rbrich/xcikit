@@ -34,32 +34,35 @@ public:
     using WeakInstanceId = IndexedMap<Instance>::WeakIndex;
     using InstanceIdx = IndexedMap<Instance>::Index;
 
-    explicit Module(ModuleManager& module_manager, std::string name = "<module>")
-        : m_module_manager(&module_manager), m_symtab(std::move(name))
+    explicit Module(ModuleManager& module_manager, NameId name = intern("<module>"))
+        : m_module_manager(&module_manager), m_symtab(name)
         { init(); }
-    Module() : m_symtab("<module>") { m_symtab.set_module(this); }  // only for serialization
+    Module() : m_symtab(intern("<module>")) { m_symtab.set_module(this); }  // only for serialization
     ~Module();
     Module(Module&&) = delete;
     Module& operator =(Module&&) = delete;
 
-    const std::string& name() const { return m_symtab.name(); }
+    NameId name() const { return m_symtab.name(); }
     const ModuleManager& module_manager() const { return *m_module_manager; }
 
-    SymbolPointer add_native_function(std::string&& name,
-            TypeInfo&& param, TypeInfo&& retval,
-            NativeDelegate native);
+    SymbolPointer add_native_function(NameId name,
+            TypeInfo&& param, TypeInfo&& retval, NativeDelegate native);
+
+    SymbolPointer add_native_function(std::string_view name,
+            TypeInfo&& param, TypeInfo&& retval, NativeDelegate native)
+    { return add_native_function(intern(name), std::move(param), std::move(retval), native); }
 
     template<class F>
-    SymbolPointer add_native_function(std::string&& name, F&& fun) {
+    SymbolPointer add_native_function(std::string_view name, F&& fun) {
         auto w = native::AutoWrap{core::ToFunctionPtr(std::forward<F>(fun))};
-        return add_native_function(std::move(name),
+        return add_native_function(intern(name),
                 w.param_type(), w.return_type(), w.native_wrapper());
     }
 
     template<class F>
-    SymbolPointer add_native_function(std::string&& name, F&& fun, void* arg0) {
+    SymbolPointer add_native_function(std::string_view name, F&& fun, void* arg0) {
         auto w = native::AutoWrap(core::ToFunctionPtr(std::forward<F>(fun)), arg0);
-        return add_native_function(std::move(name),
+        return add_native_function(intern(name),
                 w.param_type(), w.return_type(), w.native_wrapper());
     }
 
@@ -68,11 +71,12 @@ public:
     // - index 0 should be builtin
     // - index 1 should be std
     // - imported modules are added in import order
-    Index import_module(const std::string& name);
+    Index import_module(std::string_view name) { return import_module(intern(name)); }
+    Index import_module(NameId name);
     Index add_imported_module(std::shared_ptr<Module> mod);
     Module& get_imported_module(Index idx) const { return *m_modules[idx]; }
     Index get_imported_module_index(Module* mod) const;
-    Index get_imported_module_index(std::string_view name) const;
+    Index get_imported_module_index(NameId name) const;
     Size num_imported_modules() const { return Size(m_modules.size()); }
 
     // Functions
@@ -81,7 +85,7 @@ public:
     const Function& get_function(FunctionIdx id) const { return m_functions[id]; }
     Function& get_function(FunctionIdx id) { return m_functions[id]; }
     Function& get_main_function() { return m_functions[0]; }
-    WeakFunctionId find_function(std::string_view name) const;
+    WeakFunctionId find_function(NameId name) const;
     Size num_functions() const { return Size(m_functions.size()); }
 
     // Scopes

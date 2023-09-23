@@ -290,13 +290,13 @@ std::ostream& operator<<(std::ostream& os, const Parameter& v)
 std::ostream& operator<<(std::ostream& os, const Identifier& v)
 {
     if (stream_options(os).enable_tree) {
-        os << "Identifier " << v.name;
+        fmt::print(os, "Identifier {}", v.name);
         if (v.symbol) {
             os << " [" << v.symbol << "]";
         }
         return os << endl;
     } else {
-        return os << v.name;
+        return os << v.name.view();
     }
 }
 
@@ -310,15 +310,15 @@ std::ostream& operator<<(std::ostream& os, const Type& v)
 std::ostream& operator<<(std::ostream& os, const TypeName& v)
 {
     if (stream_options(os).enable_tree) {
-        if (!v.name.empty()) {
-            os << "TypeName(Type) " << v.name;
+        if (v) {
+            fmt::print(os, "TypeName(Type) {}", v.name);
             if (v.symbol) {
                 os << " [" << v.symbol << "]";
             }
         }
         return os << endl;
     } else {
-        return os << v.name;
+        return os << v.name.view();
     }
 }
 
@@ -438,8 +438,8 @@ std::ostream& operator<<(std::ostream& os, const Reference& v)
             os << " [type_info=" << v.ti << ']';
         const auto symptr = v.identifier.symbol;
         if (symptr && symptr->type() == Symbol::Function && v.index != no_index) {
-            os << " [Function #" << v.index << " @" << v.module->name()
-               << ": " << v.module->get_scope(v.index).function().signature() << "]";
+            fmt::print(os, " [Function #{} @{}: {}]", v.index, v.module->name(),
+                       v.module->get_scope(v.index).function().signature());
         }
         os << endl
            << more_indent
@@ -871,13 +871,13 @@ static void dump_l1_instruction(std::ostream& os, Opcode opcode, size_t arg, con
         case Opcode::Call0:
         case Opcode::TailCall0: {
             const auto& fn = mod.get_function(Module::FunctionIdx(arg));
-            os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
+            fmt::print(os, " ({} {})", fn.symtab().name(), fn.signature());
             break;
         }
         case Opcode::Call1:
         case Opcode::TailCall1: {
             const auto& fn = mod.get_imported_module(0).get_function(Module::FunctionIdx(arg));
-            os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
+            fmt::print(os, " ({} {})", fn.symtab().name(), fn.signature());
             break;
         }
         case Opcode::ListSubscript:
@@ -886,7 +886,7 @@ static void dump_l1_instruction(std::ostream& os, Opcode opcode, size_t arg, con
         case Opcode::ListConcat:
         case Opcode::Invoke: {
             const TypeInfo& ti = get_type_info(mod.module_manager(), Index(arg));
-            os << " (" << ti << ")";
+            fmt::print(os, " ({})", ti);
             break;
         }
         default:
@@ -901,12 +901,12 @@ static void dump_l2_instruction(std::ostream& os, Opcode opcode, size_t arg1, si
         case Opcode::Call:
         case Opcode::TailCall: {
             const auto& fn = mod.get_imported_module(Index(arg1)).get_function(Module::FunctionIdx(arg2));
-            os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
+            fmt::print(os, " ({} {})", fn.symtab().name(), fn.signature());
             break;
         }
         case Opcode::MakeList: {
             const TypeInfo& ti = get_type_info(mod.module_manager(), Index(arg2));
-            os << " (" << ti << ")";
+            fmt::print(os, " ({})", ti);
             break;
         }
         default:
@@ -921,13 +921,15 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
     if (opcode == Opcode::Annotation) {
         switch (static_cast<CodeAssembly::Annotation>(v.instr.args.first)) {
             case CodeAssembly::Annotation::Label:
-                return os << fmt::format(".j{}:", v.instr.args.second);
+                fmt::print(os, ".j{}:", v.instr.args.second);
+                return os;
             case CodeAssembly::Annotation::Jump:
             case CodeAssembly::Annotation::JumpIfNot:
-                return os << fmt::format("     {:<20}.j{}", Opcode(v.instr.args.first), v.instr.args.second);
+                fmt::print(os, "     {:<20}.j{}", Opcode(v.instr.args.first), v.instr.args.second);
+                return os;
         }
     }
-    os << fmt::format("     {:<20}", opcode);
+    fmt::print(os, "     {:<20}", opcode);
     if (opcode >= Opcode::B1First && opcode <= Opcode::B1Last)
         dump_b1_instruction(os, opcode, v.instr.arg_B1());
     else if (opcode >= Opcode::L1First && opcode <= Opcode::L1Last)
@@ -967,8 +969,10 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     bool verbose = stream_options(os).module_verbose;
     bool dump_tree = stream_options(os).enable_tree;
     os << "* " << v.num_imported_modules() << " imported modules\n" << more_indent;
-    for (Index i = 0; i < v.num_imported_modules(); ++i)
-        os << put_indent << '[' << i << "] " << v.get_imported_module(i).name() << '\n';
+    for (Index i = 0; i < v.num_imported_modules(); ++i) {
+        os << put_indent;
+        fmt::print(os, "[{}] {}\n", i, v.get_imported_module(i).name());;
+    }
     os << less_indent;
 
     os << "* " << v.num_functions() << " functions\n" << more_indent;
@@ -1039,14 +1043,15 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     os << "* " << v.num_classes() << " type classes\n" << more_indent;
     for (Index i = 0; i < v.num_classes(); ++i) {
         const auto& cls = v.get_class(i);
-        os << put_indent << '[' << i << "] " << cls.name();
+        os << put_indent;
+        fmt::print(os, "[{}] {}", i, cls.name());
         bool first_method = true;
         for (const auto& sym : cls.symtab()) {
             switch (sym.type()) {
                 case Symbol::Parameter:
                     break;
                 case Symbol::TypeVar:
-                    os << ' ' << sym.name();
+                    fmt::print(os, " {}", sym.name());
                     break;
                 case Symbol::Function: {
                     if (first_method) {
@@ -1054,8 +1059,9 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
                         first_method = false;
                     }
                     SymbolPointer symptr = cls.symtab().find(sym);
-                    os << put_indent << sym.name() << ": "
-                       << symptr.get_generic_scope().function().signature() << '\n';
+                    os << put_indent;
+                    fmt::print(os, "{}: {}\n", sym.name(),
+                               symptr.get_generic_scope().function().signature());
                     break;
                 }
                 default:
@@ -1070,14 +1076,16 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     os << "* " << v.num_instances() << " instances\n" << more_indent;
     for (Index i = 0; i < v.num_instances(); ++i) {
         const auto& inst = v.get_instance(i);
-        os << put_indent << '[' << i << "] " << inst.class_().name();
+        os << put_indent;
+        fmt::print(os, "[{}] {}", i, inst.class_().name());
         for (const auto& t : inst.types())
             os << ' ' << t;
         os << '\n' << more_indent;
         for (Index j = 0; j < inst.num_functions(); ++j) {
             const auto& inst_fn_info = inst.get_function(j);
             const auto& f = inst_fn_info.module->get_scope(inst_fn_info.scope_index).function();
-            os << put_indent << f.name() << ": " << f.signature() << '\n';
+            os << put_indent;
+            fmt::print(os, "{}: {}\n", f.name(), f.signature());
         }
         os << less_indent;
     }
@@ -1099,7 +1107,7 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
                 return os << '?';
             if (qualify)
                 os << var.symtab()->qualified_name() << "::";
-            return os << var->name();
+            return os << var->name().view();
         }
         case Type::Bool:        return os << "Bool";
         case Type::Char:        return os << "Char";
@@ -1131,7 +1139,7 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
         case Type::Struct: {
             os << "(";
             for (const auto& item : v.struct_items()) {
-                os << item.first << ": " << item.second;
+                fmt::print(os, "{}: {}", item.first, item.second);
                 if (&item != &v.struct_items().back())
                     os << ", ";
             }
@@ -1145,7 +1153,7 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
         case Type::Module:      return os << "Module";
         case Type::Stream:      return os << "Stream";
         case Type::TypeIndex:   return os << "TypeIndex";
-        case Type::Named:       return os << v.name();
+        case Type::Named:       return os << v.name().view();
     }
     XCI_UNREACHABLE;
 }
@@ -1200,8 +1208,7 @@ std::ostream& operator<<(std::ostream& os, const SymbolPointer& v)
     if (v->index() != no_index)
         os << " #" << v->index();
     if (v.symtab() != nullptr) {
-        os << " @" << v.symtab()->name() << " ("
-           << std::hex << intptr_t(v.symtab()) << ')' << std::dec;
+        fmt::print(os, " @{} ({:x})", v.symtab()->name(), intptr_t(v.symtab()));
         if (v->type() == Symbol::Function && v.symtab()->module() && v->index() != no_index)
             os << ": " << v.get_generic_scope().function().signature();
     }
@@ -1213,16 +1220,15 @@ std::ostream& operator<<(std::ostream& os, const SymbolPointer& v)
 
 std::ostream& operator<<(std::ostream& os, const Symbol& v)
 {
-    os << left << setw(20) << v.name() << " "
-       << left << setw(18) << v.type();
+    fmt::print(os, "{:<20} {:<18}", v.name(), v.type());
     if (v.index() != no_index)
         os << " #" << v.index();
     if (v.ref()) {
         os << " -> " << v.ref()->type()
            << " #" << v.ref()->index();
         if (v.depth() == 0 && v.ref().symtab()->level() != 0)
-            os << " @ " << v.ref().symtab()->name();
-        os << " (" << v.ref()->name() << ')';
+            fmt::print(os, " @ {}", v.ref().symtab()->name());
+        fmt::print(os, " ({})", v.ref()->name());
     }
     if (v.depth() != 0)
         os << ", depth -" << v.depth();
@@ -1235,7 +1241,7 @@ std::ostream& operator<<(std::ostream& os, const SymbolTable& v)
     os << put_indent << "--- ";
     if (v.scope() != nullptr)
         os << '#' << v.scope()->function_index() << ' ';
-    os << v.name() << " ---" << endl;
+    fmt::print(os, "{} ---\n", v.name());
     for (const auto& sym : v) {
         os << put_indent << sym << endl;
     }
@@ -1252,7 +1258,7 @@ std::ostream& operator<<(std::ostream& os, const SymbolTable& v)
 std::ostream& operator<<(std::ostream& os, const Scope& v)
 {
     if (v.has_function()) {
-        os << "Function #" << v.function_index() << " (" << v.function().name() << ")";
+        fmt::print(os, "Function #{} ({})", v.function_index(), v.function().name());
     }
     os << '\t';
     if (v.has_subscopes()) {
@@ -1290,7 +1296,7 @@ std::ostream& operator<<(std::ostream& os, const Scope& v)
                 first = false;
             if (&v.function().symtab() != arg.first.symtab())
                 os << arg.first.symtab()->qualified_name() << "::";  // qualify non-own symbols
-            os << arg.first->name() << "=";
+            fmt::print(os, "{}=", arg.first->name());
             if (arg.second.is_unknown()) {
                 auto var = arg.second.generic_var();
                 stream_options(os).qualify_type_vars = (var.symtab() != &v.function().symtab());
@@ -1315,7 +1321,7 @@ std::ostream& operator<<(std::ostream& os, const TypeArgs& v)
             first = false;
         if (qualify)
             os << arg.first.symtab()->qualified_name() << "::";
-        os << arg.first->name() << "=" << arg.second;
+        fmt::print(os, "{}={}", arg.first->name(), arg.second);
     }
     return os;
 }

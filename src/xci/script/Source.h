@@ -1,12 +1,13 @@
 // Source.h created on 2019-12-25 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_SOURCE_H
 #define XCI_SCRIPT_SOURCE_H
 
+#include "NameId.h"
 #include <vector>
 #include <string>
 #include <cstddef>
@@ -45,22 +46,24 @@ struct SourceLocation {
 
 class Source {
 public:
-    Source(std::string&& name, std::string&& content)
-        : m_name(std::move(name)), m_content(std::move(content)) {}
+    Source(NameId name, std::string&& content)
+        : m_name(name), m_content(std::move(content)) {}
 
-    const std::string& name() const { return m_name; }
+    NameId name() const { return m_name; }
     const char* data() const { return m_content.data(); }
     size_t size() const { return m_content.size(); }
 
 private:
-    std::string m_name;
+    NameId m_name;
     std::string m_content;
 };
 
 
 class SourceManager {
 public:
-    SourceId add_source(std::string name, std::string content);
+    SourceId add_source(std::string_view name, std::string content)
+        { return add_source(intern(name), std::move(content)); }
+    SourceId add_source(NameId name, std::string content);
     const Source& get_source(SourceId id) const;
 
 private:
@@ -76,7 +79,7 @@ struct SourceRef {
 
     // For use as Source in tao::pegtl::memory_input,
     // it needs to be convertible to string for tao::pegtl::position
-    operator std::string() const { return source().name(); }
+    operator std::string() const { return source().name().str(); }
 };
 
 

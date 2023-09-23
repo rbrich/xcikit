@@ -33,6 +33,7 @@ add_library(xci-script
     Machine.cpp
     Module.cpp
     ModuleManager.cpp
+    NameId.cpp
     Value.cpp
     Parser.cpp
     Source.cpp

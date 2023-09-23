@@ -1,7 +1,7 @@
 // Repl.h created on 2021-03-16 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2022 Radek Brich
+// Copyright 2021–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_TOOL_REPL_H
@@ -30,9 +30,11 @@ public:
     Repl(Context& ctx, const ReplOptions& opts)
         : m_ctx(ctx), m_opts(opts) {}
 
-    bool evaluate(const std::string& module_name, std::string module_source, EvalMode mode);
+    bool evaluate(std::string_view module_name, std::string module_source, EvalMode mode)
+        { return evaluate(intern(module_name), std::move(module_source), mode); }
+    bool evaluate(NameId module_name, std::string module_source, EvalMode mode);
 
-    std::shared_ptr<Module> prepare_module(const std::string& module_name);
+    std::shared_ptr<Module> prepare_module(NameId module_name);
     bool evaluate_module(Module& module, EvalMode mode);
 
 private:

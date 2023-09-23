@@ -254,7 +254,7 @@ public:
                                  << fn.signature() << std::endl;
                 }
                 stringstream o_ftype;
-                o_ftype << v.identifier.name;
+                o_ftype << v.identifier.name.view();
                 if (!m_call_sig.empty())
                     o_ftype << ' ' << m_call_sig.back().signature();
                 if (conflict)
@@ -491,11 +491,9 @@ public:
             if (!v.definition) {
                 fn.set_specialized();
                 specialize_to_call_args(scope, fn.ast(), v.source_loc);
-                if (fn.has_any_generic()) {
-                    stringstream sig_str;
-                    sig_str << fn.name() << ':' << fn.signature();
-                    throw unexpected_generic_function(sig_str.str(), v.source_loc);
-                }
+                if (fn.has_any_generic())
+                    throw unexpected_generic_function(fmt::format("{}:{}", fn.name(), fn.signature()),
+                                                      v.source_loc);
                 m_value_type = TypeInfo{fn.signature_ptr()};
             }
         } else if (fn.has_generic_param() || scope.has_unresolved_type_params()) {
@@ -507,11 +505,10 @@ public:
                 clone_fn.set_specialized();
                 scope.set_function_index(clone_fn_idx);
                 specialize_to_call_args(scope, clone_fn.ast(), v.source_loc);
-                if (clone_fn.has_any_generic()) {
-                    stringstream sig_str;
-                    sig_str << clone_fn.name() << ':' << clone_fn.signature();
-                    throw unexpected_generic_function(sig_str.str(), v.source_loc);
-                }
+                if (clone_fn.has_any_generic())
+                    throw unexpected_generic_function(
+                            fmt::format("{}:{}", clone_fn.name(), clone_fn.signature()),
+                            v.source_loc);
                 m_value_type = TypeInfo{clone_fn.signature_ptr()};
             }/* else {
                 resolve_spec(scope, v.body);
@@ -794,7 +791,7 @@ private:
         if (!type_args.empty()) {
             unsigned i = 0;
             for (auto var : fn.symtab().filter(Symbol::TypeVar)) {
-                if (var->name().front() == '$')
+                if (var->is_implicit())
                     continue;
                 set_type_arg(var, type_args[i], explicit_type_args,
                              [](const TypeInfo& exp, const TypeInfo& got)
@@ -922,11 +919,8 @@ void resolve_spec(Scope& scope, ast::Expression& body)
     auto& fn = scope.function();
     if (fn.has_any_generic()) {
         // the resolved function is generic - not allowed in main scope
-        if (scope.parent() == nullptr) {
-            stringstream sig_str;
-            sig_str << fn.name() << ':' << fn.signature();
-            throw unexpected_generic_function(sig_str.str());
-        }
+        if (scope.parent() == nullptr)
+            throw unexpected_generic_function(fmt::format("{}:{}", fn.name(), fn.signature()));
         return;
     }
     // not generic -> compile

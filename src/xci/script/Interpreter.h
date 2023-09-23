@@ -28,7 +28,7 @@ public:
 
     // Build a module.
     // Ignores mandatory Compiler::Flags, respects only optimization flags
-    std::shared_ptr<Module> build_module(const std::string& name, SourceId source_id);
+    std::shared_ptr<Module> build_module(NameId name, SourceId source_id);
 
     using InvokeCallback = Machine::InvokeCallback;
     TypedValue eval(Index mod_idx, SourceId source_id, const InvokeCallback& cb = Machine::no_invoke_cb);

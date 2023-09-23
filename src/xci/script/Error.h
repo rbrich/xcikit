@@ -40,7 +40,6 @@ enum ErrorCode {
     UndefinedTypeName,
     RedefinedName,
     UnsupportedOperandsError,
-    UnknownTypeName,
     UnexpectedArgument,
     UnexpectedArgumentType,
     UnexpectedReturnType,
@@ -99,7 +98,7 @@ private:
 
 
 struct StackTraceFrame {
-    std::string function_name;
+    NameId function_name;
 };
 
 using StackTrace = std::vector<StackTraceFrame>;
@@ -167,26 +166,22 @@ inline ScriptError parse_error(string_view msg, const SourceLocation& loc = {}) 
     return ScriptError(ErrorCode::ParseError, std::string(msg), loc);
 }
 
-inline ScriptError undefined_name(string_view name, const SourceLocation& loc) {
+inline ScriptError undefined_name(NameId name, const SourceLocation& loc) {
     return ScriptError(ErrorCode::UndefinedName, fmt::format("undefined name: {}", name), loc);
 }
 
-inline ScriptError undefined_type_name(string_view name, const SourceLocation& loc) {
+inline ScriptError undefined_type_name(NameId name, const SourceLocation& loc) {
     return ScriptError(ErrorCode::UndefinedTypeName,
                        fmt::format("undefined type name: {}", name), loc);
 }
 
-inline ScriptError redefined_name(string_view name, const SourceLocation& loc) {
+inline ScriptError redefined_name(NameId name, const SourceLocation& loc) {
     return ScriptError(ErrorCode::RedefinedName, fmt::format("redefined name: {}", name), loc);
 }
 
 inline ScriptError unsupported_operands_error(string_view op) {
     return ScriptError(ErrorCode::UnsupportedOperandsError,
                        fmt::format("unsupported operands to '{}'", op));
-}
-
-inline ScriptError unknown_type_name(string_view name) {
-    return ScriptError(ErrorCode::UnknownTypeName, fmt::format("unknown type name: {}", name));
 }
 
 ScriptError unexpected_argument(const TypeInfo& ftype, const SourceLocation& loc);
@@ -207,7 +202,7 @@ inline ScriptError missing_explicit_type(const SourceLocation& loc) {
                        "type cannot be inferred and wasn't specified", loc);
 }
 
-inline ScriptError missing_explicit_type(string_view name, const SourceLocation& loc) {
+inline ScriptError missing_explicit_type(NameId name, const SourceLocation& loc) {
     return ScriptError(ErrorCode::MissingExplicitType,
                        fmt::format("type cannot be inferred and wasn't specified: {}", name), loc);
 }
@@ -244,7 +239,7 @@ inline ScriptError function_conflict(string_view fn_desc,
                                    "   Candidates:\n{}", fn_desc, candidates), loc);
 }
 
-inline ScriptError function_not_found_in_class(string_view fn, string_view cls) {
+inline ScriptError function_not_found_in_class(NameId fn, NameId cls) {
     return ScriptError(ErrorCode::FunctionNotFoundInClass,
                        fmt::format("instance function '{}' not found in class '{}'", fn, cls));
 }
@@ -276,10 +271,10 @@ ScriptError list_elem_type_mismatch(const TypeInfo& exp, const TypeInfo& got,
 
 ScriptError struct_type_mismatch(const TypeInfo& got, const SourceLocation& loc);
 
-ScriptError struct_unknown_key(const TypeInfo& struct_type, const std::string& key,
+ScriptError struct_unknown_key(const TypeInfo& struct_type, NameId key,
                                const SourceLocation& loc);
 
-inline ScriptError struct_duplicate_key(const std::string& key, const SourceLocation& loc) {
+inline ScriptError struct_duplicate_key(NameId key, const SourceLocation& loc) {
     return ScriptError(ErrorCode::StructDuplicateKey,
                        fmt::format("duplicate struct key \"{}\"", key), loc);
 }
@@ -298,7 +293,7 @@ inline ScriptError unresolved_symbol(string_view name) {
 }
 
 
-inline ScriptError import_error(string_view name) {
+inline ScriptError import_error(NameId name) {
     return ScriptError(ErrorCode::ImportError,
                        fmt::format("module cannot be imported: {}", name));
 }

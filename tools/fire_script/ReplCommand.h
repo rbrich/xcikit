@@ -26,14 +26,14 @@ public:
 
 private:
     template<class F>
-    void add_cmd(std::string&& name, std::string&& alias, F&& fun) {
-        auto p = m_module->add_native_function(std::move(name), std::forward<F>(fun));
-        m_module->symtab().add(Symbol{std::move(alias), Symbol::Function, p->index()});
+    void add_cmd(std::string_view name, std::string_view alias, F&& fun) {
+        auto p = m_module->add_native_function(name, std::forward<F>(fun));
+        m_module->symtab().add(Symbol{intern(alias), Symbol::Function, p->index()});
     }
     template<class F>
-    void add_cmd(std::string&& name, std::string&& alias, F&& fun, void* arg) {
-        auto p = m_module->add_native_function(std::move(name), std::forward<F>(fun), arg);
-        m_module->symtab().add(Symbol{std::move(alias), Symbol::Function, p->index()});
+    void add_cmd(std::string_view name, std::string_view alias, F&& fun, void* arg) {
+        auto p = m_module->add_native_function(name, std::forward<F>(fun), arg);
+        m_module->symtab().add(Symbol{intern(alias), Symbol::Function, p->index()});
     }
 
     void cmd_quit();

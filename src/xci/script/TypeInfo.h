@@ -87,7 +87,7 @@ public:
 
     using Var = SymbolPointer;  // for unknown type, specifies which type variable this represents
     using Subtypes = std::vector<TypeInfo>;
-    using StructItem = std::pair<std::string, TypeInfo>;
+    using StructItem = std::pair<NameId, TypeInfo>;
     using StructItems = std::vector<StructItem>;
     using SignaturePtr = std::shared_ptr<Signature>;
     using NamedTypePtr = std::shared_ptr<NamedType>;
@@ -119,7 +119,7 @@ protected:
     TypeInfoUnion(ListTag, TypeInfo elem);
     TypeInfoUnion(TupleTag, Subtypes subtypes) : m_type(Type::Tuple) { std::construct_at(&m_subtypes, std::move(subtypes)); }
     TypeInfoUnion(StructTag, StructItems items);
-    TypeInfoUnion(std::string name, TypeInfo&& type_info);
+    TypeInfoUnion(NameId name, TypeInfo&& type_info);
     ~TypeInfoUnion() { destroy_variant(); }
 
     TypeInfoUnion(const TypeInfoUnion& r) : m_type(r.m_type) { construct_variant(); *this = r; }
@@ -171,8 +171,8 @@ public:
     explicit TypeInfo(StructItems items)
             : detail::TypeInfoUnion(struct_of, std::move(items)) {}
     // Named
-    explicit TypeInfo(std::string name, TypeInfo&& type_info)
-            : detail::TypeInfoUnion(std::move(name), std::move(type_info)) {}
+    explicit TypeInfo(NameId name, TypeInfo&& type_info)
+            : detail::TypeInfoUnion(name, std::move(type_info)) {}
 
     TypeInfo(const TypeInfo&) = default;
     TypeInfo& operator =(const TypeInfo&) = default;
@@ -226,13 +226,13 @@ public:
 
     const TypeInfo& elem_type() const;  // type = List (Subtypes[0])
     TypeInfo& elem_type() { return const_cast<TypeInfo&>( const_cast<const TypeInfo*>(this)->elem_type() ); }
-    const TypeInfo* struct_item_by_name(const std::string& name) const;  // type = Struct
+    const TypeInfo* struct_item_by_name(NameId name) const;  // type = Struct
     Subtypes struct_or_tuple_subtypes() const;  // type = Tuple | Struct
     const Signature& signature() const { return *signature_ptr(); }
     Signature& signature() { return *signature_ptr(); }
     const NamedType& named_type() const { return *named_type_ptr(); }
     NamedType& named_type() { return *named_type_ptr(); }
-    std::string name() const;
+    NameId name() const;
     const TypeInfo& underlying() const;  // transparently get type_info of NamedType
     TypeInfo& underlying();
     const SignaturePtr& ul_signature_ptr() const { return underlying().signature_ptr(); }
@@ -358,7 +358,7 @@ using SignaturePtr = std::shared_ptr<Signature>;
 
 
 struct NamedType {
-    std::string name;
+    NameId name;
     TypeInfo type_info;
 
     bool operator==(const NamedType& rhs) const = default;

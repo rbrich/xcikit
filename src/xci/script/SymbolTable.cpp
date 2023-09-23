@@ -139,32 +139,32 @@ std::string SymbolPointer::symtab_qualified_name() const
 //------------------------------------------------------------------------------
 
 
-SymbolTable::SymbolTable(std::string name, SymbolTable* parent)
-        : m_name(std::move(name)), m_parent(parent),
+SymbolTable::SymbolTable(NameId name, SymbolTable* parent)
+        : m_name(name), m_parent(parent),
           m_module(parent ? parent->module() : nullptr)
 {}
 
 
 std::string SymbolTable::qualified_name() const
 {
-    std::string result = m_name;
+    std::string result = name().str();
     const auto* parent = m_parent;
     while (parent != nullptr) {
-        result = parent->name() + "::" + result;
+        result = parent->name().str() + "::" + result;
         parent = parent->parent();
     }
     return result;
 }
 
 
-SymbolPointer SymbolTable::add(Symbol&& symbol)
+SymbolPointer SymbolTable::add(const Symbol& symbol)
 {
-    m_symbols.emplace_back(std::move(symbol));
+    m_symbols.push_back(symbol);
     return {*this, Index(m_symbols.size() - 1)};
 }
 
 
-SymbolTable& SymbolTable::add_child(const std::string& name)
+SymbolTable& SymbolTable::add_child(NameId name)
 {
     m_children.emplace_back(name, this);
     return m_children.back();
@@ -214,10 +214,10 @@ SymbolPointer SymbolTable::find(const Symbol& symbol)
 }
 
 
-SymbolPointer SymbolTable::find_by_name(std::string_view name)
+SymbolPointer SymbolTable::find_by_name(NameId name)
 {
     auto it = std::find_if(m_symbols.rbegin(), m_symbols.rend(),
-            [&name](const Symbol& sym){ return sym.name() == name; });
+            [name](const Symbol& sym){ return sym.name() == name; });
     if (it == m_symbols.rend())
         return {*this, no_index};
     return {*this, Index((m_symbols.rend() - it) - 1)};
@@ -235,11 +235,11 @@ SymbolPointer SymbolTable::find_by_index(Symbol::Type type, Index index)
 }
 
 
-SymbolPointer SymbolTable::find_last_of(const std::string& name,
+SymbolPointer SymbolTable::find_last_of(NameId name,
                                         Symbol::Type type)
 {
     auto it = std::find_if(m_symbols.rbegin(), m_symbols.rend(),
-                   [&name, type](const Symbol& sym) {
+                   [name, type](const Symbol& sym) {
                         return sym.type() == type && sym.name() == name;
                    });
     if (it == m_symbols.rend())
@@ -271,7 +271,7 @@ SymbolPointerList SymbolTable::filter(Symbol::Type type)
 }
 
 
-SymbolPointerList SymbolTable::filter(const std::string& name, Symbol::Type type)
+SymbolPointerList SymbolTable::filter(NameId name, Symbol::Type type)
 {
     SymbolPointerList res;
     Index i = 0;
@@ -284,10 +284,10 @@ SymbolPointerList SymbolTable::filter(const std::string& name, Symbol::Type type
 }
 
 
-SymbolTable* SymbolTable::find_child_by_name(std::string_view name)
+SymbolTable* SymbolTable::find_child_by_name(NameId name)
 {
     auto it = std::find_if(m_children.begin(), m_children.end(),
-            [&name](const SymbolTable& s){ return s.name() == name; });
+            [name](const SymbolTable& s){ return s.name() == name; });
     if (it == m_children.end())
         return nullptr;
     return &*it;

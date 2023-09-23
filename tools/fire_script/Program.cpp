@@ -54,7 +54,7 @@ void Program::process_args(char* argv[])
     if (!opts.prog_opts.input_files.empty()) {
         for (const char* input_file : opts.prog_opts.input_files) {
             fs::path input_path {input_file};
-            auto module_name = input_path.filename().replace_extension().string();
+            auto module_name = intern(input_path.filename().replace_extension().string());
             if (input_path.extension() == ".firm") {
                 // Load binary module
                 auto module = std::make_shared<Module>(ctx.interpreter.module_manager(), module_name);

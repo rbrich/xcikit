@@ -55,7 +55,7 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
                 t.move_up(m_lines_to_erase).write();
             } else {
                 auto frame = m_machine.stack().n_frames() - 1;
-                cout << "[" << frame << "] " << f.name() << " " << f.signature() << '\n';
+                fmt::print("[{}] {} {}\n", frame, f.name(), f.signature());
             }
             for (auto it = f.bytecode().begin(); it != f.bytecode().end();) {
                 if (it == ipos) {
@@ -95,7 +95,7 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
 void BytecodeTracer::print_code(size_t frame, const Function& f)
 {
     m_lines_to_erase = 0;
-    cout << "[" << frame << "] " << f.name() << " " << f.signature() << '\n';
+    fmt::print("[{}] {} {}\n", frame, f.name(), f.signature());
     for (auto it = f.bytecode().begin(); it != f.bytecode().end();) {
         ++ m_lines_to_erase;
         cout << ' ' << DumpBytecode{f, it} << '\n';

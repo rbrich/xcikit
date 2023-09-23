@@ -15,6 +15,7 @@ add_library(xci-core
     sys.cpp
     rtti.cpp
     TermCtl.cpp
+    container/StringPool.cpp
     $<TARGET_OBJECTS:third_party::widechar_width>
     )
 add_library(xcikit::xci-core ALIAS xci-core)
