@@ -206,7 +206,7 @@ public:
     void set_module(Module* mod) { m_module = mod; }
     Module* module() const { return m_module; }
 
-    SymbolPointer add(Symbol&& symbol);
+    SymbolPointer add(const Symbol& symbol);
 
     Symbol& get(Index idx);
     const Symbol& get(Index idx) const;

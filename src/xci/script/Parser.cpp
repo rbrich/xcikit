@@ -731,27 +731,27 @@ struct Action<Identifier> : change_states< ast::Identifier > {
 
     template<typename Input>
     static void success(const Input &in, ast::Identifier& ident, ast::StructItem& item) {
-        item.identifier = std::move(ident);
+        item.identifier = ident;
     }
 
     template<typename Input>
     static void success(const Input &in, ast::Identifier& ident, ast::Variable& var) {
-        var.identifier = std::move(ident);
+        var.identifier = ident;
     }
 
     template<typename Input>
     static void success(const Input &in, ast::Identifier& ident, ast::Parameter& par) {
-        par.identifier = std::move(ident);
+        par.identifier = ident;
     }
 
     template<typename Input>
     static void success(const Input &in, ast::Identifier& ident, ast::Reference& ref) {
-        ref.identifier = std::move(ident);
+        ref.identifier = ident;
     }
 
     template<typename Input>
     static void success(const Input &in, ast::Identifier& ident, ast::StructInit& node) {
-        node.items.emplace_back(std::move(ident), std::unique_ptr<ast::Expression>{});
+        node.items.emplace_back(ident, std::unique_ptr<ast::Expression>{});
     }
 };
 

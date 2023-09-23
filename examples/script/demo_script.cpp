@@ -109,7 +109,7 @@ int main()
     interpreter.eval(module, R"(hello "Demo")");
 
     // capture the result
-    auto result = interpreter.eval(module, R"(hello (toupper_at ("world", 0)))");
+    auto result = interpreter.eval(module, R"(hello (toupper_at ("world", 0d)))");
 
     // result contains value of the last expression in the script
     assert(result.type() == Type::Int32);

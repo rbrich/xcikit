@@ -157,9 +157,9 @@ std::string SymbolTable::qualified_name() const
 }
 
 
-SymbolPointer SymbolTable::add(Symbol&& symbol)
+SymbolPointer SymbolTable::add(const Symbol& symbol)
 {
-    m_symbols.emplace_back(std::move(symbol));
+    m_symbols.push_back(symbol);
     return {*this, Index(m_symbols.size() - 1)};
 }
 
