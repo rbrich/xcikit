@@ -1,3 +1,8 @@
+# Reference:
+# * https://lldb.llvm.org/use/variable.html
+# * https://github.com/llvm/llvm-project/blob/main/lldb/examples/synthetic/bitfield/example.py
+# * https://melatonin.dev/blog/how-to-create-lldb-type-summaries-and-synthetic-children-for-your-custom-types/
+
 import lldb
 
 

@@ -190,6 +190,44 @@ public:
 };
 
 
+// -----------------------------------------------------------------------------
+// Abstract base classes for AST nodes
+
+struct Type {
+    virtual ~Type() = default;
+    virtual void apply(ConstVisitor& visitor) const = 0;
+    virtual void apply(Visitor& visitor) = 0;
+    virtual std::unique_ptr<ast::Type> make_copy() const = 0;
+
+    SourceLocation source_loc;
+};
+
+struct Expression {
+    Expression() = default;
+    Expression(Expression&&) = default;
+    Expression& operator=(Expression&&) = default;
+    virtual ~Expression() = default;
+    virtual void apply(ConstVisitor& visitor) const = 0;
+    virtual void apply(Visitor& visitor) = 0;
+    virtual std::unique_ptr<ast::Expression> make_copy() const = 0;
+    void copy_to(Expression& r) const;
+    virtual const TypeInfo& type_info() const = 0;  // resolved type
+
+    SourceLocation source_loc;
+
+    // set when this expression is direct child of a Definition
+    Definition* definition = nullptr;
+};
+
+struct Statement {
+    virtual ~Statement() = default;
+    virtual void apply(ConstVisitor& visitor) const = 0;
+    virtual void apply(Visitor& visitor) = 0;
+    virtual std::unique_ptr<ast::Statement> make_copy() const = 0;
+};
+
+// -----------------------------------------------------------------------------
+
 struct Identifier {
     Identifier() = default;
     explicit Identifier(NameId s) : name(s) {}
@@ -201,16 +239,6 @@ struct Identifier {
 
     // resolved symbol:
     SymbolPointer symbol;
-};
-
-
-struct Type {
-    virtual ~Type() = default;
-    virtual void apply(ConstVisitor& visitor) const = 0;
-    virtual void apply(Visitor& visitor) = 0;
-    virtual std::unique_ptr<ast::Type> make_copy() const = 0;
-
-    SourceLocation source_loc;
 };
 
 
@@ -292,24 +320,6 @@ struct FunctionType: public Type {
 struct Variable {
     Identifier identifier;  // required
     std::unique_ptr<Type> type;  // optional
-};
-
-
-struct Expression {
-    Expression() = default;
-    Expression(Expression&&) = default;
-    Expression& operator=(Expression&&) = default;
-    virtual ~Expression() = default;
-    virtual void apply(ConstVisitor& visitor) const = 0;
-    virtual void apply(Visitor& visitor) = 0;
-    virtual std::unique_ptr<ast::Expression> make_copy() const = 0;
-    void copy_to(Expression& r) const;
-    virtual const TypeInfo& type_info() const = 0;  // resolved type
-
-    SourceLocation source_loc;
-
-    // set when this expression is direct child of a Definition
-    Definition* definition = nullptr;
 };
 
 
@@ -569,13 +579,6 @@ struct Cast: public Expression {
     bool is_init = false;  // Cast and Init share same AST node
 };
 
-
-struct Statement {
-    virtual ~Statement() = default;
-    virtual void apply(ConstVisitor& visitor) const = 0;
-    virtual void apply(Visitor& visitor) = 0;
-    virtual std::unique_ptr<ast::Statement> make_copy() const = 0;
-};
 
 // This node is also used as "Declaration" - in that case, the expression is empty.
 // The same applies to class declarations, but those may have non-empty expression

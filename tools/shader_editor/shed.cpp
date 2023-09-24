@@ -18,6 +18,7 @@
 #include <xci/core/TermCtl.h>
 #include <xci/core/dispatch.h>
 #include <xci/core/log.h>
+#include <atomic>
 
 using namespace xci::core;
 using namespace xci::core::argparser;
