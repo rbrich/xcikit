@@ -49,13 +49,8 @@ Value create_value(const TypeInfo& type_info)
             else
                 return value::List();
         case Type::Tuple:
+        case Type::Struct:
             return value::Tuple{type_info.subtypes()};
-        case Type::Struct: {
-            auto subtypes = type_info.struct_items()
-                | views::transform([](const TypeInfo::StructItem& item) { return item.second; })
-                | to<std::vector>();
-            return value::Tuple{subtypes};
-        }
         case Type::Named:
             return create_value(type_info.named_type().type_info);
         default:
@@ -866,20 +861,14 @@ public:
             os << type_info.name().view();
         const auto& underlying = type_info.underlying();
         os << '(';
-        if (underlying.is_tuple()) {
+        if (underlying.is_tuple() || underlying.is_struct()) {
             auto ti_iter = underlying.subtypes().begin();
             for (Value* it = v.values.get(); !it->is_unknown(); ++it) {
                 if (it != v.values.get())
                     os << ", ";
+                if (ti_iter->key())
+                    fmt::print(os, "{}=", ti_iter->key());
                 os << TypedValue(*it, *ti_iter++);
-            }
-        } else if (underlying.is_struct()) {
-            auto ti_iter = underlying.struct_items().begin();
-            for (Value* it = v.values.get(); !it->is_unknown(); ++it) {
-                if (it != v.values.get())
-                    os << ", ";
-                os << ti_iter->first.view() << '=' << TypedValue(*it, ti_iter->second);
-                ++ti_iter;
             }
         } else {
             // unknown TypeInfo

@@ -38,7 +38,7 @@ void Machine::call(const Function& function, const Machine::InvokeCallback& cb)
 
 void Machine::run(const InvokeCallback& cb)
 {
-    // Avoid double-recursion - move these pointers instead (we already have a stack)
+    // Avoid recursion - update these pointers instead (we already have a stack)
     const Function* function = &m_stack.frame().function;
     assert(function->is_bytecode());
     auto it = function->bytecode().begin() + (std::ptrdiff_t) m_stack.frame().instruction;

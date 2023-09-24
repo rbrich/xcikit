@@ -27,12 +27,9 @@ Index make_type_index(Module& mod, const TypeInfo& type_info)
         make_type_index(mod, type_info.underlying());
     if (type_info.is_list())
         make_type_index(mod, type_info.elem_type());
-    if (type_info.is_tuple())
+    if (type_info.is_struct_or_tuple())
         for (const TypeInfo& ti : type_info.subtypes())
             make_type_index(mod, ti);
-    if (type_info.is_struct())
-        for (const auto& item : type_info.struct_items())
-            make_type_index(mod, item.second);
     return (mod.add_type(type_info) << 7) + mod_idx;
 }
 

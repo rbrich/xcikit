@@ -44,9 +44,7 @@ const TypeInfo& Function::parameter(Index idx) const
 {
     if (idx == no_index)
         return m_signature->param_type;
-    if (m_signature->param_type.is_struct())
-        return m_signature->param_type.struct_items()[idx].second;
-    assert(m_signature->param_type.is_tuple());
+    assert(m_signature->param_type.is_struct_or_tuple());
     return m_signature->param_type.subtypes()[idx];
 }
 
@@ -57,7 +55,7 @@ size_t Function::parameter_offset(Index idx) const
         return 0;
     assert(m_signature->param_type.is_struct_or_tuple());
     size_t ofs = 0;
-    for (const auto& ti : m_signature->param_type.struct_or_tuple_subtypes()) {
+    for (const auto& ti : m_signature->param_type.subtypes()) {
         if (idx == 0)
             return ofs;
         ofs += ti.size();

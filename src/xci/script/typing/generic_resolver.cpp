@@ -22,7 +22,7 @@ void set_type_arg(SymbolPointer var, const TypeInfo& deduced, TypeArgs& type_arg
         if (!match_type(existing, deduced))
             exc_cb(existing, deduced);
         if (existing.is_unspecified()) {
-            existing = deduced;
+            existing.assign_from(deduced);
         } else if (existing.has_generic()) {
             specialize_arg(existing, deduced, type_args, exc_cb);
             resolve_generic_type(existing, type_args);
@@ -36,15 +36,24 @@ void get_type_arg(SymbolPointer var, TypeInfo& sig, const TypeArgs& type_args)
     for (;;) {
         auto ti = type_args.get(var);
         if (ti.is_generic()) {
-            sig = ti;
+            sig.assign_from(ti);
             var = ti.generic_var();
             continue;
         }
         if (ti) {
-            sig = ti;
+            sig.assign_from(ti);
         }
         break;
     }
+}
+
+
+void copy_type_arg(SymbolPointer var, const TypeArgs& src, TypeArgs& dst)
+{
+    TypeInfo ti;
+    get_type_arg(var, ti, src);
+    if (ti)
+        dst.set(var, std::move(ti));
 }
 
 
@@ -62,15 +71,12 @@ void resolve_generic_type(TypeInfo& sig, const TypeArgs& type_args)
             resolve_generic_type(sig.elem_type(), type_args);
             break;
         case Type::Tuple:
+        case Type::Struct:
             for (auto& sub : sig.subtypes())
                 resolve_generic_type(sub, type_args);
             break;
-        case Type::Struct:
-            for (auto& st : sig.struct_items())
-                resolve_generic_type(st.second, type_args);
-            break;
         case Type::Function:
-            sig = TypeInfo(std::make_shared<Signature>(sig.signature()));  // copy
+            sig.assign_from(TypeInfo(std::make_shared<Signature>(sig.signature())));  // copy signature
             resolve_generic_type(sig.signature().param_type, type_args);
             resolve_generic_type(sig.signature().return_type, type_args);
             break;
@@ -91,13 +97,13 @@ void resolve_generic_type(TypeInfo& sig, const Scope& scope)
                 for (;;) {
                     auto ti = scope_p->type_args().get(var);
                     if (ti.is_generic()) {
-                        sig = ti;
+                        sig.assign_from(ti);
                         var = ti.generic_var();
                         scope_p = &scope;
                         continue;
                     }
                     if (ti) {
-                        sig = ti;
+                        sig.assign_from(ti);
                         break;
                     }
                     if (!scope_p->parent())
@@ -111,15 +117,12 @@ void resolve_generic_type(TypeInfo& sig, const Scope& scope)
             resolve_generic_type(sig.elem_type(), scope);
             break;
         case Type::Tuple:
+        case Type::Struct:
             for (auto& sub : sig.subtypes())
                 resolve_generic_type(sub, scope);
             break;
-        case Type::Struct:
-            for (auto& st : sig.struct_items())
-                resolve_generic_type(st.second, scope);
-            break;
         case Type::Function:
-            sig = TypeInfo(std::make_shared<Signature>(sig.signature()));  // copy
+            sig.assign_from(TypeInfo(std::make_shared<Signature>(sig.signature())));  // copy signature
             resolve_generic_type(sig.signature().param_type, scope);
             resolve_generic_type(sig.signature().return_type, scope);
             break;
@@ -188,45 +191,17 @@ void specialize_arg(const TypeInfo& sig, const TypeInfo& deduced,
             specialize_arg(sig.elem_type(), deduced.elem_type(), type_args, exc_cb);
             break;
         case Type::Tuple:
-            if (deduced.type() == Type::Tuple) {
-                if (sig.subtypes().size() != deduced.subtypes().size()) {
-                    exc_cb(sig, deduced);
-                    break;
-                }
-                for (auto&& [sig_sub, deduced_sub] : zip(sig.subtypes(), deduced.subtypes())) {
-                    specialize_arg(sig_sub, deduced_sub, type_args, exc_cb);
-                }
-            } else if (deduced.type() == Type::Struct) {
-                if (sig.subtypes().size() != deduced.struct_items().size()) {
-                    exc_cb(sig, deduced);
-                    break;
-                }
-                for (auto&& [sig_sub, deduced_st] : zip(sig.subtypes(), deduced.struct_items())) {
-                    specialize_arg(sig_sub, deduced_st.second, type_args, exc_cb);
-                }
-            } else {
-                exc_cb(sig, deduced);
-            }
-            break;
         case Type::Struct:
-            if (deduced.type() == Type::Struct) {
-                if (sig.struct_items().size() != deduced.struct_items().size()) {
-                    exc_cb(sig, deduced);
-                    break;
-                }
-                for (auto&& [sig_st, deduced_st] : zip(sig.struct_items(), deduced.struct_items())) {
-                    specialize_arg(sig_st.second, deduced_st.second, type_args, exc_cb);
-                }
-            } else if (deduced.type() == Type::Tuple) {
-                if (sig.struct_items().size() != deduced.subtypes().size()) {
-                    exc_cb(sig, deduced);
-                    break;
-                }
-                for (auto&& [sig_st, deduced_sub] : zip(sig.struct_items(), deduced.subtypes())) {
-                    specialize_arg(sig_st.second, deduced_sub, type_args, exc_cb);
-                }
-            } else {
+            if (deduced.type() != Type::Tuple && deduced.type() != Type::Struct) {
                 exc_cb(sig, deduced);
+                break;
+            }
+            if (sig.subtypes().size() != deduced.subtypes().size()) {
+                exc_cb(sig, deduced);
+                break;
+            }
+            for (auto&& [sig_sub, deduced_sub] : zip(sig.subtypes(), deduced.subtypes())) {
+                specialize_arg(sig_sub, deduced_sub, type_args, exc_cb);
             }
             break;
         case Type::Function:
@@ -251,9 +226,7 @@ void store_resolved_param_type_vars(Scope& scope, const TypeArgs& type_args)
         const SymbolPointer var = symtab.find(s);
         if (s.type() == Symbol::TypeVar) {
             TypeInfo ti;
-            get_type_arg(var, ti, type_args);
-            if (ti)
-                scope.type_args().set(var, ti);
+            copy_type_arg(var, type_args, scope.type_args());
         }
     }
 }

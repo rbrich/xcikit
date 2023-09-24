@@ -52,7 +52,7 @@ TypeArgs specialize_signature(const SignaturePtr& signature, const std::vector<C
         // skip blocks / functions without params
         while (sig->param_type.is_void() && sig->return_type.is_callable()) {
             sig = sig->return_type.ul_signature_ptr();
-        };
+        }
         const auto& c_sig = call_sig.signature();
         const auto& source_loc = call_sig.arg.source_loc;
         {
@@ -97,7 +97,7 @@ TypeArgs resolve_generic_args_to_signature(const Signature& signature,
         // skip blocks / functions without params
         while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
             sig = &sig->return_type.signature();
-        };
+        }
         const auto& c_sig = call_sig.signature();
         const auto& source_loc = call_sig.arg.source_loc;
         {
@@ -138,7 +138,7 @@ TypeArgs resolve_instance_types(const Signature& signature, const std::vector<Ca
         // skip blocks / functions without params
         while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
             sig = &sig->return_type.signature();
-        };
+        }
         // resolve args
         const auto& c_sig = call_sig.signature();
         const auto& source_loc = call_sig.arg.source_loc;
@@ -154,7 +154,7 @@ TypeArgs resolve_instance_types(const Signature& signature, const std::vector<Ca
 
             if (call_type.is_struct() && sig_type.is_tuple()) {
                 // downgrade struct to tuple in call_type
-                call_type = TypeInfo(call_type.struct_or_tuple_subtypes());
+                call_type = TypeInfo(call_type.subtypes());
             }
 
             const auto m = match_type(call_type, sig_type);
@@ -205,7 +205,7 @@ MatchScore match_signature(const Signature& signature,
         // skip blocks / functions without params
         while (sig->param_type.is_void() && sig->return_type.type() == Type::Function) {
             sig = &sig->return_type.signature();
-        };
+        }
         const auto& c_sig = call_sig.signature();
         {
             // check type of next param

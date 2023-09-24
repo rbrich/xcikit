@@ -80,7 +80,7 @@ public:
     void visit(ast::Tuple& v) override {
         TypeChecker type_check(TypeInfo(v.ti), std::move(m_cast_type));
         const auto& spec = type_check.eval_type().underlying();  // specified/cast type
-        TypeInfo::Subtypes cast_items = spec.is_struct_or_tuple() ? spec.struct_or_tuple_subtypes() : TypeInfo::Subtypes{};
+        TypeInfo::Subtypes cast_items = spec.is_struct_or_tuple() ? spec.subtypes() : TypeInfo::Subtypes{};
         // build TypeInfo from subtypes
         std::vector<TypeInfo> subtypes;
         subtypes.reserve(v.items.size());
@@ -124,12 +124,12 @@ public:
         if (!specified.is_unknown() && !specified.is_struct())
             throw struct_type_mismatch(specified, v.source_loc);
         // build TypeInfo for the struct initializer
-        TypeInfo::StructItems ti_items;
+        TypeInfo::Subtypes ti_items;
         ti_items.reserve(v.items.size());
         for (auto& item : v.items) {
             // resolve item type
             if (specified) {
-                const TypeInfo* specified_item = specified.struct_item_by_name(item.first.name);
+                const TypeInfo* specified_item = specified.struct_item_by_key(item.first.name);
                 if (specified_item)
                     m_type_info = *specified_item;
             }
@@ -138,11 +138,11 @@ public:
             auto item_type = m_value_type.effective_type();
             if (!specified.is_unknown())
                 type_check.check_struct_item(item.first.name, item_type, item.second->source_loc);
-            ti_items.emplace_back(item.first.name, item_type);
+            item_type.set_key(item.first.name);
+            ti_items.push_back(std::move(item_type));
         }
-        v.ti = TypeInfo(std::move(ti_items));
+        v.ti = TypeInfo(TypeInfo::struct_of, std::move(ti_items));
         if (!specified.is_unknown()) {
-            assert(match_struct(v.ti, specified));  // already checked above
             v.ti = std::move(type_check.eval_type());
         }
         m_value_type = v.ti;
@@ -621,7 +621,7 @@ private:
                 // If it isn't, skip the candidate.
                 if (!m_call_sig.empty() && m_call_sig.back().arg.type_info.underlying().is_struct()) {
                     const auto& struct_type = m_call_sig.back().arg.type_info;
-                    const auto* item_type = struct_type.underlying().struct_item_by_name(symptr->name());
+                    const auto* item_type = struct_type.underlying().struct_item_by_key(symptr->name());
                     if (item_type == nullptr) {
                         // skip - struct doesn't have the referenced member
                         continue;
@@ -752,7 +752,7 @@ private:
                     // resolve overload in case the arg tuple contains a function that was specialized
                     auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
                     if (tuple && !tuple->items.empty()) {
-                        auto sig_subtypes = sig_type.struct_or_tuple_subtypes();
+                        auto sig_subtypes = sig_type.subtypes();
                         assert(tuple->items.size() == sig_subtypes.size());
                         auto orig_call_sig = std::move(m_call_sig);
                         for (auto&& [i, sig_item] : sig_subtypes | enumerate) {
