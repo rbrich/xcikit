@@ -82,7 +82,7 @@ namespace detail {
 TypeInfoUnion::TypeInfoUnion(ListTag, TypeInfo elem)
         : m_type(Type::List)
 {
-    std::construct_at(&m_subtypes, std::vector{std::move(elem)});
+    std::construct_at(&m_subtypes, Subtypes({std::move(elem)}));
 }
 
 
@@ -135,6 +135,7 @@ TypeInfoUnion& TypeInfoUnion::operator =(TypeInfoUnion&& r) noexcept {
             break;
     }
     r.set_type(Type::Unknown);
+    r.generic_var() = {};
     return *this;
 }
 
@@ -214,7 +215,7 @@ size_t TypeInfo::size() const
         case Type::Tuple:
         case Type::Struct: {
             const auto& l = subtypes();
-            return accumulate(l.begin(), l.end(), size_t(0),
+            return std::accumulate(l.begin(), l.end(), size_t(0),
                               [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
         }
         default:
@@ -320,12 +321,10 @@ bool is_same_underlying(const TypeInfo& lhs, const TypeInfo& rhs)
         case Type::Tuple:
         case Type::Struct:
             if (r.type() == Type::Tuple || r.type() == Type::Struct) {
-                auto l_types = l.subtypes();
-                auto r_types = r.subtypes();
-                if (l_types.size() != r_types.size())
+                if (l.subtypes().size() != r.subtypes().size())
                     return false;
-                auto r_type_it = r_types.begin();
-                for (const auto& l_type : l_types) {
+                auto r_type_it = r.subtypes().begin();
+                for (const auto& l_type : l.subtypes()) {
                     if (!is_same_underlying(l_type, *r_type_it++))
                         return false;
                 }
@@ -404,7 +403,7 @@ auto TypeInfo::elem_type() const -> const TypeInfo&
 {
     assert(type() == Type::List);
     assert(subtypes().size() == 1);
-    return subtypes()[0];
+    return subtypes().front();
 }
 
 

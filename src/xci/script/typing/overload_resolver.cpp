@@ -154,7 +154,7 @@ TypeArgs resolve_instance_types(const Signature& signature, const std::vector<Ca
 
             if (call_type.is_struct() && sig_type.is_tuple()) {
                 // downgrade struct to tuple in call_type
-                call_type = TypeInfo(call_type.subtypes());
+                call_type.set_type(Type::Tuple);
             }
 
             const auto m = match_type(call_type, sig_type);

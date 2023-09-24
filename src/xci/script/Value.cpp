@@ -14,7 +14,6 @@
 #include <xci/core/template/helpers.h>
 #include <range/v3/view/transform.hpp>
 #include <range/v3/view/take.hpp>
-#include <range/v3/range/conversion.hpp>
 #include <range/v3/numeric/accumulate.hpp>
 #include <numeric>
 #include <sstream>
@@ -28,7 +27,6 @@ using xci::data::leb128_encode;
 using xci::data::leb128_decode;
 using namespace xci::core;
 namespace views = ranges::cpp20::views;
-using ranges::to;
 using ranges::accumulate;
 
 
@@ -749,7 +747,7 @@ Function* ClosureV::function() const
 
 value::Tuple ClosureV::closure() const
 {
-    value::Tuple values{function()->nonlocals()};
+    value::Tuple values{TypeInfo::Subtypes(function()->nonlocals())};
     values.read(slot.data() + sizeof(Function*));
     return values;
 }

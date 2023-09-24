@@ -86,13 +86,12 @@ public:
         TypeChecker type_check(std::move(v.ti), std::move(m_cast_type));
         const auto& spec = type_check.eval_type();  // specified/cast type
         const TypeInfo::Subtypes* cast_items = spec.is_tuple()? &spec.subtypes() : nullptr;
-        std::vector<TypeInfo> subtypes;
-        subtypes.reserve(v.items.size());
+        TypeInfo::Subtypes subtypes(v.items.size());
         for (auto&& [i, item] : v.items | enumerate) {
             m_cast_type = cast_items ? (*cast_items)[i] : TypeInfo{};
             resolve_generic_type(m_cast_type, m_scope);
             item->apply(*this);
-            subtypes.push_back(m_value_type.effective_type());
+            subtypes[i] = m_value_type.effective_type();
         }
         m_cast_type = {};
         TypeInfo inferred(std::move(subtypes));
@@ -132,9 +131,8 @@ public:
         if (!specified.is_unknown() && !specified.is_struct())
             throw struct_type_mismatch(specified, v.source_loc);
         // build TypeInfo for the struct initializer
-        TypeInfo::Subtypes ti_items;
-        ti_items.reserve(v.items.size());
-        for (auto& item : v.items) {
+        TypeInfo::Subtypes ti_items(v.items.size());
+        for (auto&& [i, item] : v.items | enumerate) {
             // resolve item type
             if (specified) {
                 const TypeInfo* specified_item = specified.struct_item_by_key(item.first.name);
@@ -147,7 +145,7 @@ public:
             if (!specified.is_unknown())
                 type_check.check_struct_item(item.first.name, item_type, item.second->source_loc);
             item_type.set_key(item.first.name);
-            ti_items.push_back(std::move(item_type));
+            ti_items[i] = std::move(item_type);
         }
         v.ti = TypeInfo(TypeInfo::struct_of, std::move(ti_items));
         if (!specified.is_unknown()) {

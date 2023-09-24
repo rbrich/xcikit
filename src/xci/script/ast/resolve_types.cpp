@@ -80,14 +80,13 @@ public:
     void visit(ast::Tuple& v) override {
         TypeChecker type_check(TypeInfo(v.ti), std::move(m_cast_type));
         const auto& spec = type_check.eval_type().underlying();  // specified/cast type
-        TypeInfo::Subtypes cast_items = spec.is_struct_or_tuple() ? spec.subtypes() : TypeInfo::Subtypes{};
+        const TypeInfo::Subtypes* cast_items = spec.is_struct_or_tuple() ? &spec.subtypes() : nullptr;
         // build TypeInfo from subtypes
-        std::vector<TypeInfo> subtypes;
-        subtypes.reserve(v.items.size());
+        TypeInfo::Subtypes subtypes(v.items.size());
         for (auto&& [i, item] : v.items | enumerate) {
-            m_cast_type = !cast_items.empty() ? cast_items[i] : TypeInfo{};
+            m_cast_type = cast_items ? (*cast_items)[i] : TypeInfo{};
             item->apply(*this);
-            subtypes.push_back(m_value_type.effective_type());
+            subtypes[i] = m_value_type.effective_type();
         }
         m_cast_type = {};
         m_value_type = type_check.resolve(TypeInfo(std::move(subtypes)), v.source_loc);
@@ -124,9 +123,8 @@ public:
         if (!specified.is_unknown() && !specified.is_struct())
             throw struct_type_mismatch(specified, v.source_loc);
         // build TypeInfo for the struct initializer
-        TypeInfo::Subtypes ti_items;
-        ti_items.reserve(v.items.size());
-        for (auto& item : v.items) {
+        TypeInfo::Subtypes ti_items(v.items.size());
+        for (auto&& [i, item] : v.items | enumerate) {
             // resolve item type
             if (specified) {
                 const TypeInfo* specified_item = specified.struct_item_by_key(item.first.name);
@@ -139,7 +137,7 @@ public:
             if (!specified.is_unknown())
                 type_check.check_struct_item(item.first.name, item_type, item.second->source_loc);
             item_type.set_key(item.first.name);
-            ti_items.push_back(std::move(item_type));
+            ti_items[i] = std::move(item_type);
         }
         v.ti = TypeInfo(TypeInfo::struct_of, std::move(ti_items));
         if (!specified.is_unknown()) {
@@ -221,7 +219,7 @@ public:
                 Index cls_fn_idx = no_index;
                 TypeInfo cls_fn_ti;
                 TypeArgs inst_type_args;
-                std::vector<TypeInfo> resolved_types;
+                TypeInfo::Subtypes resolved_types;
                 for (auto psym : v.sym_list) {
                     auto* inst_mod = psym.symtab()->module();
                     if (inst_mod == nullptr)
@@ -233,10 +231,10 @@ public:
                         cls_fn_idx = cls.get_index_of_function(psym->ref()->index());
                         const auto& cls_fn = psym->ref().get_generic_scope().function();
                         inst_type_args = resolve_instance_types(cls_fn.signature(), m_call_sig, m_cast_type);
-                        resolved_types.clear();
-                        for (Index i = 1; i <= cls.symtab().count(Symbol::TypeVar); ++i) {
-                            auto var_psym = cls.symtab().find_by_index(Symbol::TypeVar, i);
-                            resolved_types.push_back(get_type_arg(var_psym, inst_type_args));
+                        resolved_types.resize(cls.symtab().count(Symbol::TypeVar));
+                        for (Index i = 0; i != resolved_types.size(); ++i) {
+                            auto var_psym = cls.symtab().find_by_index(Symbol::TypeVar, i+1);
+                            resolved_types[i] = get_type_arg(var_psym, inst_type_args);
                         }
                         cls_fn_ti = TypeInfo{cls_fn.signature_ptr()};
                         continue;
@@ -246,11 +244,11 @@ public:
                     auto& inst = inst_mod->get_instance(psym->index());
                     auto inst_fn_info = inst.get_function(cls_fn_idx);
                     const auto& fn = inst_fn_info.module->get_scope(inst_fn_info.scope_index).function();
-                    auto m = match_inst_types(inst.types(), resolved_types);
+                    auto m = match_inst_types(std::span{inst.types()}, resolved_types);
                     if (m.is_generic()) {
                         // If it's a generic match, make sure the generic vars can be specialized
                         TypeArgs type_args;
-                        specialize_arg(TypeInfo{inst.types()}, TypeInfo{resolved_types}, type_args,
+                        specialize_arg(TypeInfo{std::span(inst.types())}, TypeInfo{resolved_types}, type_args,
                                        [&m] (const TypeInfo&, const TypeInfo&) { m = MatchScore(-1); });
                     }
                     candidates.push_back({inst_fn_info.module, inst_fn_info.scope_index, psym, TypeInfo{fn.signature_ptr()}, cls_fn_ti, inst_type_args, m});

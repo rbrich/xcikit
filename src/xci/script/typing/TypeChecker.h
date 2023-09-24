@@ -10,6 +10,7 @@
 #include <xci/script/TypeInfo.h>
 #include <xci/script/Function.h>
 #include <xci/script/Source.h>
+#include <span>
 #include <compare>
 
 namespace xci::script {
@@ -68,7 +69,7 @@ private:
 /// Match instance types
 /// \param candidate    Candidate types (types of specific instance)
 /// \param expected     Parameters expected by signature (resolved class types)
-MatchScore match_inst_types(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& expected);
+MatchScore match_inst_types(std::span<const TypeInfo> candidate, std::span<const TypeInfo> expected);
 
 /// Match a single type
 /// \param candidate    Candidate / inferred type

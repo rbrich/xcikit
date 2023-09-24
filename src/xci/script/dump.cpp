@@ -1131,11 +1131,11 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
         case Type::Struct: {
             os << "(";
             for (const auto& item : v.subtypes()) {
+                if (&item != &v.subtypes().front())
+                    os << ", ";
                 if (item.key())
                     fmt::print(os, "{}: ", item.key());
                 os << item;
-                if (&item != &v.subtypes().back())
-                    os << ", ";
             }
             return os << ")";
         }

@@ -8,6 +8,7 @@
 #define XCI_SCRIPT_TYPEINFO_H
 
 #include "SymbolTable.h"
+#include <xci/core/container/StaticVec.h>
 
 #include <cstdint>
 #include <ostream>
@@ -86,7 +87,7 @@ public:
     struct StructTag {};
 
     using Var = SymbolPointer;  // for unknown type, specifies which type variable this represents
-    using Subtypes = std::vector<TypeInfo>;
+    using Subtypes = core::StaticVec<TypeInfo>;
     using SignaturePtr = std::shared_ptr<Signature>;
     using NamedTypePtr = std::shared_ptr<NamedType>;
 
@@ -94,6 +95,12 @@ public:
     void set_type(Type type) {
         if (m_type == type)
             return;
+        if ((m_type == Type::List || m_type == Type::Tuple || m_type == Type::Struct) &&
+            (type == Type::List || type == Type::Tuple || type == Type::Struct))
+        {
+            m_type = type;
+            return;
+        }
         destroy_variant();
         m_type = type;
         construct_variant();
@@ -310,13 +317,15 @@ public:
                 break;
             }
             case Type::List: {
-                subtypes().emplace_back();
-                ar(subtypes().back());
+                subtypes().resize(1);
+                ar(subtypes().front());
                 break;
             }
             case Type::Tuple:
             case Type::Struct: {
-                ar(subtypes());
+                std::vector<TypeInfo> v;
+                ar(v);
+                subtypes() = Subtypes(v);
                 break;
             }
             case Type::Named: {
