@@ -528,7 +528,9 @@ bool Vfs::mount(const fs::path& fs_path, std::string target_path)
 
 bool Vfs::mount_memory(const std::byte* data, size_t size, std::string target_path)
 {
+    XCI_IGNORE_DEPRECATED(
     auto stream = std::make_unique<std::istrstream>((const char*)(data), size);
+    )
     auto path = fmt::format("memory:{:x},{}", intptr_t(data), size);
     std::shared_ptr<VfsDirectory> vfs_directory;
 

@@ -714,6 +714,11 @@ size_t TupleV::length() const
 }
 
 
+const Value& TupleV::value_at(size_t idx) const
+{
+    return values[idx];
+}
+
 void TupleV::foreach(const std::function<void(const Value&)>& cb) const
 {
     for (Value* it = values.get(); !it->is_unknown(); ++it)

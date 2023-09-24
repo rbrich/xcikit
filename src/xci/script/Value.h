@@ -141,7 +141,7 @@ struct TupleV {
 
     bool empty() const;
     size_t length() const;
-    const Value& value_at(size_t idx) const { return values[idx]; }
+    const Value& value_at(size_t idx) const;
     void foreach(const std::function<void(const Value&)>& cb) const;
 
     std::unique_ptr<Value[]> values;  // Unknown-terminated
