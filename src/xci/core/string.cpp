@@ -11,6 +11,7 @@
 #endif
 
 #include <xci/core/log.h>
+#include <xci/compat/macros.h>
 
 #include <fmt/core.h>
 #include <widechar_width/widechar_width.h>
@@ -209,40 +210,30 @@ bool ci_equal(std::string_view s1, std::string_view s2)
 
 std::u32string to_utf32(string_view utf8)
 {
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
+    XCI_IGNORE_DEPRECATED(
     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
+    )
     try {
         return convert_utf32.from_bytes(utf8.data(), utf8.data() + utf8.size());
     } catch (const std::range_error& e) {
         log::error("to_utf32: Invalid UTF8 string: {} ({})", utf8, e.what());
         return {};
     }
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 }
 
 
 template <class Elem>
 std::string _to_utf8(std::basic_string_view<Elem> wstr)
 {
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
+    XCI_IGNORE_DEPRECATED(
     std::wstring_convert<std::codecvt_utf8<Elem>, Elem> convert;
+    )
     try {
         return convert.to_bytes(wstr.data(), wstr.data() + wstr.size());
     } catch (const std::range_error& e) {
         log::error("to_utf8: Invalid UTF16/32 string ({})", e.what());
         return {};
     }
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 }
 
 std::string to_utf8(std::u16string_view wstr) { return _to_utf8(wstr); }
@@ -254,15 +245,10 @@ std::string to_utf8(std::wstring_view wstr) { return _to_utf8(wstr); }
 
 std::string to_utf8(char32_t codepoint)
 {
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
+    XCI_IGNORE_DEPRECATED(
     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
+    )
     return convert_utf32.to_bytes(codepoint);
-#ifdef __clang__
-#pragma clang diagnostic pop
-#endif
 }
 
 
