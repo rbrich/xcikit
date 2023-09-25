@@ -7,7 +7,6 @@
 #ifndef XCI_SCRIPT_ERROR_H
 #define XCI_SCRIPT_ERROR_H
 
-#include "Value.h"
 #include "Source.h"
 #include <xci/core/error.h>
 #include <xci/core/TermCtl.h>
@@ -22,6 +21,8 @@ namespace xci::script {
 
 using core::TermCtl;
 using std::string_view;
+
+class TypeInfo;
 
 
 enum ErrorCode {

@@ -86,11 +86,11 @@ public:
         if (v.ti.underlying().is_struct() && v.items.empty()) {
             // A struct can be initialized with empty tuple "()".
             // Fill in the defaults.
-            for (const auto& ti : reverse(v.ti.underlying().struct_items())) {
-                if (ti.second.is_void())
+            for (const auto& ti : reverse(v.ti.underlying().subtypes())) {
+                if (ti.is_void())
                     return;  // Void value
                 // add to static values
-                auto idx = module().add_value(TypedValue(ti.second));
+                auto idx = module().add_value(TypedValue(ti));
                 // LOAD_STATIC <static_idx>
                 code().add_L1(Opcode::LoadStatic, idx);
             }
@@ -113,18 +113,18 @@ public:
 
     void visit(ast::StructInit& v) override {
         // build struct on stack according to struct_type, fill in defaults
-        for (const auto& ti : reverse(v.ti.underlying().struct_items())) {
+        for (const auto& ti : reverse(v.ti.underlying().subtypes())) {
             // lookup the name in StructInit
             auto it = std::find_if(v.items.begin(), v.items.end(),
                 [&ti](const ast::StructInit::Item& item) {
-                  return item.first.name == ti.first;
+                  return item.first.name == ti.key();
                 });
             if (it == v.items.end()) {
                 // not found - use the default
-                if (ti.second.is_void())
+                if (ti.is_void())
                     return;  // Void value
                 // add to static values
-                auto idx = module().add_value(TypedValue(ti.second));
+                auto idx = module().add_value(TypedValue(ti));
                 // LOAD_STATIC <static_idx>
                 code().add_L1(Opcode::LoadStatic, idx);
                 continue;
@@ -357,17 +357,17 @@ public:
                 size_t drop_before = 0;  // first DROP 0 <size>
                 size_t skip = 0;
                 size_t drop = 0;  // second DROP <skip> <size>
-                for (const auto& item : struct_type.struct_items()) {
-                    if (item.first == sym.name()) {
+                for (const auto& item : struct_type.subtypes()) {
+                    if (item.key() == sym.name()) {
                         std::swap(drop_before, drop);
-                        skip = item.second.size();
+                        skip = item.size();
                         continue;
                     }
-                    item.second.foreach_heap_slot([this, skip](size_t offset) {
+                    item.foreach_heap_slot([this, skip](size_t offset) {
                         // DEC_REF <offset>
                         code().add_L1(Opcode::DecRef, offset + skip);
                     });
-                    drop += item.second.size();
+                    drop += item.size();
                 }
                 if (drop_before != 0) {
                     // DROP <skip> <size>
@@ -515,8 +515,12 @@ public:
 
     void visit(ast::Cast& v) override {
         v.expression->apply(*this);
-        if (v.cast_function)
+        if (v.cast_function) {
+            const bool orig_callable = m_callable;
+            m_callable = true;
             v.cast_function->apply(*this);
+            m_callable = orig_callable;
+        }
     }
 
     void visit(ast::Instance& v) override {

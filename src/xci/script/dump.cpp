@@ -1127,21 +1127,15 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
         case Type::String:      return os << "String";
         case Type::List:
             return os << "[" << v.elem_type() << "]";
-        case Type::Tuple: {
-            os << "(";
-            for (const auto& ti : v.subtypes()) {
-                os << ti;
-                if (&ti != &v.subtypes().back())
-                    os << ", ";
-            }
-            return os << ")";
-        }
+        case Type::Tuple:
         case Type::Struct: {
             os << "(";
-            for (const auto& item : v.struct_items()) {
-                fmt::print(os, "{}: {}", item.first, item.second);
-                if (&item != &v.struct_items().back())
+            for (const auto& item : v.subtypes()) {
+                if (&item != &v.subtypes().front())
                     os << ", ";
+                if (item.key())
+                    fmt::print(os, "{}: ", item.key());
+                os << item;
             }
             return os << ")";
         }
@@ -1240,8 +1234,8 @@ std::ostream& operator<<(std::ostream& os, const SymbolTable& v)
 {
     os << put_indent << "--- ";
     if (v.scope() != nullptr)
-        os << '#' << v.scope()->function_index() << ' ';
-    fmt::print(os, "{} ---\n", v.name());
+        os << '#' << v.scope()->function_index();
+    fmt::print(os, " {} ---\n", v.name());
     for (const auto& sym : v) {
         os << put_indent << sym << endl;
     }

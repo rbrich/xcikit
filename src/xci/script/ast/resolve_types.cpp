@@ -80,14 +80,13 @@ public:
     void visit(ast::Tuple& v) override {
         TypeChecker type_check(TypeInfo(v.ti), std::move(m_cast_type));
         const auto& spec = type_check.eval_type().underlying();  // specified/cast type
-        TypeInfo::Subtypes cast_items = spec.is_struct_or_tuple() ? spec.struct_or_tuple_subtypes() : TypeInfo::Subtypes{};
+        const TypeInfo::Subtypes* cast_items = spec.is_struct_or_tuple() ? &spec.subtypes() : nullptr;
         // build TypeInfo from subtypes
-        std::vector<TypeInfo> subtypes;
-        subtypes.reserve(v.items.size());
+        TypeInfo::Subtypes subtypes(v.items.size());
         for (auto&& [i, item] : v.items | enumerate) {
-            m_cast_type = !cast_items.empty() ? cast_items[i] : TypeInfo{};
+            m_cast_type = cast_items ? (*cast_items)[i] : TypeInfo{};
             item->apply(*this);
-            subtypes.push_back(m_value_type.effective_type());
+            subtypes[i] = m_value_type.effective_type();
         }
         m_cast_type = {};
         m_value_type = type_check.resolve(TypeInfo(std::move(subtypes)), v.source_loc);
@@ -124,12 +123,11 @@ public:
         if (!specified.is_unknown() && !specified.is_struct())
             throw struct_type_mismatch(specified, v.source_loc);
         // build TypeInfo for the struct initializer
-        TypeInfo::StructItems ti_items;
-        ti_items.reserve(v.items.size());
-        for (auto& item : v.items) {
+        TypeInfo::Subtypes ti_items(v.items.size());
+        for (auto&& [i, item] : v.items | enumerate) {
             // resolve item type
             if (specified) {
-                const TypeInfo* specified_item = specified.struct_item_by_name(item.first.name);
+                const TypeInfo* specified_item = specified.struct_item_by_key(item.first.name);
                 if (specified_item)
                     m_type_info = *specified_item;
             }
@@ -138,11 +136,11 @@ public:
             auto item_type = m_value_type.effective_type();
             if (!specified.is_unknown())
                 type_check.check_struct_item(item.first.name, item_type, item.second->source_loc);
-            ti_items.emplace_back(item.first.name, item_type);
+            item_type.set_key(item.first.name);
+            ti_items[i] = std::move(item_type);
         }
-        v.ti = TypeInfo(std::move(ti_items));
+        v.ti = TypeInfo(TypeInfo::struct_of, std::move(ti_items));
         if (!specified.is_unknown()) {
-            assert(match_struct(v.ti, specified));  // already checked above
             v.ti = std::move(type_check.eval_type());
         }
         m_value_type = v.ti;
@@ -221,7 +219,7 @@ public:
                 Index cls_fn_idx = no_index;
                 TypeInfo cls_fn_ti;
                 TypeArgs inst_type_args;
-                std::vector<TypeInfo> resolved_types;
+                TypeInfo::Subtypes resolved_types;
                 for (auto psym : v.sym_list) {
                     auto* inst_mod = psym.symtab()->module();
                     if (inst_mod == nullptr)
@@ -233,10 +231,10 @@ public:
                         cls_fn_idx = cls.get_index_of_function(psym->ref()->index());
                         const auto& cls_fn = psym->ref().get_generic_scope().function();
                         inst_type_args = resolve_instance_types(cls_fn.signature(), m_call_sig, m_cast_type);
-                        resolved_types.clear();
-                        for (Index i = 1; i <= cls.symtab().count(Symbol::TypeVar); ++i) {
-                            auto var_psym = cls.symtab().find_by_index(Symbol::TypeVar, i);
-                            resolved_types.push_back(get_type_arg(var_psym, inst_type_args));
+                        resolved_types.resize(cls.symtab().count(Symbol::TypeVar));
+                        for (Index i = 0; i != resolved_types.size(); ++i) {
+                            auto var_psym = cls.symtab().find_by_index(Symbol::TypeVar, i+1);
+                            resolved_types[i] = get_type_arg(var_psym, inst_type_args);
                         }
                         cls_fn_ti = TypeInfo{cls_fn.signature_ptr()};
                         continue;
@@ -250,7 +248,7 @@ public:
                     if (m.is_generic()) {
                         // If it's a generic match, make sure the generic vars can be specialized
                         TypeArgs type_args;
-                        specialize_arg(TypeInfo{inst.types()}, TypeInfo{resolved_types}, type_args,
+                        specialize_arg(TypeInfo{std::span(inst.types())}, TypeInfo{resolved_types}, type_args,
                                        [&m] (const TypeInfo&, const TypeInfo&) { m = MatchScore(-1); });
                     }
                     candidates.push_back({inst_fn_info.module, inst_fn_info.scope_index, psym, TypeInfo{fn.signature_ptr()}, cls_fn_ti, inst_type_args, m});
@@ -621,7 +619,7 @@ private:
                 // If it isn't, skip the candidate.
                 if (!m_call_sig.empty() && m_call_sig.back().arg.type_info.underlying().is_struct()) {
                     const auto& struct_type = m_call_sig.back().arg.type_info;
-                    const auto* item_type = struct_type.underlying().struct_item_by_name(symptr->name());
+                    const auto* item_type = struct_type.underlying().struct_item_by_key(symptr->name());
                     if (item_type == nullptr) {
                         // skip - struct doesn't have the referenced member
                         continue;
@@ -698,7 +696,6 @@ private:
     }
 
     /// Resolve return type after applying m_call_sig
-    // FIXME: share with resolve_spec
     TypeInfo resolve_return_type_from_call_args(const SignaturePtr& signature, ast::Call& v)
     {
         SignaturePtr sig;
@@ -729,7 +726,7 @@ private:
                 const auto& call_type = c_sig.param_type;
                 const auto m = match_type(call_type, sig_type);
                 if (!m)
-                    throw unexpected_argument_type(sig_type, sig_type, source_loc);
+                    throw unexpected_argument_type(sig_type, call_type, source_loc);
                 if (m.is_coerce()) {
                     // Update type_info of the coerced literal argument
                     m_cast_type = sig_type;
@@ -738,32 +735,6 @@ private:
                     v.arg->apply(*this);
                     m_call_sig = std::move(orig_call_sig);
                     m_cast_type = {};
-                }
-                // FIXME: move into second pass outside resolve_return_type_from_call_args()
-                if (sig_type.is_callable()) {
-                    // resolve overload in case the arg is a function that was specialized
-                    auto orig_call_sig = std::move(m_call_sig);
-                    m_call_sig.clear();
-                    m_call_sig.emplace_back().load_from(sig_type.ul_signature(), source_loc);
-                    v.arg->apply(*this);
-                    m_call_sig = std::move(orig_call_sig);
-                }
-                if (sig_type.is_struct_or_tuple() && !sig_type.is_void()) {
-                    // resolve overload in case the arg tuple contains a function that was specialized
-                    auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
-                    if (tuple && !tuple->items.empty()) {
-                        auto sig_subtypes = sig_type.struct_or_tuple_subtypes();
-                        assert(tuple->items.size() == sig_subtypes.size());
-                        auto orig_call_sig = std::move(m_call_sig);
-                        for (auto&& [i, sig_item] : sig_subtypes | enumerate) {
-                            if (sig_item.is_callable()) {
-                                m_call_sig.clear();
-                                m_call_sig.emplace_back().load_from(sig_item.ul_signature(), source_loc);
-                                tuple->items[i]->apply(*this);
-                            }
-                        }
-                        m_call_sig = std::move(orig_call_sig);
-                    }
                 }
             }
         }

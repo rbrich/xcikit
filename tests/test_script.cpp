@@ -1071,6 +1071,7 @@ TEST_CASE( "If-expression", "[script][interpreter]" )
 
 TEST_CASE( "Casting", "[script][interpreter]" )
 {
+    CHECK(interpret("cast=fun String->Void {};\"drop this\":Void") == "()");
     CHECK(interpret_std("\"drop this\":Void") == "()");
     CHECK(interpret_std("{42}:Void") == "()");
     CHECK(interpret_std("(fun x { x + 1 }):Void") == "()");

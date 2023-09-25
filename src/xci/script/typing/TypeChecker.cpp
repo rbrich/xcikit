@@ -14,34 +14,74 @@ namespace xci::script {
 using ranges::views::zip;
 
 
-MatchScore match_inst_types(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& expected)
+MatchScore match_inst_types(std::span<const TypeInfo> candidate, std::span<const TypeInfo> expected)
 {
     if (candidate.size() != expected.size())
-        return MatchScore(-1);
+        return MatchScore::mismatch();
     MatchScore score;
     for (size_t i = 0; i != expected.size(); ++i) {
         auto m = match_type(candidate[i], expected[i]);
         if (!m || m.is_coerce())
-            return MatchScore(-1);
+            return MatchScore::mismatch();
         score += m;
     }
     return score;
 }
 
 
+static MatchScore match_named(const TypeInfo& candidate, const TypeInfo& expected)
+{
+    if (candidate.name() != expected.name())
+        return MatchScore::mismatch();
+    return match_type(candidate.named_type().type_info, expected.named_type().type_info);
+}
+
+
+static MatchScore match_function(const TypeInfo& candidate, const TypeInfo& expected)
+{
+    const auto& cnd_sig = candidate.signature();
+    const auto& exp_sig = expected.signature();
+    if (cnd_sig.nonlocals.size() != exp_sig.nonlocals.size())
+        return MatchScore::mismatch();
+    MatchScore res;
+    for (auto&& [cnd, exp] : zip(cnd_sig.nonlocals, exp_sig.nonlocals)) {
+        const auto m = match_type(cnd, exp);
+        if (!m)
+            return MatchScore::mismatch();
+        res += m;
+    }
+    {
+        const auto m = match_type(cnd_sig.param_type, exp_sig.param_type);
+        if (!m)
+            return MatchScore::mismatch();
+        res += m;
+    }
+    {
+        const auto m = match_type(cnd_sig.return_type, exp_sig.return_type);
+        if (!m)
+            return MatchScore::mismatch();
+        res += m;
+    }
+    return res;
+}
+
+
 MatchScore match_type(const TypeInfo& candidate, const TypeInfo& expected)
 {
-    if (candidate.is_struct() && expected.is_struct())
-        return match_struct(candidate, expected);
-    if (candidate.is_tuple() && expected.is_tuple())
-        return match_tuple(candidate, expected);
     if (candidate.is_literal() && candidate.is_tuple() && expected.underlying().is_struct())
         return MatchScore::coerce() + match_tuple_to_struct(candidate, expected.underlying());
-    if (candidate == expected) {
-        if (expected.has_unknown() || candidate.has_unknown())
-            return MatchScore::generic();
-        else
-            return MatchScore::exact();
+    if (candidate.is_unknown() || expected.is_unknown())
+        return MatchScore::generic();
+    if (candidate.type() == expected.type()) {
+        switch (candidate.type()) {
+            case Type::List: return match_type(candidate.elem_type(), expected.elem_type());
+            case Type::Tuple: return match_tuple(candidate, expected);
+            case Type::Struct: return match_struct(candidate, expected);
+            case Type::Function: return match_function(candidate, expected);
+            case Type::Named: return match_named(candidate, expected);
+            default:
+                return MatchScore::exact();
+        }
     }
     if (candidate.is_literal() && expected.is_named())
         return MatchScore::coerce() + match_type(candidate, expected.underlying());
@@ -51,17 +91,15 @@ MatchScore match_type(const TypeInfo& candidate, const TypeInfo& expected)
 
 MatchScore match_tuple(const TypeInfo& candidate, const TypeInfo& expected)
 {
-    assert(candidate.is_tuple());
-    assert(expected.is_tuple());
+    assert(candidate.is_struct_or_tuple());
+    assert(expected.is_struct_or_tuple());
+    if (candidate.is_void() && expected.is_void())
+        return MatchScore::exact();
     const auto& expected_types = expected.subtypes();
     const auto& candidate_types = candidate.subtypes();
     if (candidate_types.size() != expected_types.size())
         return MatchScore::mismatch();  // number of fields doesn't match
-    if (candidate == expected)
-        return MatchScore::exact();
     MatchScore res;
-    if (candidate.is_named() || expected.is_named())
-        res.add_coerce();
     auto expected_iter = expected_types.begin();
     for (const auto& inf_type : candidate_types) {
         auto m = match_type(inf_type, *expected_iter);
@@ -78,24 +116,21 @@ MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& expected)
 {
     assert(candidate.is_struct());
     assert(expected.is_struct());
-    const auto& expected_items = expected.struct_items();
-    if (candidate == expected)
-        return MatchScore::exact();
+    const auto& expected_types = expected.subtypes();
+    const auto& candidate_types = candidate.subtypes();
+    if (candidate_types.size() > expected_types.size())
+        return MatchScore::mismatch();  // number of fields doesn't match
+    assert(!expected_types.empty());
     MatchScore res;
-    if (candidate.is_named() || expected.is_named()) {
-        // The named type doesn't match.
-        // The underlying type may match - each field adds another match to total score.
-        res.add_coerce();
-    }
-    for (const auto& inf : candidate.struct_items()) {
-        auto act_it = std::find_if(expected_items.begin(), expected_items.end(),
-                [&inf](const TypeInfo::StructItem& act) {
-                  return act.first == inf.first;
-                });
-        if (act_it == expected_items.end())
+    for (const auto& inf_type : candidate_types) {
+        assert(inf_type.key());
+        auto exp_it = std::find_if(expected_types.begin(), expected_types.end(),
+                                   [&inf_type](const TypeInfo& exp) {
+                                       return exp.key() == inf_type.key();
+                                   });
+        if (exp_it == expected_types.end())
             return MatchScore::mismatch();  // not found
-        // check item type
-        auto m = match_type(inf.second, act_it->second);
+        auto m = match_type(inf_type, *exp_it);
         if (!m)
             return MatchScore::mismatch();  // item type doesn't match
         res += m;
@@ -108,24 +143,9 @@ MatchScore match_tuple_to_struct(const TypeInfo& candidate, const TypeInfo& expe
 {
     assert(candidate.is_tuple());
     assert(expected.is_struct());
-    const auto& expected_items = expected.struct_items();
-    const auto& candidate_types = candidate.subtypes();
-    if (candidate_types.size() != expected_items.size() && !candidate_types.empty())  // allow initializing a struct with ()
-        return MatchScore::mismatch();  // number of fields doesn't match
-    if (candidate == expected)
-        return MatchScore::exact();
-    MatchScore res;
-    if (candidate.is_named() || expected.is_named())
-        res.add_coerce();
-    auto expected_iter = expected_items.begin();
-    for (const auto& inf_type : candidate_types) {
-        auto m = match_type(inf_type, expected_iter->second);
-        if (!m)
-            return MatchScore::mismatch();  // item type doesn't match
-        res += m;
-        ++expected_iter;
-    }
-    return res;
+    if (candidate.is_void())  // allow initializing a struct with ()
+        return MatchScore::coerce();
+    return match_tuple(candidate, expected);
 }
 
 
@@ -151,15 +171,18 @@ auto TypeChecker::resolve(const TypeInfo& inferred, const SourceLocation& loc) -
             if (!match_tuple_to_struct(inferred, underlying))
                 throw definition_type_mismatch(ti, inferred, loc);
             TypeInfo res = std::move(eval_type());
-            for (auto&& [st_item, inf_subtype] : zip(res.underlying().struct_items(), inferred.subtypes())) {
-                if (st_item.second.is_unspecified())
-                    st_item.second = inf_subtype;
+            for (auto&& [st_item, inf_subtype] : zip(res.underlying().subtypes(), inferred.subtypes())) {
+                if (st_item.is_unspecified()) {
+                    auto key = st_item.key();
+                    st_item = inf_subtype;
+                    st_item.set_key(key);
+                }
             }
             return res;
         }
-        if (underlying.struct_items().size() == 1) {
+        if (underlying.subtypes().size() == 1) {
             // allow initializing a single-field struct with the value of first field (as there is no single-item tuple)
-            if (!match_type(inferred, underlying.struct_items().front().second))
+            if (!match_type(inferred, underlying.subtypes().front()))
                 throw definition_type_mismatch(ti, inferred, loc);
             return std::move(eval_type());
         }
@@ -184,15 +207,15 @@ auto TypeChecker::resolve(const TypeInfo& inferred, const SourceLocation& loc) -
 
 void TypeChecker::check_struct_item(NameId key, const TypeInfo& inferred, const SourceLocation& loc) const
 {
-    const auto& spec_items = eval_type().underlying().struct_items();
+    const auto& spec_items = eval_type().underlying().subtypes();
     auto spec_it = std::find_if(spec_items.begin(), spec_items.end(),
-                                [key](const TypeInfo::StructItem& spec) {
-                                    return spec.first == key;
+                                [key](const TypeInfo& spec) {
+                                    return spec.key() == key;
                                 });
     if (spec_it == spec_items.end())
         throw struct_unknown_key(eval_type(), key, loc);
-    if (!match_type(inferred, spec_it->second))
-        throw struct_key_type_mismatch(eval_type(), spec_it->second, inferred, loc);
+    if (!match_type(inferred, *spec_it))
+        throw struct_key_type_mismatch(eval_type(), *spec_it, inferred, loc);
 }
 
 

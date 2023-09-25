@@ -82,14 +82,7 @@ namespace detail {
 TypeInfoUnion::TypeInfoUnion(ListTag, TypeInfo elem)
         : m_type(Type::List)
 {
-    std::construct_at(&m_subtypes, std::vector{std::move(elem)});
-}
-
-
-TypeInfoUnion::TypeInfoUnion(StructTag, StructItems items)
-        : m_type(Type::Struct)
-{
-    std::construct_at(&m_struct_items, std::move(items));
+    std::construct_at(&m_subtypes, Subtypes({std::move(elem)}));
 }
 
 
@@ -113,8 +106,8 @@ TypeInfoUnion& TypeInfoUnion::operator =(const TypeInfoUnion& r)
     switch (m_type) {
         case Type::Unknown: m_var = r.m_var; break;
         case Type::List:
-        case Type::Tuple: m_subtypes = r.m_subtypes; break;
-        case Type::Struct: m_struct_items = r.m_struct_items; break;
+        case Type::Tuple:
+        case Type::Struct: m_subtypes = r.m_subtypes; break;
         case Type::Function: m_signature_ptr = r.m_signature_ptr; break;
         case Type::Named: m_named_type_ptr = r.m_named_type_ptr; break;
         default:
@@ -134,14 +127,15 @@ TypeInfoUnion& TypeInfoUnion::operator =(TypeInfoUnion&& r) noexcept {
     switch (m_type) {
         case Type::Unknown: m_var = r.m_var; break;
         case Type::List:
-        case Type::Tuple: m_subtypes = std::move(r.m_subtypes); break;
-        case Type::Struct: m_struct_items = std::move(r.m_struct_items); break;
+        case Type::Tuple:
+        case Type::Struct: m_subtypes = std::move(r.m_subtypes); break;
         case Type::Function: m_signature_ptr = std::move(r.m_signature_ptr); break;
         case Type::Named: m_named_type_ptr = std::move(r.m_named_type_ptr); break;
         default:
             break;
     }
     r.set_type(Type::Unknown);
+    r.generic_var() = {};
     return *this;
 }
 
@@ -150,8 +144,8 @@ void TypeInfoUnion::construct_variant() {
     switch (m_type) {
         case Type::Unknown: std::construct_at(&m_var); break;
         case Type::List:
-        case Type::Tuple: std::construct_at(&m_subtypes); break;
-        case Type::Struct: std::construct_at(&m_struct_items); break;
+        case Type::Tuple:
+        case Type::Struct: std::construct_at(&m_subtypes); break;
         case Type::Function: std::construct_at(&m_signature_ptr); break;
         case Type::Named: std::construct_at(&m_named_type_ptr); break;
         default:
@@ -164,8 +158,8 @@ void TypeInfoUnion::destroy_variant() {
     switch (m_type) {
         case Type::Unknown: m_var.~Var(); break;
         case Type::List:
-        case Type::Tuple: m_subtypes.~Subtypes(); break;
-        case Type::Struct: m_struct_items.~StructItems(); break;
+        case Type::Tuple:
+        case Type::Struct: m_subtypes.~Subtypes(); break;
         case Type::Function: m_signature_ptr.~SignaturePtr(); break;
         case Type::Named: m_named_type_ptr.~NamedTypePtr(); break;
         default:
@@ -190,15 +184,8 @@ auto TypeInfoUnion::generic_var() -> Var&
 
 auto TypeInfoUnion::subtypes() const -> const Subtypes&
 {
-    assert(m_type == Type::Tuple || type() == Type::List);
+    assert(m_type == Type::Tuple || m_type == Type::Struct || type() == Type::List);
     return m_subtypes;
-}
-
-
-auto TypeInfoUnion::struct_items() const -> const StructItems&
-{
-    assert(m_type == Type::Struct);
-    return m_struct_items;
 }
 
 
@@ -225,15 +212,11 @@ size_t TypeInfo::size() const
     switch (type()) {
         case Type::Named:
             return named_type().type_info.size();
-        case Type::Tuple: {
-            const auto& l = subtypes();
-            return accumulate(l.begin(), l.end(), size_t(0),
-                              [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
-        }
+        case Type::Tuple:
         case Type::Struct: {
-            const auto& l = struct_items();
-            return accumulate(l.begin(), l.end(), size_t(0),
-                              [](size_t init, const TypeInfo::StructItem& ti) { return init + ti.second.size(); });
+            const auto& l = subtypes();
+            return std::accumulate(l.begin(), l.end(), size_t(0),
+                              [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
         }
         default:
             return type_size_on_stack(type());
@@ -251,23 +234,14 @@ void TypeInfo::foreach_heap_slot(std::function<void(size_t offset)> cb) const
         case Type::Stream:
             cb(0);
             break;
-        case Type::Tuple: {
+        case Type::Tuple:
+        case Type::Struct: {
             size_t pos = 0;
             for (const auto& ti : uti.subtypes()) {
                 ti.foreach_heap_slot([&cb, pos](size_t offset) {
                     cb(pos + offset);
                 });
                 pos += ti.size();
-            }
-            break;
-        }
-        case Type::Struct: {
-            size_t pos = 0;
-            for (const auto& item : uti.struct_items()) {
-                item.second.foreach_heap_slot([&cb, pos](size_t offset) {
-                    cb(pos + offset);
-                });
-                pos += item.second.size();
             }
             break;
         }
@@ -294,13 +268,10 @@ void TypeInfo::replace_var(SymbolPointer var, const TypeInfo& ti)
             signature().return_type.replace_var(var, ti);
             break;
         case Type::Tuple:
+        case Type::Struct:
         case Type::List:
             for (auto& sub : subtypes())
                 sub.replace_var(var, ti);
-            break;
-        case Type::Struct:
-            for (auto& item : struct_items())
-                item.second.replace_var(var, ti);
             break;
         default:
             break;
@@ -350,12 +321,10 @@ bool is_same_underlying(const TypeInfo& lhs, const TypeInfo& rhs)
         case Type::Tuple:
         case Type::Struct:
             if (r.type() == Type::Tuple || r.type() == Type::Struct) {
-                auto l_types = l.struct_or_tuple_subtypes();
-                auto r_types = r.struct_or_tuple_subtypes();
-                if (l_types.size() != r_types.size())
+                if (l.subtypes().size() != r.subtypes().size())
                     return false;
-                auto r_type_it = r_types.begin();
-                for (const auto& l_type : l_types) {
+                auto r_type_it = r.subtypes().begin();
+                for (const auto& l_type : l.subtypes()) {
                     if (!is_same_underlying(l_type, *r_type_it++))
                         return false;
                 }
@@ -376,10 +345,12 @@ bool TypeInfo::operator==(const TypeInfo& rhs) const
         return true;  // unknown type matches any other type
     if (type() != rhs.type())
         return false;
+    if (key() && rhs.key() && key() != rhs.key())
+        return false;  // keys don't match (missing key = match anything)
     switch (type()) {
         case Type::List:
-        case Type::Tuple: return subtypes() == rhs.subtypes();
-        case Type::Struct: return struct_items() == rhs.struct_items();
+        case Type::Tuple:
+        case Type::Struct: return subtypes() == rhs.subtypes();
         case Type::Function: return signature() == rhs.signature();  // compare content, not pointer
         case Type::Named: return named_type() == rhs.named_type();
         default:
@@ -398,12 +369,9 @@ bool TypeInfo::has_unknown() const
         case Type::List:
             return elem_type().has_unknown();
         case Type::Tuple:
+        case Type::Struct:
             return ranges::any_of(subtypes(), [](const TypeInfo& type_info) {
                 return type_info.has_unknown();
-            });
-        case Type::Struct:
-            return ranges::any_of(struct_items(), [](const auto& item) {
-                return item.second.has_unknown();
             });
         default:
             return false;
@@ -421,12 +389,9 @@ bool TypeInfo::has_generic() const
         case Type::List:
             return elem_type().has_generic();
         case Type::Tuple:
+        case Type::Struct:
             return ranges::any_of(subtypes(), [](const TypeInfo& type_info) {
                 return type_info.has_generic();
-            });
-        case Type::Struct:
-            return ranges::any_of(struct_items(), [](const auto& item) {
-                return item.second.has_generic();
             });
         default:
             return false;
@@ -438,33 +403,19 @@ auto TypeInfo::elem_type() const -> const TypeInfo&
 {
     assert(type() == Type::List);
     assert(subtypes().size() == 1);
-    return subtypes()[0];
+    return subtypes().front();
 }
 
 
-const TypeInfo* TypeInfo::struct_item_by_name(NameId name) const
+const TypeInfo* TypeInfo::struct_item_by_key(NameId key) const
 {
-    const auto& items = struct_items();
-    auto it = std::find_if(items.begin(), items.end(), [name](const StructItem& item) {
-         return item.first == name;
+    const auto& items = subtypes();
+    auto it = std::find_if(items.begin(), items.end(), [key](const TypeInfo& item) {
+         return item.key() == key;
     });
     if (it == items.end())
         return nullptr;
-    return &it->second;
-}
-
-
-auto TypeInfo::struct_or_tuple_subtypes() const -> Subtypes
-{
-    if (is_tuple())
-        return subtypes();
-    const auto& items = struct_items();
-    Subtypes res;
-    res.reserve(items.size());
-    std::transform(items.begin(), items.end(), std::back_inserter(res), [](const auto& item) {
-        return item.second;
-    });
-    return res;
+    return &*it;
 }
 
 
@@ -506,8 +457,8 @@ bool Signature::has_nonvoid_param() const
 {
     // Struct can have single Void item
     if (param_type.is_struct()) {
-        const auto& items = param_type.struct_items();
-        if (items.size() == 1 && items.front().second.is_void())
+        const auto& items = param_type.subtypes();
+        if (items.size() == 1 && items.front().is_void())
             return false;
     }
     // Otherwise, only empty Tuple is considered Void

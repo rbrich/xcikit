@@ -454,9 +454,9 @@ void BuiltinModule::add_io_functions()
 {
     // types
     auto streams = ti_struct({
-            {intern("in"), ti_stream()},
-            {intern("out"), ti_stream()},
-            {intern("err"), ti_stream()}
+            ti_keyed(intern("in"), ti_stream()),
+            ti_keyed(intern("out"), ti_stream()),
+            ti_keyed(intern("err"), ti_stream())
     });
     add_symbol("Streams", Symbol::TypeName, add_type(streams));
 
@@ -522,7 +522,7 @@ static void introspect_subtypes(Stack& stack, void*, void*)
 {
     const TypeInfo& ti = read_type_index(stack);
     if (ti.is_tuple() || ti.is_struct()) {
-        const auto& subtypes = ti.struct_or_tuple_subtypes();
+        const auto& subtypes = ti.subtypes();
         value::List res(subtypes.size(), ti_string());
         for (const auto& [i, sub] : subtypes | enumerate) {
             std::ostringstream os;

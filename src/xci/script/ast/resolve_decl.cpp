@@ -172,7 +172,7 @@ public:
         for (auto& item : v.items) {
             // resolve item type
             if (specified) {
-                const TypeInfo* specified_item = specified.underlying().struct_item_by_name(item.first.name);
+                const TypeInfo* specified_item = specified.underlying().struct_item_by_key(item.first.name);
                 if (specified_item)
                     m_type_info = *specified_item;
             }
@@ -333,10 +333,10 @@ public:
             }
             if (param.is_struct() && spec.is_tuple()) {
                 for (const auto& [i, sp] : spec.subtypes() | enumerate) {
-                    auto& par = param.struct_items()[i].second;
-                    if (par.is_unknown())
-                        par = sp;
-                    else {
+                    auto& par = param.subtypes()[i];
+                    if (par.is_unknown()) {
+                        par.assign_from(sp);
+                    } else {
                         auto m = match_type(par, sp);
                         if (!m)
                             throw definition_param_type_mismatch(1+i, sp, par, v.source_loc);
@@ -397,22 +397,23 @@ public:
     }
 
     void visit(ast::TupleType& t) final {
-        std::vector<TypeInfo> subtypes;
-        for (auto& st : t.subtypes) {
+        TypeInfo::Subtypes subtypes(t.subtypes.size());
+        for (auto&& [i, st] : t.subtypes | enumerate) {
             st->apply(*this);
-            subtypes.push_back(std::move(m_type_info));
+            subtypes[i] = std::move(m_type_info);
         }
         m_type_info = TypeInfo{std::move(subtypes)};
     }
 
     void visit(ast::StructType& t) final {
-        TypeInfo::StructItems items;
-        for (auto& st : t.subtypes) {
+        TypeInfo::Subtypes items(t.subtypes.size());
+        for (auto&& [i, st] : t.subtypes | enumerate) {
             if (st.type)
                 st.type->apply(*this);
-            items.emplace_back(st.identifier.name, std::move(m_type_info));
+            m_type_info.set_key(st.identifier.name);
+            items[i] = std::move(m_type_info);
         }
-        m_type_info = TypeInfo{std::move(items)};
+        m_type_info = TypeInfo{TypeInfo::struct_of, std::move(items)};
     }
 
 private:

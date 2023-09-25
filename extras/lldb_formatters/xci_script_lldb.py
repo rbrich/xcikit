@@ -77,20 +77,20 @@ class TypeInfo_SyntheticChildrenProvider:
     def __init__(self, valobj, _dict):
         self.valobj = valobj
         self.m_type = None
+        self.m_key = None
         self.m_is_literal = None
         self.active_member = None
 
     def update(self):
         union = self.valobj.GetChildAtIndex(0)
         self.m_type = union.GetChildMemberWithName("m_type")
+        self.m_key = self.valobj.GetChildMemberWithName("m_key")
         self.m_is_literal = self.valobj.GetChildMemberWithName("m_is_literal")
         type_ = self.m_type.value
         if type_ == "Unknown":
             active_member_name = "m_var"
-        elif type_ in ("List", "Tuple"):
+        elif type_ in ("List", "Tuple", "Struct"):
             active_member_name = "m_subtypes"
-        elif type_ == "Struct":
-            active_member_name = "m_struct_items"
         elif type_ == "Function":
             active_member_name = "m_signature_ptr"
         elif type_ == "Named":
@@ -102,7 +102,10 @@ class TypeInfo_SyntheticChildrenProvider:
             self.active_member = union.GetChildMemberWithName(active_member_name)
 
     def num_children(self):
-        return 2 if self.active_member is None else 3
+        n = 3  # m_type, m_key, m_is_literal
+        if self.active_member is not None:
+            n += 1
+        return n
 
     def has_children(self):
         return True
@@ -110,8 +113,10 @@ class TypeInfo_SyntheticChildrenProvider:
     def get_child_index(self, name):
         if name == "m_type":
             index = 0
-        elif name == "m_is_literal":
+        elif name == "m_key":
             index = 1
+        elif name == "m_is_literal":
+            index = 2
         elif self.active_member is not None and name == self.active_member.name:
             index = -1
         else:
@@ -128,6 +133,8 @@ class TypeInfo_SyntheticChildrenProvider:
         if index == 0:
             return self.m_type
         if index == 1:
+            return self.m_key
+        if index == 2:
             return self.m_is_literal
         return self.active_member
 
@@ -144,40 +151,43 @@ def NameId_Summary(valobj, _dict, _options):
     pool_mask = 0x8000_0000
     offset_mask = 0x7fff_ffff
     m_id = valobj.GetChildMemberWithName('m_id').GetValueAsUnsigned()
-    if m_id & pool_mask:
-        string_pool = valobj.EvaluateExpression("NameId::string_pool()")
+    if (m_id & pool_mask) == pool_mask:
+        string_pool = valobj.frame.EvaluateExpression("xci::script::NameId::string_pool()")
         m_strings = string_pool.GetChildMemberWithName('m_strings')
         offset = m_id & offset_mask
         return m_strings.GetChildAtIndex(offset).AddressOf().summary
     else:
-        return quote((m_id.to_bytes(4, 'little') + b'\0').split(b'\0', 1)[0].decode())
+        return quote((m_id.to_bytes(4, 'little') + b'\0').split(b'\0', 1)[0].decode('ascii', 'backslashreplace'))
 
 
 def TypeInfo_Summary(valobj, _dict, _options):
-    m_type = valobj.GetChildMemberWithName('m_type')
-    type_ = m_type.value
-    if type_ == 'Unknown':
+    m_type = valobj.GetChildMemberWithName('m_type').value
+    m_key = valobj.GetChildMemberWithName('m_key')
+    if m_type == 'Unknown':
         var = valobj.GetChildMemberWithName("m_var")
         symidx = var.GetChildMemberWithName('m_symidx').GetValueAsUnsigned()
         if symidx != 0xffffffff:
-            return var.summary
-        return str(type_)
-    if type_ == 'List':
+            value = var.summary
+        else:
+            value = str(m_type)
+    elif m_type == 'List':
         elem_type = valobj.GetChildMemberWithName("m_subtypes").GetChildAtIndex(0).summary
-        return f"[{elem_type}]"
-    if type_ == 'Tuple':
+        value = f"[{elem_type}]"
+    elif m_type in ('Tuple', 'Struct'):
         subtypes = valobj.GetChildMemberWithName("m_subtypes")
-        return f"({', '.join(x.summary for x in subtypes.children)})"
-    if type_ == 'Struct':
-        struct_items = valobj.GetChildMemberWithName("m_struct_items")
-        return f"({', '.join('='.join(unquote(p.summary) for p in x.children) for x in struct_items.children)})"
-    if type_ == 'Function':
+        value = f"({', '.join(x.summary for x in subtypes.children)})"
+    elif m_type == 'Function':
         signature = valobj.GetChildMemberWithName("m_signature_ptr").Dereference()
-        return signature.summary
-    if type_ == 'Named':
+        value = signature.summary
+    elif m_type == 'Named':
         named_type = valobj.GetChildMemberWithName('m_named_type_ptr').Dereference()
-        return unquote(named_type.GetChildMemberWithName('name').summary)
-    return str(type_)
+        value = unquote(named_type.GetChildMemberWithName('name').summary)
+    else:
+        value = str(m_type)
+    key = unquote(m_key.summary)
+    if key:
+        return f"{key}={value}"
+    return value
 
 
 def Signature_Summary(valobj, _dict, _options):
