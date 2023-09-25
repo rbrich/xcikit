@@ -21,6 +21,7 @@
 
 #include <sstream>
 #include <optional>
+#include <span>
 
 namespace xci::script {
 
@@ -220,7 +221,7 @@ public:
                     assert(psym->type() == Symbol::Instance);
                     auto& inst = inst_mod->get_instance(psym->index());
                     auto inst_fn = inst.get_function(cls_fn_idx);
-                    auto m = match_inst_types(inst.types(), resolved_types);
+                    auto m = match_inst_types(inst.types(), to_span(resolved_types));
                     candidates.push_back({inst_fn.module, inst_fn.scope_index, psym, {}, {}, inst_type_args, m});
                 }
 
@@ -603,6 +604,7 @@ private:
                     m_call_sig = std::move(orig_call_sig);
                     m_cast_type = {};
                 }
+                // FIXME: move into second pass outside resolve_return_type_from_call_args()
                 if (sig_type.is_callable()) {
                     // resolve overload in case the arg is a function that was specialized
                     auto orig_call_sig = std::move(m_call_sig);

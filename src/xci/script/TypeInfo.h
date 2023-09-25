@@ -258,89 +258,96 @@ public:
     // -------------------------------------------------------------------------
     // Serialization
 
-    template <class Archive>
-    void save_schema(Archive& ar) const {
-        ar("key", m_key);
-        ar("type", type());
-        if (ar.enter_union("info", "type", typeid(TypeInfoUnion))) {
-            ar(uint8_t(Type::Unknown), "var", SymbolPointer{});
-            ar(uint8_t(Type::List), "elem_type", TypeInfo{});
-            ar(uint8_t(Type::Tuple), "subtypes", Subtypes{});
-            ar(uint8_t(Type::Function), "signature", SignaturePtr{});
-            ar(uint8_t(Type::Named), "named_type", NamedTypePtr{});
-            ar(uint8_t(Type::Struct), "subtypes", Subtypes{});
-            ar.leave_union();
-        }
-    }
-
-    template <class Archive>
-    void save(Archive& ar) const {
-        if (m_key)
-            ar("key", m_key);
-        ar("type", type());
-        switch (type()) {
-            case Type::Unknown:
-                ar("var", generic_var());
-                break;
-            case Type::Function:
-                ar("signature", signature());
-                break;
-            case Type::List:
-                ar("elem_type", elem_type());
-                break;
-            case Type::Tuple:
-            case Type::Struct:
-                ar("subtypes", subtypes());
-                break;
-            case Type::Named:
-                ar("named_type", named_type());
-                break;
-            default:
-                break;
-        }
-    }
-
-    template <class Archive>
-    void load(Archive& ar)
-    {
-        ar(m_key);
-        Type t;
-        ar(t);
-        set_type(t);
-        switch (type()) {
-            case Type::Unknown: {
-                ar(generic_var());
-                break;
-            }
-            case Type::Function: {
-                ar(*signature_ptr());
-                break;
-            }
-            case Type::List: {
-                subtypes().resize(1);
-                ar(subtypes().front());
-                break;
-            }
-            case Type::Tuple:
-            case Type::Struct: {
-                std::vector<TypeInfo> v;
-                ar(v);
-                subtypes() = Subtypes(v);
-                break;
-            }
-            case Type::Named: {
-                ar(named_type());
-                break;
-            }
-            default:
-                break;
-        }
-    }
+    template <class Archive> void save_schema(Archive& ar) const;
+    template <class Archive> void save(Archive& ar) const;
+    template <class Archive> void load(Archive& ar);
 
 private:
     bool m_is_literal = true;  // literal = any expression that doesn't reference functions/variables
     NameId m_key;
 };
+
+
+template <class Archive>
+void TypeInfo::save_schema(Archive& ar) const {
+    ar("key", m_key);
+    ar("type", type());
+    if (ar.enter_union("info", "type", typeid(TypeInfoUnion))) {
+        ar(uint8_t(Type::Unknown), "var", SymbolPointer{});
+        ar(uint8_t(Type::List), "elem_type", TypeInfo{});
+        ar(uint8_t(Type::Tuple), "subtypes", Subtypes{});
+        ar(uint8_t(Type::Function), "signature", SignaturePtr{});
+        ar(uint8_t(Type::Named), "named_type", NamedTypePtr{});
+        ar(uint8_t(Type::Struct), "subtypes", Subtypes{});
+        ar.leave_union();
+    }
+}
+
+
+template <class Archive>
+void TypeInfo::save(Archive& ar) const {
+    if (m_key)
+        ar("key", m_key);
+    ar("type", type());
+    switch (type()) {
+        case Type::Unknown:
+            ar("var", generic_var());
+            break;
+        case Type::Function:
+            ar("signature", signature());
+            break;
+        case Type::List:
+            ar("elem_type", elem_type());
+            break;
+        case Type::Tuple:
+        case Type::Struct:
+            ar("subtypes", subtypes());
+            break;
+        case Type::Named:
+            ar("named_type", named_type());
+            break;
+        default:
+            break;
+    }
+}
+
+
+template <class Archive>
+void TypeInfo::load(Archive& ar)
+{
+    ar(m_key);
+    Type t;
+    ar(t);
+    set_type(t);
+    switch (type()) {
+        case Type::Unknown: {
+            ar(generic_var());
+            break;
+        }
+        case Type::Function: {
+            ar(*signature_ptr());
+            break;
+        }
+        case Type::List: {
+            subtypes().resize(1);
+            ar(subtypes().front());
+            break;
+        }
+        case Type::Tuple:
+        case Type::Struct: {
+            std::vector<TypeInfo> v;
+            ar(v);
+            subtypes() = Subtypes(core::to_span(v));
+            break;
+        }
+        case Type::Named: {
+            ar(named_type());
+            break;
+        }
+        default:
+            break;
+    }
+}
 
 
 struct Signature {
@@ -441,6 +448,7 @@ inline TypeInfo ti_keyed(NameId key, TypeInfo&& ti) {
 // Normalize: unwrap tuple of one item
 inline TypeInfo ti_normalize(TypeInfo&& ti)
 { return ti.is_tuple() && ti.subtypes().size() == 1 ? ti.subtypes().front() : ti; }
+
 
 } // namespace xci::script
 

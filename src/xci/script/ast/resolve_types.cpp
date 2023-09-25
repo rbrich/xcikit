@@ -244,7 +244,7 @@ public:
                     auto& inst = inst_mod->get_instance(psym->index());
                     auto inst_fn_info = inst.get_function(cls_fn_idx);
                     const auto& fn = inst_fn_info.module->get_scope(inst_fn_info.scope_index).function();
-                    auto m = match_inst_types(std::span{inst.types()}, resolved_types);
+                    auto m = match_inst_types(inst.types(), resolved_types);
                     if (m.is_generic()) {
                         // If it's a generic match, make sure the generic vars can be specialized
                         TypeArgs type_args;
@@ -696,7 +696,6 @@ private:
     }
 
     /// Resolve return type after applying m_call_sig
-    // FIXME: share with resolve_spec
     TypeInfo resolve_return_type_from_call_args(const SignaturePtr& signature, ast::Call& v)
     {
         SignaturePtr sig;
@@ -727,7 +726,7 @@ private:
                 const auto& call_type = c_sig.param_type;
                 const auto m = match_type(call_type, sig_type);
                 if (!m)
-                    throw unexpected_argument_type(sig_type, sig_type, source_loc);
+                    throw unexpected_argument_type(sig_type, call_type, source_loc);
                 if (m.is_coerce()) {
                     // Update type_info of the coerced literal argument
                     m_cast_type = sig_type;
@@ -736,32 +735,6 @@ private:
                     v.arg->apply(*this);
                     m_call_sig = std::move(orig_call_sig);
                     m_cast_type = {};
-                }
-                // FIXME: move into second pass outside resolve_return_type_from_call_args()
-                if (sig_type.is_callable()) {
-                    // resolve overload in case the arg is a function that was specialized
-                    auto orig_call_sig = std::move(m_call_sig);
-                    m_call_sig.clear();
-                    m_call_sig.emplace_back().load_from(sig_type.ul_signature(), source_loc);
-                    v.arg->apply(*this);
-                    m_call_sig = std::move(orig_call_sig);
-                }
-                if (sig_type.is_struct_or_tuple() && !sig_type.is_void()) {
-                    // resolve overload in case the arg tuple contains a function that was specialized
-                    auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
-                    if (tuple && !tuple->items.empty()) {
-                        auto sig_subtypes = sig_type.subtypes();
-                        assert(tuple->items.size() == sig_subtypes.size());
-                        auto orig_call_sig = std::move(m_call_sig);
-                        for (auto&& [i, sig_item] : sig_subtypes | enumerate) {
-                            if (sig_item.is_callable()) {
-                                m_call_sig.clear();
-                                m_call_sig.emplace_back().load_from(sig_item.ul_signature(), source_loc);
-                                tuple->items[i]->apply(*this);
-                            }
-                        }
-                        m_call_sig = std::move(orig_call_sig);
-                    }
                 }
             }
         }

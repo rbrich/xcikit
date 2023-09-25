@@ -64,6 +64,10 @@ private:
 };
 
 
+template <class T>
+std::span<const T> to_span(const std::vector<T>& v) { return {v.data(), v.size()}; }
+
+
 // ----------------------------------------------------------------------------
 // Implementation details
 
