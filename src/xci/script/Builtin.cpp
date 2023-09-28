@@ -454,9 +454,9 @@ void BuiltinModule::add_io_functions()
 {
     // types
     auto streams = ti_struct({
-            ti_keyed(intern("in"), ti_stream()),
-            ti_keyed(intern("out"), ti_stream()),
-            ti_keyed(intern("err"), ti_stream())
+            ti_key("in", ti_stream()),
+            ti_key("out", ti_stream()),
+            ti_key("err", ti_stream())
     });
     add_symbol("Streams", Symbol::TypeName, add_type(streams));
 

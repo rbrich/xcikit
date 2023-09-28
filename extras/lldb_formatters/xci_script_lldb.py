@@ -73,6 +73,28 @@ class IndexedMap_SyntheticChildrenProvider:
         return elem.Clone("[" + str(index) + "]")
 
 
+class StaticVec_SyntheticChildrenProvider:
+    def __init__(self, valobj, _dict):
+        self.valobj = valobj
+        self.m_size = 0
+        self.m_vec = None
+
+    def update(self):
+        self.m_size = self.valobj.GetChildMemberWithName("m_size").GetValueAsUnsigned()
+        self.m_vec = self.valobj.GetChildMemberWithName("m_vec")
+
+    def num_children(self):
+        return self.m_size
+
+    def get_child_at_index(self, index):
+        if index < 0 or index >= self.m_size:
+            return None
+        ptr = self.m_vec.GetChildAtIndex(0).GetChildAtIndex(0).GetChildAtIndex(0)
+        elem_type = ptr.GetType().GetPointeeType()
+        elem = ptr.CreateChildAtOffset("", index * elem_type.size, elem_type)
+        return elem.Clone("[" + str(index) + "]")
+
+
 class TypeInfo_SyntheticChildrenProvider:
     def __init__(self, valobj, _dict):
         self.valobj = valobj
@@ -220,6 +242,7 @@ def __lldb_init_module(debugger, _dict):
     print("Loading xci::script formatters...")
     debugger.HandleCommand("type synthetic add -x '^xci::core::ChunkedStack<' --python-class xci_script_lldb.ChunkedStack_SyntheticChildrenProvider --category xci")
     debugger.HandleCommand("type synthetic add -x '^xci::core::IndexedMap<' --python-class xci_script_lldb.IndexedMap_SyntheticChildrenProvider --category xci")
+    debugger.HandleCommand("type synthetic add -x '^xci::core::StaticVec<' --python-class xci_script_lldb.StaticVec_SyntheticChildrenProvider --category xci")
     debugger.HandleCommand("type summary add -x '^xci::core::IndexedMap<' --summary-string 'size=${var.m_size}' -w xci")
     debugger.HandleCommand("type synthetic add 'xci::script::TypeInfo' --python-class xci_script_lldb.TypeInfo_SyntheticChildrenProvider --category xci")
     debugger.HandleCommand("type summary add 'xci::script::NameId' --python-function xci_script_lldb.NameId_Summary -w xci")
