@@ -116,12 +116,12 @@ void Machine::run(const InvokeCallback& cb)
 
             case Opcode::LogicalOr:
             case Opcode::LogicalAnd: {
-                auto lhs = m_stack.pull<value::Bool>();
-                auto rhs = m_stack.pull<value::Bool>();
+                const auto lhs = m_stack.pull<value::Bool>();
+                const auto rhs = m_stack.pull<value::Bool>();
                 switch (opcode) {
-                    case Opcode::LogicalOr:   m_stack.push(lhs.binary_op<std::logical_or<>, true>(rhs)); break;
-                    case Opcode::LogicalAnd:  m_stack.push(lhs.binary_op<std::logical_and<>, true>(rhs)); break;
-                    default: break;
+                    case Opcode::LogicalOr:   m_stack.push(Value(lhs.value() || lhs.value())); break;
+                    case Opcode::LogicalAnd:  m_stack.push(Value(lhs.value() && rhs.value())); break;
+                    default: XCI_UNREACHABLE;
                 }
                 break;
             }
@@ -152,94 +152,69 @@ void Machine::run(const InvokeCallback& cb)
                 break;
             }
 
-            case Opcode::BitwiseOr_8: {
-                auto lhs = m_stack.pull<value::UInt8>();
-                auto rhs = m_stack.pull<value::UInt8>();
-                m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseAnd_8: {
-                auto lhs = m_stack.pull<value::UInt8>();
-                auto rhs = m_stack.pull<value::UInt8>();
-                m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
-                break;
-            }
+            case Opcode::BitwiseOr_8:
+            case Opcode::BitwiseAnd_8:
             case Opcode::BitwiseXor_8: {
-                auto lhs = m_stack.pull<value::UInt8>();
-                auto rhs = m_stack.pull<value::UInt8>();
-                m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
+                const auto lhs = m_stack.pull<value::UInt8>();
+                const auto rhs = m_stack.pull<value::UInt8>();
+                switch (opcode) {
+                    case Opcode::BitwiseOr_8:   m_stack.push(Value(lhs.value() | rhs.value())); break;
+                    case Opcode::BitwiseAnd_8:  m_stack.push(Value(lhs.value() & rhs.value())); break;
+                    case Opcode::BitwiseXor_8:  m_stack.push(Value(lhs.value() ^ rhs.value())); break;
+                    default: XCI_UNREACHABLE;
+                }
                 break;
             }
-            case Opcode::BitwiseOr_16: {
-                auto lhs = m_stack.pull<value::UInt16>();
-                auto rhs = m_stack.pull<value::UInt16>();
-                m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseAnd_16: {
-                auto lhs = m_stack.pull<value::UInt16>();
-                auto rhs = m_stack.pull<value::UInt16>();
-                m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
-                break;
-            }
+            case Opcode::BitwiseOr_16:
+            case Opcode::BitwiseAnd_16:
             case Opcode::BitwiseXor_16: {
-                auto lhs = m_stack.pull<value::UInt16>();
-                auto rhs = m_stack.pull<value::UInt16>();
-                m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
+                const auto lhs = m_stack.pull<value::UInt16>();
+                const auto rhs = m_stack.pull<value::UInt16>();
+                switch (opcode) {
+                    case Opcode::BitwiseOr_16:  m_stack.push(Value(lhs.value() | rhs.value())); break;
+                    case Opcode::BitwiseAnd_16: m_stack.push(Value(lhs.value() & rhs.value())); break;
+                    case Opcode::BitwiseXor_16: m_stack.push(Value(lhs.value() ^ rhs.value())); break;
+                    default: XCI_UNREACHABLE;
+                }
                 break;
             }
-            case Opcode::BitwiseOr_32: {
-                auto lhs = m_stack.pull<value::UInt32>();
-                auto rhs = m_stack.pull<value::UInt32>();
-                m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseAnd_32: {
-                auto lhs = m_stack.pull<value::UInt32>();
-                auto rhs = m_stack.pull<value::UInt32>();
-                m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
-                break;
-            }
+            case Opcode::BitwiseOr_32:
+            case Opcode::BitwiseAnd_32:
             case Opcode::BitwiseXor_32: {
-                auto lhs = m_stack.pull<value::UInt32>();
-                auto rhs = m_stack.pull<value::UInt32>();
-                m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
+                const auto lhs = m_stack.pull<value::UInt32>();
+                const auto rhs = m_stack.pull<value::UInt32>();
+                switch (opcode) {
+                    case Opcode::BitwiseOr_32:  m_stack.push(Value(lhs.value() | rhs.value())); break;
+                    case Opcode::BitwiseAnd_32: m_stack.push(Value(lhs.value() & rhs.value())); break;
+                    case Opcode::BitwiseXor_32: m_stack.push(Value(lhs.value() ^ rhs.value())); break;
+                    default: XCI_UNREACHABLE;
+                }
                 break;
             }
-            case Opcode::BitwiseOr_64: {
-                auto lhs = m_stack.pull<value::UInt64>();
-                auto rhs = m_stack.pull<value::UInt64>();
-                m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseAnd_64: {
-                auto lhs = m_stack.pull<value::UInt64>();
-                auto rhs = m_stack.pull<value::UInt64>();
-                m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
-                break;
-            }
+            case Opcode::BitwiseOr_64:
+            case Opcode::BitwiseAnd_64:
             case Opcode::BitwiseXor_64: {
-                auto lhs = m_stack.pull<value::UInt64>();
-                auto rhs = m_stack.pull<value::UInt64>();
-                m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
+                const auto lhs = m_stack.pull<value::UInt64>();
+                const auto rhs = m_stack.pull<value::UInt64>();
+                switch (opcode) {
+                    case Opcode::BitwiseOr_64:  m_stack.push(Value(lhs.value() | rhs.value())); break;
+                    case Opcode::BitwiseAnd_64: m_stack.push(Value(lhs.value() & rhs.value())); break;
+                    case Opcode::BitwiseXor_64: m_stack.push(Value(lhs.value() ^ rhs.value())); break;
+                    default: XCI_UNREACHABLE;
+                }
                 break;
             }
-            case Opcode::BitwiseOr_128: {
-                auto lhs = m_stack.pull<value::UInt128>();
-                auto rhs = m_stack.pull<value::UInt128>();
-                m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseAnd_128: {
-                auto lhs = m_stack.pull<value::UInt128>();
-                auto rhs = m_stack.pull<value::UInt128>();
-                m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
-                break;
-            }
+            case Opcode::BitwiseOr_128:
+            case Opcode::BitwiseAnd_128:
             case Opcode::BitwiseXor_128: {
-                auto lhs = m_stack.pull<value::UInt128>();
-                auto rhs = m_stack.pull<value::UInt128>();
-                m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
+                const auto lhs = m_stack.pull<value::UInt128>();
+                const auto rhs = m_stack.pull<value::UInt128>();
+                switch (opcode) {
+                    case Opcode::BitwiseOr_128:  m_stack.push(Value(lhs.value() | rhs.value())); break;
+                    case Opcode::BitwiseAnd_128: m_stack.push(Value(lhs.value() & rhs.value())); break;
+                    case Opcode::BitwiseXor_128: m_stack.push(Value(lhs.value() ^ rhs.value())); break;
+                    default: XCI_UNREACHABLE;
+                }
                 break;
             }
 

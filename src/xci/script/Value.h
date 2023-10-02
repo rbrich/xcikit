@@ -247,7 +247,7 @@ public:
     // Returns number of bytes written/read
     size_t write(std::byte* buffer) const;
     size_t read(const std::byte* buffer);
-    size_t size_on_stack() const;
+    size_t size_on_stack() const noexcept;
 
     // Set when the value lives on heap
     const HeapSlot* heapslot() const;
@@ -270,22 +270,20 @@ public:
 
     bool negate();  // unary minus op
 
-    template <class TBinFun, bool bitwise=false>
+    template <class TBinFun>
     Value binary_op(const Value& rhs) {
-        return std::visit([](const auto& l, const auto& r) -> Value {
-            using TLhs = std::decay_t<decltype(l)>;
-            using TRhs = std::decay_t<decltype(r)>;
-
-            if constexpr (std::is_same_v<TLhs, TRhs>) {
-                // Cannot use '&&', because VS 17 then tries to evaluate TBinFun for double, and fails
-                if constexpr (!bitwise) if constexpr (std::is_floating_point_v<TLhs>)
-                    return Value(TBinFun{}(l, r));
-                if constexpr ((std::is_integral_v<TLhs> || std::is_same_v<TLhs, uint128> || std::is_same_v<TLhs, int128>) && !std::is_same_v<TLhs, bool>)
-                    return Value(TBinFun{}(l, r));
+        return std::visit([&rhs](const auto& l) -> Value {
+            using T = std::decay_t<decltype(l)>;
+            if constexpr ((std::is_floating_point_v<T> ||
+                           std::is_integral_v<T> ||
+                           std::is_same_v<T, uint128> || std::is_same_v<T, int128>
+                          ) && !std::is_same_v<T, bool>)
+            {
+                if (std::holds_alternative<T>(rhs.m_value))
+                    return Value(TBinFun{}(l, rhs.get<T>()));
             }
-
-            return {};
-        }, m_value, rhs.m_value);
+            XCI_UNREACHABLE;
+        }, m_value);
     }
 
     // Cast to subtype, e.g.: `v.get<bool>()`
