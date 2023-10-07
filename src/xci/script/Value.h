@@ -270,17 +270,17 @@ public:
 
     bool negate();  // unary minus op
 
-    template <class TBinFun>
-    Value binary_op(const Value& rhs) {
-        return std::visit([&rhs](const auto& l) -> Value {
+    template <class F>
+    Value binary_op(const Value& rhs, F&& f) {
+        return std::visit([&rhs, &f](const auto& l) -> Value {
             using T = std::decay_t<decltype(l)>;
             if constexpr ((std::is_floating_point_v<T> ||
                            std::is_integral_v<T> ||
                            std::is_same_v<T, uint128> || std::is_same_v<T, int128>
-                          ) && !std::is_same_v<T, bool>)
+                          ) && !std::is_same_v<T, bool> && !std::is_same_v<T, char32_t>)
             {
                 if (std::holds_alternative<T>(rhs.m_value))
-                    return Value(TBinFun{}(l, rhs.get<T>()));
+                    return f(l, rhs.get<T>());
             }
             XCI_UNREACHABLE;
         }, m_value);
