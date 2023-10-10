@@ -76,20 +76,70 @@ struct Signature;
 struct NamedType;
 
 
-namespace detail {
-
-/// Discriminated union for TypeInfo details.
-/// In comparison to std::variant, this saves 8 bytes + some unnecessary templating.
-class TypeInfoUnion {
+class TypeInfo {
 public:
     struct ListTag {};
     struct TupleTag {};
     struct StructTag {};
 
+    static constexpr ListTag list_of {};
+    static constexpr TupleTag tuple_of {};
+    static constexpr StructTag struct_of {};
+
     using Var = SymbolPointer;  // for unknown type, specifies which type variable this represents
     using Subtypes = core::StaticVec<TypeInfo>;
     using SignaturePtr = std::shared_ptr<Signature>;
     using NamedTypePtr = std::shared_ptr<NamedType>;
+
+    // Unknown / generic
+    TypeInfo() { construct_variant(); }
+    ~TypeInfo() { destroy_variant(); }
+
+    explicit TypeInfo(Var var) { std::construct_at(&m_var, var); }
+    // Default-construct any type
+    explicit TypeInfo(Type type) : m_type(type) { construct_variant(); }
+    // Function
+    explicit TypeInfo(SignaturePtr signature) : m_type(Type::Function) { std::construct_at(&m_signature_ptr, std::move(signature)); }
+    // List
+    explicit TypeInfo(ListTag tag, TypeInfo elem);
+    // Tuple
+    explicit TypeInfo(TupleTag, Subtypes subtypes)
+            : m_type(Type::Tuple) { std::construct_at(&m_subtypes, std::move(subtypes)); }
+    explicit TypeInfo(Subtypes subtypes)
+            : m_type(Type::Tuple) { std::construct_at(&m_subtypes, std::move(subtypes)); }
+    // Struct
+    explicit TypeInfo(StructTag, Subtypes subtypes)
+            : m_type(Type::Struct) { std::construct_at(&m_subtypes, std::move(subtypes)); }
+    // Named
+    explicit TypeInfo(NameId name, TypeInfo&& type_info);
+
+    TypeInfo(const TypeInfo& r)
+            : m_type(r.m_type), m_is_literal(r.m_is_literal), m_key(r.m_key)
+    {
+        assert(this != &r);
+        construct_variant();
+        copy_variant(r);
+    }
+    TypeInfo(TypeInfo&& r) noexcept
+            : m_type(r.m_type), m_is_literal(r.m_is_literal), m_key(r.m_key)
+    {
+        assert(this != &r);
+        construct_variant();
+        move_variant(std::move(r));
+        r.set_type(Type::Unknown);
+        r.m_var = {};
+        r.m_is_literal = true;
+        r.m_key = {};
+    }
+
+    TypeInfo& operator =(const TypeInfo& r);
+    TypeInfo& operator =(TypeInfo&& r) noexcept;
+
+    // Assign type info, but keep key untouched
+    void copy_from_no_key(const TypeInfo& r) noexcept;
+
+    size_t size() const;
+    void foreach_heap_slot(std::function<void(size_t offset)> cb) const;
 
     Type type() const noexcept { return m_type; }
     void set_type(Type type) {
@@ -105,103 +155,6 @@ public:
         m_type = type;
         construct_variant();
     }
-
-    Var generic_var() const;  // type = Unknown
-    Var& generic_var();  // type = Unknown
-    const Subtypes& subtypes() const;  // type = Tuple
-    Subtypes& subtypes() { return const_cast<Subtypes&>( const_cast<const TypeInfoUnion*>(this)->subtypes() ); }
-    const SignaturePtr& signature_ptr() const;  // type = Function
-    SignaturePtr& signature_ptr() { return const_cast<SignaturePtr&>( const_cast<const TypeInfoUnion*>(this)->signature_ptr() ); }
-    const NamedTypePtr& named_type_ptr() const;   // type = Named
-
-protected:
-    TypeInfoUnion() { construct_variant(); }
-    TypeInfoUnion(Var var) { std::construct_at(&m_var, var); }
-    TypeInfoUnion(Type type) : m_type(type) { construct_variant(); }
-    TypeInfoUnion(SignaturePtr signature) : m_type(Type::Function) { std::construct_at(&m_signature_ptr, std::move(signature)); }
-    TypeInfoUnion(ListTag, TypeInfo elem);
-    TypeInfoUnion(TupleTag, Subtypes subtypes) : m_type(Type::Tuple) { std::construct_at(&m_subtypes, std::move(subtypes)); }
-    TypeInfoUnion(StructTag, Subtypes subtypes) : m_type(Type::Struct) { std::construct_at(&m_subtypes, std::move(subtypes)); }
-    TypeInfoUnion(NameId name, TypeInfo&& type_info);
-    ~TypeInfoUnion() { destroy_variant(); }
-
-    TypeInfoUnion(const TypeInfoUnion& r) : m_type(r.m_type) { construct_variant(); *this = r; }
-    TypeInfoUnion& operator =(const TypeInfoUnion& r);
-
-    TypeInfoUnion(TypeInfoUnion&& r) noexcept : m_type(r.m_type) { construct_variant(); *this = std::move(r); }
-    TypeInfoUnion& operator =(TypeInfoUnion&& r) noexcept;
-
-private:
-    void construct_variant();
-    void destroy_variant();
-
-    union {
-        Var m_var;
-        Subtypes m_subtypes;
-        SignaturePtr m_signature_ptr;
-        NamedTypePtr m_named_type_ptr;
-    };
-    Type m_type { Type::Unknown };
-};
-
-}  // namespace detail
-
-
-class TypeInfo: public detail::TypeInfoUnion {
-public:
-    static constexpr ListTag list_of {};
-    static constexpr TupleTag tuple_of {};
-    static constexpr StructTag struct_of {};
-
-    // Unknown / generic
-    TypeInfo() = default;
-    explicit TypeInfo(Var var) : detail::TypeInfoUnion(var) {}
-    // Default-construct any type
-    explicit TypeInfo(Type type) : detail::TypeInfoUnion(type) {}
-    // Function
-    explicit TypeInfo(SignaturePtr signature) : detail::TypeInfoUnion(std::move(signature)) {}
-    // List
-    explicit TypeInfo(ListTag tag, TypeInfo elem) : detail::TypeInfoUnion(tag, std::move(elem)) {}
-    // Tuple
-    explicit TypeInfo(TupleTag tag, Subtypes subtypes)
-            : detail::TypeInfoUnion(tuple_of, std::move(subtypes)) {}
-    explicit TypeInfo(Subtypes subtypes)
-            : detail::TypeInfoUnion(tuple_of, std::move(subtypes)) {}
-    // Struct
-    explicit TypeInfo(StructTag, Subtypes subtypes)
-            : detail::TypeInfoUnion(struct_of, std::move(subtypes)) {}
-    // Named
-    explicit TypeInfo(NameId name, TypeInfo&& type_info)
-            : detail::TypeInfoUnion(name, std::move(type_info)) {}
-
-    TypeInfo(const TypeInfo&) = default;
-    TypeInfo(TypeInfo&& r) noexcept
-            : detail::TypeInfoUnion(std::move(r)), m_is_literal(r.m_is_literal), m_key(r.m_key)
-    {
-        assert(this != &r);
-        r.m_is_literal = true;
-        r.m_key = {};
-    }
-
-    TypeInfo& operator =(const TypeInfo& r) = default;
-    TypeInfo& operator =(TypeInfo&& r) noexcept {
-        assert(this != &r);
-        this->detail::TypeInfoUnion::operator=(std::move(r));
-        m_is_literal = r.m_is_literal; r.m_is_literal = true;
-        m_key = r.m_key; r.m_key = {};
-        return *this;
-    }
-
-    // Do not clear key (but copy it from `r` if it has a key)
-    void assign_from(const TypeInfo& r) {
-        this->detail::TypeInfoUnion::operator=(r);
-        m_is_literal = r.m_is_literal;
-        if (r.m_key)
-            m_key = r.m_key;
-    }
-
-    size_t size() const;
-    void foreach_heap_slot(std::function<void(size_t offset)> cb) const;
 
     bool is_unknown() const { return type() == Type::Unknown; }
     bool is_unspecified() const { return is_unknown() && !generic_var(); }  // == is_unknown() && !is_generic()
@@ -243,10 +196,17 @@ public:
     void set_key(NameId key) { m_key = key; }
     const TypeInfo* struct_item_by_key(NameId key) const;  // type = Struct
 
+    Var generic_var() const;  // type = Unknown
+    Var& generic_var();  // type = Unknown
     const TypeInfo& elem_type() const;  // type = List (Subtypes[0])
     TypeInfo& elem_type() { return const_cast<TypeInfo&>( const_cast<const TypeInfo*>(this)->elem_type() ); }
+    const Subtypes& subtypes() const;  // type = Tuple
+    Subtypes& subtypes() { return const_cast<Subtypes&>( const_cast<const TypeInfo*>(this)->subtypes() ); }
+    const SignaturePtr& signature_ptr() const;  // type = Function
+    SignaturePtr& signature_ptr() { return const_cast<SignaturePtr&>( const_cast<const TypeInfo*>(this)->signature_ptr() ); }
     const Signature& signature() const { return *signature_ptr(); }
     Signature& signature() { return *signature_ptr(); }
+    const NamedTypePtr& named_type_ptr() const;   // type = Named
     const NamedType& named_type() const { return *named_type_ptr(); }
     NamedType& named_type() { return *named_type_ptr(); }
     NameId name() const;
@@ -263,6 +223,21 @@ public:
     template <class Archive> void load(Archive& ar);
 
 private:
+    void construct_variant();
+    void destroy_variant();
+    void copy_variant(const TypeInfo& r);
+    void move_variant(TypeInfo&& r);
+
+    /// Discriminated union.
+    /// In comparison to std::variant, this saves 8 bytes + some unnecessary templating.
+    union {
+        Var m_var;
+        Subtypes m_subtypes;
+        SignaturePtr m_signature_ptr;
+        NamedTypePtr m_named_type_ptr;
+    };
+    Type m_type { Type::Unknown };
+
     bool m_is_literal = true;  // literal = any expression that doesn't reference functions/variables
     NameId m_key;
 };
@@ -272,7 +247,7 @@ template <class Archive>
 void TypeInfo::save_schema(Archive& ar) const {
     ar("key", m_key);
     ar("type", type());
-    if (ar.enter_union("info", "type", typeid(TypeInfoUnion))) {
+    if (ar.enter_union("info", "type", typeid(TypeInfo))) {
         ar(uint8_t(Type::Unknown), "var", SymbolPointer{});
         ar(uint8_t(Type::List), "elem_type", TypeInfo{});
         ar(uint8_t(Type::Tuple), "subtypes", Subtypes{});

@@ -32,10 +32,10 @@ public:
     StaticVec(std::span<const T> r);
 
     StaticVec(const StaticVec& r);
-    StaticVec(StaticVec&& r) = default;
+    StaticVec(StaticVec&& r);
 
     StaticVec& operator=(const StaticVec& r);
-    StaticVec& operator=(StaticVec&& r) = default;
+    StaticVec& operator=(StaticVec&& r);
 
     friend bool operator==(const StaticVec& a, const StaticVec& b) {
         return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin());
@@ -99,12 +99,26 @@ StaticVec<T>::StaticVec(const StaticVec& r)
 }
 
 template<class T>
+StaticVec<T>::StaticVec(StaticVec&& r)
+        : m_vec(std::move(r.m_vec)), m_size(r.size())
+{
+    r.m_size = 0;
+}
+
+template<class T>
 auto StaticVec<T>::operator=(const StaticVec& r) -> StaticVec& {
     reset(r.size());
     std::copy(r.begin(), r.end(), m_vec.get());
     return *this;
 }
 
+template<class T>
+auto StaticVec<T>::operator=(StaticVec&& r) -> StaticVec& {
+    m_vec = std::move(r.m_vec);
+    m_size = r.m_size;
+    r.m_size = 0;
+    return *this;
+}
 
 template<class T>
 void StaticVec<T>::reset(size_t new_size) {

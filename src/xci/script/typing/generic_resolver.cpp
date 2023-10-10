@@ -22,7 +22,7 @@ void set_type_arg(SymbolPointer var, const TypeInfo& deduced, TypeArgs& type_arg
         if (!match_type(existing, deduced))
             exc_cb(existing, deduced);
         if (existing.is_unspecified()) {
-            existing.assign_from(deduced);
+            existing.copy_from_no_key(deduced);
         } else if (existing.has_generic()) {
             specialize_arg(existing, deduced, type_args, exc_cb);
             resolve_generic_type(existing, type_args);
@@ -36,12 +36,12 @@ void get_type_arg(SymbolPointer var, TypeInfo& sig, const TypeArgs& type_args)
     for (;;) {
         auto ti = type_args.get(var);
         if (ti.is_generic()) {
-            sig.assign_from(ti);
+            sig.copy_from_no_key(ti);
             var = ti.generic_var();
             continue;
         }
         if (ti) {
-            sig.assign_from(ti);
+            sig.copy_from_no_key(ti);
         }
         break;
     }
@@ -76,7 +76,7 @@ void resolve_generic_type(TypeInfo& sig, const TypeArgs& type_args)
                 resolve_generic_type(sub, type_args);
             break;
         case Type::Function:
-            sig.assign_from(TypeInfo(std::make_shared<Signature>(sig.signature())));  // copy signature
+            sig.copy_from_no_key(TypeInfo(std::make_shared<Signature>(sig.signature())));  // copy signature
             resolve_generic_type(sig.signature().param_type, type_args);
             resolve_generic_type(sig.signature().return_type, type_args);
             break;
@@ -97,13 +97,13 @@ void resolve_generic_type(TypeInfo& sig, const Scope& scope)
                 for (;;) {
                     auto ti = scope_p->type_args().get(var);
                     if (ti.is_generic()) {
-                        sig.assign_from(ti);
+                        sig.copy_from_no_key(ti);
                         var = ti.generic_var();
                         scope_p = &scope;
                         continue;
                     }
                     if (ti) {
-                        sig.assign_from(ti);
+                        sig.copy_from_no_key(ti);
                         break;
                     }
                     if (!scope_p->parent())
@@ -122,7 +122,7 @@ void resolve_generic_type(TypeInfo& sig, const Scope& scope)
                 resolve_generic_type(sub, scope);
             break;
         case Type::Function:
-            sig.assign_from(TypeInfo(std::make_shared<Signature>(sig.signature())));  // copy signature
+            sig.copy_from_no_key(TypeInfo(std::make_shared<Signature>(sig.signature())));  // copy signature
             resolve_generic_type(sig.signature().param_type, scope);
             resolve_generic_type(sig.signature().return_type, scope);
             break;
