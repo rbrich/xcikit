@@ -151,7 +151,7 @@ jobs:
             echo "CC='$CC'" >> $GITHUB_ENV
             echo "CXX='$CXX'" >> $GITHUB_ENV
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew install ninja glfw doxygen google-benchmark hyperscan harfbuzz freetype
+            brew install ninja glfw doxygen google-benchmark hyperscan freetype
             if [[ "${{ matrix.clang }}" == llvm* ]] ; then
                 export CC="$(brew --prefix ${{ matrix.clang }})/bin/clang"
                 export CXX="$(brew --prefix ${{ matrix.clang }})/bin/clang++"
