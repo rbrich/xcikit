@@ -52,7 +52,7 @@ requirements:
       - examples
   zlib:
     cmake: "ZLIB/"
-    conan: "zlib/1.2.13"
+    conan: "zlib/1.3"
     prereq:
       - data
   glfw:
