@@ -917,7 +917,6 @@ int main(int argc, const char* argv[])
     bool search_in_special_dirs = false;
     bool single_device = false;
     bool long_form = false;
-    int max_depth = -1;
     bool show_version = false;
     bool show_stats = false;
     bool show_bin_table = false;
@@ -925,6 +924,8 @@ int main(int argc, const char* argv[])
     bool quiet_grep = false;
     bool binary_grep = false;
     bool quiet = false;
+    int hs_flags = 0;
+    int max_depth = -1;
     int jobs = 2 * cpu_count();
     size_t size_from = 0;
     size_t size_to = 0;
@@ -944,6 +945,7 @@ int main(int argc, const char* argv[])
     ArgParser {
             Option("-F, --fixed", "Match literal string instead of (default) regex", fixed),
             Option("-i, --ignore-case", "Enable case insensitive matching", ignore_case),
+            Option("-u, --unicode", "Enable unicode patterns (UTF-8)", [&hs_flags]{ hs_flags |= HS_FLAG_UTF8 | HS_FLAG_UCP; }),
             Option("-e, --ext EXT ...", "Match only files with extension EXT (shortcut for pattern '\\.EXT$')", extensions),
             Option("-E, --exclude PATTERN ...", "Exclude files matching PATTERN", exclusions),
             Option("-H, --search-hidden", "Don't skip hidden files", show_hidden),
@@ -1000,7 +1002,7 @@ int main(int argc, const char* argv[])
 
     bool re_exclusion_only = true;
     for (const char* exclusion : exclusions) {
-        const int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP | HS_FLAG_SINGLEMATCH;
+        const int flags = hs_flags | HS_FLAG_DOTALL | HS_FLAG_SINGLEMATCH;
         {
             auto re_info = analyze_pattern(exclusion, flags);
             if (!re_info)
@@ -1016,7 +1018,7 @@ int main(int argc, const char* argv[])
     }
 
     if (pattern) {
-        int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
+        int flags = hs_flags | HS_FLAG_DOTALL;
         if (ignore_case)
             flags |= HS_FLAG_CASELESS;
         if (fixed) {
@@ -1048,7 +1050,7 @@ int main(int argc, const char* argv[])
     }
 
     if (!extensions.empty()) {
-        int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
+        int flags = hs_flags | HS_FLAG_DOTALL;
         if (ignore_case)
             flags |= HS_FLAG_CASELESS;
         if (highlight_match)
@@ -1066,7 +1068,7 @@ int main(int argc, const char* argv[])
 
     HyperscanDatabase grep_db;
     if (grep_pattern) {
-        int flags = HS_FLAG_UTF8 | HS_FLAG_UCP;
+        int flags = hs_flags;
         if (ignore_case)
             flags |= HS_FLAG_CASELESS;
         if (highlight_match)
