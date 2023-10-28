@@ -329,7 +329,7 @@ void TypeInfo::load(Archive& ar)
             break;
         }
         case Type::List: {
-            subtypes().resize(1);
+            subtypes().reset(1);
             ar(subtypes().front());
             break;
         }
@@ -440,8 +440,8 @@ inline TypeInfo ti_tuple(Args&&... args) { return TypeInfo(TypeInfo::tuple_of, {
 // Each item should have key
 inline TypeInfo ti_struct(std::initializer_list<TypeInfo> items)
 { return TypeInfo(TypeInfo::struct_of, std::forward<std::initializer_list<TypeInfo>>(items)); }
-inline TypeInfo ti_keyed(NameId key, TypeInfo&& ti) {
-    ti.set_key(key);
+inline TypeInfo ti_key(std::string_view key, TypeInfo&& ti) {
+    ti.set_key(intern(key));
     return std::move(ti);
 }
 

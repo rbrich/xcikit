@@ -231,7 +231,7 @@ public:
                         cls_fn_idx = cls.get_index_of_function(psym->ref()->index());
                         const auto& cls_fn = psym->ref().get_generic_scope().function();
                         inst_type_args = resolve_instance_types(cls_fn.signature(), m_call_sig, m_cast_type);
-                        resolved_types.resize(cls.symtab().count(Symbol::TypeVar));
+                        resolved_types.reset(cls.symtab().count(Symbol::TypeVar));
                         for (Index i = 0; i != resolved_types.size(); ++i) {
                             auto var_psym = cls.symtab().find_by_index(Symbol::TypeVar, i+1);
                             resolved_types[i] = get_type_arg(var_psym, inst_type_args);

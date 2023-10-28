@@ -41,13 +41,16 @@ public:
         return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin());
     }
 
-    void resize(size_t new_size);
+    // Lossy resize - does not preserve previous data!
+    void reset(size_t new_size);
 
     bool empty() const { return m_size == 0; }
     size_t size() const { return m_size; }
 
     T& front() { return *m_vec.get(); }
     const T& front() const { return *m_vec.get(); }
+    T& back() { return m_vec[m_size - 1]; }
+    const T& back() const { return m_vec[m_size - 1]; }
     T& operator[](size_t i) { return m_vec[i]; }
     const T& operator[](size_t i) const { return m_vec[i]; }
 
@@ -97,14 +100,14 @@ StaticVec<T>::StaticVec(const StaticVec& r)
 
 template<class T>
 auto StaticVec<T>::operator=(const StaticVec& r) -> StaticVec& {
-    resize(r.size());
+    reset(r.size());
     std::copy(r.begin(), r.end(), m_vec.get());
     return *this;
 }
 
 
 template<class T>
-void StaticVec<T>::resize(size_t new_size) {
+void StaticVec<T>::reset(size_t new_size) {
     m_vec = std::make_unique<T[]>(new_size);
     m_size = new_size;
 }
