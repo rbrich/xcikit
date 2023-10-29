@@ -335,7 +335,7 @@ public:
                 for (const auto& [i, sp] : spec.subtypes() | enumerate) {
                     auto& par = param.subtypes()[i];
                     if (par.is_unknown()) {
-                        par.assign_from(sp);
+                        par.copy_from_no_key(sp);
                     } else {
                         auto m = match_type(par, sp);
                         if (!m)

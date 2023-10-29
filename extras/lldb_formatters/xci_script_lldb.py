@@ -104,8 +104,7 @@ class TypeInfo_SyntheticChildrenProvider:
         self.active_member = None
 
     def update(self):
-        union = self.valobj.GetChildAtIndex(0)
-        self.m_type = union.GetChildMemberWithName("m_type")
+        self.m_type = self.valobj.GetChildMemberWithName("m_type")
         self.m_key = self.valobj.GetChildMemberWithName("m_key")
         self.m_is_literal = self.valobj.GetChildMemberWithName("m_is_literal")
         type_ = self.m_type.value
@@ -121,7 +120,7 @@ class TypeInfo_SyntheticChildrenProvider:
             active_member_name = None
             self.active_member = None
         if active_member_name is not None:
-            self.active_member = union.GetChildMemberWithName(active_member_name)
+            self.active_member = self.valobj.GetChildMemberWithName(active_member_name)
 
     def num_children(self):
         n = 3  # m_type, m_key, m_is_literal

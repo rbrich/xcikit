@@ -116,130 +116,79 @@ void Machine::run(const InvokeCallback& cb)
 
             case Opcode::LogicalOr:
             case Opcode::LogicalAnd: {
-                auto lhs = m_stack.pull<value::Bool>();
-                auto rhs = m_stack.pull<value::Bool>();
+                const auto lhs = m_stack.pull<value::Bool>();
+                const auto rhs = m_stack.pull<value::Bool>();
                 switch (opcode) {
-                    case Opcode::LogicalOr:   m_stack.push(lhs.binary_op<std::logical_or<>, true>(rhs)); break;
-                    case Opcode::LogicalAnd:  m_stack.push(lhs.binary_op<std::logical_and<>, true>(rhs)); break;
-                    default: break;
+                    case Opcode::LogicalOr:   m_stack.push(Value(lhs.value() || lhs.value())); break;
+                    case Opcode::LogicalAnd:  m_stack.push(Value(lhs.value() && rhs.value())); break;
+                    default: XCI_UNREACHABLE;
                 }
                 break;
             }
 
-            case Opcode::Equal:
-            case Opcode::NotEqual:
-            case Opcode::LessEqual:
-            case Opcode::GreaterEqual:
-            case Opcode::LessThan:
-            case Opcode::GreaterThan: {
-                const auto arg = *it++;
-                const auto lhs_type = decode_arg_type(arg >> 4);
-                const auto rhs_type = decode_arg_type(arg & 0xf);
-                if (lhs_type == Type::Unknown || rhs_type == Type::Unknown || lhs_type != rhs_type)
-                    throw not_implemented(format("opcode: {} lhs type: {:x} rhs type: {:x}",
-                            opcode, arg >> 4, arg & 0xf));
-                auto lhs = m_stack.pull(TypeInfo{lhs_type});
-                auto rhs = m_stack.pull(TypeInfo{rhs_type});
-                switch (opcode) {
-                    case Opcode::Equal: m_stack.push(lhs.binary_op<std::equal_to<>>(rhs)); break;
-                    case Opcode::NotEqual: m_stack.push(lhs.binary_op<std::not_equal_to<>>(rhs)); break;
-                    case Opcode::LessEqual: m_stack.push(lhs.binary_op<std::less_equal<>>(rhs)); break;
-                    case Opcode::GreaterEqual: m_stack.push(lhs.binary_op<std::greater_equal<>>(rhs)); break;
-                    case Opcode::LessThan: m_stack.push(lhs.binary_op<std::less<>>(rhs)); break;
-                    case Opcode::GreaterThan: m_stack.push(lhs.binary_op<std::greater<>>(rhs)); break;
-                    default: break;
-                }
-                break;
-            }
-
-            case Opcode::BitwiseOr_8: {
-                auto lhs = m_stack.pull<value::UInt8>();
-                auto rhs = m_stack.pull<value::UInt8>();
-                m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseAnd_8: {
-                auto lhs = m_stack.pull<value::UInt8>();
-                auto rhs = m_stack.pull<value::UInt8>();
-                m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
-                break;
-            }
+            case Opcode::BitwiseOr_8:
+            case Opcode::BitwiseAnd_8:
             case Opcode::BitwiseXor_8: {
-                auto lhs = m_stack.pull<value::UInt8>();
-                auto rhs = m_stack.pull<value::UInt8>();
-                m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
+                const auto lhs = m_stack.pull<value::UInt8>();
+                const auto rhs = m_stack.pull<value::UInt8>();
+                switch (opcode) {
+                    case Opcode::BitwiseOr_8:   m_stack.push(Value(lhs.value() | rhs.value())); break;
+                    case Opcode::BitwiseAnd_8:  m_stack.push(Value(lhs.value() & rhs.value())); break;
+                    case Opcode::BitwiseXor_8:  m_stack.push(Value(lhs.value() ^ rhs.value())); break;
+                    default: XCI_UNREACHABLE;
+                }
                 break;
             }
-            case Opcode::BitwiseOr_16: {
-                auto lhs = m_stack.pull<value::UInt16>();
-                auto rhs = m_stack.pull<value::UInt16>();
-                m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseAnd_16: {
-                auto lhs = m_stack.pull<value::UInt16>();
-                auto rhs = m_stack.pull<value::UInt16>();
-                m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
-                break;
-            }
+            case Opcode::BitwiseOr_16:
+            case Opcode::BitwiseAnd_16:
             case Opcode::BitwiseXor_16: {
-                auto lhs = m_stack.pull<value::UInt16>();
-                auto rhs = m_stack.pull<value::UInt16>();
-                m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
+                const auto lhs = m_stack.pull<value::UInt16>();
+                const auto rhs = m_stack.pull<value::UInt16>();
+                switch (opcode) {
+                    case Opcode::BitwiseOr_16:  m_stack.push(Value(lhs.value() | rhs.value())); break;
+                    case Opcode::BitwiseAnd_16: m_stack.push(Value(lhs.value() & rhs.value())); break;
+                    case Opcode::BitwiseXor_16: m_stack.push(Value(lhs.value() ^ rhs.value())); break;
+                    default: XCI_UNREACHABLE;
+                }
                 break;
             }
-            case Opcode::BitwiseOr_32: {
-                auto lhs = m_stack.pull<value::UInt32>();
-                auto rhs = m_stack.pull<value::UInt32>();
-                m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseAnd_32: {
-                auto lhs = m_stack.pull<value::UInt32>();
-                auto rhs = m_stack.pull<value::UInt32>();
-                m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
-                break;
-            }
+            case Opcode::BitwiseOr_32:
+            case Opcode::BitwiseAnd_32:
             case Opcode::BitwiseXor_32: {
-                auto lhs = m_stack.pull<value::UInt32>();
-                auto rhs = m_stack.pull<value::UInt32>();
-                m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
+                const auto lhs = m_stack.pull<value::UInt32>();
+                const auto rhs = m_stack.pull<value::UInt32>();
+                switch (opcode) {
+                    case Opcode::BitwiseOr_32:  m_stack.push(Value(lhs.value() | rhs.value())); break;
+                    case Opcode::BitwiseAnd_32: m_stack.push(Value(lhs.value() & rhs.value())); break;
+                    case Opcode::BitwiseXor_32: m_stack.push(Value(lhs.value() ^ rhs.value())); break;
+                    default: XCI_UNREACHABLE;
+                }
                 break;
             }
-            case Opcode::BitwiseOr_64: {
-                auto lhs = m_stack.pull<value::UInt64>();
-                auto rhs = m_stack.pull<value::UInt64>();
-                m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseAnd_64: {
-                auto lhs = m_stack.pull<value::UInt64>();
-                auto rhs = m_stack.pull<value::UInt64>();
-                m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
-                break;
-            }
+            case Opcode::BitwiseOr_64:
+            case Opcode::BitwiseAnd_64:
             case Opcode::BitwiseXor_64: {
-                auto lhs = m_stack.pull<value::UInt64>();
-                auto rhs = m_stack.pull<value::UInt64>();
-                m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
+                const auto lhs = m_stack.pull<value::UInt64>();
+                const auto rhs = m_stack.pull<value::UInt64>();
+                switch (opcode) {
+                    case Opcode::BitwiseOr_64:  m_stack.push(Value(lhs.value() | rhs.value())); break;
+                    case Opcode::BitwiseAnd_64: m_stack.push(Value(lhs.value() & rhs.value())); break;
+                    case Opcode::BitwiseXor_64: m_stack.push(Value(lhs.value() ^ rhs.value())); break;
+                    default: XCI_UNREACHABLE;
+                }
                 break;
             }
-            case Opcode::BitwiseOr_128: {
-                auto lhs = m_stack.pull<value::UInt128>();
-                auto rhs = m_stack.pull<value::UInt128>();
-                m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs));
-                break;
-            }
-            case Opcode::BitwiseAnd_128: {
-                auto lhs = m_stack.pull<value::UInt128>();
-                auto rhs = m_stack.pull<value::UInt128>();
-                m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs));
-                break;
-            }
+            case Opcode::BitwiseOr_128:
+            case Opcode::BitwiseAnd_128:
             case Opcode::BitwiseXor_128: {
-                auto lhs = m_stack.pull<value::UInt128>();
-                auto rhs = m_stack.pull<value::UInt128>();
-                m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs));
+                const auto lhs = m_stack.pull<value::UInt128>();
+                const auto rhs = m_stack.pull<value::UInt128>();
+                switch (opcode) {
+                    case Opcode::BitwiseOr_128:  m_stack.push(Value(lhs.value() | rhs.value())); break;
+                    case Opcode::BitwiseAnd_128: m_stack.push(Value(lhs.value() & rhs.value())); break;
+                    case Opcode::BitwiseXor_128: m_stack.push(Value(lhs.value() ^ rhs.value())); break;
+                    default: XCI_UNREACHABLE;
+                }
                 break;
             }
 
@@ -334,6 +283,12 @@ void Machine::run(const InvokeCallback& cb)
                 break;
             }
 
+            case Opcode::Equal:
+            case Opcode::NotEqual:
+            case Opcode::LessEqual:
+            case Opcode::GreaterEqual:
+            case Opcode::LessThan:
+            case Opcode::GreaterThan:
             case Opcode::Add:
             case Opcode::Sub:
             case Opcode::Mul:
@@ -353,20 +308,28 @@ void Machine::run(const InvokeCallback& cb)
                             opcode, arg >> 4, arg & 0xf));
                 auto lhs = m_stack.pull(TypeInfo{lhs_type});
                 auto rhs = m_stack.pull(TypeInfo{rhs_type});
-                switch (opcode) {
-                    case Opcode::Add: m_stack.push(lhs.binary_op<builtin::Add>(rhs)); break;
-                    case Opcode::Sub: m_stack.push(lhs.binary_op<builtin::Sub>(rhs)); break;
-                    case Opcode::Mul: m_stack.push(lhs.binary_op<builtin::Mul>(rhs)); break;
-                    case Opcode::Div: m_stack.push(lhs.binary_op<builtin::Div>(rhs)); break;
-                    case Opcode::Mod: m_stack.push(lhs.binary_op<builtin::Mod>(rhs)); break;
-                    case Opcode::Exp: m_stack.push(lhs.binary_op<builtin::Exp>(rhs)); break;
-                    case Opcode::UnsafeAdd: m_stack.push(lhs.binary_op<builtin::UnsafeAdd>(rhs)); break;
-                    case Opcode::UnsafeSub: m_stack.push(lhs.binary_op<builtin::UnsafeSub>(rhs)); break;
-                    case Opcode::UnsafeMul: m_stack.push(lhs.binary_op<builtin::UnsafeMul>(rhs)); break;
-                    case Opcode::UnsafeDiv: m_stack.push(lhs.binary_op<builtin::UnsafeDiv>(rhs)); break;
-                    case Opcode::UnsafeMod: m_stack.push(lhs.binary_op<builtin::UnsafeMod>(rhs)); break;
-                    default: XCI_UNREACHABLE;
-                }
+                m_stack.push(lhs.binary_op(rhs, [opcode]<class T>(T a, T b) -> Value {
+                    switch (opcode) {
+                        case Opcode::Equal: return Value(a == b); break;
+                        case Opcode::NotEqual: return Value(a != b); break;
+                        case Opcode::LessEqual: return Value(a <= b); break;
+                        case Opcode::GreaterEqual: return Value(a >= b); break;
+                        case Opcode::LessThan: return Value(a < b); break;
+                        case Opcode::GreaterThan: return Value(a > b); break;
+                        case Opcode::Add: return Value(builtin::add(a, b)); break;
+                        case Opcode::Sub: return Value(builtin::sub(a, b)); break;
+                        case Opcode::Mul: return Value(builtin::mul(a, b)); break;
+                        case Opcode::Div: return Value(builtin::div(a, b)); break;
+                        case Opcode::Mod: return Value(builtin::mod(a, b)); break;
+                        case Opcode::Exp: return Value(builtin::exp(a, b)); break;
+                        case Opcode::UnsafeAdd: return Value(T(a + b)); break;  // do not promote return type
+                        case Opcode::UnsafeSub: return Value(T(a - b)); break;
+                        case Opcode::UnsafeMul: return Value(T(a * b)); break;
+                        case Opcode::UnsafeDiv: return Value(T(a / b)); break;
+                        case Opcode::UnsafeMod: return Value(builtin::unsafe_mod(a, b)); break;
+                        default: XCI_UNREACHABLE;
+                    }
+                }));
                 break;
             }
 

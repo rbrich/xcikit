@@ -47,3 +47,18 @@ TEST_CASE( "Iterators", "[ChunkedStack]" )
         ++i;
     }
 }
+
+
+TEST_CASE( "Moved out", "[ChunkedStack]" )
+{
+    StaticVec<int> vec(3);
+    vec[0] = 1;
+    vec[1] = 2;
+    vec[2] = 3;
+    StaticVec<int> vec2 = std::move(vec);
+    CHECK(vec.size() == 0);  // NOLINT, intentional check after move
+    REQUIRE(vec2.size() == 3);
+    CHECK(vec2.front() == 1);
+    CHECK(vec2[1] == 2);
+    CHECK(vec2.back() == 3);
+}

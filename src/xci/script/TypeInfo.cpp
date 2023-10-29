@@ -76,17 +76,16 @@ size_t type_size_on_stack(Type type)
 
 
 // -------------------------------------------------------------------------------------------------
-namespace detail {
 
 
-TypeInfoUnion::TypeInfoUnion(ListTag, TypeInfo elem)
+TypeInfo::TypeInfo(ListTag, TypeInfo elem)
         : m_type(Type::List)
 {
     std::construct_at(&m_subtypes, Subtypes({std::move(elem)}));
 }
 
 
-TypeInfoUnion::TypeInfoUnion(NameId name, TypeInfo&& type_info)
+TypeInfo::TypeInfo(NameId name, TypeInfo&& type_info)
         : m_type(Type::Named)
 {
     std::construct_at(&m_named_type_ptr,
@@ -94,53 +93,36 @@ TypeInfoUnion::TypeInfoUnion(NameId name, TypeInfo&& type_info)
 }
 
 
-TypeInfoUnion& TypeInfoUnion::operator =(const TypeInfoUnion& r)
+TypeInfo& TypeInfo::operator =(const TypeInfo& r)
 {
-    if (this == &r)
-        return *this;
-    if (m_type != r.m_type) {
-        destroy_variant();
-        m_type = r.m_type;
-        construct_variant();
-    }
-    switch (m_type) {
-        case Type::Unknown: m_var = r.m_var; break;
-        case Type::List:
-        case Type::Tuple:
-        case Type::Struct: m_subtypes = r.m_subtypes; break;
-        case Type::Function: m_signature_ptr = r.m_signature_ptr; break;
-        case Type::Named: m_named_type_ptr = r.m_named_type_ptr; break;
-        default:
-            break;
-    }
+    copy_from_no_key(r);
+    m_key = r.m_key;
     return *this;
 }
 
 
-TypeInfoUnion& TypeInfoUnion::operator =(TypeInfoUnion&& r) noexcept {
+TypeInfo& TypeInfo::operator =(TypeInfo&& r) noexcept {
     assert(this != &r);
-    if (m_type != r.m_type) {
-        destroy_variant();
-        m_type = r.m_type;
-        construct_variant();
-    }
-    switch (m_type) {
-        case Type::Unknown: m_var = r.m_var; break;
-        case Type::List:
-        case Type::Tuple:
-        case Type::Struct: m_subtypes = std::move(r.m_subtypes); break;
-        case Type::Function: m_signature_ptr = std::move(r.m_signature_ptr); break;
-        case Type::Named: m_named_type_ptr = std::move(r.m_named_type_ptr); break;
-        default:
-            break;
-    }
-    r.set_type(Type::Unknown);
-    r.generic_var() = {};
+    set_type(r.m_type);
+    move_variant(std::move(r));
+    r.set_type(Type::Unknown);  // NOLINT(bugprone-use-after-move)
+    r.m_var = {};
+    m_is_literal = r.m_is_literal; r.m_is_literal = true;
+    m_key = r.m_key; r.m_key = {};
     return *this;
 }
 
 
-void TypeInfoUnion::construct_variant() {
+void TypeInfo::copy_from_no_key(const TypeInfo& r) noexcept {
+    if (this == &r)
+        return;
+    set_type(r.m_type);
+    copy_variant(r);
+    m_is_literal = r.m_is_literal;
+}
+
+
+void TypeInfo::construct_variant() {
     switch (m_type) {
         case Type::Unknown: std::construct_at(&m_var); break;
         case Type::List:
@@ -154,7 +136,7 @@ void TypeInfoUnion::construct_variant() {
 }
 
 
-void TypeInfoUnion::destroy_variant() {
+void TypeInfo::destroy_variant() {
     switch (m_type) {
         case Type::Unknown: m_var.~Var(); break;
         case Type::List:
@@ -168,43 +150,69 @@ void TypeInfoUnion::destroy_variant() {
 }
 
 
-auto TypeInfoUnion::generic_var() const -> Var
+void TypeInfo::copy_variant(const xci::script::TypeInfo& r)
+{
+    switch (m_type) {
+        case Type::Unknown: m_var = r.m_var; break;
+        case Type::List:
+        case Type::Tuple:
+        case Type::Struct: m_subtypes = r.m_subtypes; break;
+        case Type::Function: m_signature_ptr = r.m_signature_ptr; break;
+        case Type::Named: m_named_type_ptr = r.m_named_type_ptr; break;
+        default:
+            break;
+    }
+}
+
+
+void TypeInfo::move_variant(xci::script::TypeInfo&& r)
+{
+    switch (m_type) {
+        case Type::Unknown: m_var = r.m_var; break;
+        case Type::List:
+        case Type::Tuple:
+        case Type::Struct: m_subtypes = std::move(r.m_subtypes); break;
+        case Type::Function: m_signature_ptr = std::move(r.m_signature_ptr); break;
+        case Type::Named: m_named_type_ptr = std::move(r.m_named_type_ptr); break;
+        default:
+            break;
+    }
+}
+
+
+auto TypeInfo::generic_var() const -> Var
 {
     assert(m_type == Type::Unknown);
     return m_var;
 }
 
 
-auto TypeInfoUnion::generic_var() -> Var&
+auto TypeInfo::generic_var() -> Var&
 {
     assert(m_type == Type::Unknown);
     return m_var;
 }
 
 
-auto TypeInfoUnion::subtypes() const -> const Subtypes&
+auto TypeInfo::subtypes() const -> const Subtypes&
 {
     assert(m_type == Type::Tuple || m_type == Type::Struct || type() == Type::List);
     return m_subtypes;
 }
 
 
-auto TypeInfoUnion::signature_ptr() const -> const SignaturePtr&
+auto TypeInfo::signature_ptr() const -> const SignaturePtr&
 {
     assert(type() == Type::Function);
     return m_signature_ptr;
 }
 
 
-auto TypeInfoUnion::named_type_ptr() const -> const NamedTypePtr&
+auto TypeInfo::named_type_ptr() const -> const NamedTypePtr&
 {
     assert(m_type == Type::Named);
     return m_named_type_ptr;
 }
-
-
-} // namespace detail
-// -------------------------------------------------------------------------------------------------
 
 
 size_t TypeInfo::size() const

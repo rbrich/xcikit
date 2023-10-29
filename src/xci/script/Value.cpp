@@ -170,7 +170,7 @@ size_t Value::read(const byte* buffer)
 }
 
 
-size_t Value::size_on_stack() const
+size_t Value::size_on_stack() const noexcept
 {
     static_assert(sizeof(bool) == 1);
     return std::visit([](auto&& v) -> size_t {
