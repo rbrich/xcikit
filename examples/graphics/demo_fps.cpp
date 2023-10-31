@@ -39,7 +39,7 @@ int main(int argc, const char* argv[])
     FpsDisplay fps_display(theme);
     fps_display.set_position({-60_vp, -35_vp});
     Text help_text(font, "[p] periodic\t[i] immediate\n"
-                         "[d] on demand\t[f] fifo\n"
+                         "[d] on demand\t[f] fifo\t[r] relaxed\n"
                          "[e] on event\t[m] mailbox\n");
     Text mouse_pos(font, "Mouse: ");
     mouse_pos.set_color(Color(255, 150, 50));
@@ -113,6 +113,9 @@ int main(int argc, const char* argv[])
                 break;
             case Key::F:
                 renderer.set_present_mode(PresentMode::Fifo);
+                break;
+            case Key::R:
+                renderer.set_present_mode(PresentMode::FifoRelaxed);
                 break;
             case Key::M:
                 renderer.set_present_mode(PresentMode::Mailbox);
