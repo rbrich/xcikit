@@ -33,6 +33,7 @@ add_library(xci-graphics
     vulkan/DescriptorPool.cpp
     vulkan/DeviceMemory.cpp
     vulkan/Pipeline.cpp
+    vulkan/Swapchain.cpp
 )
 add_library(xcikit::xci-graphics ALIAS xci-graphics)
 

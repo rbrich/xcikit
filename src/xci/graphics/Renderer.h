@@ -11,6 +11,7 @@
 #include <xci/geometry/Vec2.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
+#include <xci/graphics/vulkan/Swapchain.h>
 #include <xci/graphics/vulkan/Pipeline.h>
 #include <xci/graphics/vulkan/DescriptorPool.h>
 
@@ -27,14 +28,6 @@ struct GLFWwindow;
 namespace xci::graphics {
 
 
-enum class PresentMode {
-    Immediate,      // no vsync, possible tearing
-    Mailbox,        // vsync, new request replaces old one (program is not slowed down)
-    Fifo,           // vsync, requests are queued
-    FifoRelaxed,    // vsync, requests are queued, late frame can be displayed immediately
-};
-
-
 class Renderer: private core::NonCopyable {
 public:
     explicit Renderer(core::Vfs& vfs);
@@ -47,8 +40,8 @@ public:
     /// - Mailbox        - driver waits, program doesn't (new request replaces old one)
     /// - Fifo*          - full vsync, requests are queued (*default)
     /// - FifoRelaxed    - mostly vsync, late frame can be displayed immediately
-    void set_present_mode(PresentMode mode);
-    PresentMode present_mode() const;
+    void set_present_mode(PresentMode mode) { m_swapchain.set_present_mode(mode); }
+    PresentMode present_mode() const { return m_swapchain.present_mode(); }
 
     void set_device_id(uint32_t device_id) { m_device_id = device_id; }
 
@@ -104,33 +97,28 @@ public:
 
     void create_surface(GLFWwindow* window);
     void destroy_surface();
-    void reset_framebuffer(VkExtent2D new_size = {UINT32_MAX, UINT32_MAX});
+    void reset_framebuffer(VkExtent2D new_size = {UINT32_MAX, UINT32_MAX}) { m_swapchain.reset_framebuffer(new_size); }
 
     // Vulkan handles
     VkInstance vk_instance() const { return m_instance; }
+    VkSurfaceKHR vk_surface() const { return m_surface; }
     VkDevice vk_device() const { return m_device; }
     VkPhysicalDevice vk_physical_device() const { return m_physical_device; }
-    VkSwapchainKHR vk_swapchain() const { return m_swapchain; }
+    VkSwapchainKHR vk_swapchain() const { return m_swapchain.vk(); }
     VkQueue vk_queue() const { return m_queue; }
     VkCommandPool vk_command_pool() const { return m_command_pool; }
     VkCommandPool vk_transient_command_pool() const { return m_transient_command_pool; }
-    const VkExtent2D& vk_image_extent() const { return m_extent; }
+    VkExtent2D vk_image_extent() const { return m_swapchain.vk_image_extent(); }
     VkRenderPass vk_render_pass() const { return m_render_pass; }
-    VkFramebuffer vk_framebuffer(uint32_t index) const { return m_framebuffers[index]; }
+    VkFramebuffer vk_framebuffer(uint32_t index) const { return m_swapchain.vk_framebuffer(index); }
 
 private:
     void create_device();
     void destroy_device();
-    void create_swapchain();
-    void destroy_swapchain();
     void create_renderpass();
     void destroy_renderpass();
-    void create_framebuffers();
-    void destroy_framebuffers();
 
     std::optional<uint32_t> query_queue_families(VkPhysicalDevice device);
-    void query_surface_capabilities(VkPhysicalDevice device, VkExtent2D new_size);
-    bool query_swapchain(VkPhysicalDevice device);
 
     void load_device_limits(const VkPhysicalDeviceLimits& limits);
 
@@ -148,21 +136,10 @@ private:
     VkPhysicalDevice m_physical_device {};
     VkDevice m_device {};
     VkQueue m_queue {};
-    VkSwapchainKHR m_swapchain {};
+    Swapchain m_swapchain {*this};
     VkRenderPass m_render_pass {};
     VkCommandPool m_command_pool {};
     VkCommandPool m_transient_command_pool {};
-
-    static constexpr uint32_t max_image_count = 8;
-    VkImage m_images[max_image_count] {};
-    VkImageView m_image_views[max_image_count] {};
-    VkFramebuffer m_framebuffers[max_image_count] {};
-
-    // swapchain create info
-    VkSurfaceFormatKHR m_surface_format {};
-    VkPresentModeKHR m_present_mode = VK_PRESENT_MODE_FIFO_KHR;
-    VkExtent2D m_extent {};
-    uint32_t m_image_count = 0;  // swapchain image count, N <= max_image_count
 
 #ifdef XCI_DEBUG_VULKAN
     VkDebugUtilsMessengerEXT m_debug_messenger {};

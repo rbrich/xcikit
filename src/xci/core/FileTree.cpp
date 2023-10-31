@@ -1,7 +1,7 @@
 // FileTree.cpp created on 2020-10-05 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "FileTree.h"
@@ -14,7 +14,7 @@ void FileTree::enqueue(int tn, RcPtr<PathNode> path_node)
 {
     // Skip locking and queuing if all workers are (apparently) busy.
     if (m_busy.load(std::memory_order_relaxed) >= m_busy_max) {
-        TRACE("skip lock ({} busy)", m_busy);
+        TRACE("skip lock ({} busy)", m_busy.load(std::memory_order_relaxed));
         read(tn, std::move(path_node));
         return;
     }
@@ -51,7 +51,7 @@ void FileTree::worker(int tn)
         assert(!m_job);  // cleared
         lock.unlock();
 
-        TRACE("[{}] worker read ({} busy)", tn, m_busy);
+        TRACE("[{}] worker read ({} busy)", tn, m_busy.load(std::memory_order_relaxed));
         read(tn, std::move(path));
         m_busy.fetch_sub(1, std::memory_order_release);
     }
