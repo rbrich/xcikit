@@ -15,6 +15,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <map>
 #include <vector>
 
 using namespace xci::core;
@@ -22,13 +23,12 @@ using namespace xci::core::argparser;
 namespace fs = std::filesystem;
 
 
-void extract_entry(const Vfs& vfs, const std::string& entry, fs::path output_path)
+static void extract_entry(const std::string& name, const VfsFile& file, fs::path output_path)
 {
-    const auto entry_path = output_path / entry;
+    const auto entry_path = output_path / name;
     TermCtl& term = TermCtl::stdout_instance();
-    term.print("Extracting file\t{fg:yellow}{}{t:normal} to {}\n", entry, entry_path);
-    auto f = vfs.read_file(entry);
-    auto content = f.content();
+    term.print("Extracting file\t{fg:yellow}{}{t:normal} to {}\n", name, entry_path);
+    auto content = file.content();
     if (content) {
         fs::create_directories(entry_path.parent_path());
         if (fs::exists(entry_path)) {
@@ -42,6 +42,90 @@ void extract_entry(const Vfs& vfs, const std::string& entry, fs::path output_pat
             log::error("Cannot open target file {}", entry_path);
         }
     }
+}
+
+
+static bool is_wad_map_entry(const std::string& name)
+{
+    // ExMy or MAPxx
+    return (name[0] == 'E' && std::isdigit((int)name[1]) &&
+            name[2] == 'M' && std::isdigit((int)name[3]) && name[4] == 0) ||
+           (std::memcmp(name.c_str(), "MAP", 3) == 0 &&
+            std::isdigit((int)name[3]) && std::isdigit((int)name[4]) && name[5] == 0);
+}
+
+
+static bool is_wad_map_subentry(const std::string& name)
+{
+    return name == "THINGS" || name == "LINEDEFS" || name == "SIDEDEFS" ||
+           name == "VERTEXES" || name == "SEGS" || name == "SSECTORS" ||
+           name == "NODES" || name == "SECTORS" || name == "REJECT" ||
+           name == "BLOCKMAP" || name == "BEHAVIOR";
+}
+
+
+/// Special handling of WADs ordered and non-uniquely named lumps.
+/// Map the original lump names to virtual paths:
+/// * "<lump name>" for normal entries
+/// * "_1/<lump name>" for repeated lump names (_1 is the second occurrence, increments for each repetition)
+/// * "_MAP01/<lump name>" for map lumps
+/// The filename (without subdir) always matches the original lump name.
+void extract_wad(VfsDirectory& vfs_dir, fs::path output_path)
+{
+    if (fs::exists(output_path / ".wad")) {
+        log::warning("Not overwriting existing .wad at {}", output_path);
+        return;
+    }
+
+    // Generating .wad while extracting, write as last file
+    fs::create_directories(output_path);
+    std::ofstream dot_wad(output_path / ".wad",
+                          std::ios::out | std::ios::binary | std::ios::trunc);
+
+    // .wad first line: IWAD or PWAD
+    dot_wad << vfs_dir.type() << '\n';
+    if (!dot_wad) {
+        log::warning("Error writing {}", output_path / ".wad");
+        return;
+    }
+
+    // .wad each entry: <lump name>\t<path>
+    std::string subdir;  // virtual path for next entry
+    std::map<std::string, int> repetition;  // counter for multiple lumps with same name
+    for (const auto& entry : vfs_dir) {
+        const auto entry_name = entry.name();
+        auto entry_subdir = subdir;
+
+        // reset subdir if this entry is not part of a map
+        if (!is_wad_map_subentry(entry_name)) {
+            subdir.clear();
+        }
+        // set subdir of this entry
+        entry_subdir = subdir;
+        // set subdir for following entries, if this entry is map starter
+        if (is_wad_map_entry(entry_name)) {
+            subdir = entry_name;
+        }
+        // add subdir for repeated names (_1, _2...)
+        if (entry_subdir.empty()) {
+            int& rep = repetition[entry_name];
+            if (rep != 0)
+                entry_subdir = std::to_string(rep);
+            ++rep;
+        }
+
+        std::string virtual_path;
+        if (!entry_subdir.empty()) {
+            entry_subdir = '_' + entry_subdir;
+            virtual_path = entry_subdir + '/';
+        }
+        virtual_path += entry.name();
+        dot_wad << entry_name << '\t' << virtual_path << '\n';
+        extract_entry(entry.name(), entry.file(), output_path / entry_subdir);
+    }
+
+    dot_wad.flush();
+    dot_wad.close();
 }
 
 
@@ -79,8 +163,8 @@ int main(int argc, const char* argv[])
         }
 
         if (list_entries) {
-            for (const auto& name : *vfs.mounts().back().vfs_dir) {
-                term.print("{fg:yellow}{}{t:normal}\n", name);
+            for (const auto& entry : *vfs.mounts().back().vfs_dir) {
+                term.print("{fg:yellow}{}{t:normal}\n", entry.name());
             }
             continue;
         }
@@ -95,11 +179,16 @@ int main(int argc, const char* argv[])
         }
 
         if (entries.empty()) {
-            for (const auto& name : *vfs.mounts().back().vfs_dir)
-                extract_entry(vfs, name, output_path);
+            VfsDirectory& vfs_dir = *vfs.mounts().back().vfs_dir;
+            if (vfs_dir.type().substr(1) == "WAD") {
+                extract_wad(vfs_dir, output_path);
+            } else {
+                for (const auto& entry : vfs_dir)
+                    extract_entry(entry.name(), entry.file(), output_path);
+            }
         } else {
-            for (const auto entry : entries)
-                extract_entry(vfs, entry, output_path);
+            for (const char* name : entries)
+                extract_entry(name, vfs.read_file(name), output_path);
         }
     }
 

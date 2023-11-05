@@ -46,13 +46,13 @@ public:
 
     /// memory buffer containing the file data
     /// or nullptr if there was error reading the file
-    BufferPtr content() { return m_content; }
+    BufferPtr content() const { return m_content; }
 
     // convenience operators
     explicit operator bool() const { return is_open(); }
 
 private:
-    fs::path m_path;   ///< path of the file or archive containing the file
+    fs::path m_path;   ///< path of the file in real directory (empty for archives)
     BufferPtr m_content;
 };
 
@@ -64,16 +64,34 @@ class VfsDirectory: public std::enable_shared_from_this<VfsDirectory> {
 public:
     virtual ~VfsDirectory() = default;
 
-    virtual VfsFile read_file(const std::string& path) = 0;
+    virtual std::string type() const = 0;
 
+    // Read file by name
+    virtual VfsFile read_file(const std::string& path) const = 0;
+
+    // List entries, read file by index
     virtual unsigned num_entries() const = 0;
     virtual std::string get_entry_name(unsigned index) const = 0;
+    virtual VfsFile read_entry(unsigned index) const = 0;
 
     class const_iterator {
         friend VfsDirectory;
     public:
+        struct Entry {
+            friend class const_iterator;
+        public:
+            std::string name() const { return m_dir.get_entry_name(m_index); }
+            VfsFile file() const { return m_dir.read_entry(m_index); }
+        private:
+            explicit Entry(const VfsDirectory& dir, unsigned index)
+                    : m_dir(dir), m_index(index) {}
+
+            const VfsDirectory& m_dir;
+            unsigned m_index;
+        };
+
         using difference_type = std::ptrdiff_t;
-        using value_type = std::string;
+        using value_type = Entry;
         using iterator_category = std::forward_iterator_tag;
 
         bool operator==(const const_iterator& rhs) const { return &m_dir == &rhs.m_dir && m_index == rhs.m_index; }
@@ -87,7 +105,7 @@ public:
         }
         const_iterator operator++(int) { auto v = *this; ++*this; return v; }
 
-        value_type operator*() const { return m_dir.get_entry_name(m_index); }
+        Entry operator*() const { return Entry(m_dir, m_index); }
 
     private:
         explicit const_iterator(const VfsDirectory& dir, unsigned index = ~0u)
@@ -155,12 +173,15 @@ class RealDirectory: public VfsDirectory {
 public:
     explicit RealDirectory(fs::path dir_path) : m_dir_path(std::move(dir_path)) {}
 
-    VfsFile read_file(const std::string& path) override;
+    std::string type() const override { return "DIR"; }
+
+    VfsFile read_file(const std::string& path) const override;
 
     // Calling any of these methods creates a snapshot of the directory,
     // that is used by subsequent calls. Listing live directory would be fragile.
     unsigned num_entries() const override;
     std::string get_entry_name(unsigned index) const override;
+    VfsFile read_entry(unsigned index) const override;
 
 private:
     void snapshot_entries() const;
@@ -189,26 +210,30 @@ public:
     explicit DarArchive(std::string&& path, std::unique_ptr<std::istream>&& stream);
     ~DarArchive() override { close_archive(); }
 
+    std::string type() const override { return "DAR"; }
+
     bool is_open() const { return bool(m_stream); }
 
-    VfsFile read_file(const std::string& path) override;
+    VfsFile read_file(const std::string& path) const override;
     unsigned num_entries() const override;
     std::string get_entry_name(unsigned index) const override;
+    VfsFile read_entry(unsigned index) const override;
 
 private:
-    bool read_index(size_t size);
-    void close_archive();
-
-private:
-    std::string m_path;
-    std::unique_ptr<std::istream> m_stream;
-
-    // index:
     struct IndexEntry {
         uint32_t offset;
         uint32_t size;
         std::string name;
     };
+
+    bool read_index(size_t size);
+    VfsFile read_entry(const IndexEntry& entry) const;
+    void close_archive();
+
+    std::string m_path;
+    std::unique_ptr<std::istream> m_stream;
+
+    // index:
     std::vector<IndexEntry> m_entries;
 };
 
@@ -225,19 +250,12 @@ public:
 };
 
 /// Lookup files in WAD file, which is mapped to VFS path
-/// WAD is DOOM 1 uncompressed data file format, see `tools/pack_assets.py`
+/// WAD is DOOM 1 uncompressed data file format.
 /// Same as DarArchive, this has no external dependency and very simple implementation.
-/// Unlike DarArchive, WAD depends on "lump" (archived file) order, lump names can repeat
+/// Unlike DarArchive, WAD depends on lump order (lump = archived file), lump names can repeat
 /// and they are limited to 8 chars.
-///
-/// This VFS adapter maps the original lump names to virtual paths:
-/// * "<lump name>" for normal entries
-/// * "_1/<lump name>" for repeated lump names (_1 is the second occurrence, increments for each repetition)
-/// * "_MAP01/<lump name>" for map lumps
-/// These virtual names has to be used in `get_file`.
-/// Alternatively, a program may use directory listing and process the lumps in order.
-/// The filename (without subdir) always matches the original lump name.
-///
+/// When looking up files by name, only the first lump of that name is returned.
+/// Use entry listing to process lumps in order.
 /// Reference: https://doomwiki.org/wiki/WAD
 class WadArchive: public VfsDirectory {
     friend class WadArchiveLoader;
@@ -245,31 +263,32 @@ public:
     explicit WadArchive(std::string&& path, std::unique_ptr<std::istream>&& stream);
     ~WadArchive() override { close_archive(); }
 
+    std::string type() const override;  // "IWAD" or "PWAD"
     bool is_open() const { return bool(m_stream); }
 
-    VfsFile read_file(const std::string& path) override;
+    VfsFile read_file(const std::string& path) const override;
     unsigned num_entries() const override;
     std::string get_entry_name(unsigned index) const override;
+    VfsFile read_entry(unsigned index) const override;
 
 private:
+    struct IndexEntry {
+        uint32_t filepos;
+        uint32_t size;
+        char name[8];  // not zero-terminated, use path() instead
+
+        std::string path() const;
+    };
+    static_assert(sizeof(IndexEntry) == 16);
+
     bool read_index(size_t size);
+    VfsFile read_entry(const IndexEntry& entry) const;
     void close_archive();
-    VfsFile generate_dot_wad();
 
     std::string m_path;
     std::unique_ptr<std::istream> m_stream;
 
     // index:
-    struct IndexEntry {
-        uint32_t filepos;
-        uint32_t size;
-        char name[8];  // not zero-terminated, use path() instead
-        char subdir[8];  // virtual subdir for the entry, added by loader heuristic
-
-        // Virtual path of the entry. The original lump name is kept as basename,
-        // but a subdirectory may be added to uniquely distinguish the entry.
-        std::string path() const;
-    };
     std::vector<IndexEntry> m_entries;
 };
 
@@ -291,11 +310,13 @@ public:
     explicit ZipArchive(std::string&& path, std::unique_ptr<std::istream>&& stream);
     ~ZipArchive() override;
 
+    std::string type() const override { return "ZIP"; }
     bool is_open() const { return m_zip != nullptr; }
 
-    VfsFile read_file(const std::string& path) override;
+    VfsFile read_file(const std::string& path) const override;
     unsigned num_entries() const override;
     std::string get_entry_name(unsigned index) const override;
+    VfsFile read_entry(unsigned index) const override;
 
 private:
     std::string m_path;

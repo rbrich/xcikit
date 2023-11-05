@@ -46,7 +46,7 @@ auto RealDirectoryLoader::load_fs_dir(const fs::path& path) -> std::shared_ptr<V
 }
 
 
-VfsFile RealDirectory::read_file(const std::string& path)
+VfsFile RealDirectory::read_file(const std::string& path) const
 {
     auto full_path = m_dir_path / path;
     log::debug("VfsDirLoader: open file: {}", full_path);
@@ -73,6 +73,13 @@ std::string RealDirectory::get_entry_name(unsigned index) const
 {
     snapshot_entries();
     return m_entries[index].string();
+}
+
+
+VfsFile RealDirectory::read_entry(unsigned index) const
+{
+    snapshot_entries();
+    return read_file(get_entry_name(index));
 }
 
 
@@ -131,7 +138,7 @@ DarArchive::DarArchive(std::string&& path, std::unique_ptr<std::istream>&& strea
 }
 
 
-VfsFile DarArchive::read_file(const std::string& path)
+VfsFile DarArchive::read_file(const std::string& path) const
 {
     // search for the entry
     auto entry_it = std::find_if(m_entries.cbegin(), m_entries.cend(), [&path](auto& entry){
@@ -142,23 +149,7 @@ VfsFile DarArchive::read_file(const std::string& path)
         return {};
     }
 
-    // return a view into mmapped archive
-    log::debug("Vfs: DarArchive: open file: {}", path);
-
-    // Pass self to Buffer deleter, so the archive object lives
-    // at least as long as the buffer.
-    auto* content = new std::byte[entry_it->size];
-    BufferPtr buffer_ptr(new Buffer{content, entry_it->size},
-            [this_ptr = shared_from_this()](Buffer* b){ delete[] b->data(); delete b; });
-
-    m_stream->seekg(entry_it->offset);
-    m_stream->read((char*) buffer_ptr->data(), std::streamsize(buffer_ptr->size()));
-    if (!m_stream) {
-        log::error("Vfs: DarArchive: Not found in archive: {}", path);
-        return {};
-    }
-
-    return VfsFile("", std::move(buffer_ptr));
+    return read_entry(*entry_it);
 }
 
 
@@ -171,6 +162,34 @@ unsigned DarArchive::num_entries() const
 std::string DarArchive::get_entry_name(unsigned index) const
 {
     return m_entries[index].name;
+}
+
+
+VfsFile DarArchive::read_entry(unsigned index) const
+{
+    return read_entry(m_entries[index]);
+}
+
+
+VfsFile DarArchive::read_entry(const IndexEntry& entry) const
+{
+    // return a view into mmapped archive
+    log::debug("Vfs: DarArchive: open file: {}", entry.name);
+
+    // Pass self to Buffer deleter, so the archive object lives
+    // at least as long as the buffer.
+    auto* content = new std::byte[entry.size];
+    BufferPtr buffer_ptr(new Buffer{content, entry.size},
+                         [this_ptr = shared_from_this()](Buffer* b){ delete[] b->data(); delete b; });
+
+    m_stream->seekg(entry.offset);
+    m_stream->read((char*) buffer_ptr->data(), std::streamsize(buffer_ptr->size()));
+    if (!m_stream) {
+        log::error("Vfs: DarArchive: Not found in archive: {}", entry.name);
+        return {};
+    }
+
+    return VfsFile("", std::move(buffer_ptr));
 }
 
 
@@ -265,25 +284,6 @@ static bool check_wad_magic(const char* magic)
     return std::memcmp(magic + 1, "WAD", 3) == 0 && (magic[0] == 'I' || magic[0] == 'P');
 }
 
-static bool is_wad_map_entry(const char* name)
-{
-    // ExMy or MAPxx
-    return (name[0] == 'E' && std::isdigit((int)name[1]) &&
-            name[2] == 'M' && std::isdigit((int)name[3]) && name[4] == 0) ||
-           (std::memcmp(name, "MAP", 3) == 0 &&
-            std::isdigit((int)name[3]) && std::isdigit((int)name[4]) && name[5] == 0);
-}
-
-static bool is_wad_map_subentry(const char* name)
-{
-    return !std::strncmp(name, "THINGS", 8) || !std::strncmp(name, "LINEDEFS", 8) ||
-           !std::strncmp(name, "SIDEDEFS", 8) || !std::strncmp(name, "VERTEXES", 8) ||
-           !std::strncmp(name, "SEGS", 8) || !std::strncmp(name, "SSECTORS", 8) ||
-           !std::strncmp(name, "NODES", 8) || !std::strncmp(name, "SECTORS", 8) ||
-           !std::strncmp(name, "REJECT", 8) || !std::strncmp(name, "BLOCKMAP", 8) ||
-           !std::strncmp(name, "BEHAVIOR", 8);
-}
-
 
 bool WadArchiveLoader::can_load_stream(std::istream& stream)
 {
@@ -325,11 +325,8 @@ WadArchive::WadArchive(std::string&& path, std::unique_ptr<std::istream>&& strea
 }
 
 
-VfsFile WadArchive::read_file(const std::string& path)
+VfsFile WadArchive::read_file(const std::string& path) const
 {
-    if (path == ".wad")
-        return generate_dot_wad();
-
     // search for the entry
     auto entry_it = std::find_if(m_entries.cbegin(), m_entries.cend(), [&path](auto& entry){
         return entry.path() == path;
@@ -339,16 +336,22 @@ VfsFile WadArchive::read_file(const std::string& path)
         return {};
     }
 
-    // return a view into mmapped archive
+    return read_entry(*entry_it);
+}
+
+
+VfsFile WadArchive::read_entry(const IndexEntry& entry) const
+{
+    const auto path = entry.path();
     log::debug("Vfs: WadArchive: open file: {}", path);
 
     // Pass self to Buffer deleter, so the archive object lives
     // at least as long as the buffer.
-    auto* content = new std::byte[entry_it->size];
-    BufferPtr buffer_ptr(new Buffer{content, entry_it->size},
+    auto* content = new std::byte[entry.size];
+    BufferPtr buffer_ptr(new Buffer{content, entry.size},
                          [this_ptr = shared_from_this()](Buffer* b){ delete[] b->data(); delete b; });
 
-    m_stream->seekg(entry_it->filepos);
+    m_stream->seekg(entry.filepos);
     m_stream->read((char*) buffer_ptr->data(), std::streamsize(buffer_ptr->size()));
     if (!m_stream) {
         log::error("Vfs: WadArchive: Not found in archive: {}", path);
@@ -359,44 +362,31 @@ VfsFile WadArchive::read_file(const std::string& path)
 }
 
 
-VfsFile WadArchive::generate_dot_wad()
+std::string WadArchive::type() const
 {
-    log::debug("Vfs: WadArchive: generating .wad");
-
-    std::ostringstream os;
-
-    // first line: IWAD or PWAD
+    // read magic from WAD file
     m_stream->seekg(0);
     std::string magic(4, '\0');
     m_stream->read(magic.data(), magic.size());
-    os << magic << '\n';
-
-    // each entry: <lump name>\t<path>
-    for (const auto& entry : m_entries) {
-        std::string sanitized_name (entry.name, 8);
-        os << sanitized_name.c_str() << '\t' << entry.path() << '\n';
-    }
-    auto data = os.str();
-
-    BufferPtr buffer_ptr(new Buffer{new std::byte[data.size()], data.size()},
-                         [](Buffer* b){ delete[] b->data(); delete b; });
-    std::memcpy(buffer_ptr->data(), data.data(), data.size());
-
-    return VfsFile("", std::move(buffer_ptr));
+    return magic;
 }
 
 
 unsigned WadArchive::num_entries() const
 {
-    return m_entries.size() + 1;  // +1 for .wad (index file)
+    return m_entries.size();
 }
 
 
 std::string WadArchive::get_entry_name(unsigned index) const
 {
-    if (index == 0)
-        return ".wad";
-    return m_entries[index - 1].path();
+    return m_entries[index].path();
+}
+
+
+VfsFile WadArchive::read_entry(unsigned index) const
+{
+    return read_entry(m_entries[index]);
 }
 
 
@@ -435,8 +425,6 @@ bool WadArchive::read_index(size_t size)
     // INDEX (directory)
     m_entries.resize(num_entries);
     m_stream->seekg(index_offset);
-    char subdir[8] = {};
-    std::map<std::string, int> repetition;  // counter for multiple lumps with same name
     for (auto& entry : m_entries) {
         m_stream->read((char*)&entry, 16);
         entry.filepos = le32toh(entry.filepos);
@@ -446,28 +434,6 @@ bool WadArchive::read_index(size_t size)
                        m_path, "directory entry");
             return false;
         }
-        // reset subdir if this entry is not part of a map
-        if (!is_wad_map_subentry(entry.name)) {
-            std::memset(subdir, 0, 8);
-        }
-        // set subdir of this entry
-        std::memcpy(entry.subdir, subdir, 8);
-        // set subdir for following entries, if this entry is map starter
-        if (is_wad_map_entry(entry.name)) {
-            std::memcpy(subdir, entry.name, 8);
-        }
-        // add subdir for repeated names (_1, _2...)
-        int& rep = repetition[entry.path()];
-        if (rep != 0) {
-            const auto len = strlen(entry.subdir);
-            if (len == 0)
-                std::strcpy(entry.subdir, std::to_string(rep).c_str());
-            else if (len < 8) {
-                entry.subdir[len] = '_';
-                std::strncat(entry.subdir, std::to_string(rep).c_str(), 7-len);
-            }
-        }
-        ++rep;
     }
     return true;
 }
@@ -485,16 +451,8 @@ void WadArchive::close_archive()
 std::string WadArchive::IndexEntry::path() const
 {
     std::string sanitized_name (name, 8);
-    std::string sanitized_subdir (subdir, 8);
     sanitized_name.resize(strlen(sanitized_name.c_str()));
-    sanitized_subdir.resize(strlen(sanitized_subdir.c_str()));
-    if (sanitized_subdir.empty())
-        return sanitized_name;
-    std::string out = "_";  // prefix to avoid collision with the lump name when extracting
-    out += sanitized_subdir;
-    out += '/';
-    out += sanitized_name;
-    return out;
+    return sanitized_name;
 }
 
 
@@ -664,7 +622,7 @@ ZipArchive::~ZipArchive()
 }
 
 
-VfsFile ZipArchive::read_file(const std::string& path)
+VfsFile ZipArchive::read_file(const std::string& path) const
 {
     if (!is_open()) {
         log::error("ZipArchive: Cannot read - archive is not open");
@@ -725,6 +683,13 @@ std::string ZipArchive::get_entry_name(unsigned index) const
 {
     return zip_get_name((zip_t*) m_zip, index, 0);
 }
+
+
+VfsFile ZipArchive::read_entry(unsigned index) const
+{
+    return read_file(get_entry_name(index));
+}
+
 
 
 // -------------------------------------------------------------------------------------------------
