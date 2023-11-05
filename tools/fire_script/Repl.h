@@ -11,7 +11,7 @@
 #include "Options.h"
 
 #include <xci/script/Error.h>
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 
 #include <string>
 #include <string_view>

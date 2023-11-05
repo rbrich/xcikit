@@ -7,7 +7,8 @@
 #ifndef XCI_CORE_VFS_H
 #define XCI_CORE_VFS_H
 
-#include "Buffer.h"
+#include <xci/core/Buffer.h>
+
 #include <string>
 #include <vector>
 #include <memory>

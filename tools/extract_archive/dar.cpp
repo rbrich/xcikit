@@ -7,7 +7,7 @@
 /// DAR archive extractor (dar) command line tool
 /// Also extracts WAD and ZIP (all formats supported by Vfs).
 
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 #include <xci/core/ArgParser.h>
 #include <xci/core/TermCtl.h>
 #include <xci/core/string.h>

@@ -12,7 +12,7 @@
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Sprites.h>
 #include <xci/graphics/shape/Rectangle.h>
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 #include <xci/config.h>
 #include <cstdlib>
 

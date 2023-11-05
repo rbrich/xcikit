@@ -5,7 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Vfs.h"
-#include "file.h"
+#include <xci/core/file.h>
 #include <xci/core/log.h>
 #include <xci/core/string.h>
 #include <xci/core/sys.h>
@@ -14,8 +14,6 @@
 
 #include <zip.h>
 
-#include <map>
-#include <sstream>
 #include <algorithm>
 #include <cstddef>  // byte
 #include <fcntl.h>

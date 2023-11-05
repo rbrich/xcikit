@@ -9,7 +9,7 @@
 #include <xci/widgets/FpsDisplay.h>
 #include <xci/text/Text.h>
 #include <xci/graphics/shape/Ellipse.h>
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 #include <xci/config.h>
 
 #include <cstdlib>

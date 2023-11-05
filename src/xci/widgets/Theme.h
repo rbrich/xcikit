@@ -9,7 +9,7 @@
 
 #include <xci/text/Font.h>
 #include <xci/graphics/Color.h>
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 #include <array>
 
 namespace xci::graphics { class Renderer; }

@@ -1,7 +1,7 @@
 // demo_glyph_cluster.cpp created on 2019-12-16 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -10,7 +10,7 @@
 #include <xci/text/GlyphCluster.h>
 #include <xci/graphics/Renderer.h>
 #include <xci/graphics/Window.h>
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 #include <xci/core/FpsCounter.h>
 #include <xci/config.h>
 #include <random>

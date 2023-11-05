@@ -12,7 +12,7 @@
 #include <xci/graphics/Texture.h>
 #include <xci/core/mixin.h>
 #include <xci/geometry/Vec2.h>
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 
 #include <vector>
 #include <map>
