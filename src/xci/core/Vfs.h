@@ -372,7 +372,7 @@ public:
     /// Supported archive formats:
     /// - DAR - see `tools/pack_assets.py`
     /// - WAD - DOOM 1 format
-    /// - ZIP - when linked with libzip (in cmake: XCI_WITH_ZIP)
+    /// - ZIP - zip format via libzip
     ///
     /// \param fs_path          FS path to a directory or archive.
     /// \param target_path      The target path inside the VFS

@@ -23,7 +23,7 @@ if (@XCI_TEXT@)
     find_dependency(harfbuzz)
 endif()
 
-if (@XCI_WITH_ZIP@)
+if (@XCI_VFS@)
     find_dependency(libzip)
 endif()
 

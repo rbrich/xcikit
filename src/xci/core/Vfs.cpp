@@ -12,9 +12,7 @@
 #include <xci/compat/endian.h>
 #include <xci/compat/macros.h>
 
-#ifdef XCI_WITH_ZIP
 #include <zip.h>
-#endif
 
 #include <map>
 #include <sstream>
@@ -485,7 +483,7 @@ ZipArchive::ZipArchive(std::string&& path, std::unique_ptr<std::istream>&& strea
     : m_path(std::move(path)), m_stream(std::move(stream))
 {
     TRACE("ZipArchive: Opening archive: {}", m_path);
-#ifdef XCI_WITH_ZIP
+
     // obtain file size
     m_stream->seekg(0, std::ios_base::end);
     m_size = size_t(m_stream->tellg());
@@ -598,25 +596,15 @@ ZipArchive::ZipArchive(std::string&& path, std::unique_ptr<std::istream>&& strea
     }
 
     m_zip = f;
-#else
-    log::error("ZipArchive: Not supported (not compiled with XCI_WITH_ZIP)");
-    (void) m_size;
-    (void) m_last_zip_err;
-    (void) m_last_sys_err;
-#endif
 }
 
 
 ZipArchive::~ZipArchive()
 {
-#ifdef XCI_WITH_ZIP
     if (m_zip != nullptr) {
         TRACE("ZipArchive: Closing archive: {}", m_path);
         zip_close((zip_t*) m_zip);
     }
-#else
-    (void) 0;
-#endif
 }
 
 
@@ -627,7 +615,6 @@ VfsFile ZipArchive::read_file(const std::string& path) const
         return {};
     }
 
-#ifdef XCI_WITH_ZIP
     struct zip_stat st = {};
     zip_stat_init(&st);
     if (zip_stat((zip_t*) m_zip, path.c_str(), ZIP_FL_ENC_RAW, &st) == -1) {
@@ -663,11 +650,6 @@ VfsFile ZipArchive::read_file(const std::string& path) const
     }
 
     return VfsFile("", std::move(buffer_ptr));
-#else
-    XCI_UNUSED path;
-    log::error("ZipArchive: Not supported (not compiled with XCI_WITH_ZIP)");
-    return {};
-#endif
 }
 
 
