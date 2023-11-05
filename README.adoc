@@ -204,7 +204,7 @@ Tools:
 Libraries:
 
 - PEGTL (xci-core)
-- libzip (xci-core-vfs)
+- libzip (xci-vfs)
 - FreeType (xci-text)
 - GLFW, Vulkan (xci-graphics)
 - https://github.com/google/shaderc[glslc] or
