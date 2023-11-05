@@ -16,6 +16,8 @@
 #include <zip.h>
 #endif
 
+#include <map>
+#include <sstream>
 #include <algorithm>
 #include <cstddef>  // byte
 #include <fcntl.h>
@@ -325,6 +327,9 @@ WadArchive::WadArchive(std::string&& path, std::unique_ptr<std::istream>&& strea
 
 VfsFile WadArchive::read_file(const std::string& path)
 {
+    if (path == ".wad")
+        return generate_dot_wad();
+
     // search for the entry
     auto entry_it = std::find_if(m_entries.cbegin(), m_entries.cend(), [&path](auto& entry){
         return entry.path() == path;
@@ -354,15 +359,44 @@ VfsFile WadArchive::read_file(const std::string& path)
 }
 
 
+VfsFile WadArchive::generate_dot_wad()
+{
+    log::debug("Vfs: WadArchive: generating .wad");
+
+    std::ostringstream os;
+
+    // first line: IWAD or PWAD
+    m_stream->seekg(0);
+    std::string magic(4, '\0');
+    m_stream->read(magic.data(), magic.size());
+    os << magic << '\n';
+
+    // each entry: <lump name>\t<path>
+    for (const auto& entry : m_entries) {
+        std::string sanitized_name (entry.name, 8);
+        os << sanitized_name.c_str() << '\t' << entry.path() << '\n';
+    }
+    auto data = os.str();
+
+    BufferPtr buffer_ptr(new Buffer{new std::byte[data.size()], data.size()},
+                         [](Buffer* b){ delete[] b->data(); delete b; });
+    std::memcpy(buffer_ptr->data(), data.data(), data.size());
+
+    return VfsFile("", std::move(buffer_ptr));
+}
+
+
 unsigned WadArchive::num_entries() const
 {
-    return m_entries.size();
+    return m_entries.size() + 1;  // +1 for .wad (index file)
 }
 
 
 std::string WadArchive::get_entry_name(unsigned index) const
 {
-    return m_entries[index].path();
+    if (index == 0)
+        return ".wad";
+    return m_entries[index - 1].path();
 }
 
 
@@ -402,6 +436,7 @@ bool WadArchive::read_index(size_t size)
     m_entries.resize(num_entries);
     m_stream->seekg(index_offset);
     char subdir[8] = {};
+    std::map<std::string, int> repetition;  // counter for multiple lumps with same name
     for (auto& entry : m_entries) {
         m_stream->read((char*)&entry, 16);
         entry.filepos = le32toh(entry.filepos);
@@ -421,6 +456,18 @@ bool WadArchive::read_index(size_t size)
         if (is_wad_map_entry(entry.name)) {
             std::memcpy(subdir, entry.name, 8);
         }
+        // add subdir for repeated names (_1, _2...)
+        int& rep = repetition[entry.path()];
+        if (rep != 0) {
+            const auto len = strlen(entry.subdir);
+            if (len == 0)
+                std::strcpy(entry.subdir, std::to_string(rep).c_str());
+            else if (len < 8) {
+                entry.subdir[len] = '_';
+                std::strncat(entry.subdir, std::to_string(rep).c_str(), 7-len);
+            }
+        }
+        ++rep;
     }
     return true;
 }

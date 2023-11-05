@@ -229,8 +229,15 @@ public:
 /// Same as DarArchive, this has no external dependency and very simple implementation.
 /// Unlike DarArchive, WAD depends on "lump" (archived file) order, lump names can repeat
 /// and they are limited to 8 chars.
-/// This VFS adapter maps the original lump names to virtual file names:
-/// * TODO
+///
+/// This VFS adapter maps the original lump names to virtual paths:
+/// * "<lump name>" for normal entries
+/// * "_1/<lump name>" for repeated lump names (_1 is the second occurrence, increments for each repetition)
+/// * "_MAP01/<lump name>" for map lumps
+/// These virtual names has to be used in `get_file`.
+/// Alternatively, a program may use directory listing and process the lumps in order.
+/// The filename (without subdir) always matches the original lump name.
+///
 /// Reference: https://doomwiki.org/wiki/WAD
 class WadArchive: public VfsDirectory {
     friend class WadArchiveLoader;
@@ -247,6 +254,7 @@ public:
 private:
     bool read_index(size_t size);
     void close_archive();
+    VfsFile generate_dot_wad();
 
     std::string m_path;
     std::unique_ptr<std::istream> m_stream;
@@ -258,7 +266,8 @@ private:
         char name[8];  // not zero-terminated, use path() instead
         char subdir[8];  // virtual subdir for the entry, added by loader heuristic
 
-        // virtual path of the entry
+        // Virtual path of the entry. The original lump name is kept as basename,
+        // but a subdirectory may be added to uniquely distinguish the entry.
         std::string path() const;
     };
     std::vector<IndexEntry> m_entries;
