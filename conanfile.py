@@ -26,6 +26,7 @@ class XcikitConan(ConanFile):
         "fPIC": [True, False],
 
         # Optional components:
+        "vfs": [True, False],
         "data": [True, False],
         "script": [True, False],
         "graphics": [True, False],
@@ -39,6 +40,7 @@ class XcikitConan(ConanFile):
         "benchmarks": [True, False],
 
         # Individual tools ("tools" must be enabled too)
+        "dar_tool": [True, False],
         "dati_tool": [True, False],
         "ff_tool": [True, False],
         "fire_tool": [True, False],
@@ -48,6 +50,7 @@ class XcikitConan(ConanFile):
         # System dependencies (instead of Conan):
         "system_fmt": [True, False],
         "system_zlib": [True, False],
+        "system_libzip": [True, False],
         "system_glfw": [True, False],
         "system_vulkan": [True, False],
         "system_spirv-cross": [True, False],
@@ -70,6 +73,7 @@ class XcikitConan(ConanFile):
         "fPIC": True,
 
         # Optional components:
+        "vfs": True,
         "data": True,
         "script": True,
         "graphics": True,
@@ -83,6 +87,7 @@ class XcikitConan(ConanFile):
         "benchmarks": True,
 
         # Individual tools
+        "dar_tool": True,
         "dati_tool": True,
         "ff_tool": True,
         "fire_tool": True,
@@ -92,6 +97,7 @@ class XcikitConan(ConanFile):
         # System dependencies (instead of Conan):
         "system_fmt": False,
         "system_zlib": False,
+        "system_libzip": False,
         "system_glfw": False,
         "system_vulkan": False,
         "system_spirv-cross": False,
@@ -107,6 +113,11 @@ class XcikitConan(ConanFile):
         "with_hyperscan": False,
 
         # Disable unnecessary transient deps by default.
+        "libzip/*:with_bzip2": False,
+        "libzip/*:with_lzma": False,
+        "libzip/*:with_zstd": False,
+        "libzip/*:crypto": False,
+        "libzip/*:tools": False,
         "freetype/*:with_bzip2": False,
         "freetype/*:with_brotli": False,
         "harfbuzz/*:with_glib": False,
@@ -176,12 +187,17 @@ class XcikitConan(ConanFile):
         if options['script']:
             del self.options.data
             options['data'] = True
+        if options['script'] or options['graphics']:
+            del self.options.vfs
+            options['vfs'] = True
         if not options['tools']:
+            del self.options.dar_tool
             del self.options.dati_tool
             del self.options.ff_tool
             del self.options.fire_tool
             del self.options.shed_tool
             del self.options.tc_tool
+            options['dar_tool'] = False
             options['dati_tool'] = False
             options['ff_tool'] = False
             options['fire_tool'] = False
@@ -197,6 +213,9 @@ class XcikitConan(ConanFile):
             if not options['data']:
                 del self.options.dati_tool
                 options['dati_tool'] = False
+            if not options['vfs']:
+                del self.options.dar_tool
+                options['dar_tool'] = False
             if not options['with_hyperscan']:
                 del self.options.ff_tool
                 options['ff_tool'] = False
@@ -238,6 +257,7 @@ class XcikitConan(ConanFile):
         defs["BUILD_EXAMPLES"] = self.options.examples
         defs["BUILD_TESTS"] = self.options.tests
         defs["BUILD_BENCHMARKS"] = self.options.benchmarks
+        defs["BUILD_DAR_TOOL"] = self.options.get_safe('dar_tool', True)
         defs["BUILD_DATI_TOOL"] = self.options.get_safe('dati_tool', True)
         defs["BUILD_FF_TOOL"] = self.options.get_safe('ff_tool', True)
         defs["BUILD_FIRE_TOOL"] = self.options.get_safe('fire_tool', True)
@@ -281,7 +301,7 @@ class XcikitConan(ConanFile):
             component.requires += [conan_dep if conan_dep is not None else cmake_dep]
 
     def package_info(self):
-        for name in ('core', 'data', 'script', 'graphics', 'text', 'widgets'):
+        for name in ('core', 'vfs', 'data', 'script', 'graphics', 'text', 'widgets'):
             if not self.options.get_safe(name, True):
                 continue  # component is disabled
             component = self.cpp_info.components["xci-" + name]
@@ -294,6 +314,8 @@ class XcikitConan(ConanFile):
                 self._add_dep('system_magic_enum', component, "magic_enum::magic_enum")
                 self._add_dep('system_range_v3', component, "range-v3::range-v3")
                 self._add_dep('system_pegtl', component, "taocpp::pegtl", "taocpp-pegtl::taocpp-pegtl")
+            if name == 'vfs':
+                self._add_dep('system_libzip', component, "libzip::zip")
             if name == 'data':
                 self._add_dep('system_zlib', component, "zlib::zlib")
                 self._add_dep('system_boost', component, "pfr::pfr")
