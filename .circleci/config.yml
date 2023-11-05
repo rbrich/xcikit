@@ -111,7 +111,7 @@ workflows:
       - build:
           name: Emscripten
           image: emscripten
-          build-args: "--emscripten core data script"
+          build-args: "--emscripten core vfs data script"
       - conan_package:
           name: Ubuntu 22.04 - Clang 14 - Conan package
           image: ubuntu

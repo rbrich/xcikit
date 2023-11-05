@@ -315,7 +315,7 @@ class XcikitConan(ConanFile):
                 self._add_dep('system_range_v3', component, "range-v3::range-v3")
                 self._add_dep('system_pegtl', component, "taocpp::pegtl", "taocpp-pegtl::taocpp-pegtl")
             if name == 'vfs':
-                self._add_dep('system_libzip', component, "libzip::zip")
+                self._add_dep('system_libzip', component, "libzip::zip", "libzip::libzip")
             if name == 'data':
                 self._add_dep('system_zlib', component, "zlib::zlib")
                 self._add_dep('system_boost', component, "pfr::pfr")

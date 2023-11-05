@@ -27,7 +27,7 @@ print_usage()
     echo "                  [--debug|--minsize] [--emscripten] [--unity] [--tidy] [--update]"
     echo
     echo "Where: PHASE = clean | deps | config | build | test | install | package | graphviz (default: deps..install)"
-    echo "       COMPONENT = core | data | script | graphics | text | widgets (default: all)"
+    echo "       COMPONENT = core | vfs | data | script | graphics | text | widgets (default: all)"
     echo "       PART = libs | tools | examples | tests | benchmarks (default: all, 'libs' are implicit)"
     echo "       TOOL = dati | ff | fire | shed | tc (default: all, narrows 'tools')"
     echo
@@ -107,7 +107,7 @@ while [[ $# -gt 0 ]] ; do
         clean | deps | config | build | test | install | package | graphviz )
             enable_phase "$1"
             shift 1 ;;
-        core | data | script | graphics | text | widgets )
+        core | vfs | data | script | graphics | text | widgets )
             enable_component "$1"
             shift 1 ;;
         libs | tools | examples | tests | benchmarks )
@@ -236,7 +236,7 @@ PACKAGE_FILENAME="xcikit-${VERSION}-${PLATFORM}-${ARCH}"
 
 CONAN_ARGS+=("-pr=${CONAN_PROFILE}" "-pr:b=${CONAN_PROFILE}")
 
-COMPONENTS=(data script graphics text widgets)
+COMPONENTS=(vfs data script graphics text widgets)
 if [[ -z "$component_default" ]]; then
     # Disable components that were not selected
     for name in "${COMPONENTS[@]}" ; do
