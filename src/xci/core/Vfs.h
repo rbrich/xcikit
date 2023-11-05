@@ -1,7 +1,7 @@
 // Vfs.h created on 2018-09-01 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2020 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_VFS_H
@@ -105,6 +105,9 @@ public:
 namespace vfs {
 
 
+// -------------------------------------------------------------------------------------------------
+// Real directory
+
 /// Lookup regular files in real directory, which is mapped to VFS path
 class RealDirectoryLoader: public VfsLoader {
 public:
@@ -124,6 +127,9 @@ private:
     fs::path m_dir_path;
 };
 
+
+// -------------------------------------------------------------------------------------------------
+// DAR archive
 
 /// Lookup files in DAR archive, which is mapped to VFS path
 class DarArchiveLoader: public VfsLoader {
@@ -163,6 +169,57 @@ private:
 };
 
 
+// -------------------------------------------------------------------------------------------------
+// WAD file
+
+/// Lookup files in WAD file (DOOM 1 format), which is mapped to VFS path
+class WadArchiveLoader: public VfsLoader {
+public:
+    const char* name() const override { return "WAD file"; }
+    bool can_load_stream(std::istream& stream) override;
+    auto load_stream(std::string&& path, std::unique_ptr<std::istream>&& stream) -> std::shared_ptr<VfsDirectory> override;
+};
+
+/// Lookup files in WAD file, which is mapped to VFS path
+/// WAD is DOOM 1 uncompressed data file format, see `tools/pack_assets.py`
+/// Same as DarArchive, this has no external dependency and very simple implementation.
+/// Unlike DarArchive, WAD depends on "lump" (archived file) order, lump names can repeat
+/// and they are limited to 8 chars.
+/// This VFS adapter maps the original lump names to virtual file names:
+/// * TODO
+/// Reference: https://doomwiki.org/wiki/WAD
+class WadArchive: public VfsDirectory {
+    friend class WadArchiveLoader;
+public:
+    explicit WadArchive(std::string&& path, std::unique_ptr<std::istream>&& stream);
+    ~WadArchive() override { close_archive(); }
+
+    bool is_open() const { return bool(m_stream); }
+
+    VfsFile read_file(const std::string& path) override;
+
+private:
+    static bool check_magic(const char* magic);
+    bool read_index(size_t size);
+    void close_archive();
+
+    std::string m_path;
+    std::unique_ptr<std::istream> m_stream;
+
+    // index:
+    struct IndexEntry {
+        uint32_t filepos;
+        uint32_t size;
+        char name[8];
+    };
+    static_assert(sizeof(IndexEntry) == 16);
+    std::vector<IndexEntry> m_entries;
+};
+
+
+// -------------------------------------------------------------------------------------------------
+// ZIP archive
+
 /// Lookup files in ZIP archive, which is mapped to VFS path
 class ZipArchiveLoader: public VfsLoader {
 public:
@@ -190,6 +247,8 @@ private:
     int m_last_sys_err = 0;
 };
 
+
+// -------------------------------------------------------------------------------------------------
 
 }  // namespace vfs
 
@@ -232,10 +291,12 @@ public:
     /// The path can point to an archive instead of a directory.
     /// Supported archive formats:
     /// - DAR - see `tools/pack_assets.py`
+    /// - WAD - DOOM 1 format
     /// - ZIP - when linked with libzip (in cmake: XCI_WITH_ZIP)
     ///
     /// \param fs_path          FS path to a directory or archive.
     /// \param target_path      The target path inside the VFS
+    /// \returns true if successfully mounted (archive format identified and supported)
     bool mount(const fs::path& fs_path, std::string target_path="");
 
     /// Same as above, but instead of mounting real directory or archive file,
