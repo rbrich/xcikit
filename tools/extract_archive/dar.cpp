@@ -22,6 +22,25 @@ using namespace xci::core::argparser;
 namespace fs = std::filesystem;
 
 
+void extract_entry(const Vfs& vfs, const std::string& entry, fs::path output_path)
+{
+    const auto entry_path = output_path / entry;
+    TermCtl& term = TermCtl::stdout_instance();
+    term.print("Extracting file\t{fg:yellow}{}{t:normal} to {}\n", entry, entry_path);
+    auto f = vfs.read_file(entry);
+    auto content = f.content();
+    if (content) {
+        fs::create_directories(entry_path.parent_path());
+        std::ofstream of(entry_path);
+        if (of) {
+            of.write((const char*) content->data(), content->size());
+        } else {
+            log::error("Cannot open target file {}", entry_path);
+        }
+    }
+}
+
+
 int main(int argc, const char* argv[])
 {
     std::vector<const char*> files;
@@ -56,7 +75,9 @@ int main(int argc, const char* argv[])
         }
 
         if (list_entries) {
-            // TODO
+            for (const auto& name : *vfs.mounts().back().vfs_dir) {
+                term.print("{fg:yellow}{}{t:normal}\n", name);
+            }
             continue;
         }
 
@@ -69,20 +90,12 @@ int main(int argc, const char* argv[])
                 output_path.replace_extension();
         }
 
-        for (const auto entry : entries) {
-            term.print("Extracting file\t{fg:yellow}{}{t:normal}\n", entry);
-            auto f = vfs.read_file(entry);
-            auto content = f.content();
-            if (content) {
-                const auto entry_path = output_path / entry;
-                fs::create_directories(entry_path.parent_path());
-                std::ofstream of(entry_path);
-                if (of) {
-                    of.write((const char*) content->data(), content->size());
-                } else {
-                    log::error("Cannot open target file {}", entry_path);
-                }
-            }
+        if (entries.empty()) {
+            for (const auto& name : *vfs.mounts().back().vfs_dir)
+                extract_entry(vfs, name, output_path);
+        } else {
+            for (const auto entry : entries)
+                extract_entry(vfs, entry, output_path);
         }
     }
 

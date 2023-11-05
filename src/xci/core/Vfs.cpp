@@ -60,6 +60,30 @@ VfsFile RealDirectory::read_file(const std::string& path)
 }
 
 
+unsigned RealDirectory::num_entries() const
+{
+    snapshot_entries();
+    return m_entries.size();
+}
+
+
+std::string RealDirectory::get_entry_name(unsigned index) const
+{
+    snapshot_entries();
+    return m_entries[index].string();
+}
+
+
+void RealDirectory::snapshot_entries() const
+{
+    if (!m_entries.empty())
+        return;
+    for (const auto& entry : fs::recursive_directory_iterator{m_dir_path}) {
+        m_entries.push_back(entry.path());
+    }
+}
+
+
 // -------------------------------------------------------------------------------------------------
 // DAR archive
 
@@ -133,6 +157,18 @@ VfsFile DarArchive::read_file(const std::string& path)
     }
 
     return VfsFile("", std::move(buffer_ptr));
+}
+
+
+unsigned DarArchive::num_entries() const
+{
+    return m_entries.size();
+}
+
+
+std::string DarArchive::get_entry_name(unsigned index) const
+{
+    return m_entries[index].name;
 }
 
 
@@ -267,7 +303,7 @@ VfsFile WadArchive::read_file(const std::string& path)
 {
     // search for the entry
     auto entry_it = std::find_if(m_entries.cbegin(), m_entries.cend(), [&path](auto& entry){
-        return entry.name == path;
+        return entry.path() == path;
     });
     if (entry_it == m_entries.cend()) {
         log::error("Vfs: WadArchive: Not found in archive: {}", path);
@@ -291,6 +327,18 @@ VfsFile WadArchive::read_file(const std::string& path)
     }
 
     return VfsFile("", std::move(buffer_ptr));
+}
+
+
+unsigned WadArchive::num_entries() const
+{
+    return m_entries.size();
+}
+
+
+std::string WadArchive::get_entry_name(unsigned index) const
+{
+    return m_entries[index].path();
 }
 
 
@@ -355,6 +403,15 @@ void WadArchive::close_archive()
         TRACE("Closing archive: {}", m_path);
         m_stream.reset();
     }
+}
+
+
+std::string WadArchive::IndexEntry::path() const
+{
+    std::string sanitized_name (name, 8);
+    while (!sanitized_name.empty() && sanitized_name.back() == 0)
+        sanitized_name.pop_back();
+    return sanitized_name;
 }
 
 
@@ -572,6 +629,18 @@ VfsFile ZipArchive::read_file(const std::string& path)
     log::error("ZipArchive: Not supported (not compiled with XCI_WITH_ZIP)");
     return {};
 #endif
+}
+
+
+unsigned ZipArchive::num_entries() const
+{
+    return zip_get_num_entries((zip_t*) m_zip, 0);
+}
+
+
+std::string ZipArchive::get_entry_name(unsigned index) const
+{
+    return zip_get_name((zip_t*) m_zip, index, 0);
 }
 
 

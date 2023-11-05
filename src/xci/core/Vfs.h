@@ -65,6 +65,40 @@ public:
     virtual ~VfsDirectory() = default;
 
     virtual VfsFile read_file(const std::string& path) = 0;
+
+    virtual unsigned num_entries() const = 0;
+    virtual std::string get_entry_name(unsigned index) const = 0;
+
+    class const_iterator {
+        friend VfsDirectory;
+    public:
+        using difference_type = std::ptrdiff_t;
+        using value_type = std::string;
+        using iterator_category = std::forward_iterator_tag;
+
+        bool operator==(const const_iterator& rhs) const { return &m_dir == &rhs.m_dir && m_index == rhs.m_index; }
+        bool operator!=(const const_iterator& rhs) const { return &m_dir != &rhs.m_dir || m_index != rhs.m_index; }
+
+        const_iterator& operator++() {
+            ++m_index;
+            if (m_index >= m_dir.num_entries())
+                m_index = ~0u;
+            return *this;
+        }
+        const_iterator operator++(int) { auto v = *this; ++*this; return v; }
+
+        value_type operator*() const { return m_dir.get_entry_name(m_index); }
+
+    private:
+        explicit const_iterator(const VfsDirectory& dir, unsigned index = ~0u)
+                : m_dir(dir), m_index(index) {}
+
+        const VfsDirectory& m_dir;
+        unsigned m_index;
+    };
+
+    const_iterator begin() const    { return const_iterator{*this, 0u}; }
+    const_iterator end() const      { return const_iterator{*this}; }
 };
 
 
@@ -123,8 +157,16 @@ public:
 
     VfsFile read_file(const std::string& path) override;
 
+    // Calling any of these methods creates a snapshot of the directory,
+    // that is used by subsequent calls. Listing live directory would be fragile.
+    unsigned num_entries() const override;
+    std::string get_entry_name(unsigned index) const override;
+
 private:
+    void snapshot_entries() const;
+
     fs::path m_dir_path;
+    mutable std::vector<fs::path> m_entries;  // snapshot of the directory for listing
 };
 
 
@@ -150,6 +192,8 @@ public:
     bool is_open() const { return bool(m_stream); }
 
     VfsFile read_file(const std::string& path) override;
+    unsigned num_entries() const override;
+    std::string get_entry_name(unsigned index) const override;
 
 private:
     bool read_index(size_t size);
@@ -197,6 +241,8 @@ public:
     bool is_open() const { return bool(m_stream); }
 
     VfsFile read_file(const std::string& path) override;
+    unsigned num_entries() const override;
+    std::string get_entry_name(unsigned index) const override;
 
 private:
     static bool check_magic(const char* magic);
@@ -210,7 +256,10 @@ private:
     struct IndexEntry {
         uint32_t filepos;
         uint32_t size;
-        char name[8];
+        char name[8];  // not zero-terminated, use path() instead
+
+        // virtual path of the entry
+        std::string path() const;
     };
     static_assert(sizeof(IndexEntry) == 16);
     std::vector<IndexEntry> m_entries;
@@ -237,6 +286,8 @@ public:
     bool is_open() const { return m_zip != nullptr; }
 
     VfsFile read_file(const std::string& path) override;
+    unsigned num_entries() const override;
+    std::string get_entry_name(unsigned index) const override;
 
 private:
     std::string m_path;
@@ -305,14 +356,17 @@ public:
 
     VfsFile read_file(std::string path) const;
 
-private:
-    // Registered loaders
-    std::vector<std::unique_ptr<VfsLoader>> m_loaders;
-    // Mounted virtual directories
+    // FIXME: wrap to replace shared_ptr by ref
     struct MountedDir {
         std::string path;  // mounted path
         std::shared_ptr<VfsDirectory> vfs_dir;
     };
+    const std::vector<MountedDir>& mounts() const { return m_mounted_dir; }
+
+private:
+    // Registered loaders
+    std::vector<std::unique_ptr<VfsLoader>> m_loaders;
+    // Mounted virtual directories
     std::vector<MountedDir> m_mounted_dir;
 };
 
