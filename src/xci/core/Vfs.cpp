@@ -574,12 +574,10 @@ ZipArchive::ZipArchive(std::string&& path, std::unique_ptr<std::istream>&& strea
                             return -1;
                         }
                         return sp->tellg();
+                    case ZIP_SOURCE_FREE:
+                        return 0;
                     case ZIP_SOURCE_SUPPORTS:
-                        return zip_source_make_command_bitmap(
-                                ZIP_SOURCE_OPEN, ZIP_SOURCE_READ, ZIP_SOURCE_CLOSE,
-                                ZIP_SOURCE_STAT, ZIP_SOURCE_ERROR,
-                                ZIP_SOURCE_SEEK, ZIP_SOURCE_TELL, ZIP_SOURCE_SUPPORTS,
-                                -1);
+                        return ZIP_SOURCE_SUPPORTS_SEEKABLE;
                     default:
                         self->m_last_zip_err = ZIP_ER_OPNOTSUPP;
                         return -1;
