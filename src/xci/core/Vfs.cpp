@@ -195,7 +195,7 @@ bool DarArchive::read_index(size_t size)
 {
     // HEADER: ID
     std::array<char, c_dar_magic.size()> magic;
-    m_stream->read(magic.data(), magic.size());
+    m_stream->read(magic.data(), std::streamsize(magic.size()));
     if (!m_stream || magic != c_dar_magic) {
         log::error("Vfs: DarArchive: Corrupted archive: {} ({}).",
                 m_path, "ID");
@@ -365,7 +365,7 @@ std::string WadArchive::type() const
     // read magic from WAD file
     m_stream->seekg(0);
     std::string magic(4, '\0');
-    m_stream->read(magic.data(), magic.size());
+    m_stream->read(magic.data(), std::streamsize(magic.size()));
     return magic;
 }
 
@@ -392,7 +392,7 @@ bool WadArchive::read_index(size_t size)
 {
     // HEADER: identification
     std::array<char, 4> magic;
-    m_stream->read(magic.data(), magic.size());
+    m_stream->read(magic.data(), std::streamsize(magic.size()));
     if (!m_stream || !check_wad_magic(magic.data())) {
         log::error("Vfs: WadArchive: Corrupted archive: {} ({}).",
                    m_path, "identification");
@@ -632,7 +632,7 @@ VfsFile ZipArchive::read_file(const std::string& path) const
     }
 
     auto* data = new std::byte[st.size];
-    BufferPtr buffer_ptr(new Buffer{data, st.size},
+    BufferPtr buffer_ptr(new Buffer{data, size_t(st.size)},
             [](Buffer* b){ delete[] b->data(); delete b; });
 
     zip_file* f = zip_fopen_index((zip_t*) m_zip, st.index, 0);

@@ -23,7 +23,7 @@ using namespace xci::core::argparser;
 namespace fs = std::filesystem;
 
 
-static void extract_entry(const std::string& name, const VfsFile& file, fs::path output_path)
+static void extract_entry(const std::string& name, const VfsFile& file, const fs::path& output_path)
 {
     const auto entry_path = output_path / name;
     TermCtl& term = TermCtl::stdout_instance();
@@ -37,7 +37,7 @@ static void extract_entry(const std::string& name, const VfsFile& file, fs::path
         }
         std::ofstream of(entry_path);
         if (of) {
-            of.write((const char*) content->data(), content->size());
+            of.write((const char*) content->data(), (std::streamsize) content->size());
         } else {
             log::error("Cannot open target file {}", entry_path);
         }
@@ -70,7 +70,7 @@ static bool is_wad_map_subentry(const std::string& name)
 /// * "_1/<lump name>" for repeated lump names (_1 is the second occurrence, increments for each repetition)
 /// * "_MAP01/<lump name>" for map lumps
 /// The filename (without subdir) always matches the original lump name.
-void extract_wad(VfsDirectory& vfs_dir, fs::path output_path)
+void extract_wad(VfsDirectory& vfs_dir, const fs::path& output_path)
 {
     if (fs::exists(output_path / ".wad")) {
         log::warning("Not overwriting existing .wad at {}", output_path);
