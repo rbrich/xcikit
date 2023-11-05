@@ -45,7 +45,7 @@ target_include_directories(xci-graphics
 target_link_libraries(xci-graphics
     PUBLIC
         xci-core
-        xci-core-vfs
+        xci-vfs
         ${CMAKE_DL_LIBS}
         Vulkan::Vulkan
     PRIVATE

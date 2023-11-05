@@ -43,15 +43,11 @@ bool Shader::load_from_vfs(const Vfs& vfs, const std::string& vertex, const std:
 {
     auto vert_file = vfs.read_file(vertex);
     auto frag_file = vfs.read_file(fragment);
-    if (vert_file.is_real_file() && frag_file.is_real_file()) {
-        return load_from_file(vert_file.path(), frag_file.path());
-    } else {
-        auto vert_data = vert_file.content();
-        auto frag_data = frag_file.content();
-        return load_from_memory(
-            reinterpret_cast<const char*>(vert_data->data()), static_cast<int>(vert_data->size()),
-            reinterpret_cast<const char*>(frag_data->data()), static_cast<int>(frag_data->size()));
-    }
+    auto vert_data = vert_file.content();
+    auto frag_data = frag_file.content();
+    return load_from_memory(
+        reinterpret_cast<const char*>(vert_data->data()), static_cast<int>(vert_data->size()),
+        reinterpret_cast<const char*>(frag_data->data()), static_cast<int>(frag_data->size()));
 }
 
 

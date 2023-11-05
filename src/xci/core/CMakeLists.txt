@@ -115,23 +115,22 @@ if (BUILD_FRAMEWORKS)
 endif()
 
 
-# --------------------- #
-# Library: xci-core-vfs #
-# --------------------- #
+# ---------------- #
+# Library: xci-vfs #
+# ---------------- #
 
-add_library(xci-core-vfs Vfs.cpp)
-add_library(xcikit::xci-core-vfs ALIAS xci-core-vfs)
-target_precompile_headers(xci-core-vfs REUSE_FROM xci-core)
-target_link_libraries(xci-core-vfs PUBLIC xci-core)
-if (BUILD_SHARED_LIBS)
-    set_target_properties(xci-core-vfs PROPERTIES CXX_VISIBILITY_PRESET default)
-endif()
+if (XCI_VFS)
+    add_library(xci-vfs Vfs.cpp)
+    add_library(xcikit::xci-vfs ALIAS xci-vfs)
+    target_precompile_headers(xci-vfs REUSE_FROM xci-core)
+    target_link_libraries(xci-vfs PUBLIC xci-core)
+    if (BUILD_SHARED_LIBS)
+        set_target_properties(xci-vfs PROPERTIES CXX_VISIBILITY_PRESET default)
+    endif()
 
-# ZIP support requires libzip
-if (XCI_WITH_ZIP)
+    # VFS requires libzip
     find_package(libzip REQUIRED)
-    target_link_libraries(xci-core-vfs PRIVATE libzip::zip)
-    target_compile_definitions(xci-core-vfs PRIVATE XCI_WITH_ZIP)
+    target_link_libraries(xci-vfs PRIVATE libzip::zip)
 endif ()
 
 
@@ -140,7 +139,7 @@ endif ()
 # ------- #
 
 if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
-    install(TARGETS xci-core xci-core-vfs
+    install(TARGETS xci-core xci-vfs
         EXPORT xcikit
         DESTINATION ${CMAKE_INSTALL_LIBDIR}
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

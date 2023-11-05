@@ -77,7 +77,7 @@ if (ASSETS AND Python3_Interpreter_FOUND)
 endif()
 
 # Create data archive: share.zip
-if (ASSETS AND XCI_WITH_ZIP)
+if (ASSETS)
     set(output_zip "share.zip")
     add_custom_command(
         OUTPUT "${output_zip}"

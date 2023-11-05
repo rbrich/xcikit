@@ -47,7 +47,7 @@ target_include_directories(xci-text
 target_link_libraries(xci-text
     PUBLIC
         xci-core
-        xci-core-vfs
+        xci-vfs
         xci-graphics
     PRIVATE
         Freetype::Freetype

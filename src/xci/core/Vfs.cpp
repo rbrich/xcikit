@@ -12,10 +12,10 @@
 #include <xci/compat/endian.h>
 #include <xci/compat/macros.h>
 
-#ifdef XCI_WITH_ZIP
 #include <zip.h>
-#endif
 
+#include <map>
+#include <sstream>
 #include <algorithm>
 #include <cstddef>  // byte
 #include <fcntl.h>
@@ -35,6 +35,8 @@ using namespace core::log;
 
 namespace vfs {
 
+// -------------------------------------------------------------------------------------------------
+// Real directory
 
 auto RealDirectoryLoader::load_fs_dir(const fs::path& path) -> std::shared_ptr<VfsDirectory>
 {
@@ -42,7 +44,7 @@ auto RealDirectoryLoader::load_fs_dir(const fs::path& path) -> std::shared_ptr<V
 }
 
 
-VfsFile RealDirectory::read_file(const std::string& path)
+VfsFile RealDirectory::read_file(const std::string& path) const
 {
     auto full_path = m_dir_path / path;
     log::debug("VfsDirLoader: open file: {}", full_path);
@@ -58,8 +60,39 @@ VfsFile RealDirectory::read_file(const std::string& path)
 }
 
 
-// -----------------------------------------------------------------------------
+unsigned RealDirectory::num_entries() const
+{
+    snapshot_entries();
+    return m_entries.size();
+}
 
+
+std::string RealDirectory::get_entry_name(unsigned index) const
+{
+    snapshot_entries();
+    return m_entries[index].string();
+}
+
+
+VfsFile RealDirectory::read_entry(unsigned index) const
+{
+    snapshot_entries();
+    return read_file(get_entry_name(index));
+}
+
+
+void RealDirectory::snapshot_entries() const
+{
+    if (!m_entries.empty())
+        return;
+    for (const auto& entry : fs::recursive_directory_iterator{m_dir_path}) {
+        m_entries.push_back(entry.path());
+    }
+}
+
+
+// -------------------------------------------------------------------------------------------------
+// DAR archive
 
 static constexpr std::array<char, 4> c_dar_magic = {{'d', 'a', 'r', '\n'}};
 
@@ -103,30 +136,54 @@ DarArchive::DarArchive(std::string&& path, std::unique_ptr<std::istream>&& strea
 }
 
 
-VfsFile DarArchive::read_file(const std::string& path)
+VfsFile DarArchive::read_file(const std::string& path) const
 {
     // search for the entry
     auto entry_it = std::find_if(m_entries.cbegin(), m_entries.cend(), [&path](auto& entry){
         return entry.name == path;
     });
     if (entry_it == m_entries.cend()) {
-        log::error("VfsDarArchiveLoader: Not found in archive: {}", path);
+        log::error("Vfs: DarArchive: Not found in archive: {}", path);
         return {};
     }
 
+    return read_entry(*entry_it);
+}
+
+
+unsigned DarArchive::num_entries() const
+{
+    return m_entries.size();
+}
+
+
+std::string DarArchive::get_entry_name(unsigned index) const
+{
+    return m_entries[index].name;
+}
+
+
+VfsFile DarArchive::read_entry(unsigned index) const
+{
+    return read_entry(m_entries[index]);
+}
+
+
+VfsFile DarArchive::read_entry(const IndexEntry& entry) const
+{
     // return a view into mmapped archive
-    log::debug("VfsDarArchiveLoader: open file: {}", path);
+    log::debug("Vfs: DarArchive: open file: {}", entry.name);
 
     // Pass self to Buffer deleter, so the archive object lives
     // at least as long as the buffer.
-    auto* content = new std::byte[entry_it->size];
-    BufferPtr buffer_ptr(new Buffer{content, entry_it->size},
-            [this_ptr = shared_from_this()](Buffer* b){ delete[] b->data(); delete b; });
+    auto* content = new std::byte[entry.size];
+    BufferPtr buffer_ptr(new Buffer{content, entry.size},
+                         [this_ptr = shared_from_this()](Buffer* b){ delete[] b->data(); delete b; });
 
-    m_stream->seekg(entry_it->offset);
+    m_stream->seekg(entry.offset);
     m_stream->read((char*) buffer_ptr->data(), std::streamsize(buffer_ptr->size()));
     if (!m_stream) {
-        log::error("VfsDarArchiveLoader: Not found in archive: {}", path);
+        log::error("Vfs: DarArchive: Not found in archive: {}", entry.name);
         return {};
     }
 
@@ -138,9 +195,9 @@ bool DarArchive::read_index(size_t size)
 {
     // HEADER: ID
     std::array<char, c_dar_magic.size()> magic;
-    m_stream->read(magic.data(), magic.size());
+    m_stream->read(magic.data(), std::streamsize(magic.size()));
     if (!m_stream || magic != c_dar_magic) {
-        log::error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
+        log::error("Vfs: DarArchive: Corrupted archive: {} ({}).",
                 m_path, "ID");
         return false;
     }
@@ -148,24 +205,24 @@ bool DarArchive::read_index(size_t size)
     // HEADER: INDEX_OFFSET
     uint32_t index_offset;
     m_stream->read((char*)&index_offset, sizeof(index_offset));
-    if (!m_stream || be32toh(index_offset) + 4 > size) {
+    index_offset = be32toh(index_offset);
+    if (!m_stream || index_offset + 4 > size) {
         // the offset must be inside archive, plus 4B for num_entries
-        log::error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
+        log::error("Vfs: DarArchive: Corrupted archive: {} ({}).",
                   m_path, "INDEX_OFFSET");
         return false;
     }
-    index_offset = be32toh(index_offset);
 
     // INDEX: NUMBER_OF_ENTRIES
     m_stream->seekg(index_offset);
     uint32_t num_entries;
     m_stream->read((char*)&num_entries, sizeof(num_entries));
+    num_entries = be32toh(num_entries);
     if (!m_stream) {
-        log::error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
+        log::error("Vfs: DarArchive: Corrupted archive: {} ({}).",
                 m_path, "INDEX_ENTRY");
         return false;
     }
-    num_entries = be32toh(num_entries);
 
     // INDEX: INDEX_ENTRY[]
     m_entries.resize(num_entries);
@@ -177,7 +234,7 @@ bool DarArchive::read_index(size_t size)
         } entry_header;
         m_stream->read((char*)&entry_header, 10);  // sizeof would be 12 due to padding
         if (!m_stream) {
-            log::error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
+            log::error("Vfs: DarArchive: Corrupted archive: {} ({}).",
                       m_path, "INDEX_ENTRY");
             return false;
         }
@@ -188,7 +245,7 @@ bool DarArchive::read_index(size_t size)
         entry.size = be32toh(entry_header.size);
         if (entry.offset + entry.size > index_offset) {
             // there must be space for the name in archive
-            log::error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
+            log::error("Vfs: DarArchive: Corrupted archive: {} ({}).",
                       m_path, "CONTENT_OFFSET + CONTENT_SIZE");
             return false;
         }
@@ -199,7 +256,7 @@ bool DarArchive::read_index(size_t size)
         entry.name.resize(name_size);
         m_stream->read(entry.name.data(), name_size);
         if (!m_stream) {
-            log::error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
+            log::error("Vfs: DarArchive: Corrupted archive: {} ({}).",
                       m_path, "NAME");
             return false;
         }
@@ -217,8 +274,188 @@ void DarArchive::close_archive()
 }
 
 
-// ----------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------
+// WAD file
 
+static bool check_wad_magic(const char* magic)
+{
+    return std::memcmp(magic + 1, "WAD", 3) == 0 && (magic[0] == 'I' || magic[0] == 'P');
+}
+
+
+bool WadArchiveLoader::can_load_stream(std::istream& stream)
+{
+    std::array<char, 4> magic {};
+    stream.seekg(0);
+    stream.read(magic.data(), magic.size());
+    if (!stream) {
+        log::debug("Vfs: WadArchiveLoader: couldn't read magic: first 4 bytes");
+        return false;
+    }
+    // "IWAD" or "PWAD"
+    return check_wad_magic(magic.data());
+}
+
+
+std::shared_ptr<VfsDirectory>
+WadArchiveLoader::load_stream(std::string&& path, std::unique_ptr<std::istream>&& stream)
+{
+    auto archive = std::make_shared<WadArchive>(std::move(path), std::move(stream));
+    if (!archive->is_open())
+        return {};
+    return archive;
+}
+
+
+WadArchive::WadArchive(std::string&& path, std::unique_ptr<std::istream>&& stream)
+        : m_path(std::move(path)), m_stream(std::move(stream))
+{
+    TRACE("Opening archive: {}", m_path);
+    // obtain file size
+    m_stream->seekg(0, std::ios_base::end);
+    const auto size = size_t(m_stream->tellg());
+    m_stream->seekg(0);
+
+    // read archive index
+    if (!read_index(size)) {
+        close_archive();
+    }
+}
+
+
+VfsFile WadArchive::read_file(const std::string& path) const
+{
+    // search for the entry
+    auto entry_it = std::find_if(m_entries.cbegin(), m_entries.cend(), [&path](auto& entry){
+        return entry.path() == path;
+    });
+    if (entry_it == m_entries.cend()) {
+        log::error("Vfs: WadArchive: Not found in archive: {}", path);
+        return {};
+    }
+
+    return read_entry(*entry_it);
+}
+
+
+VfsFile WadArchive::read_entry(const IndexEntry& entry) const
+{
+    const auto path = entry.path();
+    log::debug("Vfs: WadArchive: open file: {}", path);
+
+    // Pass self to Buffer deleter, so the archive object lives
+    // at least as long as the buffer.
+    auto* content = new std::byte[entry.size];
+    BufferPtr buffer_ptr(new Buffer{content, entry.size},
+                         [this_ptr = shared_from_this()](Buffer* b){ delete[] b->data(); delete b; });
+
+    m_stream->seekg(entry.filepos);
+    m_stream->read((char*) buffer_ptr->data(), std::streamsize(buffer_ptr->size()));
+    if (!m_stream) {
+        log::error("Vfs: WadArchive: Not found in archive: {}", path);
+        return {};
+    }
+
+    return VfsFile("", std::move(buffer_ptr));
+}
+
+
+std::string WadArchive::type() const
+{
+    // read magic from WAD file
+    m_stream->seekg(0);
+    std::string magic(4, '\0');
+    m_stream->read(magic.data(), std::streamsize(magic.size()));
+    return magic;
+}
+
+
+unsigned WadArchive::num_entries() const
+{
+    return m_entries.size();
+}
+
+
+std::string WadArchive::get_entry_name(unsigned index) const
+{
+    return m_entries[index].path();
+}
+
+
+VfsFile WadArchive::read_entry(unsigned index) const
+{
+    return read_entry(m_entries[index]);
+}
+
+
+bool WadArchive::read_index(size_t size)
+{
+    // HEADER: identification
+    std::array<char, 4> magic;
+    m_stream->read(magic.data(), std::streamsize(magic.size()));
+    if (!m_stream || !check_wad_magic(magic.data())) {
+        log::error("Vfs: WadArchive: Corrupted archive: {} ({}).",
+                   m_path, "identification");
+        return false;
+    }
+
+    // HEADER: numlumps
+    uint32_t num_entries;
+    m_stream->read((char*)&num_entries, sizeof(num_entries));
+    num_entries = le32toh(num_entries);
+    if (!m_stream) {
+        log::error("Vfs: WadArchive: Corrupted archive: {} ({}).",
+                   m_path, "num entries");
+        return false;
+    }
+
+    // HEADER: infotableofs
+    uint32_t index_offset;
+    m_stream->read((char*)&index_offset, sizeof(index_offset));
+    index_offset = le32toh(index_offset);
+    if (!m_stream || index_offset > size) {
+        // the offset must be inside archive
+        log::error("Vfs: WadArchive: Corrupted archive: {} ({}).",
+                   m_path, "info table offset");
+        return false;
+    }
+
+    // INDEX (directory)
+    m_entries.resize(num_entries);
+    m_stream->seekg(index_offset);
+    for (auto& entry : m_entries) {
+        m_stream->read((char*)&entry, 16);
+        entry.filepos = le32toh(entry.filepos);
+        entry.size = le32toh(entry.size);
+        if (!m_stream || entry.filepos + entry.size > index_offset) {
+            log::error("Vfs: WadArchive: Corrupted archive: {} ({}).",
+                       m_path, "directory entry");
+            return false;
+        }
+    }
+    return true;
+}
+
+
+void WadArchive::close_archive()
+{
+    if (m_stream) {
+        TRACE("Closing archive: {}", m_path);
+        m_stream.reset();
+    }
+}
+
+
+std::string WadArchive::IndexEntry::path() const
+{
+    std::string sanitized_name (name, 8);
+    sanitized_name.resize(strlen(sanitized_name.c_str()));
+    return sanitized_name;
+}
+
+
+// -------------------------------------------------------------------------------------------------
+// ZIP archive
 
 bool ZipArchiveLoader::can_load_stream(std::istream& stream)
 {
@@ -246,7 +483,7 @@ ZipArchive::ZipArchive(std::string&& path, std::unique_ptr<std::istream>&& strea
     : m_path(std::move(path)), m_stream(std::move(stream))
 {
     TRACE("ZipArchive: Opening archive: {}", m_path);
-#ifdef XCI_WITH_ZIP
+
     // obtain file size
     m_stream->seekg(0, std::ios_base::end);
     m_size = size_t(m_stream->tellg());
@@ -335,12 +572,10 @@ ZipArchive::ZipArchive(std::string&& path, std::unique_ptr<std::istream>&& strea
                             return -1;
                         }
                         return sp->tellg();
+                    case ZIP_SOURCE_FREE:
+                        return 0;
                     case ZIP_SOURCE_SUPPORTS:
-                        return zip_source_make_command_bitmap(
-                                ZIP_SOURCE_OPEN, ZIP_SOURCE_READ, ZIP_SOURCE_CLOSE,
-                                ZIP_SOURCE_STAT, ZIP_SOURCE_ERROR,
-                                ZIP_SOURCE_SEEK, ZIP_SOURCE_TELL, ZIP_SOURCE_SUPPORTS,
-                                -1);
+                        return ZIP_SOURCE_SUPPORTS_SEEKABLE;
                     default:
                         self->m_last_zip_err = ZIP_ER_OPNOTSUPP;
                         return -1;
@@ -361,36 +596,25 @@ ZipArchive::ZipArchive(std::string&& path, std::unique_ptr<std::istream>&& strea
     }
 
     m_zip = f;
-#else
-    log::error("ZipArchive: Not supported (not compiled with XCI_WITH_ZIP)");
-    (void) m_size;
-    (void) m_last_zip_err;
-    (void) m_last_sys_err;
-#endif
 }
 
 
 ZipArchive::~ZipArchive()
 {
-#ifdef XCI_WITH_ZIP
     if (m_zip != nullptr) {
         TRACE("ZipArchive: Closing archive: {}", m_path);
         zip_close((zip_t*) m_zip);
     }
-#else
-    (void) 0;
-#endif
 }
 
 
-VfsFile ZipArchive::read_file(const std::string& path)
+VfsFile ZipArchive::read_file(const std::string& path) const
 {
     if (!is_open()) {
         log::error("ZipArchive: Cannot read - archive is not open");
         return {};
     }
 
-#ifdef XCI_WITH_ZIP
     struct zip_stat st = {};
     zip_stat_init(&st);
     if (zip_stat((zip_t*) m_zip, path.c_str(), ZIP_FL_ENC_RAW, &st) == -1) {
@@ -408,7 +632,7 @@ VfsFile ZipArchive::read_file(const std::string& path)
     }
 
     auto* data = new std::byte[st.size];
-    BufferPtr buffer_ptr(new Buffer{data, st.size},
+    BufferPtr buffer_ptr(new Buffer{data, size_t(st.size)},
             [](Buffer* b){ delete[] b->data(); delete b; });
 
     zip_file* f = zip_fopen_index((zip_t*) m_zip, st.index, 0);
@@ -426,18 +650,31 @@ VfsFile ZipArchive::read_file(const std::string& path)
     }
 
     return VfsFile("", std::move(buffer_ptr));
-#else
-    XCI_UNUSED path;
-    log::error("ZipArchive: Not supported (not compiled with XCI_WITH_ZIP)");
-    return {};
-#endif
 }
 
 
+unsigned ZipArchive::num_entries() const
+{
+    return zip_get_num_entries((zip_t*) m_zip, 0);
+}
+
+
+std::string ZipArchive::get_entry_name(unsigned index) const
+{
+    return zip_get_name((zip_t*) m_zip, index, 0);
+}
+
+
+VfsFile ZipArchive::read_entry(unsigned index) const
+{
+    return read_file(get_entry_name(index));
+}
+
+
+
+// -------------------------------------------------------------------------------------------------
+
 }  // namespace vfs
-
-
-// ----------------------------------------------------------------------------
 
 
 Vfs::Vfs(Loaders loaders)
@@ -448,6 +685,7 @@ Vfs::Vfs(Loaders loaders)
             [[fallthrough]];
         case Loaders::NoZip:
             m_loaders.emplace_back(std::make_unique<vfs::DarArchiveLoader>());
+            m_loaders.emplace_back(std::make_unique<vfs::WadArchiveLoader>());
             [[fallthrough]];
         case Loaders::NoArchives:
             m_loaders.emplace_back(std::make_unique<vfs::RealDirectoryLoader>());
