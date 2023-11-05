@@ -245,7 +245,6 @@ public:
     std::string get_entry_name(unsigned index) const override;
 
 private:
-    static bool check_magic(const char* magic);
     bool read_index(size_t size);
     void close_archive();
 
@@ -257,11 +256,11 @@ private:
         uint32_t filepos;
         uint32_t size;
         char name[8];  // not zero-terminated, use path() instead
+        char subdir[8];  // virtual subdir for the entry, added by loader heuristic
 
         // virtual path of the entry
         std::string path() const;
     };
-    static_assert(sizeof(IndexEntry) == 16);
     std::vector<IndexEntry> m_entries;
 };
 

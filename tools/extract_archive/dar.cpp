@@ -31,6 +31,10 @@ void extract_entry(const Vfs& vfs, const std::string& entry, fs::path output_pat
     auto content = f.content();
     if (content) {
         fs::create_directories(entry_path.parent_path());
+        if (fs::exists(entry_path)) {
+            log::warning("File exists, skipping: {}", entry_path);
+            return;
+        }
         std::ofstream of(entry_path);
         if (of) {
             of.write((const char*) content->data(), content->size());

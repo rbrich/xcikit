@@ -258,6 +258,30 @@ void DarArchive::close_archive()
 // -------------------------------------------------------------------------------------------------
 // WAD file
 
+static bool check_wad_magic(const char* magic)
+{
+    return std::memcmp(magic + 1, "WAD", 3) == 0 && (magic[0] == 'I' || magic[0] == 'P');
+}
+
+static bool is_wad_map_entry(const char* name)
+{
+    // ExMy or MAPxx
+    return (name[0] == 'E' && std::isdigit((int)name[1]) &&
+            name[2] == 'M' && std::isdigit((int)name[3]) && name[4] == 0) ||
+           (std::memcmp(name, "MAP", 3) == 0 &&
+            std::isdigit((int)name[3]) && std::isdigit((int)name[4]) && name[5] == 0);
+}
+
+static bool is_wad_map_subentry(const char* name)
+{
+    return !std::strncmp(name, "THINGS", 8) || !std::strncmp(name, "LINEDEFS", 8) ||
+           !std::strncmp(name, "SIDEDEFS", 8) || !std::strncmp(name, "VERTEXES", 8) ||
+           !std::strncmp(name, "SEGS", 8) || !std::strncmp(name, "SSECTORS", 8) ||
+           !std::strncmp(name, "NODES", 8) || !std::strncmp(name, "SECTORS", 8) ||
+           !std::strncmp(name, "REJECT", 8) || !std::strncmp(name, "BLOCKMAP", 8) ||
+           !std::strncmp(name, "BEHAVIOR", 8);
+}
+
 
 bool WadArchiveLoader::can_load_stream(std::istream& stream)
 {
@@ -269,7 +293,7 @@ bool WadArchiveLoader::can_load_stream(std::istream& stream)
         return false;
     }
     // "IWAD" or "PWAD"
-    return WadArchive::check_magic(magic.data());
+    return check_wad_magic(magic.data());
 }
 
 
@@ -342,18 +366,12 @@ std::string WadArchive::get_entry_name(unsigned index) const
 }
 
 
-bool WadArchive::check_magic(const char* magic)
-{
-    return std::memcmp(magic + 1, "WAD", 3) == 0 && (magic[0] == 'I' || magic[0] == 'P');
-}
-
-
 bool WadArchive::read_index(size_t size)
 {
     // HEADER: identification
     std::array<char, 4> magic;
     m_stream->read(magic.data(), magic.size());
-    if (!m_stream || !check_magic(magic.data())) {
+    if (!m_stream || !check_wad_magic(magic.data())) {
         log::error("Vfs: WadArchive: Corrupted archive: {} ({}).",
                    m_path, "identification");
         return false;
@@ -383,14 +401,25 @@ bool WadArchive::read_index(size_t size)
     // INDEX (directory)
     m_entries.resize(num_entries);
     m_stream->seekg(index_offset);
+    char subdir[8] = {};
     for (auto& entry : m_entries) {
-        m_stream->read((char*)&entry, sizeof(entry));
+        m_stream->read((char*)&entry, 16);
         entry.filepos = le32toh(entry.filepos);
         entry.size = le32toh(entry.size);
         if (!m_stream || entry.filepos + entry.size > index_offset) {
             log::error("Vfs: WadArchive: Corrupted archive: {} ({}).",
                        m_path, "directory entry");
             return false;
+        }
+        // reset subdir if this entry is not part of a map
+        if (!is_wad_map_subentry(entry.name)) {
+            std::memset(subdir, 0, 8);
+        }
+        // set subdir of this entry
+        std::memcpy(entry.subdir, subdir, 8);
+        // set subdir for following entries, if this entry is map starter
+        if (is_wad_map_entry(entry.name)) {
+            std::memcpy(subdir, entry.name, 8);
         }
     }
     return true;
@@ -409,9 +438,16 @@ void WadArchive::close_archive()
 std::string WadArchive::IndexEntry::path() const
 {
     std::string sanitized_name (name, 8);
-    while (!sanitized_name.empty() && sanitized_name.back() == 0)
-        sanitized_name.pop_back();
-    return sanitized_name;
+    std::string sanitized_subdir (subdir, 8);
+    sanitized_name.resize(strlen(sanitized_name.c_str()));
+    sanitized_subdir.resize(strlen(sanitized_subdir.c_str()));
+    if (sanitized_subdir.empty())
+        return sanitized_name;
+    std::string out = "_";  // prefix to avoid collision with the lump name when extracting
+    out += sanitized_subdir;
+    out += '/';
+    out += sanitized_name;
+    return out;
 }
 
 
