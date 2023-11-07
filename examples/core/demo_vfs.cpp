@@ -8,7 +8,7 @@
 #include <xci/core/log.h>
 #include <xci/config.h>
 
-using namespace xci::core;
+using namespace xci::vfs;
 using namespace xci::core::log;
 
 int main()
@@ -16,7 +16,7 @@ int main()
     info("====== VFS with manually managed loaders ======");
     {
         Vfs vfs {Vfs::Loaders::NoArchives};
-        vfs.add_loader(std::make_unique<vfs::RealDirectoryLoader>());
+        vfs.add_loader(std::make_unique<RealDirectoryLoader>());
         vfs.mount("/does/not/exist");
         vfs.mount(XCI_SHARE_DIR);
 

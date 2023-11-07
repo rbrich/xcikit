@@ -1,7 +1,7 @@
 // Context.h created on 2019-12-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019, 2020 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_TOOL_CONTEXT_H
@@ -20,7 +20,7 @@ namespace xci::script::tool {
 // globals, basically
 struct Context {
     int input_number = -1;  // -1 = batch mode, 0..N = REPL mode
-    core::Vfs vfs;
+    Vfs vfs;
     Interpreter interpreter {vfs};
     std::vector<std::shared_ptr<xci::script::Module>> input_modules;
     xci::core::TermCtl& term_out = xci::core::TermCtl::stdout_instance();

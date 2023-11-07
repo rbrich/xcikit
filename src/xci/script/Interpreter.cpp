@@ -13,7 +13,7 @@
 namespace xci::script {
 
 
-Interpreter::Interpreter(const core::Vfs& vfs, Compiler::Flags flags)
+Interpreter::Interpreter(const Vfs& vfs, Compiler::Flags flags)
     : m_module_manager(vfs, *this),
       m_compiler(flags)
 {}

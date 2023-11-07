@@ -16,12 +16,14 @@
 
 namespace xci::script {
 
+using xci::vfs::Vfs;
+
 
 /// High level interpreter
 
 class Interpreter {
 public:
-    explicit Interpreter(const core::Vfs& vfs, Compiler::Flags flags = Compiler::Flags::Default);
+    explicit Interpreter(const Vfs& vfs, Compiler::Flags flags = Compiler::Flags::Default);
 
     // `flags` are Compiler::Flags
     void configure(Compiler::Flags flags) { m_compiler.set_flags(flags); }

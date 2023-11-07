@@ -20,6 +20,7 @@ INCBIN(share_file, SHARE_ARCHIVE);
 
 using namespace xci::core;
 using namespace xci::core::log;
+using xci::vfs::Vfs;
 
 int main()
 {

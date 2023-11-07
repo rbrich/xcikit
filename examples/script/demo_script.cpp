@@ -67,7 +67,7 @@ int main()
     // silence logging
     Logger::init(Logger::Level::Warning);
 
-    xci::core::Vfs vfs;
+    Vfs vfs;
 
     // this is a convenient class which manages everything needed to interpret a script
     Interpreter interpreter {vfs};

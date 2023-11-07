@@ -16,6 +16,9 @@ namespace xci::graphics { class Renderer; }
 
 namespace xci::widgets {
 
+using xci::vfs::Vfs;
+
+
 enum class FontId {
     Base,       // base font
     Emoji,      // emoji font (fallback)
@@ -64,7 +67,7 @@ public:
     /// \param file_path    path to font file inside the VFS
     /// \param face_index   index of font face in the font file which should be loaded (0 = default / single face)
     /// \param font_id      target FontID to which the face should be added
-    bool load_font_face(const core::Vfs& vfs, const char* file_path, int face_index, FontId font_id);
+    bool load_font_face(const Vfs& vfs, const char* file_path, int face_index, FontId font_id);
     text::Font& font(FontId font_id) { return m_fonts[size_t(font_id)]; }
     text::Font& base_font() { return font(FontId::Base); }
     text::Font& emoji_font() { return font(FontId::Emoji); }

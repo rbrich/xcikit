@@ -17,8 +17,9 @@
 #include <array>
 #include <filesystem>
 
-namespace xci::core {
+namespace xci::vfs {
 
+using namespace xci::core;
 namespace fs = std::filesystem;
 
 
@@ -153,9 +154,6 @@ public:
     /// \returns        Pointer to initialized VfsDirectory or nullptr if failed.
     virtual auto load_stream(std::string&& path, std::unique_ptr<std::istream>&& stream) -> std::shared_ptr<VfsDirectory> { return {}; }
 };
-
-
-namespace vfs {
 
 
 // -------------------------------------------------------------------------------------------------
@@ -331,8 +329,6 @@ private:
 
 // -------------------------------------------------------------------------------------------------
 
-}  // namespace vfs
-
 
 /// Virtual File System
 ///
@@ -401,6 +397,6 @@ private:
 };
 
 
-}  // namespace xci::core
+}  // namespace xci::vfs
 
 #endif // XCI_CORE_VFS_H

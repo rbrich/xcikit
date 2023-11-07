@@ -26,12 +26,10 @@
 #include <strstream>
 #undef _BACKWARD_BACKWARD_WARNING_H
 
-namespace xci::core {
+namespace xci::vfs {
 
 using namespace core::log;
 
-
-namespace vfs {
 
 // -------------------------------------------------------------------------------------------------
 // Real directory
@@ -669,10 +667,7 @@ VfsFile ZipArchive::read_entry(unsigned index) const
 }
 
 
-
 // -------------------------------------------------------------------------------------------------
-
-}  // namespace vfs
 
 
 Vfs::Vfs(Loaders loaders)
@@ -817,4 +812,4 @@ VfsFile Vfs::read_file(std::string path) const
 }
 
 
-}  // namespace xci::core
+}  // namespace xci::vfs

@@ -88,7 +88,7 @@ vulkan_debug_callback(
 #endif
 
 
-Renderer::Renderer(core::Vfs& vfs)
+Renderer::Renderer(Vfs& vfs)
         : m_vfs(vfs)
 {
     glfwSetErrorCallback(glfw_error_callback);

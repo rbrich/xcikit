@@ -19,6 +19,7 @@
 
 namespace xci::graphics {
 
+using xci::vfs::Vfs;
 namespace fs = std::filesystem;
 
 class Renderer;
@@ -61,7 +62,7 @@ public:
     /// Load program from VFS
     /// This in turn calls either `load_from_file` or `load_from_memory`
     /// depending on kind of VfsLoader used (real file or archive)
-    bool load_from_vfs(const core::Vfs& vfs, const std::string& vertex, const std::string& fragment);
+    bool load_from_vfs(const Vfs& vfs, const std::string& vertex, const std::string& fragment);
 
     /// Load program from a file (possibly adding a file watch for auto-reload)
     bool load_from_file(const fs::path& vertex, const fs::path& fragment);

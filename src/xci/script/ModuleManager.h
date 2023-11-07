@@ -13,6 +13,7 @@
 
 namespace xci::script {
 
+using xci::vfs::Vfs;
 class Interpreter;
 class Module;
 
@@ -21,7 +22,7 @@ using ModulePtr = std::shared_ptr<Module>;
 
 class ModuleManager {
 public:
-    ModuleManager(const core::Vfs& vfs, Interpreter& interpreter);
+    ModuleManager(const Vfs& vfs, Interpreter& interpreter);
 
     ModulePtr import_module(NameId name);
     ModulePtr import_module(std::string_view name) { return import_module(intern(name)); }
@@ -49,7 +50,7 @@ public:
     void clear(bool keep_std = true);
 
 private:
-    const core::Vfs& m_vfs;
+    const Vfs& m_vfs;
     Interpreter& m_interpreter;
     std::vector<ModulePtr> m_modules;
     std::map<NameId, Index> m_module_names;  // map name to index

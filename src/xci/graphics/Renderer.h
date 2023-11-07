@@ -27,13 +27,15 @@ struct GLFWwindow;
 
 namespace xci::graphics {
 
+using xci::vfs::Vfs;
+
 
 class Renderer: private core::NonCopyable {
 public:
-    explicit Renderer(core::Vfs& vfs);
+    explicit Renderer(Vfs& vfs);
     ~Renderer();
 
-    core::Vfs& vfs() { return m_vfs; }
+    Vfs& vfs() { return m_vfs; }
 
     /// Presentation mode. Limits framerate, avoids tearing.
     /// - Immediate      - do not wait for vertical blank period
@@ -123,7 +125,7 @@ private:
     void load_device_limits(const VkPhysicalDeviceLimits& limits);
 
 private:
-    core::Vfs& m_vfs;
+    Vfs& m_vfs;
     static constexpr auto c_num_shaders = (size_t) ShaderId::NumItems_;
     std::array<std::unique_ptr<Shader>, c_num_shaders> m_shader = {};
 
