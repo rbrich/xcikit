@@ -1,7 +1,7 @@
 // Font.cpp created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Font.h"
@@ -33,7 +33,7 @@ void Font::add_face(std::unique_ptr<FontFace> face)
 }
 
 
-bool Font::add_face(const core::Vfs& vfs, std::string path, int face_index)
+bool Font::add_face(const Vfs& vfs, std::string path, int face_index)
 {
     auto face = FontLibrary::default_instance()->create_font_face();
     auto face_file = vfs.read_file(std::move(path));

@@ -20,6 +20,7 @@
 
 using namespace xci::core;
 using namespace xci::core::argparser;
+using namespace xci::vfs;
 namespace fs = std::filesystem;
 
 

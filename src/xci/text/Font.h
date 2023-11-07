@@ -23,6 +23,7 @@ namespace xci::text {
 using core::Rect_u;
 using graphics::Renderer;
 using graphics::Texture;
+using xci::vfs::Vfs;
 
 
 class FontTexture;
@@ -41,7 +42,7 @@ public:
     // The same as above, but constructs FontFace object for you
     // (using default FontLibrary).
     // Returns false when FontFace load operation fails.
-    bool add_face(const core::Vfs& vfs, std::string path, int face_index);
+    bool add_face(const Vfs& vfs, std::string path, int face_index);
 
     // Get currently selected face.
     FontFace& face() { check_face(); return *m_faces[m_current_face].get(); }

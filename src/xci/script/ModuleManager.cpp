@@ -14,7 +14,7 @@
 namespace xci::script {
 
 
-ModuleManager::ModuleManager(const core::Vfs& vfs, Interpreter& interpreter)
+ModuleManager::ModuleManager(const Vfs& vfs, Interpreter& interpreter)
         : m_vfs(vfs), m_interpreter(interpreter)
 {
     m_modules.emplace_back(std::make_shared<BuiltinModule>(*this));

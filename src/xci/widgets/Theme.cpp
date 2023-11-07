@@ -24,7 +24,7 @@ Theme::Theme(graphics::Renderer& renderer)
 
 bool Theme::load_default()
 {
-    const core::Vfs& vfs = m_renderer.vfs();
+    const Vfs& vfs = m_renderer.vfs();
 
     // Base font
     TRY(load_font_face(vfs, "fonts/RobotoMono/RobotoMono_wght.ttf", 0, FontId::Base));
@@ -50,7 +50,7 @@ bool Theme::load_default()
 }
 
 
-bool Theme::load_font_face(const core::Vfs& vfs, const char* file_path, int face_index, FontId font_id)
+bool Theme::load_font_face(const Vfs& vfs, const char* file_path, int face_index, FontId font_id)
 {
     return m_fonts[size_t(font_id)].add_face(vfs, file_path, face_index);
 }
