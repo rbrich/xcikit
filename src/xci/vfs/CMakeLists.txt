@@ -3,7 +3,13 @@
 # ---------------- #
 
 if (XCI_VFS)
-    add_library(xci-vfs Vfs.cpp)
+    add_library(xci-vfs
+        Vfs.cpp
+        RealDirectory.cpp
+        DarArchive.cpp
+        WadArchive.cpp
+        ZipArchive.cpp
+    )
     add_library(xcikit::xci-vfs ALIAS xci-vfs)
     target_precompile_headers(xci-vfs REUSE_FROM xci-core)
     target_link_libraries(xci-vfs PUBLIC xci-core)

@@ -4,8 +4,8 @@
 // Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#ifndef XCI_CORE_VFS_H
-#define XCI_CORE_VFS_H
+#ifndef XCI_VFS_H
+#define XCI_VFS_H
 
 #include <xci/core/Buffer.h>
 
@@ -156,180 +156,6 @@ public:
 };
 
 
-// -------------------------------------------------------------------------------------------------
-// Real directory
-
-/// Lookup regular files in real directory, which is mapped to VFS path
-class RealDirectoryLoader: public VfsLoader {
-public:
-    const char* name() const override { return "directory"; }
-    bool can_load_fs_dir(const fs::path& path) override { return true; }
-    auto load_fs_dir(const fs::path& path) -> std::shared_ptr<VfsDirectory> override;
-};
-
-/// Lookup regular files in real directory, which is mapped to VFS path
-class RealDirectory: public VfsDirectory {
-public:
-    explicit RealDirectory(fs::path dir_path) : m_dir_path(std::move(dir_path)) {}
-
-    std::string type() const override { return "DIR"; }
-
-    VfsFile read_file(const std::string& path) const override;
-
-    // Calling any of these methods creates a snapshot of the directory,
-    // that is used by subsequent calls. Listing live directory would be fragile.
-    unsigned num_entries() const override;
-    std::string get_entry_name(unsigned index) const override;
-    VfsFile read_entry(unsigned index) const override;
-
-private:
-    void snapshot_entries() const;
-
-    fs::path m_dir_path;
-    mutable std::vector<fs::path> m_entries;  // snapshot of the directory for listing
-};
-
-
-// -------------------------------------------------------------------------------------------------
-// DAR archive
-
-/// Lookup files in DAR archive, which is mapped to VFS path
-class DarArchiveLoader: public VfsLoader {
-public:
-    const char* name() const override { return "DAR archive"; }
-    bool can_load_stream(std::istream& stream) override;
-    auto load_stream(std::string&& path, std::unique_ptr<std::istream>&& stream) -> std::shared_ptr<VfsDirectory> override;
-};
-
-/// Lookup files in DAR archive, which is mapped to VFS path
-/// DAR is custom uncompressed archive format, see `tools/pack_assets.py`
-/// Unlike ZipArchive, this has no external dependency and very simple implementation.
-class DarArchive: public VfsDirectory {
-public:
-    explicit DarArchive(std::string&& path, std::unique_ptr<std::istream>&& stream);
-    ~DarArchive() override { close_archive(); }
-
-    std::string type() const override { return "DAR"; }
-
-    bool is_open() const { return bool(m_stream); }
-
-    VfsFile read_file(const std::string& path) const override;
-    unsigned num_entries() const override;
-    std::string get_entry_name(unsigned index) const override;
-    VfsFile read_entry(unsigned index) const override;
-
-private:
-    struct IndexEntry {
-        uint32_t offset;
-        uint32_t size;
-        std::string name;
-    };
-
-    bool read_index(size_t size);
-    VfsFile read_entry(const IndexEntry& entry) const;
-    void close_archive();
-
-    std::string m_path;
-    std::unique_ptr<std::istream> m_stream;
-
-    // index:
-    std::vector<IndexEntry> m_entries;
-};
-
-
-// -------------------------------------------------------------------------------------------------
-// WAD file
-
-/// Lookup files in WAD file (DOOM 1 format), which is mapped to VFS path
-class WadArchiveLoader: public VfsLoader {
-public:
-    const char* name() const override { return "WAD file"; }
-    bool can_load_stream(std::istream& stream) override;
-    auto load_stream(std::string&& path, std::unique_ptr<std::istream>&& stream) -> std::shared_ptr<VfsDirectory> override;
-};
-
-/// Lookup files in WAD file, which is mapped to VFS path
-/// WAD is DOOM 1 uncompressed data file format.
-/// Same as DarArchive, this has no external dependency and very simple implementation.
-/// Unlike DarArchive, WAD depends on lump order (lump = archived file), lump names can repeat
-/// and they are limited to 8 chars.
-/// When looking up files by name, only the first lump of that name is returned.
-/// Use entry listing to process lumps in order.
-/// Reference: https://doomwiki.org/wiki/WAD
-class WadArchive: public VfsDirectory {
-    friend class WadArchiveLoader;
-public:
-    explicit WadArchive(std::string&& path, std::unique_ptr<std::istream>&& stream);
-    ~WadArchive() override { close_archive(); }
-
-    std::string type() const override;  // "IWAD" or "PWAD"
-    bool is_open() const { return bool(m_stream); }
-
-    VfsFile read_file(const std::string& path) const override;
-    unsigned num_entries() const override;
-    std::string get_entry_name(unsigned index) const override;
-    VfsFile read_entry(unsigned index) const override;
-
-private:
-    struct IndexEntry {
-        uint32_t filepos;
-        uint32_t size;
-        char name[8];  // not zero-terminated, use path() instead
-
-        std::string path() const;
-    };
-    static_assert(sizeof(IndexEntry) == 16);
-
-    bool read_index(size_t size);
-    VfsFile read_entry(const IndexEntry& entry) const;
-    void close_archive();
-
-    std::string m_path;
-    std::unique_ptr<std::istream> m_stream;
-
-    // index:
-    std::vector<IndexEntry> m_entries;
-};
-
-
-// -------------------------------------------------------------------------------------------------
-// ZIP archive
-
-/// Lookup files in ZIP archive, which is mapped to VFS path
-class ZipArchiveLoader: public VfsLoader {
-public:
-    const char* name() const override { return "ZIP archive"; }
-    bool can_load_stream(std::istream& stream) override;
-    auto load_stream(std::string&& path, std::unique_ptr<std::istream>&& stream) -> std::shared_ptr<VfsDirectory> override;
-};
-
-/// Lookup files in ZIP archive, which is mapped to VFS path
-class ZipArchive: public VfsDirectory {
-public:
-    explicit ZipArchive(std::string&& path, std::unique_ptr<std::istream>&& stream);
-    ~ZipArchive() override;
-
-    std::string type() const override { return "ZIP"; }
-    bool is_open() const { return m_zip != nullptr; }
-
-    VfsFile read_file(const std::string& path) const override;
-    unsigned num_entries() const override;
-    std::string get_entry_name(unsigned index) const override;
-    VfsFile read_entry(unsigned index) const override;
-
-private:
-    std::string m_path;
-    std::unique_ptr<std::istream> m_stream;
-    void* m_zip = nullptr;
-    size_t m_size = 0;
-    int m_last_zip_err = 0;
-    int m_last_sys_err = 0;
-};
-
-
-// -------------------------------------------------------------------------------------------------
-
-
 /// Virtual File System
 ///
 /// Search for files by path and open them as file streams.
@@ -399,4 +225,4 @@ private:
 
 }  // namespace xci::vfs
 
-#endif // XCI_CORE_VFS_H
+#endif // XCI_VFS_H

@@ -5,6 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/vfs/Vfs.h>
+#include <xci/vfs/RealDirectory.h>
 #include <xci/core/log.h>
 #include <xci/config.h>
 
