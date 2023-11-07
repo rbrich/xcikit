@@ -17,7 +17,7 @@
 #include <xci/script/ast/fold_dot_call.h>
 #include <xci/script/ast/fold_paren.h>
 #include <xci/script/dump.h>
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 #include <xci/core/log.h>
 #include <xci/core/string.h>
 #include <xci/config.h>

@@ -6,7 +6,7 @@
 
 #include <xci/script/Interpreter.h>
 #include <xci/script/NativeDelegate.h>
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 #include <xci/core/log.h>
 #include <xci/config.h>
 

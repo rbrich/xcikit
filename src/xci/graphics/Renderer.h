@@ -9,7 +9,7 @@
 
 #include "Shader.h"
 #include <xci/geometry/Vec2.h>
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 #include <xci/config.h>
 #include <xci/graphics/vulkan/Swapchain.h>
 #include <xci/graphics/vulkan/Pipeline.h>

@@ -8,7 +8,7 @@
 #define XCI_GRAPHICS_SHADER_H
 
 #include <xci/graphics/Texture.h>
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 
 #include <vulkan/vulkan.h>
 

@@ -194,6 +194,10 @@ endif()
 
 add_subdirectory(src/xci/core)
 
+if (XCI_VFS)
+    add_subdirectory(src/xci/vfs)
+endif()
+
 if (XCI_DATA)
     add_subdirectory(src/xci/data)
 endif()

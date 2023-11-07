@@ -14,7 +14,7 @@
 #include <xci/graphics/shape/Line.h>
 #include <xci/graphics/shape/Polygon.h>
 #include <xci/graphics/shape/Triangle.h>
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 #include <xci/config.h>
 #include <variant>
 #include <cstdlib>

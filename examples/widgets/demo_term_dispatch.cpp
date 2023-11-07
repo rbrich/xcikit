@@ -7,7 +7,7 @@
 #include "graphics/common.h"
 
 #include <xci/widgets/TextTerminal.h>
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 #include <xci/core/file.h>
 #include <xci/core/log.h>
 #include <xci/core/dispatch.h>

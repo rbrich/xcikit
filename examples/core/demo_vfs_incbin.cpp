@@ -1,12 +1,12 @@
 // demo_vfs.cpp created on 2018-09-01 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021 Radek Brich
+// Copyright 2021–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// Shows how to embed the VFS archive in the program binary
 
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 #include <xci/core/log.h>
 
 #define INCBIN_PREFIX g_

@@ -8,7 +8,7 @@
 #define XCI_SCRIPT_MODULE_MANAGER_H
 
 #include "SymbolTable.h"  // Index
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 #include <map>
 
 namespace xci::script {

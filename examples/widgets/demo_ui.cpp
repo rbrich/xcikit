@@ -14,7 +14,7 @@
 #include <xci/widgets/TextInput.h>
 #include <xci/widgets/Spinner.h>
 #include <xci/widgets/ColorPicker.h>
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 #include <xci/config.h>
 #include <random>
 #include <deque>

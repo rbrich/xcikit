@@ -10,7 +10,7 @@
 #include <xci/graphics/Shader.h>
 #include <xci/graphics/Texture.h>
 #include <xci/graphics/shape/Rectangle.h>
-#include <xci/core/Vfs.h>
+#include <xci/vfs/Vfs.h>
 #include <xci/config.h>
 
 #include <cstdlib>
