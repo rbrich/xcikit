@@ -243,24 +243,25 @@ public:
     /// {fg:COLOR} where COLOR is default | red | *red ... ("*" = bright)
     /// {bg:COLOR} where COLOR is the same as for fg
     /// {t:MODE} where MODE is bold | underline | normal ...
-    #define XCI_TERMCTL_FMT_ARGS decltype("fg"_a = FgPlaceholder{}), \
-                                 decltype("bg"_a = BgPlaceholder{}), \
-                                 decltype("t"_a = ModePlaceholder{})
+    #define XCI_TERMCTL_FMT_DECL_ARGS decltype("fg"_a = FgPlaceholder{}), \
+                                      decltype("bg"_a = BgPlaceholder{}), \
+                                      decltype("t"_a = ModePlaceholder{})
+    #define XCI_TERMCTL_FMT_ARGS      "fg"_a = FgPlaceholder{this}, \
+                                      "bg"_a = BgPlaceholder{this}, \
+                                      "t"_a = ModePlaceholder{this}
     template<typename... T>
-    std::string format(fmt::format_string<T..., XCI_TERMCTL_FMT_ARGS> fmt,
-                       T&&... args) {
-        return fmt::vformat(fmt, fmt::make_format_args(args...,
-                        "fg"_a = FgPlaceholder{this},
-                        "bg"_a = BgPlaceholder{this},
-                        "t"_a = ModePlaceholder{this}));
+    std::string format(fmt::format_string<T..., XCI_TERMCTL_FMT_DECL_ARGS> fmt, T&&... args) {
+        return _plain_format(fmt, args..., XCI_TERMCTL_FMT_ARGS);
     }
 
     /// Print string with special color/mode placeholders, see `format` above.
     template<typename... T>
-    void print(fmt::format_string<T..., XCI_TERMCTL_FMT_ARGS> fmt,
-               T&&... args) {
-        write(format(fmt, std::forward<T>(args)...));
+    void print(fmt::format_string<T..., XCI_TERMCTL_FMT_DECL_ARGS> fmt, T&&... args) {
+        write(_plain_format(fmt, args..., XCI_TERMCTL_FMT_ARGS));
     }
+
+    #undef XCI_TERMCTL_FMT_DECL_ARGS
+    #undef XCI_TERMCTL_FMT_ARGS
 
     void write(std::string_view buf);
     void write_raw(std::string_view buf);  // doesn't check newline
@@ -421,6 +422,11 @@ private:
     TermCtl& _append_seq(const char* seq) { if (seq) m_seq += seq; return *this; }  // needed for TermInfo, which returns NULL for unknown seqs
     TermCtl& _append_seq(std::string_view seq) { m_seq += seq; return *this; }
 
+    // helper to avoid fmt error on named arg not being lvalue
+    template<typename... T>
+    std::string _plain_format(fmt::string_view fmt, T&&... args) {
+        return fmt::vformat(fmt, fmt::make_format_args(args...));
+    }
     std::string m_seq;  // cached capability sequences
     WriteCallback m_write_cb {};
     int m_fd;   // FD (on Windows mapped to handle)

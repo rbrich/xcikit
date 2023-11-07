@@ -37,8 +37,8 @@ static XCI_INLINE uint32_t murmur3_32(const uint8_t* key, size_t len)
     // Read the rest
     k = 0;
     switch (len & 3) {
-        case 3: k ^= key[2] << 16;
-        case 2: k ^= key[1] << 8;
+        case 3: k ^= key[2] << 16; [[fallthrough]];
+        case 2: k ^= key[1] << 8;  [[fallthrough]];
         case 1: k ^= key[0];
     }
     h ^= murmur_32_scramble(k);

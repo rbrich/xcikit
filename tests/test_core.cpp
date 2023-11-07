@@ -2,7 +2,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <xci/core/log.h>
 #include <xci/core/file.h>
 #include <xci/core/string.h>
 #include <xci/core/memory.h>
@@ -14,30 +13,9 @@
 #endif
 
 #include <string>
-#include <cstdio>
 
 using namespace xci::core;
 using namespace std::string_literals;
-using xci::core::log::format;
-
-
-TEST_CASE( "Format placeholders", "[log]" )
-{
-    CHECK(format("hex {:x} dec {}", 255, 255) == "hex ff dec 255");
-    CHECK(format("hex {:02X} dec {:03}", 15, 15) == "hex 0F dec 015");
-
-    errno = EACCES;
-    CHECK(format("error: {m}") == "error: Permission denied");
-
-    // Format char type
-    // only 'char' is special, other char-like types are just numbers
-    CHECK(format("{}", char('c')) == "c");
-    CHECK(format("{:c}", int('c')) == "c");
-    CHECK(format("{}", (unsigned char)('c')) == "99");
-    CHECK(format("{}", int8_t('c')) == "99");
-    CHECK(format("{}", uint8_t('c')) == "99");
-    CHECK(format("{:02x}", char('c')) == "63");
-}
 
 
 TEST_CASE( "read_binary_file", "[file]" )
