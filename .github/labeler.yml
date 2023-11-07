@@ -6,6 +6,9 @@ xci-core:
 xci-data:
   - src/xci/data/*.+(cpp|h)
   - src/xci/data/**/*.+(cpp|h)
+xci-geometry:
+  - src/xci/geometry/*.+(cpp|h)
+  - src/xci/geometry/**/*.+(cpp|h)
 xci-graphics:
   - src/xci/graphics/*.+(cpp|h)
   - src/xci/graphics/**/*.+(cpp|h)
@@ -15,11 +18,16 @@ xci-script:
 xci-text:
   - src/xci/text/*.+(cpp|h)
   - src/xci/text/**/*.+(cpp|h)
+xci-vfs:
+  - src/xci/vfs/*.+(cpp|h)
+  - src/xci/vfs/**/*.+(cpp|h)
 xci-widgets:
   - src/xci/widgets/*.+(cpp|h)
   - src/xci/widgets/**/*.+(cpp|h)
 tools:
   - tools/**/*.+(cpp|h)
+extras:
+  - extras/**/*.+(py|js|html)
 build/ci:
   - ./*.sh
   - conanfile.py
