@@ -44,6 +44,10 @@ if (NOT EMSCRIPTEN)
     add_catch_test(test_eventloop test_eventloop.cpp xci-core)
 endif()
 
+if (XCI_CONFIG)
+    add_catch_test(test_config test_config.cpp xci-config)
+endif()
+
 if (XCI_DATA)
     add_catch_test(test_data test_data.cpp xci-data)
     add_catch_test(test_data_binary test_data_binary.cpp xci-data)
