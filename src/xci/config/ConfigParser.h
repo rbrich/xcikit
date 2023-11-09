@@ -8,7 +8,6 @@
 #define XCI_CONFIG_PARSER_H
 
 #include <string>
-#include <variant>
 #include <filesystem>
 
 namespace xci::config {
@@ -30,12 +29,20 @@ namespace fs = std::filesystem;
 /// Whitespace is required between item name and value. Value must start on same line as name.
 class ConfigParser {
 public:
+    virtual ~ConfigParser() = default;
+
     bool parse_file(const fs::path& path);
     bool parse_string(const std::string& str);
 
     // visitor callbacks
+
     virtual void name(const std::string& name) = 0;
+    virtual void group(bool begin) = 0;
+
     virtual void bool_value(bool value) = 0;
+    virtual void int_value(int64_t value) = 0;
+    virtual void float_value(double value) = 0;
+    virtual void string_value(std::string value) = 0;
 };
 
 

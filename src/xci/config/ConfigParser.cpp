@@ -16,7 +16,6 @@ namespace xci::config {
 using namespace xci::core;
 
 namespace parser {
-
 using namespace tao::pegtl;
 using namespace xci::core::parser::unescape;
 
@@ -26,7 +25,7 @@ using namespace xci::core::parser::unescape;
 // Spaces and comments
 struct LineComment: seq< two<'/'>, until<eolf> > {};
 struct SkipWS: star<sor<space, LineComment>> {};
-struct SemicolonOrNewline: sor<one<';'>, eolf, LineComment> {};
+struct SemicolonOrNewline: sor<one<';'>, eolf, LineComment, at<one<'}'>>> {};
 struct Sep: seq<star<blank>, SemicolonOrNewline> {};
 
 // Keywords
@@ -42,12 +41,13 @@ struct DecNumExp: seq< one<'e'>, opt<Sign>, must<UPlus<digit>> > {};
 // Values
 struct Bool: sor<KFalse, KTrue> {};
 struct Number: seq<opt<Sign>, UPlus<digit>, opt<DecNumFrac>, opt<DecNumExp>> {};
-struct StringContent: until< one<'"'>, StringChUni > {};
-struct String: if_must< one<'"'>, StringContent > {};
+struct String: if_must< one<'"'>, until< one<'"'>, StringChUni > > {};
 
 // Group
 struct GroupContent;
-struct Group: seq<one<'{'>, GroupContent, SkipWS, one<'}'>> {};
+struct GroupBegin: one<'{'> {};
+struct GroupEnd: one<'}'> {};
+struct Group: seq<GroupBegin, GroupContent, SkipWS, GroupEnd> {};
 
 // Item
 struct Name: identifier {};
@@ -82,6 +82,87 @@ struct Action<Bool> {
 };
 
 
+struct NumberHelper {
+    union {
+        double f;
+        int64_t i;
+    };
+    bool is_float = false;
+};
+
+template<>
+struct Action<Number> : change_states<NumberHelper> {
+    template<typename Input>
+    static void apply(const Input& in, NumberHelper& n) {
+        std::istringstream is(in.string());
+        if (n.is_float) {
+            is >> n.f;
+        } else {
+            is >> n.i;
+        }
+        if (!is.eof()) {
+            throw parse_error("Number not fully parsed.", in);
+        }
+    }
+
+    template<typename Input>
+    static void success(const Input& in, NumberHelper& n, ConfigParser& visitor) {
+        if (n.is_float) {
+            visitor.float_value(n.f);
+        } else {
+            visitor.int_value(n.i);
+        }
+    }
+};
+
+template<>
+struct Action<DecNumFrac> {
+    template<typename Input>
+    static void apply(const Input&, NumberHelper& n) {
+        n.is_float = true;
+    }
+};
+
+template<>
+struct Action<DecNumExp> {
+    template<typename Input>
+    static void apply(const Input&, NumberHelper& n) {
+        n.is_float = true;
+    }
+};
+
+
+template<> struct Action<StringChOther> : StringAppendChar {};
+template<> struct Action<StringChEscSingle> : StringAppendEscSingle {};
+template<> struct Action<StringChEscHex> : StringAppendEscHex {};
+template<> struct Action<StringChEscOct> : StringAppendEscOct {};
+
+template<>
+struct Action<String> : change_states< std::string > {
+    template<typename Input>
+    static void success(const Input &in, std::string& str, ConfigParser& visitor) {
+        visitor.string_value(std::move(str));
+    }
+};
+
+
+template<>
+struct Action<GroupBegin> {
+    template<typename Input>
+    static void apply(const Input& in, ConfigParser& visitor) {
+        visitor.group(true);
+    }
+};
+
+template<>
+struct Action<GroupEnd> {
+    template<typename Input>
+    static void apply(const Input& in, ConfigParser& visitor) {
+        visitor.group(false);
+    }
+};
+
+
 // ----------------------------------------------------------------------------
 // Control (error reporting)
 
@@ -108,7 +189,7 @@ bool ConfigParser::parse_string(const std::string &str)
     using parser::Action;
     using parser::Control;
 
-    tao::pegtl::memory_input<> in(str, "<buffer>");
+    tao::pegtl::memory_input in(str, "<buffer>");
 
     try {
         return tao::pegtl::parse< FileContent, Action, Control >( in, *this );
