@@ -83,14 +83,8 @@ target_include_directories(xci-core
         ${XCI_INCLUDE_DIRS}
     PRIVATE
         $<TARGET_PROPERTY:third_party::widechar_width,INTERFACE_INCLUDE_DIRECTORIES>
+        $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
     )
-
-if (XCI_WITH_PEGTL)
-    target_include_directories(xci-core
-        PRIVATE
-            $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
-        )
-endif()
 
 # Link with tinfo if available
 if (XCI_WITH_TERMINFO)

@@ -1,5 +1,8 @@
 xci-compat:
   - src/xci/compat/*.h
+xci-config:
+  - src/xci/config/*.+(cpp|h)
+  - src/xci/config/**/*.+(cpp|h)
 xci-core:
   - src/xci/core/*.+(cpp|h)
   - src/xci/core/**/*.+(cpp|h)

@@ -47,7 +47,6 @@ option(XCI_INSTALL_DEVEL "Install headers, CMake config, static libs." ON)
 # Dependencies
 option(XCI_WITH_TERMINFO "Link with TermInfo and use it for TTY control sequences, instead of builtin sequences." OFF)
 option(XCI_WITH_HYPERSCAN "Hyperscan library is required to build ff tool." OFF)
-option(XCI_WITH_PEGTL "PEGTL library is required to build xci-script." ON)
 
 # negate it for use as option() initial value
 if (EMSCRIPTEN)
@@ -101,9 +100,7 @@ else()
 endif()
 
 # PEGTL
-if (XCI_WITH_PEGTL)
-    find_package(pegtl REQUIRED)
-endif()
+find_package(pegtl REQUIRED)
 
 # range-v3
 if (XCI_SCRIPT OR XCI_GRAPHICS)
