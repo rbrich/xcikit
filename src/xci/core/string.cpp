@@ -6,9 +6,7 @@
 
 #include "string.h"
 
-#if XCI_WITH_PEGTL == 1
 #include "parser/unescape.h"
-#endif
 
 #include <xci/core/log.h>
 #include <xci/compat/macros.h>
@@ -152,7 +150,6 @@ std::string escape(string_view str, bool extended, bool utf8)
 }
 
 
-#if XCI_WITH_PEGTL == 1
 // override control to avoid demangled rules appearing in binary static data
 // (even though they're never used, they don't get optimized away)
 template< typename Rule >
@@ -188,7 +185,6 @@ std::string gen_unescape(string_view str)
 
 std::string unescape(string_view str) { return gen_unescape<parser::unescape::String>(str); }
 std::string unescape_uni(string_view str) { return gen_unescape<parser::unescape::StringUni>(str); }
-#endif
 
 
 std::string to_lower(std::string_view str)

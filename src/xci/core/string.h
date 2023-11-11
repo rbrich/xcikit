@@ -116,7 +116,6 @@ void strip(S& str) { lstrip(str); rstrip(str); }
 std::string escape(std::string_view str, bool extended = false, bool utf8 = false);
 inline std::string escape_utf8(std::string_view str, bool extended = false) { return escape(str, extended, true); }
 
-#if XCI_WITH_PEGTL == 1
 // Unescape (expand) C escape sequences (i.e. "\\n" -> "\n")
 // This expects the input is well-formatted:
 // - a trailing backslash is just ignored
@@ -125,7 +124,6 @@ std::string unescape(std::string_view str);
 
 // Same as unescape, with additional support for braced unicode escapes: "\u{ABCD}"
 std::string unescape_uni(std::string_view str);
-#endif
 
 // Convert string to lower case
 std::string to_lower(std::string_view str);

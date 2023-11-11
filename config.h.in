@@ -9,7 +9,6 @@
 
 // Optional libraries
 #cmakedefine01 XCI_WITH_TERMINFO
-#cmakedefine01 XCI_WITH_PEGTL
 
 // Location of share dir (runtime data)
 #cmakedefine XCI_SHARE_DIR "@XCI_SHARE_DIR@"

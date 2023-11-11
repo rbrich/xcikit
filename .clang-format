@@ -21,7 +21,7 @@ AllowShortFunctionsOnASingleLine: Inline
 BreakBeforeBraces: Custom
 BraceWrapping:
   AfterCaseLabel: false
-  AfterClass: true
+  AfterClass: false
   AfterControlStatement: MultiLine
   AfterEnum: false
   AfterFunction: true

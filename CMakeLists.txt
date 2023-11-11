@@ -1,7 +1,7 @@
 # 3.18.4 in Debian 11
 # 3.22.1 in Ubuntu 22.04 / Emscripten Docker image
 # 3.25.1 in Debian 12
-cmake_minimum_required(VERSION 3.18...3.25)
+cmake_minimum_required(VERSION 3.18...3.27)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(XciBuildType)
@@ -16,6 +16,7 @@ include(GNUInstallDirs)
 
 # Optional libraries (only xci-core is required)
 include(CMakeDependentOption)
+option(XCI_CONFIG "Enable component: xci-config" ON)
 option(XCI_VFS "Enable component: xci-vfs" ON)
 option(XCI_WIDGETS "Enable component: xci-widgets" ON)
 option(XCI_SCRIPT "Enable component: xci-script" ON)
@@ -46,7 +47,6 @@ option(XCI_INSTALL_DEVEL "Install headers, CMake config, static libs." ON)
 # Dependencies
 option(XCI_WITH_TERMINFO "Link with TermInfo and use it for TTY control sequences, instead of builtin sequences." OFF)
 option(XCI_WITH_HYPERSCAN "Hyperscan library is required to build ff tool." OFF)
-option(XCI_WITH_PEGTL "PEGTL library is required to build xci-script." ON)
 
 # negate it for use as option() initial value
 if (EMSCRIPTEN)
@@ -100,9 +100,7 @@ else()
 endif()
 
 # PEGTL
-if (XCI_WITH_PEGTL)
-    find_package(pegtl REQUIRED)
-endif()
+find_package(pegtl REQUIRED)
 
 # range-v3
 if (XCI_SCRIPT OR XCI_GRAPHICS)
@@ -193,6 +191,10 @@ else()
 endif()
 
 add_subdirectory(src/xci/core)
+
+if (XCI_CONFIG)
+    add_subdirectory(src/xci/config)
+endif()
 
 if (XCI_VFS)
     add_subdirectory(src/xci/vfs)
@@ -340,6 +342,7 @@ print_flag("? libraries!                   " ON)
 if (TRUE)
     push_indent()
     print_flag("? xci-core!                    " ON)
+    print_flag("? xci-config!                  " ${XCI_CONFIG})
     print_flag("? xci-vfs!                     " ${XCI_VFS})
     print_flag("? xci-data!                    " ${XCI_DATA})
     print_flag("? xci-script!                  " ${XCI_SCRIPT})
