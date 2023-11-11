@@ -6,9 +6,16 @@
 
 #include "Config.h"
 #include "ConfigParser.h"
+#include <xci/core/string.h>
+
 #include <deque>
+#include <algorithm>
+#include <sstream>
+#include <fstream>
 
 namespace xci::config {
+
+using xci::core::escape_utf8;
 
 
 class RetainedConfigParser final : public ConfigParser {
@@ -96,6 +103,62 @@ bool Config::parse_string(const std::string& str)
 {
     RetainedConfigParser p(*this);
     return p.parse_string(str);
+}
+
+
+void Config::dump(std::ostream& os) const
+{
+    class DumpingVisitor {
+    public:
+        explicit DumpingVisitor(std::ostream& os) : os(os) {}
+
+        void dump_items(const Config& v) {
+            for (const ConfigItem& item : v) {
+                if (item.is_null())
+                    continue;
+                os << indent() << item.name() << ' ';
+                item.visit(*this);
+            }
+        }
+
+        void operator()(std::monostate v) const {}
+        void operator()(bool v) const { os << std::boolalpha << v << '\n'; }
+        void operator()(int64_t v) const { os << v << '\n'; }
+        void operator()(double v) const { os << v << '\n'; }
+        void operator()(const std::string& v) const { os << '"' << escape_utf8(v) << '"' << '\n'; }
+        void operator()(const Config& v) {
+            ++ m_indent;
+            os << '{' << '\n';
+            dump_items(v);
+            -- m_indent;
+            os << indent() << '}' << '\n';
+        }
+
+    private:
+        std::string indent() const { return std::string(m_indent * 2, ' '); }
+        std::ostream& os;
+        int m_indent = 0;
+    };
+    DumpingVisitor visitor(os);
+    visitor.dump_items(*this);
+}
+
+
+std::string Config::dump() const
+{
+    std::stringstream os;
+    dump(os);
+    return os.str();
+}
+
+
+bool Config::dump_to_file(const fs::path& path) const
+{
+    std::ofstream f(path);
+    if (!f)
+        return false;
+    dump(f);
+    return bool(f);
 }
 
 

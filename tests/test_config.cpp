@@ -77,8 +77,8 @@ TEST_CASE( "Config syntax", "[ConfigParser]" )
 TEST_CASE( "Config", "[Config]" )
 {
     Config c;
-    CHECK(c.parse_string("bool_item false; int_item 1; float_item 2.3; string_item \"abc\\n\";"
-                         "group { value 2; subgroup { foo 42; bar \"baz\" } }"));
+    CHECK(c.parse_string("bool_item false\nint_item 1;\nfloat_item 2.3; string_item \"abc\\n\";"
+                         "group { value 2; subgroup { foo 42; bar \"baz\"; } }"));
     CHECK(c.size() == 5);
     CHECK(c.front().name() == "bool_item");
     CHECK(c.front().as_bool() == false);
@@ -97,4 +97,19 @@ TEST_CASE( "Config", "[Config]" )
     CHECK(c["group"]["value"].is_group());
     CHECK(c["group"]["value"].as_group().size() == 1);  // "subvalue" item was created
     CHECK(c["group"]["value"]["subvalue"].is_null());
+
+    // Serialization
+    CHECK(c.dump() ==
+        "bool_item false\n"
+        "int_item \"42x\"\n"
+        "float_item 2.3\n"
+        "string_item \"abc\\n\"\n"
+        "group {\n"
+        "  value {\n"
+        "  }\n"
+        "  subgroup {\n"
+        "    foo 42\n"
+        "    bar \"baz\"\n"
+        "  }\n"
+        "}\n");
 }

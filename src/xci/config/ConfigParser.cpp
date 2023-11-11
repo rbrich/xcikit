@@ -178,21 +178,33 @@ struct Control : normal< Rule >
 } // namespace parser
 
 
-bool ConfigParser::parse_string(const std::string &str)
+template<class T>
+static bool _parse(ConfigParser& config_parser, T&& in)
 {
     using parser::FileContent;
     using parser::Action;
     using parser::Control;
-
-    tao::pegtl::memory_input in(str, "<buffer>");
-
     try {
-        return tao::pegtl::parse< FileContent, Action, Control >( in, *this );
+        return tao::pegtl::parse< FileContent, Action, Control >( in, config_parser );
     } catch (const tao::pegtl::parse_error& e) {
         const auto& p = e.positions().front();
         log::error("{}\n:{}\n{:>{}}", e.what(), in.line_at(p), '^', p.column);
         return false;
     }
+}
+
+
+bool ConfigParser::parse_file(const fs::path& path)
+{
+    tao::pegtl::file_input in(path);
+    return _parse(*this, in);
+}
+
+
+bool ConfigParser::parse_string(const std::string &str)
+{
+    tao::pegtl::memory_input in(str, "<buffer>");
+    return _parse(*this, in);
 }
 
 

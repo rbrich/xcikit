@@ -7,8 +7,10 @@
 #ifndef XCI_CONFIG_H
 #define XCI_CONFIG_H
 
+#include <vector>
 #include <variant>
 #include <filesystem>
+#include <ostream>
 
 namespace xci::config {
 
@@ -24,6 +26,10 @@ class Config {
 public:
     bool parse_file(const fs::path& path);
     bool parse_string(const std::string& str);
+
+    void dump(std::ostream& os) const;
+    std::string dump() const;
+    bool dump_to_file(const fs::path& path) const;
 
     ConfigItem& operator[](const std::string& name) { return set(name); }
     const ConfigItem& operator[](const std::string& name) const { return get(name); }
@@ -68,6 +74,9 @@ struct ConfigItem {
 
     const std::string& name() const { return m_name; }
     void set_name(std::string name) { m_name = std::move(name); }
+
+    template<class T> auto visit(T&& visitor) const { return std::visit(visitor, m_value); }
+    template<class T> auto visit(T&& visitor) { return std::visit(visitor, m_value); }
 
     template <typename T>
     void operator= (T value) {
