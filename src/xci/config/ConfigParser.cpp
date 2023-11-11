@@ -150,7 +150,7 @@ template<>
 struct Action<GroupBegin> {
     template<typename Input>
     static void apply(const Input& in, ConfigParser& visitor) {
-        visitor.group(true);
+        visitor.begin_group();
     }
 };
 
@@ -158,7 +158,7 @@ template<>
 struct Action<GroupEnd> {
     template<typename Input>
     static void apply(const Input& in, ConfigParser& visitor) {
-        visitor.group(false);
+        visitor.end_group();
     }
 };
 
@@ -170,12 +170,7 @@ template< typename Rule >
 struct Control : normal< Rule >
 {
     template< typename Input, typename... States >
-    static void raise( const Input& in, States&&... /*unused*/ )
-    {
-        log::error("{}: Parse error matching {} at [{}]",
-                   fmt::streamed(in.position()),
-                   demangle<Rule>(),
-                   std::string(in.current(), in.size()).substr(0, 10));
+    static void raise( const Input& in, States&&... /*unused*/ ) {
         throw parse_error( "parse error matching " + std::string(demangle<Rule>()), in );
     }
 };
@@ -193,7 +188,9 @@ bool ConfigParser::parse_string(const std::string &str)
 
     try {
         return tao::pegtl::parse< FileContent, Action, Control >( in, *this );
-    } catch (const tao::pegtl::parse_error&) {
+    } catch (const tao::pegtl::parse_error& e) {
+        const auto& p = e.positions().front();
+        log::error("{}\n:{}\n{:>{}}", e.what(), in.line_at(p), '^', p.column);
         return false;
     }
 }

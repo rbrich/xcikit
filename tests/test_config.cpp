@@ -34,14 +34,13 @@ protected:
     void int_value(int64_t value) override { dump << value << '\n'; }
     void float_value(double value) override { dump << value << '\n'; }
     void string_value(std::string value) override { dump << '"' << escape_utf8(value) << '"' << '\n'; }
-    void group(bool begin) override {
-        if (begin) {
-            ++m_indent;
-            dump << '{' << '\n';
-        } else {
-            --m_indent;
-            dump << indent() << '}' << '\n';
-        }
+    void begin_group() override {
+        ++m_indent;
+        dump << '{' << '\n';
+    }
+    void end_group() override {
+        --m_indent;
+        dump << indent() << '}' << '\n';
     }
 
 private:
@@ -72,4 +71,30 @@ TEST_CASE( "Config syntax", "[ConfigParser]" )
         "    bar \"baz\"\n"
         "  }\n"
         "}\n");
+}
+
+
+TEST_CASE( "Config", "[Config]" )
+{
+    Config c;
+    CHECK(c.parse_string("bool_item false; int_item 1; float_item 2.3; string_item \"abc\\n\";"
+                         "group { value 2; subgroup { foo 42; bar \"baz\" } }"));
+    CHECK(c.size() == 5);
+    CHECK(c.front().name() == "bool_item");
+    CHECK(c.front().as_bool() == false);
+    CHECK(c.back().name() == "group");
+    CHECK(c.back().as_group().size() == 2);
+    CHECK(c.back().as_group().front().name() == "value");
+
+    // Shortcuts
+    CHECK(c["int_item"] == 1);
+    CHECK(c["int_item"] != "1");
+    c["int_item"] = "42x";
+    CHECK(c["int_item"] == "42x");
+    CHECK(c["group"]["value"] == 2);
+    CHECK(c["group"]["subgroup"]["bar"] == "baz");
+    CHECK(c["group"]["value"]["subvalue"] != false);  // this is destructive, the original int value is replaced by group
+    CHECK(c["group"]["value"].is_group());
+    CHECK(c["group"]["value"].as_group().size() == 1);  // "subvalue" item was created
+    CHECK(c["group"]["value"]["subvalue"].is_null());
 }

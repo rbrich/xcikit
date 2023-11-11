@@ -37,7 +37,8 @@ public:
     // visitor callbacks
 
     virtual void name(const std::string& name) = 0;
-    virtual void group(bool begin) = 0;
+    virtual void begin_group() = 0;
+    virtual void end_group() = 0;
 
     virtual void bool_value(bool value) = 0;
     virtual void int_value(int64_t value) = 0;
