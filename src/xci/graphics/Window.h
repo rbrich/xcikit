@@ -21,7 +21,8 @@
 #include <utility>
 #include <chrono>
 
-struct GLFWwindow;
+struct SDL_Window;
+union SDL_Event;
 
 namespace xci::graphics {
 
@@ -32,12 +33,29 @@ using xci::core::Vec2i;
 // Key names come from GLFW, with only minor changes
 enum class Key: uint8_t {
     Unknown = 0,
-    F1 = 1,
-    F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
-    Escape,
-    Enter,
-    Backspace,
-    Tab,
+
+    // The following key codes correspond to ASCII
+    Backspace = '\b',
+    Tab = '\t',
+    Return = '\r',
+    Escape = '\x1b',
+    Space = ' ',
+    Apostrophe  = '\'',
+    Comma = ',',
+    Minus = '-',
+    Period = '.',
+    Slash = '/',
+    Num0 = '0', Num1, Num2, Num3, Num4, Num5, Num6, Num7, Num8, Num9,
+    Semicolon = ';',
+    Equal = '=',
+    A = 'A', B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
+    LeftBracket = '[',
+    Backslash = '\\',
+    RightBracket = ']',
+    Backtick = '`',
+
+    // Function keys
+    F1 = 128, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
     Insert, Delete,
     Home, End,
     PageUp, PageDown,
@@ -46,29 +64,9 @@ enum class Key: uint8_t {
     PrintScreen,
     Pause,
 
-    // The following key codes correspond to ASCII
-    Space = 32,
-    Apostrophe  =   39, // '
-    Comma = 44,     // ,
-    Minus = 45,     // -
-    Period = 46,    // .
-    Slash = 47,     // /
-    Num0 = 48, Num1, Num2, Num3, Num4, Num5, Num6, Num7, Num8, Num9,
-    Semicolon = 59, // ;
-    Equal = 61,     // =
-    A = 65, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
-    LeftBracket = 91,   // [
-    Backslash = 92,     // \ //
-    RightBracket = 93,  // ]
-    GraveAccent = 96,   // `
-
-    // International keys (non-US layout)
-    World1 = 101,
-    World2 = 102,
-
     // Numeric keypad
-    Keypad0 = 128, Keypad1, Keypad2, Keypad3, Keypad4, Keypad5, Keypad6, Keypad7, Keypad8, Keypad9,
-    KeypadAdd, KeypadSubtract, KeypadMultiply, KeypadDivide, KeypadDecimalPoint, KeypadEnter,
+    Keypad0, Keypad1, Keypad2, Keypad3, Keypad4, Keypad5, Keypad6, Keypad7, Keypad8, Keypad9,
+    KeypadPlus, KeypadMinus, KeypadMultiply, KeypadDivide, KeypadDecimalPoint, KeypadEnter,
 
     // Modifier keys
     LeftShift, RightShift,
@@ -81,9 +79,10 @@ static_assert((int)Key::Z == 90, "ascii letters");
 
 
 struct ModKey {
-    bool shift : 1;
-    bool ctrl : 1;
-    bool alt : 1;
+    bool shift : 1 = false;
+    bool ctrl : 1 = false;
+    bool alt : 1 = false;
+    bool super : 1 = false;
 
     static constexpr ModKey None() { return {false, false, false}; }
     static constexpr ModKey Shift() { return {true, false, false}; }
@@ -95,7 +94,7 @@ struct ModKey {
     static constexpr ModKey ShiftCtrlAlt() { return {true, true, true}; }
 
     bool operator== (ModKey other) const
-        { return shift == other.shift && ctrl == other.ctrl && alt == other.alt;}
+        { return shift == other.shift && ctrl == other.ctrl && alt == other.alt && super == other.super;}
     bool operator!= (ModKey other) const { return !(*this == other); }
 };
 
@@ -114,20 +113,27 @@ struct KeyEvent {
 
 
 struct CharEvent {
-    char32_t code_point;
+    char text[32];
 };
 
 
-enum class MouseButton { Left = 0, Right = 1, Middle = 2 };
+enum class MouseButton {
+    Left = 1,
+    Middle = 2,
+    Right = 3,
+    Ext1 = 4,
+    Ext2 = 5,
+};
 
 struct MousePosEvent {
-    FramebufferCoords pos;
+    FramebufferCoords pos; // FIXME: ScreenCoords
+    ScreenCoords rel;  // relative movement in screen coordinates
 };
 
 struct MouseBtnEvent {
     MouseButton button;
     Action action;
-    FramebufferCoords pos;
+    FramebufferCoords pos;  // FIXME: ScreenCoords
 };
 
 
@@ -148,13 +154,13 @@ class Renderer;
 
 class Window: private core::NonCopyable {
 public:
-    explicit Window(Renderer& renderer) : m_renderer(renderer), m_command_buffers(renderer) {}
+    explicit Window(Renderer& renderer);
     ~Window();
 
-    Renderer& renderer();
+    Renderer& renderer() const;
 
     // Create the window.
-    void create(const Vec2u& size, const std::string& title);
+    [[nodiscard]] bool create(const Vec2u& size, const std::string& title);
 
     // Run main loop. Doesn't exit until the window is closed.
     void display();
@@ -166,14 +172,18 @@ public:
 
     // Stop the main loop and close the window.
     // (thread-safe)
-    void close() const;
+    void close();
 
     // Toggle fullscreen / windowed mode
     // The window starts in windowed mode.
-    void toggle_fullscreen();
+    void toggle_fullscreen() { set_fullscreen(!m_fullscreen); }
+    void set_fullscreen(bool fullscreen);
+    bool is_fullscreen() const { return m_fullscreen; }
 
-    void set_clipboard_string(const std::string& s) const;
-    std::string get_clipboard_string() const;
+    // Set clipboard text (in UTF-8)
+    bool set_clipboard_text(const std::string& text) const;
+    // Get clipboard text (in UTF-8)
+    std::string get_clipboard_text() const;
 
     using UpdateCallback = std::function<void(View&, std::chrono::nanoseconds elapsed)>;
     using SizeCallback = std::function<void(View&)>;
@@ -191,9 +201,9 @@ public:
     void set_draw_callback(DrawCallback draw_cb);
     void set_key_callback(KeyCallback key_cb) { m_key_cb = std::move(key_cb); }
     void set_char_callback(CharCallback char_cb) { m_char_cb = std::move(char_cb); }
-    void set_mouse_position_callback(MousePosCallback mpos_cb);
-    void set_mouse_button_callback(MouseBtnCallback mbtn_cb);
-    void set_scroll_callback(ScrollCallback scroll_cb);
+    void set_mouse_position_callback(MousePosCallback mpos_cb) { m_mpos_cb = std::move(mpos_cb); }
+    void set_mouse_button_callback(MouseBtnCallback mbtn_cb) { m_mbtn_cb = std::move(mbtn_cb); }
+    void set_scroll_callback(ScrollCallback scroll_cb) { m_scroll_cb = std::move(scroll_cb); }
 
     UpdateCallback update_callback() { return m_update_cb; }
     SizeCallback size_callback() { return m_size_cb; }
@@ -234,8 +244,8 @@ public:
     /// This needs to be called before recreating objects that are being drawn.
     void finish_draw();
 
-    // GLFW handles
-    GLFWwindow* glfw_window() const { return m_window; }
+    // SDL handles
+    SDL_Window* sdl_window() const { return m_window; }
 
     // Vulkan - current command buffer
     VkCommandBuffer vk_command_buffer() const { return m_command_buffers[m_current_cmd_buf]; }
@@ -245,21 +255,22 @@ public:
 private:
     void setup_view();
     void create_command_buffers();
-    void resize_framebuffer(int w, int h);
+    void resize_framebuffer();
     void draw();
+    void handle_event(SDL_Event& event);
 
 public:
     static constexpr uint32_t cmd_buf_count = 2;
 
 private:
     Renderer& m_renderer;
-    GLFWwindow* m_window = nullptr;
+    SDL_Window* m_window = nullptr;
     View m_view {this};
     RefreshMode m_refresh_mode = RefreshMode::OnDemand;
     Color m_clear_color;
-    Vec2i m_window_pos;
-    Vec2i m_window_size;
     std::chrono::microseconds m_timeout {0};
+    bool m_quit = false;
+    bool m_fullscreen = false;
     bool m_clear_timeout = false;
     bool m_draw_finished = true;
 

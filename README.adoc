@@ -237,7 +237,7 @@ pip3 install conan
 brew install cmake ninja ccache
 pip3 install conan
 # Libs
-brew install pegtl libzip freetype glfw doxygen catch2 google-benchmark hyperscan
+brew install pegtl libzip freetype sdl2 doxygen catch2 google-benchmark hyperscan
 ----
 - macOS (MacPorts):
 +
@@ -246,7 +246,7 @@ brew install pegtl libzip freetype glfw doxygen catch2 google-benchmark hypersca
 port install cmake ninja ccache
 pip3 install conan
 # Libs
-port install vulkan-* MoltenVK glfw-devel harfbuzz-devel hyperscan libfmt catch2
+port install vulkan-* MoltenVK libsdl2 harfbuzz-devel hyperscan libfmt catch2
 ----
 
 [#using-build-script]
@@ -373,7 +373,7 @@ Then open the xcikit project, let the IDE load the top-level `CMakeLists.txt`.
 Add these CMake options in the IDE settings:
 ----
 -DCMAKE_PROJECT_TOP_LEVEL_INCLUDES=/path/to/cmake-conan/conan_provider.cmake
--DCONAN_OPTIONS="-o;xcikit/*:system_glfw=True;-o;xcikit/*:system_vulkan=True;-o;xcikit/*:system_freetype=True;-o;xcikit/*:system_harfbuzz=True;-o;xcikit/*:system_zlib=True"
+-DCONAN_OPTIONS="-o;xcikit/*:system_sdl=True;-o;xcikit/*:system_vulkan=True;-o;xcikit/*:system_freetype=True;-o;xcikit/*:system_harfbuzz=True;-o;xcikit/*:system_zlib=True"
 ----
 
 The `CONAN_OPTIONS` are just an example, in this case Conan will skip installing graphical libs,

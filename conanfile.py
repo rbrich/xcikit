@@ -51,7 +51,7 @@ class XcikitConan(ConanFile):
         "system_fmt": [True, False],
         "system_zlib": [True, False],
         "system_libzip": [True, False],
-        "system_glfw": [True, False],
+        "system_sdl": [True, False],
         "system_vulkan": [True, False],
         "system_spirv-cross": [True, False],
         "system_freetype": [True, False],
@@ -98,7 +98,7 @@ class XcikitConan(ConanFile):
         "system_fmt": False,
         "system_zlib": False,
         "system_libzip": False,
-        "system_glfw": False,
+        "system_sdl": False,
         "system_vulkan": False,
         "system_spirv-cross": False,
         "system_freetype": False,
@@ -323,7 +323,7 @@ class XcikitConan(ConanFile):
                 component.requires += ['xci-core']
             if name == 'graphics':
                 component.requires += ["xci-core"]
-                self._add_dep('system_glfw', component, "glfw::glfw")
+                self._add_dep('system_sdl', component, "SDL2::SDL2", "sdl::sdl")
                 self._add_dep('system_vulkan', component, "vulkan-loader::vulkan-loader")
             if name == 'text':
                 component.requires += ['xci-core', 'xci-graphics']

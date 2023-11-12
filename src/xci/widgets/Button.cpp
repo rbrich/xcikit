@@ -83,7 +83,7 @@ void Button::draw(View& view)
 
 bool Button::key_event(View& view, const KeyEvent& ev)
 {
-    if (ev.action == Action::Press && ev.key == Key::Enter) {
+    if (ev.action == Action::Press && ev.key == Key::Return) {
         do_click(view);
         return true;
     }

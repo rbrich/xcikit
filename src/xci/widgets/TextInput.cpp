@@ -168,8 +168,7 @@ bool TextInput::key_event(View& view, const KeyEvent& ev)
 
 void TextInput::char_event(View& view, const CharEvent& ev)
 {
-    auto ch = to_utf8(ev.code_point);
-    m_buffer.insert(ch);
+    m_buffer.insert(ev.text);
     resize(view);
     view.refresh();
     if (m_change_cb)

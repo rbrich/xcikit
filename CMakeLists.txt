@@ -22,7 +22,7 @@ option(XCI_WIDGETS "Enable component: xci-widgets" ON)
 option(XCI_SCRIPT "Enable component: xci-script" ON)
 cmake_dependent_option(XCI_TEXT "Enable component: xci-text" ON
     "NOT XCI_WIDGETS" ON)
-cmake_dependent_option(XCI_GRAPHICS "Enable component: xci-graphics (requires Vulkan and GLFW)" ON
+cmake_dependent_option(XCI_GRAPHICS "Enable component: xci-graphics (requires Vulkan and SDL)" ON
     "NOT XCI_TEXT" ON)
 cmake_dependent_option(XCI_DATA "Enable component: xci-data" ON
     "NOT XCI_SCRIPT" ON)

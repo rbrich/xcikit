@@ -144,14 +144,14 @@ jobs:
         if [[ "$RUNNER_OS" == "Linux" ]]; then
             sudo apt-get update
             sudo apt-get install --no-install-recommends -y ninja-build \
-                libglfw3-dev libfreetype6-dev libharfbuzz-dev libhyperscan-dev libbenchmark-dev \
+                libsdl2-dev libfreetype6-dev libharfbuzz-dev libhyperscan-dev libbenchmark-dev \
                 ${{ matrix.apt }}
             export CC=${{ matrix.cc }}-${{ matrix.cc_ver }}
             export CXX=${{ matrix.cxx }}-${{ matrix.cc_ver }}
             echo "CC='$CC'" >> $GITHUB_ENV
             echo "CXX='$CXX'" >> $GITHUB_ENV
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew install ninja glfw doxygen google-benchmark hyperscan freetype harfbuzz libzip
+            brew install ninja sdl2 doxygen google-benchmark hyperscan freetype harfbuzz libzip
             # WORKAROUND: broken cmake config in brew harfbuzz package
             ln -s /usr/local/lib/libharfbuzz.0.dylib /usr/local/lib/libharfbuzz.0..dylib
             if [[ "${{ matrix.clang }}" == llvm* ]] ; then

@@ -58,9 +58,9 @@ requirements:
   libzip:
     cmake: "libzip/1.7.0"
     conan: "libzip/1.10.1"
-  glfw:
-    cmake: "glfw3/3.3.0"
-    conan: "glfw/3.3.8"
+  sdl:
+    cmake: "SDL2/2.0.20"
+    conan: "sdl/2.28.5"
     prereq:
       - graphics
   vulkan:

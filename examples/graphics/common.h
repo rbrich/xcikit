@@ -20,10 +20,6 @@ inline void setup_window(Window& window, const char* title, const char* argv[])
     if (device_id != ~0u)
         window.renderer().set_device_id(device_id);
 
-    try {
-        window.create({800, 600}, title);
-    } catch (const VulkanError& e) {
-        log::error("VulkanError: {}", e.what());
+    if (!window.create({800, 600}, title))
         exit(EXIT_FAILURE);
-    }
 }

@@ -5,6 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <vulkan/vulkan_core.h>  // VkResult
+#include <xci/core/log.h>
 #include <exception>
 #include <string>
 #include <string_view>
@@ -60,12 +61,17 @@ static const char *vk_result_to_cstr(VkResult value) {
     }
 }
 
+inline std::string vk_format_error(std::string_view msg, enum VkResult vk_res)
+{
+    return vk_res == VK_SUCCESS
+                   ? std::string{msg}
+                   : fmt::format("{} ({} {})", msg, int(vk_res), vk_result_to_cstr(vk_res));
+}
 
 class VulkanError : public std::exception {
 public:
     explicit VulkanError(std::string_view msg, enum VkResult vk_res = VK_SUCCESS)
-        : m_msg(vk_res == VK_SUCCESS ? msg :
-                fmt::format("{} ({} {})", msg, int(vk_res), vk_result_to_cstr(vk_res)))
+        : m_msg(vk_format_error(msg, vk_res))
         , m_vk_res(vk_res) {}
 
     const char* what() const noexcept override { return m_msg.c_str(); }
@@ -79,13 +85,25 @@ private:
 
 
 #ifndef VK_THROW
-#define VK_THROW(msg) \
-    throw VulkanError(msg)
+#define VK_THROW(...) \
+    throw VulkanError(__VA_ARGS__)
 #endif
 
 #ifndef VK_TRY
 #define VK_TRY(msg, expr) \
-    do { const VkResult res = (expr); if (res != VK_SUCCESS) throw VulkanError(msg, res); } while(0)
+    do { const VkResult res = (expr); if (res != VK_SUCCESS) VK_THROW(msg, res); } while(0)
+#endif
+
+
+inline void vk_log_error(std::string_view msg, enum VkResult vk_res)
+{
+    xci::core::log::error("VulkanError: {}", vk_format_error(msg, vk_res));
+}
+
+
+#ifndef VK_TRY_RET
+#define VK_TRY_RET(msg, expr) \
+    do { if (const VkResult res = (expr); res != VK_SUCCESS) { vk_log_error(msg, res); return false; } } while(0)
 #endif
 
 

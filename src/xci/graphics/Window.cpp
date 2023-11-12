@@ -9,14 +9,17 @@
 #include "vulkan/VulkanError.h"
 #include <xci/core/log.h>
 
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
+#include <SDL.h>
+#include <SDL_vulkan.h>
 
 namespace xci::graphics {
 
 using namespace xci::core;
 using namespace std::chrono;
 
+
+Window::Window(Renderer& renderer) : m_renderer(renderer), m_command_buffers(renderer)
+{}
 
 Window::~Window()
 {
@@ -34,24 +37,31 @@ Window::~Window()
     m_renderer.destroy_surface();
 
     if (m_window != nullptr)
-        glfwDestroyWindow(m_window);
+        SDL_DestroyWindow(m_window);
 }
 
 
-void Window::create(const Vec2u& size, const std::string& title)
+bool Window::create(const Vec2u& size, const std::string& title)
 {
-    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-    m_window = glfwCreateWindow(int(size.x), int(size.y), title.c_str(),
-                                nullptr, nullptr);
+    m_window = SDL_CreateWindow(title.c_str(),
+        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, int(size.x), int(size.y),
+        SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN | SDL_WINDOW_ALLOW_HIGHDPI);
     if (!m_window) {
-        log::error("Couldn't create GLFW window...");
-        throw std::runtime_error("Window::create failed");
+        log::error("{} failed: {}", "SDL_CreateWindow", SDL_GetError());
+        return false;
     }
-    glfwSetWindowUserPointer(m_window, this);
 
-    m_renderer.create_surface(m_window);
+    // This is a workaround for https://github.com/libsdl-org/SDL/issues/1059
+    SDL_SetEventFilter([](void* data, SDL_Event* event){
+        if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+            auto self = (Window*) data;
+            self->handle_event(*event);
+            return 0;
+        }
+        return 1;
+    }, this);
+
+    return m_renderer.create_surface(m_window);
 }
 
 
@@ -60,7 +70,7 @@ void Window::display()
     setup_view();
 
     auto t_last = steady_clock::now();
-    while (!glfwWindowShouldClose(m_window)) {
+    while (!m_quit) {
         if (m_update_cb) {
             auto t_now = steady_clock::now();
             m_update_cb(m_view, t_now - t_last);
@@ -72,17 +82,25 @@ void Window::display()
                 if (m_refresh_mode == RefreshMode::OnEvent || m_view.pop_refresh())
                     draw();
                 if (m_timeout == 0us) {
-                    glfwWaitEvents();
+                    SDL_Event event;
+                    if (SDL_WaitEvent(&event))
+                        handle_event(event);
                 } else {
-                    glfwWaitEventsTimeout(double(m_timeout.count()) / 1e6);
+                    SDL_Event event;
+                    if (SDL_WaitEventTimeout(&event, int(m_timeout.count()) / 1000))
+                        handle_event(event);
                     if (m_clear_timeout)
                         m_timeout = 0us;
                 }
                 break;
-            case RefreshMode::Periodic:
+            case RefreshMode::Periodic: {
                 draw();
-                glfwPollEvents();
+                SDL_Event event;
+                while (SDL_PollEvent(&event)) {
+                    handle_event(event);
+                }
                 break;
+            }
         }
     }
     vkDeviceWaitIdle(m_renderer.vk_device());
@@ -91,92 +109,50 @@ void Window::display()
 
 void Window::wakeup() const
 {
-    glfwPostEmptyEvent();
-}
-
-
-void Window::close() const
-{
-    glfwSetWindowShouldClose(m_window, GLFW_TRUE);
-    glfwPostEmptyEvent();
-}
-
-
-void Window::toggle_fullscreen()
-{
-    auto& pos = m_window_pos;
-    auto& size = m_window_size;
-    if (glfwGetWindowMonitor(m_window)) {
-        glfwSetWindowMonitor(m_window, nullptr, pos.x, pos.y, size.x, size.y, 0);
-    } else {
-        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-        if (monitor) {
-            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-            glfwGetWindowPos(m_window, &pos.x, &pos.y);
-            glfwGetWindowSize(m_window, &size.x, &size.y);
-            glfwSetWindowMonitor(m_window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
-        }
+    SDL_Event event { .type = SDL_WINDOWEVENT };
+    event.window.event = SDL_WINDOWEVENT_NONE;
+    if (SDL_PushEvent(&event) < 0) {
+        log::error("{} failed: {}", "SDL_PushEvent", SDL_GetError());
     }
 }
 
 
-void Window::set_clipboard_string(const std::string& s) const
+void Window::close()
 {
-    glfwSetClipboardString(m_window, s.c_str());
+    m_quit = true;
+    wakeup();
 }
 
 
-std::string Window::get_clipboard_string() const
+void Window::set_fullscreen(bool fullscreen)
 {
-    return glfwGetClipboardString(m_window);
+    m_fullscreen = fullscreen;
+    SDL_SetWindowFullscreen(m_window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+}
+
+
+bool Window::set_clipboard_text(const std::string& text) const
+{
+    if (SDL_SetClipboardText(text.c_str()) != 0) {
+        log::error("{} failed: {}", "SDL_SetClipboardText", SDL_GetError());
+        return false;
+    }
+    return true;
+}
+
+
+std::string Window::get_clipboard_text() const
+{
+    char* text = SDL_GetClipboardText();
+    std::string res(text);
+    SDL_free(text);
+    return res;
 }
 
 
 void Window::set_draw_callback(Window::DrawCallback draw_cb)
 {
     m_draw_cb = std::move(draw_cb);
-}
-
-
-void Window::set_mouse_position_callback(Window::MousePosCallback mpos_cb)
-{
-    m_mpos_cb = std::move(mpos_cb);
-    glfwSetCursorPosCallback(m_window, [](GLFWwindow* window, double xpos, double ypos) {
-        auto self = (Window*) glfwGetWindowUserPointer(window);
-        if (self->m_mpos_cb) {
-            auto pos = self->m_view.px_to_fb(ScreenCoords{float(xpos), float(ypos)}) - self->m_view.framebuffer_origin();
-            self->m_mpos_cb(self->m_view, MousePosEvent{pos});
-        }
-    });
-}
-
-
-void Window::set_mouse_button_callback(Window::MouseBtnCallback mbtn_cb)
-{
-    m_mbtn_cb = std::move(mbtn_cb);
-    glfwSetMouseButtonCallback(m_window, [](GLFWwindow* window, int button, int action, int mods) {
-        auto self = (Window*) glfwGetWindowUserPointer(window);
-        if (self->m_mbtn_cb) {
-            double xpos, ypos;
-            glfwGetCursorPos(window, &xpos, &ypos);
-            auto pos = self->m_view.px_to_fb(ScreenCoords{float(xpos), float(ypos)}) - self->m_view.framebuffer_origin();
-            self->m_mbtn_cb(self->m_view, MouseBtnEvent{(MouseButton) button, (Action) action, pos});
-        }
-    });
-}
-
-
-void Window::set_scroll_callback(Window::ScrollCallback scroll_cb)
-{
-    m_scroll_cb = std::move(scroll_cb);
-    if (m_scroll_cb) {
-        glfwSetScrollCallback(m_window, [](GLFWwindow* window, double xoffset, double yoffset) {
-            auto self = (Window*) glfwGetWindowUserPointer(window);
-            self->m_scroll_cb(self->m_view, ScrollEvent{{float(xoffset), float(yoffset)}});
-        });
-    } else {
-        glfwSetScrollCallback(m_window, nullptr);
-    }
 }
 
 
@@ -200,7 +176,7 @@ void Window::set_debug_flags(View::DebugFlags flags)
 }
 
 
-Renderer& Window::renderer()
+Renderer& Window::renderer() const
 {
     return m_renderer;
 }
@@ -212,130 +188,199 @@ void Window::setup_view()
     m_view.set_framebuffer_size({float(fsize.width), float(fsize.height)});
 
     int width, height;
-    glfwGetWindowSize(m_window, &width, &height);
+    SDL_GetWindowSize(m_window, &width, &height);
     m_view.set_screen_size({float(width), float(height)});
     if (m_size_cb)
         m_size_cb(m_view);
 
-    glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
-        TRACE("Framebuffer resize: {} {}", w, h);
-        auto self = (Window*) glfwGetWindowUserPointer(win);
-        self->resize_framebuffer(w, h);
-        self->draw();
-    });
-
-    glfwSetWindowMaximizeCallback(m_window, [](GLFWwindow* win, int maximized) {
-        TRACE("Window maximize: {}", maximized);
-        auto self = (Window*) glfwGetWindowUserPointer(win);
-        self->m_view.refresh();
-    });
-
-    glfwSetWindowRefreshCallback(m_window, [](GLFWwindow* win) {
-        TRACE("Window refresh");
-        auto self = (Window*) glfwGetWindowUserPointer(win);
-        self->m_view.refresh();
-    });
-
-    glfwSetKeyCallback(m_window, [](GLFWwindow* window, int key, int scancode,
-                                    int action, int mods) {
-        auto* self = (Window*) glfwGetWindowUserPointer(window);
-
-        if (self->m_key_cb) {
-            Key ev_key;
-
-            // Printable keys
-            if ((key >= GLFW_KEY_0 && key <= GLFW_KEY_9)
-            ||  (key >= GLFW_KEY_A && key <= GLFW_KEY_Z)
-            ||  (key >= GLFW_KEY_LEFT_BRACKET && key <= GLFW_KEY_RIGHT_BRACKET)) {
-                ev_key = Key(key);
-
-            // Function keys
-            } else if (key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12) {
-                ev_key = Key(key - GLFW_KEY_F1 + (int)Key::F1);
-
-            // Keypad
-            } else if (key >= GLFW_KEY_KP_0 && key <= GLFW_KEY_KP_9) {
-                ev_key = Key(key - GLFW_KEY_KP_0 + (int)Key::Keypad0);
-
-            } else {
-                switch (key) {
-                    // Printable keys (continued)
-                    case GLFW_KEY_SPACE: ev_key = Key::Space; break;
-                    case GLFW_KEY_APOSTROPHE: ev_key = Key::Apostrophe; break;
-                    case GLFW_KEY_COMMA: ev_key = Key::Comma; break;
-                    case GLFW_KEY_MINUS: ev_key = Key::Minus; break;
-                    case GLFW_KEY_PERIOD: ev_key = Key::Period; break;
-                    case GLFW_KEY_SLASH: ev_key = Key::Slash; break;
-                    case GLFW_KEY_SEMICOLON: ev_key = Key::Semicolon; break;
-                    case GLFW_KEY_EQUAL: ev_key = Key::Equal; break;
-                    case GLFW_KEY_GRAVE_ACCENT: ev_key = Key::GraveAccent; break;
-                    case GLFW_KEY_WORLD_1: ev_key = Key::World1; break;
-                    case GLFW_KEY_WORLD_2: ev_key = Key::World2; break;
-                    // Function keys (continued)
-                    case GLFW_KEY_ESCAPE: ev_key = Key::Escape; break;
-                    case GLFW_KEY_ENTER: ev_key = Key::Enter; break;
-                    case GLFW_KEY_BACKSPACE: ev_key = Key::Backspace; break;
-                    case GLFW_KEY_TAB: ev_key = Key::Tab; break;
-                    case GLFW_KEY_INSERT: ev_key = Key::Insert; break;
-                    case GLFW_KEY_DELETE: ev_key = Key::Delete; break;
-                    case GLFW_KEY_HOME: ev_key = Key::Home; break;
-                    case GLFW_KEY_END: ev_key = Key::End; break;
-                    case GLFW_KEY_PAGE_UP: ev_key = Key::PageUp; break;
-                    case GLFW_KEY_PAGE_DOWN: ev_key = Key::PageDown; break;
-                    case GLFW_KEY_LEFT: ev_key = Key::Left; break;
-                    case GLFW_KEY_RIGHT: ev_key = Key::Right; break;
-                    case GLFW_KEY_UP: ev_key = Key::Up; break;
-                    case GLFW_KEY_DOWN: ev_key = Key::Down; break;
-                    case GLFW_KEY_CAPS_LOCK: ev_key = Key::CapsLock; break;
-                    case GLFW_KEY_SCROLL_LOCK: ev_key = Key::ScrollLock; break;
-                    case GLFW_KEY_NUM_LOCK: ev_key = Key::NumLock; break;
-                    case GLFW_KEY_PRINT_SCREEN: ev_key = Key::PrintScreen; break;
-                    case GLFW_KEY_PAUSE: ev_key = Key::Pause; break;
-                    // Keypad (continued)
-                    case GLFW_KEY_KP_ADD: ev_key = Key::KeypadAdd; break;
-                    case GLFW_KEY_KP_SUBTRACT: ev_key = Key::KeypadSubtract; break;
-                    case GLFW_KEY_KP_MULTIPLY: ev_key = Key::KeypadMultiply; break;
-                    case GLFW_KEY_KP_DIVIDE: ev_key = Key::KeypadDivide; break;
-                    case GLFW_KEY_KP_DECIMAL: ev_key = Key::KeypadDecimalPoint; break;
-                    case GLFW_KEY_KP_ENTER: ev_key = Key::KeypadEnter; break;
-                    // Modifier keys
-                    case GLFW_KEY_LEFT_SHIFT: ev_key = Key::LeftShift; break;
-                    case GLFW_KEY_RIGHT_SHIFT: ev_key = Key::RightShift; break;
-                    case GLFW_KEY_LEFT_CONTROL: ev_key = Key::LeftControl; break;
-                    case GLFW_KEY_RIGHT_CONTROL: ev_key = Key::RightControl; break;
-                    case GLFW_KEY_LEFT_ALT: ev_key = Key::LeftAlt; break;
-                    case GLFW_KEY_RIGHT_ALT: ev_key = Key::RightAlt; break;
-                    case GLFW_KEY_LEFT_SUPER: ev_key = Key::LeftSuper; break;
-                    case GLFW_KEY_RIGHT_SUPER: ev_key = Key::RightSuper; break;
-                    case GLFW_KEY_MENU: ev_key = Key::Menu; break;
-                    // Unknown keys
-                    case GLFW_KEY_UNKNOWN: ev_key = Key::Unknown; break;
-                    default:
-                        log::debug("GlWindow: unknown key: {}", key);
-                        ev_key = Key::Unknown; break;
-                }
-            }
-
-            static_assert(int(Action::Release) == GLFW_RELEASE, "GLFW_RELEASE");
-            static_assert(int(Action::Press) == GLFW_PRESS, "GLFW_PRESS");
-            static_assert(int(Action::Repeat) == GLFW_REPEAT, "GLFW_REPEAT");
-            const ModKey mod = {
-                    bool(mods & GLFW_MOD_SHIFT),
-                    bool(mods & GLFW_MOD_CONTROL),
-                    bool(mods & GLFW_MOD_ALT),
-            };
-            self->m_key_cb(self->m_view, KeyEvent{ev_key, mod, Action(action)});
-        }
-    });
-
-    glfwSetCharCallback(m_window, [](GLFWwindow* window, unsigned int codepoint) {
-        auto self = (Window*) glfwGetWindowUserPointer(window);
-        if (self->m_char_cb) {
-            self->m_char_cb(self->m_view, CharEvent{codepoint});
-        }
-    });
-
     create_command_buffers();
+}
+
+
+static Key translate_sdl_keycode(SDL_Keycode key)
+{
+    // Printable keys
+    if (key >= SDLK_0 && key <= SDLK_9)
+        return Key(key - SDLK_0 + int(Key::Num0));
+    if (key >= SDLK_a && key <= SDLK_z)
+        return Key(key - SDLK_a + int(Key::A));
+
+    // Function keys
+    if (key >= SDLK_F1 && key <= SDLK_F12)
+        return Key(key - SDLK_F1 + int(Key::F1));
+
+    switch (key) {
+        // Printable keys (continued)
+        case SDLK_SPACE: return Key::Space;
+        case SDLK_QUOTE: return Key::Apostrophe;
+        case SDLK_COMMA: return Key::Comma;
+        case SDLK_MINUS: return Key::Minus;
+        case SDLK_PERIOD: return Key::Period;
+        case SDLK_SLASH: return Key::Slash;
+        case SDLK_SEMICOLON: return Key::Semicolon;
+        case SDLK_EQUALS: return Key::Equal;
+        case SDLK_BACKQUOTE: return Key::Backtick;
+        case SDLK_LEFTBRACKET: return Key::LeftBracket;
+        case SDLK_BACKSLASH: return Key::Backslash;
+        case SDLK_RIGHTBRACKET: return Key::RightBracket;
+        // Function keys (continued)
+        case SDLK_ESCAPE: return Key::Escape;
+        case SDLK_RETURN: return Key::Return;
+        case SDLK_BACKSPACE: return Key::Backspace;
+        case SDLK_TAB: return Key::Tab;
+        case SDLK_INSERT: return Key::Insert;
+        case SDLK_DELETE: return Key::Delete;
+        case SDLK_HOME: return Key::Home;
+        case SDLK_END: return Key::End;
+        case SDLK_PAGEUP: return Key::PageUp;
+        case SDLK_PAGEDOWN: return Key::PageDown;
+        case SDLK_LEFT: return Key::Left;
+        case SDLK_RIGHT: return Key::Right;
+        case SDLK_UP: return Key::Up;
+        case SDLK_DOWN: return Key::Down;
+        case SDLK_CAPSLOCK: return Key::CapsLock;
+        case SDLK_SCROLLLOCK: return Key::ScrollLock;
+        case SDLK_NUMLOCKCLEAR: return Key::NumLock;
+        case SDLK_PRINTSCREEN: return Key::PrintScreen;
+        case SDLK_PAUSE: return Key::Pause;
+        // Keypad
+        case SDLK_KP_0: return Key::Keypad0;
+        case SDLK_KP_1: return Key::Keypad1;
+        case SDLK_KP_2: return Key::Keypad2;
+        case SDLK_KP_3: return Key::Keypad3;
+        case SDLK_KP_4: return Key::Keypad4;
+        case SDLK_KP_5: return Key::Keypad5;
+        case SDLK_KP_6: return Key::Keypad6;
+        case SDLK_KP_7: return Key::Keypad7;
+        case SDLK_KP_8: return Key::Keypad8;
+        case SDLK_KP_9: return Key::Keypad9;
+        case SDLK_KP_PLUS: return Key::KeypadPlus;
+        case SDLK_KP_MINUS: return Key::KeypadMinus;
+        case SDLK_KP_MULTIPLY: return Key::KeypadMultiply;
+        case SDLK_KP_DIVIDE: return Key::KeypadDivide;
+        case SDLK_KP_DECIMAL: return Key::KeypadDecimalPoint;
+        case SDLK_KP_ENTER: return Key::KeypadEnter;
+        // Modifier keys
+        case SDLK_LSHIFT: return Key::LeftShift;
+        case SDLK_RSHIFT: return Key::RightShift;
+        case SDLK_LCTRL: return Key::LeftControl;
+        case SDLK_RCTRL: return Key::RightControl;
+        case SDLK_LALT: return Key::LeftAlt;
+        case SDLK_RALT: return Key::RightAlt;
+        case SDLK_LGUI: return Key::LeftSuper;
+        case SDLK_RGUI: return Key::RightSuper;
+        case SDLK_MENU: return Key::Menu;
+        // Unknown keys
+        case SDLK_UNKNOWN: return Key::Unknown;
+        default:
+            log::debug("GlWindow: unknown key: {}", key);
+            return Key::Unknown; break;
+    }
+}
+
+
+static MouseButton translate_sdl_mouse_button(uint8_t button)
+{
+    switch (button) {
+        case SDL_BUTTON_LEFT: return MouseButton::Left;
+        case SDL_BUTTON_RIGHT: return MouseButton::Right;
+        case SDL_BUTTON_MIDDLE: return MouseButton::Middle;
+        case SDL_BUTTON_X1: return MouseButton::Ext1;
+        case SDL_BUTTON_X2: return MouseButton::Ext2;
+        default:
+            assert(false);
+            return MouseButton(button);
+    }
+}
+
+
+void Window::handle_event(SDL_Event& event)
+{
+    switch (event.type) {
+        case SDL_WINDOWEVENT:
+            switch (event.window.event) {
+                case SDL_WINDOWEVENT_NONE:  // from wakeup()
+                    TRACE("Window wakeup event: {}", event.window.event);
+                    break;
+                case SDL_WINDOWEVENT_CLOSE:
+                    m_quit = true;
+                    break;
+                case SDL_WINDOWEVENT_DISPLAY_CHANGED:
+                case SDL_WINDOWEVENT_SIZE_CHANGED: {
+                    TRACE("Window display or size changed: {}", event.window.event);
+                    resize_framebuffer();
+                    draw();
+                    break;
+                }
+                case SDL_WINDOWEVENT_MAXIMIZED:
+                case SDL_WINDOWEVENT_RESTORED:
+                case SDL_WINDOWEVENT_EXPOSED:
+                case SDL_WINDOWEVENT_SHOWN:
+                    TRACE("Window refresh event: {}", event.window.event);
+                    m_view.refresh();
+                    break;
+                default:
+                    TRACE("Window other event: {}", event.window.event);
+                    break;
+            }
+            break;
+
+        case SDL_KEYDOWN:
+        case SDL_KEYUP:
+            if (m_key_cb) {
+                Key ev_key = translate_sdl_keycode(event.key.keysym.sym);
+                Action action = event.key.state == SDL_PRESSED ? Action::Press : Action::Release;
+                if (event.key.repeat)
+                    action = Action::Repeat;
+                const ModKey mod = {
+                    bool(event.key.keysym.mod & KMOD_SHIFT),
+                    bool(event.key.keysym.mod & KMOD_CTRL),
+                    bool(event.key.keysym.mod & KMOD_ALT),
+                    bool(event.key.keysym.mod & KMOD_GUI),
+                };
+                m_key_cb(m_view, KeyEvent{ev_key, mod, action});
+            }
+            break;
+
+        case SDL_TEXTINPUT:
+            if (m_char_cb) {
+                CharEvent ev{};
+                std::memcpy(ev.text, event.text.text,
+                            std::min(sizeof(ev.text), sizeof(event.text.text)));
+                m_char_cb(m_view, ev);
+            }
+            break;
+
+        case SDL_MOUSEMOTION:
+            if (m_mpos_cb) {
+                const auto pos = m_view.px_to_fb(ScreenCoords{float(event.motion.x), float(event.motion.y)})
+                                 - m_view.framebuffer_origin();
+                const ScreenCoords rel {float(event.motion.xrel), float(event.motion.yrel)};
+                m_mpos_cb(m_view, MousePosEvent{pos, rel});
+            }
+            break;
+
+        case SDL_MOUSEBUTTONDOWN:
+        case SDL_MOUSEBUTTONUP:
+            if (m_mbtn_cb) {
+                const auto pos = m_view.px_to_fb(ScreenCoords{float(event.button.x), float(event.button.y)})
+                                 - m_view.framebuffer_origin();
+                const Action action = event.button.state == SDL_PRESSED ? Action::Press : Action::Release;
+                const MouseButton button = translate_sdl_mouse_button(event.button.button);
+                m_mbtn_cb(m_view, MouseBtnEvent{button, action, pos});
+            }
+            break;
+
+        case SDL_MOUSEWHEEL:
+            if (m_scroll_cb) {
+                m_scroll_cb(m_view, ScrollEvent{{float(event.wheel.preciseX), float(event.wheel.preciseY)}});
+            }
+            break;
+
+        default:
+            log::debug("SDL event not handled: {}", event.type);
+            break;
+    }
 }
 
 
@@ -376,17 +421,20 @@ void Window::finish_draw()
 }
 
 
-void Window::resize_framebuffer(int w, int h)
+void Window::resize_framebuffer()
 {
-    const VkExtent2D new_size {uint32_t(w), uint32_t(h)};
-    m_renderer.reset_framebuffer(new_size);
+    int fb_width, fb_height;
+    SDL_Vulkan_GetDrawableSize(m_window, &fb_width, &fb_height);
+
+    const VkExtent2D fb_size {uint32_t(fb_width), uint32_t(fb_height)};
+    m_renderer.reset_framebuffer(fb_size);
 
     const auto& actual_size = m_renderer.vk_image_extent();  // normally the same
     m_view.set_framebuffer_size({float(actual_size.width), float(actual_size.height)});
 
-    int width, height;
-    glfwGetWindowSize(m_window, &width, &height);
-    m_view.set_screen_size({float(width), float(height)});
+    int sc_width, sc_height;
+    SDL_GetWindowSize(m_window, &sc_width, &sc_height);
+    m_view.set_screen_size({float(sc_width), float(sc_height)});
 
     if (m_size_cb)
         m_size_cb(m_view);

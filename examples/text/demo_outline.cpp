@@ -100,13 +100,13 @@ int main(int argc, const char* argv[])
                 window.toggle_fullscreen();
                 break;
             case Key::Minus:  // -/_ key
-            case Key::KeypadSubtract:
+            case Key::KeypadMinus:
                 outline_radius -= 0.1f;
                 if (outline_radius < 0.0f)
                     outline_radius = 0.0f;
                 break;
             case Key::Equal:  // =/+ key
-            case Key::KeypadAdd:
+            case Key::KeypadPlus:
                 outline_radius += 0.1f;
                 break;
             default:

@@ -2,12 +2,8 @@
 # Dependencies #
 # ------------ #
 
-find_package(glfw3 REQUIRED)
+find_package(SDL2 REQUIRED)
 find_package(Vulkan REQUIRED)
-
-if (NOT TARGET glfw::glfw)
-    add_library(glfw::glfw ALIAS glfw)
-endif()
 
 # ------------ #
 # Libraries    #
@@ -49,7 +45,8 @@ target_link_libraries(xci-graphics
         ${CMAKE_DL_LIBS}
         Vulkan::Vulkan
     PRIVATE
-        glfw::glfw
+        SDL2::SDL2main
+        SDL2::SDL2
         range-v3::range-v3
 )
 add_dependencies(xci-graphics shaders)
