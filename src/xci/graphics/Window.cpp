@@ -302,16 +302,21 @@ void Window::handle_event(SDL_Event& event)
                 case SDL_WINDOWEVENT_NONE:  // from wakeup()
                     TRACE("Window wakeup event: {}", event.window.event);
                     break;
+
                 case SDL_WINDOWEVENT_CLOSE:
                     m_quit = true;
                     break;
+
+                #if SDL_VERSION_ATLEAST(2,0,18)
                 case SDL_WINDOWEVENT_DISPLAY_CHANGED:
+                #endif
                 case SDL_WINDOWEVENT_SIZE_CHANGED: {
                     TRACE("Window display or size changed: {}", event.window.event);
                     resize_framebuffer();
                     draw();
                     break;
                 }
+
                 case SDL_WINDOWEVENT_MAXIMIZED:
                 case SDL_WINDOWEVENT_RESTORED:
                 case SDL_WINDOWEVENT_EXPOSED:
@@ -319,6 +324,7 @@ void Window::handle_event(SDL_Event& event)
                     TRACE("Window refresh event: {}", event.window.event);
                     m_view.refresh();
                     break;
+
                 default:
                     TRACE("Window other event: {}", event.window.event);
                     break;
@@ -373,7 +379,11 @@ void Window::handle_event(SDL_Event& event)
 
         case SDL_MOUSEWHEEL:
             if (m_scroll_cb) {
+                #if SDL_VERSION_ATLEAST(2,0,18)
                 m_scroll_cb(m_view, ScrollEvent{{float(event.wheel.preciseX), float(event.wheel.preciseY)}});
+                #else
+                m_scroll_cb(m_view, ScrollEvent{{float(event.wheel.x), float(event.wheel.y)}});
+                #endif
             }
             break;
 

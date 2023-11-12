@@ -59,7 +59,7 @@ requirements:
     cmake: "libzip/1.7.0"
     conan: "libzip/1.10.1"
   sdl:
-    cmake: "SDL2/2.0.20"
+    cmake: "SDL2/2.0.10"
     conan: "sdl/2.28.5"
     prereq:
       - graphics
