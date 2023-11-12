@@ -15,13 +15,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - os: ubuntu-20.04
-          name: "GCC 10 / Release"
-          cc: gcc
-          cc_ver: 10
-          cxx: g++
-          libcxx: libstdc++11
-          build_args: ""
         - os: ubuntu-22.04
           name: "GCC 11 / Release"
           cc: gcc
@@ -36,13 +29,12 @@ jobs:
           cxx: g++
           libcxx: libstdc++11
           build_args: ""
-        - os: ubuntu-20.04
-          name: "Clang 12 / Release"
-          cc: clang
-          cc_ver: 12
-          cxx: clang++
-          libcxx: libc++
-          apt: libc++-12-dev libc++abi-12-dev
+        - os: ubuntu-22.04
+          name: "GCC 13 / Release"
+          cc: gcc
+          cc_ver: 13
+          cxx: g++
+          libcxx: libstdc++11
           build_args: ""
         - os: ubuntu-22.04
           name: "Clang 13 / Release"
@@ -61,16 +53,24 @@ jobs:
 #          apt: libc++-14-dev libc++abi-14-dev
 #          build_args: ""
         - os: ubuntu-22.04
+          name: "Clang 15 / Release"
+          cc: clang
+          cc_ver: 15
+          cxx: clang++
+          libcxx: libc++
+          apt: libc++-15-dev libc++abi-15-dev libc++-14-dev- libc++1-14- libc++abi-14-dev- libc++abi1-14- libunwind-14- libunwind-14-dev-
+          build_args: ""
+        - os: ubuntu-22.04
           name: "GCC 12 / Debug ASAN"
           cc: gcc
           cc_ver: 12
           cxx: g++
           libcxx: libstdc++11
           build_args: "--debug --asan --ubsan"
-        - os: ubuntu-20.04
-          name: "GCC 10 / MinSizeRel Unity"
+        - os: ubuntu-22.04
+          name: "GCC 13 / MinSizeRel Unity"
           cc: gcc
-          cc_ver: 10
+          cc_ver: 13
           cxx: g++
           libcxx: libstdc++11
           build_args: "--minsize --unity"
