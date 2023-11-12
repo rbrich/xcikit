@@ -29,7 +29,7 @@ print_usage()
     echo "Where: PHASE = clean | deps | config | build | test | install | package | graphviz (default: deps..install)"
     echo "       COMPONENT = core | vfs | data | script | graphics | text | widgets (default: all)"
     echo "       PART = libs | tools | examples | tests | benchmarks (default: all, 'libs' are implicit)"
-    echo "       TOOL = dati | ff | fire | shed | tc (default: all, narrows 'tools')"
+    echo "       TOOL = dar | dati | ff | fire | shed | tc (default: all, narrows 'tools')"
     echo
     echo "Group aliases:"
     echo "       only-ff => core tools ff"
@@ -113,7 +113,7 @@ while [[ $# -gt 0 ]] ; do
         libs | tools | examples | tests | benchmarks )
             enable_part "$1"
             shift 1 ;;
-        dati | ff | fire | shed | tc )
+        dar | dati | ff | fire | shed | tc )
             enable_tool "$1"
             shift 1 ;;
         only-ff )
@@ -271,7 +271,7 @@ else
     done
 fi
 
-TOOLS=(dati ff fire shed tc)
+TOOLS=(dar dati ff fire shed tc)
 if [[ -z "$tool_default" ]]; then
     # Disable tools that were not selected
     for name in "${TOOLS[@]}" ; do
@@ -284,7 +284,6 @@ if [[ -z "$tool_default" ]]; then
         fi
     done
 else
-    DETECT_ARGS+=("${TOOLS[@]}_tool")
     for name in "${TOOLS[@]}" ; do
         CONAN_ARGS+=(-o "xcikit/*:${name}_tool=True")
     done

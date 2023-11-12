@@ -94,7 +94,7 @@ Technologies:
 Supported compilers:
 
 * GCC >= 10
-* Clang >= 12
+* Clang >= 13
 * Xcode >= 13
 * Visual Studio >= 16
 
