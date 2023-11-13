@@ -148,6 +148,13 @@ enum class RefreshMode {
     Periodic,   // continuous refresh
 };
 
+enum class FullscreenMode: uint8_t {
+    Default,    // sane default for the platform
+    Exclusive,  // normal fullscreen mode (with mode switching, but keep the desktop mode)
+    Desktop,    // on Mac, this creates a new space (similar to what system fullscreen button does)
+    BorderlessWindow,  // maximized borderless window
+};
+
 
 class Renderer;
 
@@ -179,6 +186,7 @@ public:
     void toggle_fullscreen() { set_fullscreen(!m_fullscreen); }
     void set_fullscreen(bool fullscreen);
     bool is_fullscreen() const { return m_fullscreen; }
+    void set_fullscreen_mode(FullscreenMode mode) { m_fullscreen_mode = mode; }
 
     // Set clipboard text (in UTF-8)
     bool set_clipboard_text(const std::string& text) const;
@@ -269,6 +277,7 @@ private:
     RefreshMode m_refresh_mode = RefreshMode::OnDemand;
     Color m_clear_color;
     std::chrono::microseconds m_timeout {0};
+    FullscreenMode m_fullscreen_mode = FullscreenMode::Default;
     bool m_quit = false;
     bool m_fullscreen = false;
     bool m_clear_timeout = false;

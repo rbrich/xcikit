@@ -13,6 +13,7 @@
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
+#include <SDL_hints.h>
 
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/view/enumerate.hpp>
@@ -85,6 +86,10 @@ vulkan_debug_callback(
 Renderer::Renderer(Vfs& vfs)
         : m_vfs(vfs)
 {
+#if SDL_VERSION_ATLEAST(2,24,0)
+    SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
+#endif
+
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
         VK_THROW(fmt::format("Couldn't initialize SDL: {}", SDL_GetError()));
 }

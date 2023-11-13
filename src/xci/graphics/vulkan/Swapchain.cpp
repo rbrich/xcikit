@@ -8,6 +8,7 @@
 #include "VulkanError.h"
 #include <xci/graphics/Renderer.h>
 #include <xci/core/log.h>
+#include <cassert>
 
 #include <range/v3/view/take.hpp>
 

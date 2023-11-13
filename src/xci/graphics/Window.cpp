@@ -127,7 +127,38 @@ void Window::close()
 void Window::set_fullscreen(bool fullscreen)
 {
     m_fullscreen = fullscreen;
-    SDL_SetWindowFullscreen(m_window, fullscreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+    auto fullscreen_mode = m_fullscreen_mode;
+    if (fullscreen_mode == FullscreenMode::Default) {
+        fullscreen_mode = FullscreenMode::Desktop;
+    }
+
+    if (fullscreen_mode == FullscreenMode::BorderlessWindow) {
+        if (m_fullscreen) {
+            SDL_SetWindowBordered(m_window, SDL_FALSE);
+            SDL_MaximizeWindow(m_window);
+        } else {
+            SDL_RestoreWindow(m_window);
+            SDL_SetWindowBordered(m_window, SDL_TRUE);
+        }
+        return;
+    }
+
+    uint32_t flags = 0;
+    if (!m_fullscreen) {
+        flags = 0;
+    } else if (fullscreen_mode == FullscreenMode::Exclusive) {
+        SDL_DisplayMode video_mode;
+        if (SDL_GetDesktopDisplayMode(SDL_GetWindowDisplayIndex(m_window), &video_mode) == 0) {
+            SDL_SetWindowDisplayMode(m_window, &video_mode);
+        }
+        flags = SDL_WINDOW_FULLSCREEN;
+    } else if (fullscreen_mode == FullscreenMode::Desktop) {
+        flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
+    }
+
+    if (SDL_SetWindowFullscreen(m_window, flags) != 0) {
+        log::error("{} failed: {}", "SDL_SetWindowFullscreen", SDL_GetError());
+    }
 }
 
 
