@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <sstream>
 #include <fstream>
+#include <cstdlib>  // atoi, strtod
 
 namespace xci::config {
 
@@ -159,6 +160,63 @@ bool Config::dump_to_file(const fs::path& path) const
         return false;
     dump(f);
     return bool(f);
+}
+
+
+bool ConfigItem::to_bool() const
+{
+    return std::visit([](auto&& v) -> bool {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, std::monostate> || std::is_same_v<T, Config>)
+            return false;
+        else if constexpr (std::is_same_v<T, std::string>)
+            return v == "true";
+        else
+            return bool(v);
+    }, m_value);
+}
+
+
+int64_t ConfigItem::to_int() const
+{
+    return std::visit([](auto&& v) -> int64_t {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, std::monostate> || std::is_same_v<T, Config>)
+            return 0;
+        else if constexpr (std::is_same_v<T, std::string>)
+            return std::atoi(v.c_str());
+        else
+            return int64_t(v);
+    }, m_value);
+}
+
+
+double ConfigItem::to_float() const
+{
+    return std::visit([](auto&& v) -> double {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, std::monostate> || std::is_same_v<T, Config>)
+            return 0.0;
+        else if constexpr (std::is_same_v<T, std::string>)
+            return std::strtod(v.c_str(), nullptr);
+        else
+            return double(v);
+    }, m_value);
+}
+
+
+std::string ConfigItem::to_string() const
+{
+    return std::visit([](auto&& v) -> std::string {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, std::monostate> || std::is_same_v<T, Config>) {
+            return {};
+        } else {
+            std::stringstream os;
+            os << std::boolalpha << v;
+            return os.str();
+        }
+    }, m_value);
 }
 
 

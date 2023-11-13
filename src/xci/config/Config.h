@@ -4,8 +4,8 @@
 // Copyright 2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#ifndef XCI_CONFIG_H
-#define XCI_CONFIG_H
+#ifndef XCI_CONFIG_CONFIG_H
+#define XCI_CONFIG_CONFIG_H
 
 #include <vector>
 #include <variant>
@@ -127,20 +127,20 @@ struct ConfigItem {
 
     // For int and float, returns false if 0, otherwise true.
     // String is converted to true only if "true", otherwise false.
-    bool to_bool() const { return std::get<bool>(m_value); }
+    bool to_bool() const;
 
     // Bool is converted to 0 / 1.
     // Float is truncated to int.
     // String is parsed to int if possible, otherwise 0 (atoi).
-    int64_t to_int() const { return std::get<int64_t>(m_value); }
+    int64_t to_int() const;
 
     // Bool is converted to 0.0 / 1.0.
     // String is parsed to float, 0 on failure.
-    double to_float() const { return std::get<double>(m_value); }
+    double to_float() const;
 
     // Bool is converted to "false" / "true".
     // Int/float is converted to string.
-    std::string to_string() const { return std::get<std::string>(m_value); }
+    std::string to_string() const;
 
 private:
     std::string m_name;
@@ -150,4 +150,4 @@ private:
 
 }  // namespace xci::config
 
-#endif  // XCI_CONFIG_H
+#endif  // XCI_CONFIG_CONFIG_H
