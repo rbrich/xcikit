@@ -25,10 +25,16 @@ inline void setup_window(Window& window, const char* title, const char* argv[])
         Config conf;
         if (!conf.parse_file(config_file))
             exit(EXIT_FAILURE);
-        if (auto v = conf["device_id"].to_int(); v != 0)
-            window.renderer().set_device_id(v);
-        if (auto v = conf["fullscreen_mode"].to_int(); v >= 0 && v < 4)
-            window.set_fullscreen_mode(FullscreenMode(v));
+        for (const ConfigItem& item : conf) {
+            if (item.name() == "device_id")
+                window.renderer().set_device_id(item.to_int());
+            else if (item.name() == "fullscreen_mode") {
+                if (const auto v = item.to_int(); v >= 0 && v < 4)
+                    window.set_fullscreen_mode(FullscreenMode(v));
+            } else {
+                log::warning("Unknown config option: {}", item.name());
+            }
+        }
     }
 
     if (device_id != ~0u)

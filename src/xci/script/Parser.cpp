@@ -1496,19 +1496,21 @@ inline bool do_not_trace(std::string_view rule) {
 }
 #endif
 
-using ErrMsg = const std::pair<const char*, std::string_view>;
-
 template< typename Rule >
 struct Control : normal< Rule >
 {
-    static ErrMsg errmsg;
+    static const char* errmsg;
 
     template< typename Input, typename... States >
     static void raise( const Input& in, States&&... /*unused*/ ) {
-        if (!errmsg.second.empty())
-            throw tao::pegtl::parse_error( errmsg.first + std::string(errmsg.second), in );
-        else
-            throw tao::pegtl::parse_error( errmsg.first, in );
+        if (errmsg == nullptr) {
+#ifndef NDEBUG
+            throw tao::pegtl::parse_error( "parse error matching " + std::string(demangle<Rule>()), in );
+#else
+            throw tao::pegtl::parse_error( "parse error", in );
+#endif
+        }
+        throw tao::pegtl::parse_error( errmsg, in );
     }
 
 #ifdef XCI_SCRIPT_PARSER_TRACE
@@ -1596,65 +1598,61 @@ struct Control : normal< Rule >
 #endif
 };
 
-template<> ErrMsg Control<eof>::errmsg = {"invalid syntax", {}};
-template<> ErrMsg Control<until< string<'*', '/'>, any >>::errmsg = {"unterminated comment", {}};
-template<> ErrMsg Control<UPlus<digit>>::errmsg = {"expected digit", {}};
-template<> ErrMsg Control<UPlus<odigit>>::errmsg = {"expected oct digit", {}};
-template<> ErrMsg Control<xdigit>::errmsg = {"expected hex digit", {}};
-template<> ErrMsg Control<UPlus<xdigit>>::errmsg = {"expected hex digit", {}};
-template<> ErrMsg Control<rep_min_max<1,6,xdigit>>::errmsg = {"expected hex digit", {}};
-template<> ErrMsg Control<StringCh>::errmsg = {"invalid char literal", {}};
-template<> ErrMsg Control<StringChUni>::errmsg = {"invalid char literal", {}};
-template<> ErrMsg Control<StringChEscSpec>::errmsg = {"invalid escape sequence", {}};
-template<> ErrMsg Control<StringChUniEscSpec>::errmsg = {"invalid escape sequence", {}};
-template<> ErrMsg Control<one<']'>>::errmsg = {"expected `]`", {}};
-template<> ErrMsg Control<one<')'>>::errmsg = {"expected `)`", {}};
-template<> ErrMsg Control<one<'>'>>::errmsg = {"expected `>`", {}};
-template<> ErrMsg Control<one<'{'>>::errmsg = {"expected `{`", {}};
-template<> ErrMsg Control<one<'}'>>::errmsg = {"expected `}`", {}};
-template<> ErrMsg Control<one<'='>>::errmsg = {"expected `=`", {}};
-template<> ErrMsg Control<one<'\''>>::errmsg = {"expected `'`", {}};
-template<> ErrMsg Control<RS>::errmsg = {"expected a whitespace character", {}};
-template<> ErrMsg Control<NSC>::errmsg = {"expected a whitespace character", {}};
-template<> ErrMsg Control<Expression<SC>>::errmsg = {"expected expression", {}};
-template<> ErrMsg Control<Expression<NSC>>::errmsg = {"expected expression", {}};
-template<> ErrMsg Control<ExprOperand<SC>>::errmsg = {"expected expression", {}};
-template<> ErrMsg Control<ExprArgSafe>::errmsg = {"expected expression", {}};
-template<> ErrMsg Control<ExprInfix<NSC>>::errmsg = {"expected expression", {}};
-template<> ErrMsg Control<DeclParam>::errmsg = {"expected function parameter declaration", {}};
-template<> ErrMsg Control<Block>::errmsg = {"expected function body", {}};
-template<> ErrMsg Control<ExprCallable>::errmsg = {"expected callable", {}};
-template<> ErrMsg Control<ExprInfixRight<SC>>::errmsg = {"expected infix operator", {}};
-template<> ErrMsg Control<ExprInfixRight<NSC>>::errmsg = {"expected infix operator", {}};
-template<> ErrMsg Control<DotCallRightExpr<SC>>::errmsg = {"expected expression or typename (dot call)", {}};
-template<> ErrMsg Control<DotCallRightExpr<NSC>>::errmsg = {"expected expression or typename (dot call)", {}};
-template<> ErrMsg Control<TypeDotCallRight<SC>>::errmsg = {"expected funcrion call (type dot call)", {}};
-template<> ErrMsg Control<TypeDotCallRight<NSC>>::errmsg = {"expected funcrion call (type dot call)", {}};
-template<> ErrMsg Control<Variable>::errmsg = {"expected variable name", {}};
-template<> ErrMsg Control<UnsafeType>::errmsg = {"expected type", {}};
-template<> ErrMsg Control<Type>::errmsg = {"expected type", {}};
-template<> ErrMsg Control<plus<Type, SC>>::errmsg = {"expected type", {}};
-template<> ErrMsg Control<TypeName>::errmsg = {"expected type name", {}};
-template<> ErrMsg Control<plus<TypeName, SC>>::errmsg = {"expected type name", {}};
-template<> ErrMsg Control<TypeConstraint>::errmsg = {"expected type constraint", {}};
-template<> ErrMsg Control<TypeContext>::errmsg = {"expected type constraints", {}};
-template<> ErrMsg Control<StringContent>::errmsg = {"unclosed string literal", {}};
-template<> ErrMsg Control<BytesContent>::errmsg = {"unclosed bytes literal", {}};
-template<> ErrMsg Control<RawStringContent>::errmsg = {"unclosed raw string literal", {}};
-template<> ErrMsg Control<FunctionDecl>::errmsg = {"expected function declaration", {}};
-template<> ErrMsg Control<SepList<ClassDeclaration>>::errmsg = {"expected function declaration", {}};
-template<> ErrMsg Control<SepList<Definition>>::errmsg = {"expected function definition", {}};
-template<> ErrMsg Control<ExprStructItem>::errmsg = {"expected struct item", {}};
-template<> ErrMsg Control<KeywordThen>::errmsg = {"expected `then` expression", {}};
-template<> ErrMsg Control<SepList<Statement>>::errmsg = {"expected statement", {}};
-template<> ErrMsg Control<SepList<TopLevelStatement>>::errmsg = {"expected statement", {}};
+template<> const char* Control<eof>::errmsg = "invalid syntax";
+template<> const char* Control<until< string<'*', '/'>, any >>::errmsg = "unterminated comment";
+template<> const char* Control<UPlus<digit>>::errmsg = "expected digit";
+template<> const char* Control<UPlus<odigit>>::errmsg = "expected oct digit";
+template<> const char* Control<xdigit>::errmsg = "expected hex digit";
+template<> const char* Control<UPlus<xdigit>>::errmsg = "expected hex digit";
+template<> const char* Control<rep_min_max<1,6,xdigit>>::errmsg = "expected hex digit";
+template<> const char* Control<StringCh>::errmsg = "invalid char literal";
+template<> const char* Control<StringChUni>::errmsg = "invalid char literal";
+template<> const char* Control<StringChEscSpec>::errmsg = "invalid escape sequence";
+template<> const char* Control<StringChUniEscSpec>::errmsg = "invalid escape sequence";
+template<> const char* Control<one<']'>>::errmsg = "expected `]`";
+template<> const char* Control<one<')'>>::errmsg = "expected `)`";
+template<> const char* Control<one<'>'>>::errmsg = "expected `>`";
+template<> const char* Control<one<'{'>>::errmsg = "expected `{`";
+template<> const char* Control<one<'}'>>::errmsg = "expected `}`";
+template<> const char* Control<one<'='>>::errmsg = "expected `=`";
+template<> const char* Control<one<'\''>>::errmsg = "expected `'`";
+template<> const char* Control<RS>::errmsg = "expected a whitespace character";
+template<> const char* Control<NSC>::errmsg = "expected a whitespace character";
+template<> const char* Control<Expression<SC>>::errmsg = "expected expression";
+template<> const char* Control<Expression<NSC>>::errmsg = "expected expression";
+template<> const char* Control<ExprOperand<SC>>::errmsg = "expected expression";
+template<> const char* Control<ExprArgSafe>::errmsg = "expected expression";
+template<> const char* Control<ExprInfix<NSC>>::errmsg = "expected expression";
+template<> const char* Control<DeclParam>::errmsg = "expected function parameter declaration";
+template<> const char* Control<Block>::errmsg = "expected function body";
+template<> const char* Control<ExprCallable>::errmsg = "expected callable";
+template<> const char* Control<ExprInfixRight<SC>>::errmsg = "expected infix operator";
+template<> const char* Control<ExprInfixRight<NSC>>::errmsg = "expected infix operator";
+template<> const char* Control<DotCallRightExpr<SC>>::errmsg = "expected expression or typename (dot call)";
+template<> const char* Control<DotCallRightExpr<NSC>>::errmsg = "expected expression or typename (dot call)";
+template<> const char* Control<TypeDotCallRight<SC>>::errmsg = "expected funcrion call (type dot call)";
+template<> const char* Control<TypeDotCallRight<NSC>>::errmsg = "expected funcrion call (type dot call)";
+template<> const char* Control<Variable>::errmsg = "expected variable name";
+template<> const char* Control<UnsafeType>::errmsg = "expected type";
+template<> const char* Control<Type>::errmsg = "expected type";
+template<> const char* Control<plus<Type, SC>>::errmsg = "expected type";
+template<> const char* Control<TypeName>::errmsg = "expected type name";
+template<> const char* Control<plus<TypeName, SC>>::errmsg = "expected type name";
+template<> const char* Control<TypeConstraint>::errmsg = "expected type constraint";
+template<> const char* Control<TypeContext>::errmsg = "expected type constraints";
+template<> const char* Control<StringContent>::errmsg = "unclosed string literal";
+template<> const char* Control<BytesContent>::errmsg = "unclosed bytes literal";
+template<> const char* Control<RawStringContent>::errmsg = "unclosed raw string literal";
+template<> const char* Control<FunctionDecl>::errmsg = "expected function declaration";
+template<> const char* Control<SepList<ClassDeclaration>>::errmsg = "expected function declaration";
+template<> const char* Control<SepList<Definition>>::errmsg = "expected function definition";
+template<> const char* Control<ExprStructItem>::errmsg = "expected struct item";
+template<> const char* Control<KeywordThen>::errmsg = "expected `then` expression";
+template<> const char* Control<SepList<Statement>>::errmsg = "expected statement";
+template<> const char* Control<SepList<TopLevelStatement>>::errmsg = "expected statement";
 
 // default message
-#ifndef NDEBUG
-template< typename T > ErrMsg Control< T >::errmsg = {"parse error matching ", demangle<T>()};
-#else
-template< typename T > ErrMsg Control< T >::errmsg = {"parse error", {}};
-#endif
+template<typename T> const char* Control<T>::errmsg = nullptr;
 
 // ----------------------------------------------------------------------------
 

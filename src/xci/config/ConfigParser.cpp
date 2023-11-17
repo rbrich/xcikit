@@ -52,11 +52,11 @@ struct Group: seq<GroupBegin, GroupContent, SkipWS, GroupEnd> {};
 // Item
 struct Name: identifier {};
 struct Value: sor<Bool, Number, String, Group> {};
-struct Item: seq<SkipWS, Name, plus<blank>, Value, Sep> {};
+struct Item: seq<SkipWS, Name, plus<blank>, must<Value>, Sep> {};
 
 // File
 struct GroupContent: star<Item> {};
-struct FileContent: seq<GroupContent, SkipWS, eof> {};
+struct FileContent: seq<GroupContent, SkipWS, must<eof>> {};
 
 
 // ----------------------------------------------------------------------------
@@ -169,11 +169,27 @@ struct Action<GroupEnd> {
 template< typename Rule >
 struct Control : normal< Rule >
 {
+    static const char* errmsg;
+
     template< typename Input, typename... States >
     static void raise( const Input& in, States&&... /*unused*/ ) {
-        throw parse_error( "parse error matching " + std::string(demangle<Rule>()), in );
+        if (errmsg == nullptr) {
+            // default message
+#ifndef NDEBUG
+            throw parse_error( "parse error matching " + std::string(demangle<Rule>()), in );
+#else
+            throw parse_error( "parse error", in );
+#endif
+        }
+        throw tao::pegtl::parse_error( errmsg, in );
     }
 };
+
+template<> const char* Control<eof>::errmsg = "invalid syntax";
+template<> const char* Control<Value>::errmsg = "expected value";
+
+// default message
+template<typename T> const char* Control<T>::errmsg = nullptr;
 
 } // namespace parser
 
@@ -188,7 +204,7 @@ static bool _parse(ConfigParser& config_parser, T&& in)
         return tao::pegtl::parse< FileContent, Action, Control >( in, config_parser );
     } catch (const tao::pegtl::parse_error& e) {
         const auto& p = e.positions().front();
-        log::error("{}\n:{}\n{:>{}}", e.what(), in.line_at(p), '^', p.column);
+        log::error("{}\n{}\n{:>{}}", e.what(), in.line_at(p), '^', p.column);
         return false;
     }
 }
