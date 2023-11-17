@@ -112,8 +112,12 @@ struct KeyEvent {
 };
 
 
-struct CharEvent {
+struct TextInputEvent {
     char text[32];
+    int edit_cursor = -1;  // >= 0 for text editing event, see SDL_TextEditingEvent
+    int edit_length = 0;
+
+    bool is_ime_edit() const { return edit_cursor != -1; }
 };
 
 
@@ -197,7 +201,7 @@ public:
     using SizeCallback = std::function<void(View&)>;
     using DrawCallback = std::function<void(View&)>;
     using KeyCallback = std::function<void(View&, const KeyEvent&)>;
-    using CharCallback = std::function<void(View&, const CharEvent&)>;
+    using TextInputCallback = std::function<void(View&, const TextInputEvent&)>;
     using MousePosCallback = std::function<void(View&, const MousePosEvent&)>;
     using MouseBtnCallback = std::function<void(View&, const MouseBtnEvent&)>;
     using ScrollCallback = std::function<void(View&, const ScrollEvent&)>;
@@ -208,7 +212,7 @@ public:
     void set_size_callback(SizeCallback size_cb) { m_size_cb = std::move(size_cb); }
     void set_draw_callback(DrawCallback draw_cb);
     void set_key_callback(KeyCallback key_cb) { m_key_cb = std::move(key_cb); }
-    void set_char_callback(CharCallback char_cb) { m_char_cb = std::move(char_cb); }
+    void set_text_input_callback(TextInputCallback text_cb) { m_text_cb = std::move(text_cb); }
     void set_mouse_position_callback(MousePosCallback mpos_cb) { m_mpos_cb = std::move(mpos_cb); }
     void set_mouse_button_callback(MouseBtnCallback mbtn_cb) { m_mbtn_cb = std::move(mbtn_cb); }
     void set_scroll_callback(ScrollCallback scroll_cb) { m_scroll_cb = std::move(scroll_cb); }
@@ -217,7 +221,7 @@ public:
     SizeCallback size_callback() { return m_size_cb; }
     DrawCallback draw_callback() { return m_draw_cb; }
     KeyCallback key_callback() { return m_key_cb; }
-    CharCallback char_callback() { return m_char_cb; }
+    TextInputCallback text_input_callback() { return m_text_cb; }
     MousePosCallback mouse_position_callback() { return m_mpos_cb; }
     MouseBtnCallback mouse_button_callback() { return m_mbtn_cb; }
     ScrollCallback scroll_callback() { return m_scroll_cb; }
@@ -293,7 +297,7 @@ private:
     SizeCallback m_size_cb;
     DrawCallback m_draw_cb;
     KeyCallback m_key_cb;
-    CharCallback m_char_cb;
+    TextInputCallback m_text_cb;
     MousePosCallback m_mpos_cb;
     MouseBtnCallback m_mbtn_cb;
     ScrollCallback m_scroll_cb;

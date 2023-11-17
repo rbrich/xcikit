@@ -2,7 +2,6 @@
 # Dependencies #
 # ------------ #
 
-find_package(SDL2 REQUIRED)
 find_package(Vulkan REQUIRED)
 
 # ------------ #
@@ -44,8 +43,9 @@ target_link_libraries(xci-graphics
         xci-vfs
         ${CMAKE_DL_LIBS}
         Vulkan::Vulkan
-    PRIVATE
+    INTERFACE
         SDL2::SDL2main
+    PRIVATE
         SDL2::SDL2
         range-v3::range-v3
 )

@@ -102,6 +102,11 @@ endif()
 # PEGTL
 find_package(pegtl REQUIRED)
 
+# SDL
+if (XCI_GRAPHICS OR XCI_WIDGETS)
+    find_package(SDL2 REQUIRED)
+endif()
+
 # range-v3
 if (XCI_SCRIPT OR XCI_GRAPHICS)
     find_package(range-v3 REQUIRED)

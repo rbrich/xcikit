@@ -380,11 +380,22 @@ void Window::handle_event(SDL_Event& event)
             break;
 
         case SDL_TEXTINPUT:
-            if (m_char_cb) {
-                CharEvent ev{};
+            if (m_text_cb) {
+                TextInputEvent ev{};
                 std::memcpy(ev.text, event.text.text,
                             std::min(sizeof(ev.text), sizeof(event.text.text)));
-                m_char_cb(m_view, ev);
+                m_text_cb(m_view, ev);
+            }
+            break;
+
+        case SDL_TEXTEDITING:
+            if (m_text_cb) {
+                TextInputEvent ev{};
+                std::memcpy(ev.text, event.edit.text,
+                            std::min(sizeof(ev.text), sizeof(event.edit.text)));
+                ev.edit_cursor = event.edit.start;
+                ev.edit_length = event.edit.length;
+                m_text_cb(m_view, ev);
             }
             break;
 

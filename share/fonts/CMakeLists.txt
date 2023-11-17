@@ -54,9 +54,9 @@ endif()
 
 # Noto emoji font - download in SOURCE dir
 message(STATUS "Assets: Noto emoji font")
-set(NOTO_REVISION "c05b4b47c8250ccd232780cae46d66a8179e77ab")
+set(NOTO_EMOJI_REVISION "c05b4b47c8250ccd232780cae46d66a8179e77ab")
 file(DOWNLOAD
-    https://github.com/googlefonts/noto-emoji/raw/${NOTO_REVISION}/fonts/NotoColorEmoji.ttf
+    https://github.com/googlefonts/noto-emoji/raw/${NOTO_EMOJI_REVISION}/fonts/NotoColorEmoji.ttf
     ${CMAKE_CURRENT_SOURCE_DIR}/Noto/NotoColorEmoji.ttf
     EXPECTED_HASH SHA1=82e8a1244869f8c6a8e1adf5f4ad665456366845
     SHOW_PROGRESS)

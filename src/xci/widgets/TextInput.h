@@ -40,12 +40,14 @@ public:
     void update(View& view, State state) override;
     void draw(View& view) override;
     bool key_event(View& view, const KeyEvent& ev) override;
-    void char_event(View& view, const CharEvent& ev) override;
+    void text_input_event(View& view, const TextInputEvent& ev) override;
     void mouse_pos_event(View& view, const MousePosEvent& ev) override;
     bool mouse_button_event(View& view, const MouseBtnEvent& ev) override;
+    void focus_change(View& view, const FocusChange& ev) override;
 
 private:
     core::EditBuffer m_buffer;
+    core::EditBuffer m_ime_buffer;
     text::Layout m_layout;
     graphics::Rectangle m_bg_rect;
     graphics::Rectangle m_cursor_shape;
