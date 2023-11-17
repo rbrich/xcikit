@@ -379,6 +379,14 @@ Add these CMake options in the IDE settings:
 The `CONAN_OPTIONS` are just an example, in this case Conan will skip installing graphical libs,
 so they can be searched in the system instead. Those libs must be preinstalled.
 
+==== Troubleshooting
+
+If linking tests fails with unresolved symbols from catch2 (`error LNK2019: unresolved external symbol ...`), it's because Conan picked incompatible package.
+To avoid issues like this, it's best to completely disable the https://docs.conan.io/2.0/reference/extensions/binary_compatibility.html[compatibility extension].
+
+There are multiple ways how to disable it. One way is to edit `cppstd_compat.py`
+and make it always `return []`. Do not forget to also remove header comments,
+so Conan doesn't destroy your changes.
 
 [#emscripten]
 === Porting to Emscripten

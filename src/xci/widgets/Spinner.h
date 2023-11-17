@@ -30,6 +30,7 @@ public:
     void set_text_color(graphics::Color color);
 
     using FormatCb = std::function<std::string(float value)>;
+    static std::string default_format_cb(float v) { return fmt::format("{:.2f}", v); }
     void set_format_cb(FormatCb&& cb) { m_format_cb = std::move(cb); update_text(); }
 
     using ChangeCallback = std::function<void(Spinner&)>;
@@ -57,7 +58,7 @@ private:
     VariUnits m_outline_thickness = 0.25_vp;
     ChangeCallback m_change_cb;
 
-    FormatCb m_format_cb = [](float v) { return fmt::format("{:.2f}", v); };
+    FormatCb m_format_cb = default_format_cb;
     float m_value = 0.0f;
     float m_step = 0.01f;
     float m_big_step = 0.10f;
