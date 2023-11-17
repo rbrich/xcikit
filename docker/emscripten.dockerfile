@@ -3,9 +3,9 @@
 #   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-emscripten
 # CMake arguments (for Clion IDE):
 #   -DFORCE_COLORS=1 -DXCI_WIDGETS=0 -DXCI_TEXT=0 -DXCI_GRAPHICS=0
-#   -DCONAN_OPTIONS="-c;tools.cmake.cmaketoolchain:user_toolchain=['/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake'];-o;xcikit/*:system_glfw=True;-o;xcikit/*:system_vulkan=True;-o;xcikit/*:system_freetype=True;-o;xcikit/*:system_harfbuzz=True"
+#   -DCONAN_OPTIONS="-c;tools.cmake.cmaketoolchain:user_toolchain=['/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake']"
 
-FROM emscripten/emsdk:3.1.47 AS builder
+FROM emscripten/emsdk:3.1.48 AS builder
 
 RUN echo "dev tools"; apt-get update && apt-get install --no-install-recommends -y \
     gdb ninja-build python3-setuptools && rm -rf /var/lib/apt/lists/*

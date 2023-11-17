@@ -22,6 +22,7 @@ target_link_libraries(xci-widgets
     PUBLIC
         xci-text
     PRIVATE
+        SDL2::SDL2
         range-v3::range-v3
     )
 

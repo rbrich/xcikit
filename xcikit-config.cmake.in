@@ -14,7 +14,7 @@ find_dependency(pegtl)
 find_dependency(range-v3)
 
 if (@XCI_GRAPHICS@)
-    find_dependency(glfw3 3.2)
+    find_dependency(SDL2)
     find_dependency(Vulkan)
 endif()
 

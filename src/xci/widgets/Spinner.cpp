@@ -94,7 +94,7 @@ bool Spinner::key_event(View& view, const KeyEvent& ev)
         return false;
 
     switch (ev.key) {
-        case Key::Enter:
+        case Key::Return:
             do_click(view);
             return true;
 

@@ -13,6 +13,7 @@
 #include <cassert>
 #include <cstring>
 #include <cmath>
+#include <cstdint>
 
 #include "MaxRectsBinPack.h"
 

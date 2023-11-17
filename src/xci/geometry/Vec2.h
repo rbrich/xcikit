@@ -10,6 +10,7 @@
 #include <cmath>
 #include <algorithm>
 #include <ostream>
+#include <cstdint>
 
 namespace xci::core {
 

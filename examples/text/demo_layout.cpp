@@ -130,13 +130,13 @@ int main(int argc, const char* argv[])
                 text.set_alignment(Alignment::Center);
                 break;
             case Key::Minus:  // -/_ key
-            case Key::KeypadSubtract:
+            case Key::KeypadMinus:
                 font_weight -= 50;
                 if (font_weight < 400)
                     font_weight = 400;
                 break;
             case Key::Equal:  // =/+ key
-            case Key::KeypadAdd:
+            case Key::KeypadPlus:
                 font_weight += 50;
                 if (font_weight > 700)
                     font_weight = 700;

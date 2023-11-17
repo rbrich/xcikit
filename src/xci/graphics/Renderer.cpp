@@ -11,8 +11,9 @@
 #include <xci/core/log.h>
 #include <xci/compat/macros.h>
 
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
+#include <SDL.h>
+#include <SDL_vulkan.h>
+#include <SDL_hints.h>
 
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/view/enumerate.hpp>
@@ -29,12 +30,6 @@ using namespace xci::core;
 using ranges::cpp20::views::take;
 using ranges::views::enumerate;
 using ranges::cpp20::any_of;
-
-
-static void glfw_error_callback(int error, const char* description)
-{
-    log::error("GLFW error {}: {}", error, description);
-}
 
 
 #ifdef XCI_DEBUG_VULKAN
@@ -91,16 +86,20 @@ vulkan_debug_callback(
 Renderer::Renderer(Vfs& vfs)
         : m_vfs(vfs)
 {
-    glfwSetErrorCallback(glfw_error_callback);
-    if (!glfwInit())
-        VK_THROW("Couldn't initialize GLFW");
+#if SDL_VERSION_ATLEAST(2,24,0)
+    SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
+#endif
 
-    if (!glfwVulkanSupported())
-        VK_THROW("Vulkan not supported.");
+    if (SDL_Init(SDL_INIT_VIDEO) != 0)
+        VK_THROW(fmt::format("Couldn't initialize SDL: {}", SDL_GetError()));
+}
 
+
+bool Renderer::create_instance(SDL_Window* window)
+{
     const VkApplicationInfo application_info = {
             .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-            .pApplicationName = "an xci-graphics based app",
+            .pApplicationName = "xcikit app",
             .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
             .pEngineName = "xci-graphics",
             .engineVersion = VK_MAKE_VERSION(1, 0, 0),
@@ -115,10 +114,14 @@ Renderer::Renderer(Vfs& vfs)
             .pApplicationInfo = &application_info,
     };
 
-    uint32_t glfwExtensionCount = 0;
-    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-    std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+    std::vector<const char *> extensions;
+    {
+        unsigned int sdlExtensionCount = 0;
+        SDL_Vulkan_GetInstanceExtensions(window, &sdlExtensionCount, nullptr);
+        extensions.resize(sdlExtensionCount);
+        SDL_Vulkan_GetInstanceExtensions(window, &sdlExtensionCount, extensions.data());
+        extensions.resize(sdlExtensionCount);
+    }
 
 #ifdef XCI_DEBUG_VULKAN
     // enable validation layers
@@ -192,19 +195,23 @@ Renderer::Renderer(Vfs& vfs)
     instance_create_info.enabledExtensionCount = (uint32_t) extensions.size();
     instance_create_info.ppEnabledExtensionNames = extensions.data();
 
-    VK_TRY("vkCreateInstance",
+    VK_TRY_RET("vkCreateInstance",
             vkCreateInstance(&instance_create_info, nullptr, &m_instance));
 
 #ifdef XCI_DEBUG_VULKAN
     // create debug messenger
     auto vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)
         vkGetInstanceProcAddr(m_instance, "vkCreateDebugUtilsMessengerEXT");
-    if (vkCreateDebugUtilsMessengerEXT == nullptr)
-        VK_THROW("vkCreateDebugUtilsMessengerEXT not available");
-    VK_TRY("vkCreateDebugUtilsMessengerEXT",
+    if (vkCreateDebugUtilsMessengerEXT == nullptr) {
+        log::error("VulkanError: {}", "vkCreateDebugUtilsMessengerEXT not available");
+        return false;
+    }
+    VK_TRY_RET("vkCreateDebugUtilsMessengerEXT",
             vkCreateDebugUtilsMessengerEXT(m_instance, &debugCreateInfo,
                     nullptr, &m_debug_messenger));
 #endif
+
+    return true;
 }
 
 
@@ -219,7 +226,7 @@ Renderer::~Renderer()
         vkDestroyDebugUtilsMessengerEXT(m_instance, m_debug_messenger, nullptr);
 #endif
     vkDestroyInstance(m_instance, nullptr);
-    glfwTerminate();
+    SDL_Quit();
 }
 
 
@@ -356,27 +363,46 @@ Renderer::get_descriptor_pool(uint32_t reserved_sets, DescriptorPoolSizes pool_s
     if (pool.book_capacity(reserved_sets))
         return SharedDescriptorPool(pool, reserved_sets);
     // reserved_sets is > 1000
-    throw VulkanError("Can't reserve " + std::to_string(reserved_sets) + " descriptor sets.");
+    VK_THROW("Can't reserve " + std::to_string(reserved_sets) + " descriptor sets.");
 }
 
 
-void Renderer::create_surface(GLFWwindow* window)
+bool Renderer::create_surface(SDL_Window* window)
 {
-    VK_TRY("glfwCreateWindowSurface",
-            glfwCreateWindowSurface(m_instance, window, nullptr, &m_surface));
+    if (!create_instance(window))
+        return false;
 
-    create_device();
+    if (SDL_Vulkan_CreateSurface(window, m_instance, &m_surface) == SDL_FALSE) {
+        log::error("{} failed", "SDL_Vulkan_CreateSurface");
+        return false;
+    }
+
+    try {
+        create_device();
+    } catch (const VulkanError& e) {
+        log::error("VulkanError: {}", e.what());
+        return false;
+    }
 
     int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
+    SDL_Vulkan_GetDrawableSize(window, &width, &height);
 
-    m_swapchain.query_surface_capabilities(m_physical_device, { uint32_t(width), uint32_t(height) });
-    if (!m_swapchain.query(m_physical_device))
-        VK_THROW("vulkan: physical device no longer usable");
+    try {
+        m_swapchain.query_surface_capabilities(m_physical_device, { uint32_t(width), uint32_t(height) });
+    } catch (const VulkanError& e) {
+        log::error("VulkanError: {}", e.what());
+        return false;
+    }
+
+    if (!m_swapchain.query(m_physical_device)) {
+        log::error("vulkan: physical device no longer usable");
+        return false;
+    }
 
     m_swapchain.create();
     create_renderpass();
     m_swapchain.create_framebuffers();
+    return true;
 }
 
 
@@ -489,7 +515,7 @@ void Renderer::create_device()
 
         if (m_device_id == device_props.deviceID && !choose) {
             log::error("Chosen device ID not usable: {}", m_device_id);
-            throw VulkanError("Chosen device ID not usable");
+            VK_THROW("Chosen device ID not usable");
         }
 
         log::info("({}) {}: {} (api {})",
@@ -499,7 +525,7 @@ void Renderer::create_device()
     }
 
     if (!m_physical_device) {
-        throw VulkanError("Did not found an usable device");
+        VK_THROW("Did not found any usable device");
     }
 
     // create VkDevice

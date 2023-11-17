@@ -832,7 +832,7 @@ static auto analyze_pattern(const char* pattern, int flags)
     if (rc != HS_SUCCESS) {
         fmt::print(stderr,"ff: hs_expression_info({}): ({}) {}\n", pattern, rc, re_compile_err->message);
         hs_free_compile_error(re_compile_err);
-        return {nullptr, [](void*){}};
+        return {nullptr, free};
     }
     hs_free_compile_error(re_compile_err);
     return {re_info, free};

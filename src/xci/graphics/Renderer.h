@@ -23,7 +23,7 @@
 #include <array>
 #include <cstdint>
 
-struct GLFWwindow;
+struct SDL_Window;
 
 namespace xci::graphics {
 
@@ -97,7 +97,7 @@ public:
     // -------------------------------------------------------------------------
     // Surface
 
-    void create_surface(GLFWwindow* window);
+    bool create_surface(SDL_Window* window);
     void destroy_surface();
     void reset_framebuffer(VkExtent2D new_size = {UINT32_MAX, UINT32_MAX}) { m_swapchain.reset_framebuffer(new_size); }
 
@@ -115,6 +115,7 @@ public:
     VkFramebuffer vk_framebuffer(uint32_t index) const { return m_swapchain.vk_framebuffer(index); }
 
 private:
+    bool create_instance(SDL_Window* window);
     void create_device();
     void destroy_device();
     void create_renderpass();
@@ -124,7 +125,6 @@ private:
 
     void load_device_limits(const VkPhysicalDeviceLimits& limits);
 
-private:
     Vfs& m_vfs;
     static constexpr auto c_num_shaders = (size_t) ShaderId::NumItems_;
     std::array<std::unique_ptr<Shader>, c_num_shaders> m_shader = {};

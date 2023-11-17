@@ -6,7 +6,10 @@
 
 #include "TextInput.h"
 #include <xci/core/string.h>
+#include <xci/core/log.h>
 #include <xci/geometry/Vec2.h>
+
+#include <SDL.h>
 
 namespace xci::widgets {
 
@@ -47,11 +50,15 @@ void TextInput::resize(View& view)
     m_layout.clear();
     // Text before cursor
     m_layout.add_word(m_buffer.content_upto_cursor());
+    m_layout.begin_span("ime");
+    m_layout.add_word(m_ime_buffer.content_upto_cursor());
     // Cursor placing
     m_layout.begin_span("cursor");
     m_layout.add_word("");
     m_layout.end_span("cursor");
     // Text after cursor
+    m_layout.add_word(m_ime_buffer.content_from_cursor());
+    m_layout.end_span("ime");
     m_layout.add_word(m_buffer.content_from_cursor());
     m_layout.typeset(view);
     m_layout.update(view);
@@ -68,6 +75,10 @@ void TextInput::resize(View& view)
         m_content_pos = cursor_box.x - width;
     m_cursor_shape.add_rectangle(cursor_box);
     m_cursor_shape.update(Color::Yellow());
+
+    // Highlight IME
+    layout::Span* ime_span = m_layout.get_span("ime");
+    ime_span->adjust_color(Color::Teal());
 
     auto rect = m_layout.bbox();
     rect.w = width;
@@ -123,6 +134,10 @@ bool TextInput::key_event(View& view, const KeyEvent& ev)
     if (ev.action == Action::Release)
         return false;
 
+    // Do not interfere with cursor during IME composition
+    if (!m_ime_buffer.empty())
+        return true;
+
     switch (ev.key) {
         case Key::Backspace:
             if (!m_buffer.delete_left())
@@ -166,10 +181,21 @@ bool TextInput::key_event(View& view, const KeyEvent& ev)
 }
 
 
-void TextInput::char_event(View& view, const CharEvent& ev)
+void TextInput::text_input_event(View& view, const TextInputEvent& ev)
 {
-    auto ch = to_utf8(ev.code_point);
-    m_buffer.insert(ch);
+    if (ev.is_ime_edit()) {
+        m_ime_buffer.set_content(ev.text);
+        // cursor is in unicode code points, not bytes
+        m_ime_buffer.set_cursor(0);
+        for (int i = 0; i < ev.edit_cursor; ++i)
+            m_ime_buffer.move_right();
+        // TODO: selection
+        resize(view);
+        view.refresh();
+        return;
+    }
+    m_ime_buffer.clear();
+    m_buffer.insert(ev.text);
     resize(view);
     view.refresh();
     if (m_change_cb)
@@ -193,6 +219,16 @@ bool TextInput::mouse_button_event(View& view, const MouseBtnEvent& ev)
         return true;
     }
     return false;
+}
+
+
+void TextInput::focus_change(View& view, const FocusChange& ev)
+{
+    if (ev.focused) {
+        SDL_StartTextInput();
+    } else {
+        SDL_StopTextInput();
+    }
 }
 
 

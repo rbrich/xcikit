@@ -22,7 +22,7 @@ option(XCI_WIDGETS "Enable component: xci-widgets" ON)
 option(XCI_SCRIPT "Enable component: xci-script" ON)
 cmake_dependent_option(XCI_TEXT "Enable component: xci-text" ON
     "NOT XCI_WIDGETS" ON)
-cmake_dependent_option(XCI_GRAPHICS "Enable component: xci-graphics (requires Vulkan and GLFW)" ON
+cmake_dependent_option(XCI_GRAPHICS "Enable component: xci-graphics (requires Vulkan and SDL)" ON
     "NOT XCI_TEXT" ON)
 cmake_dependent_option(XCI_DATA "Enable component: xci-data" ON
     "NOT XCI_SCRIPT" ON)
@@ -55,8 +55,8 @@ else()
     set(NOT_EMSCRIPTEN ON)
 endif()
 
-option(XCI_INSTALL_SHARE_DIR "Install runtime data as a directory (share/xcikit)" OFF)
-option(XCI_INSTALL_SHARE_DAR "Install runtime data as DAR archive (share.dar)" ${NOT_EMSCRIPTEN})
+option(XCI_INSTALL_SHARE_DIR "Install runtime data as a directory (share/xcikit)" ${NOT_EMSCRIPTEN})
+option(XCI_INSTALL_SHARE_DAR "Install runtime data as DAR archive (share.dar)" OFF)
 option(XCI_INSTALL_SHARE_ZIP "Install runtime data as ZIP archive (share.zip)" OFF)
 
 option(XCI_LISTDIR_GETDENTS "Use getdents syscall instead of readdir for tools/find_file." ${NOT_EMSCRIPTEN})
@@ -101,6 +101,11 @@ endif()
 
 # PEGTL
 find_package(pegtl REQUIRED)
+
+# SDL
+if (XCI_GRAPHICS OR XCI_WIDGETS)
+    find_package(SDL2 REQUIRED)
+endif()
 
 # range-v3
 if (XCI_SCRIPT OR XCI_GRAPHICS)

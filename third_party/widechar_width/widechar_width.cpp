@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <cstdint>
 
 namespace wcw {
 

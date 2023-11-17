@@ -2,8 +2,8 @@
 //
 // This config header is private - it must not be included from public headers.
 
-#ifndef XCI_CONFIG_H
-#define XCI_CONFIG_H
+#ifndef XCI_BUILD_CONFIG_H
+#define XCI_BUILD_CONFIG_H
 
 #cmakedefine XCI_VERSION "@XCI_VERSION@"
 
@@ -29,4 +29,4 @@
 #cmakedefine HAVE_XSI_STRERROR_R
 #cmakedefine HAVE_GNU_EXT_FLOAT128
 
-#endif //XCI_CONFIG_H
+#endif  // XCI_BUILD_CONFIG_H

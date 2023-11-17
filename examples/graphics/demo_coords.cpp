@@ -205,7 +205,7 @@ int main(int argc, const char* argv[])
                 refresh = true;
                 break;
             case Key::Equal:
-            case Key::KeypadAdd: {
+            case Key::KeypadPlus: {
                 float scale = view.viewport_scale();
                 if (scale < 200)
                     scale += 5;
@@ -214,7 +214,7 @@ int main(int argc, const char* argv[])
                 break;
             }
             case Key::Minus:
-            case Key::KeypadSubtract: {
+            case Key::KeypadMinus: {
                 float scale = view.viewport_scale();
                 if (scale > 50)
                     scale -= 5;

@@ -87,12 +87,8 @@ int main(int argc, const char* argv[])
     if (device_id != ~0u)
         window.renderer().set_device_id(device_id);
 
-    try {
-        window.create({1024, 768}, "XCI Shader Editor");
-    } catch (const VulkanError& e) {
-        log::error("VulkanError: {}", e.what());
+    if (!window.create({1024, 768}, "XCI Shader Editor"))
         return EXIT_FAILURE;
-    }
 
     Theme theme(renderer);
     if (!theme.load_default())

@@ -20,11 +20,17 @@ namespace xci::widgets {
 using namespace xci::graphics;
 using namespace xci::graphics::unit_literals;
 
+class Widget;
 
 struct State {
     std::chrono::nanoseconds elapsed;
     bool focused = false;
 };
+
+struct FocusChange {
+    bool focused;  // true = focus gained, false = focus lost
+};
+
 
 class Widget: private core::NonMovable, private core::NonCopyable {
 public:
@@ -72,16 +78,17 @@ public:
     virtual void update(View& view, State state) {}
     virtual void draw(View& view) = 0;
     virtual bool key_event(View& view, const KeyEvent& ev) { return false; }
-    virtual void char_event(View& view, const CharEvent& ev) {}
+    virtual void text_input_event(View& view, const TextInputEvent& ev) {}
     virtual void mouse_pos_event(View& view, const MousePosEvent& ev) {}
     virtual bool mouse_button_event(View& view, const MouseBtnEvent& ev) { return false; }
     virtual void scroll_event(View& view, const ScrollEvent& ev) {}
+    virtual void focus_change(View& view, const FocusChange& ev) {}
     virtual bool click_focus(View& view, FramebufferCoords pos) { return is_click_focusable() && contains(pos); }
     virtual bool tab_focus(View& view, int& step) { return is_tab_focusable(); }
 
     // Debug dump
     void dump(std::ostream& stream) { partial_dump(stream, ""); stream << std::endl; }
-    virtual void partial_dump(std::ostream& stream, const std::string& nl_prefix);
+    virtual void partial_dump(std::ostream& stream, const std::string& nl_prefix) const;
 
 protected:
     void set_baseline(FramebufferPixels baseline) { m_baseline = baseline; }
@@ -112,8 +119,8 @@ public:
     void clear_children() { m_child.clear(); }
     size_t num_children() const { return m_child.size(); }
 
-    void set_focus(Widget& child) { m_focus = &child; }
-    void reset_focus() { m_focus = nullptr; }
+    void set_focus(View& view, Widget* child);
+    bool has_focus(const Widget* child) const { return m_focus == child; }
     Widget* focus() const { return m_focus; }
 
     // impl Widget
@@ -123,7 +130,7 @@ public:
     void update(View& view, State state) override;
     void draw(View& view) override;
     bool key_event(View& view, const KeyEvent& ev) override;
-    void char_event(View& view, const CharEvent& ev) override;
+    void text_input_event(View& view, const TextInputEvent& ev) override;
     void mouse_pos_event(View& view, const MousePosEvent& ev) override;
     bool mouse_button_event(View& view, const MouseBtnEvent& ev) override;
     void scroll_event(View& view, const ScrollEvent& ev) override;
@@ -131,7 +138,7 @@ public:
     bool tab_focus(View& view, int& step) override;
 
     // Debug dump
-    void partial_dump(std::ostream& stream, const std::string& nl_prefix) override;
+    void partial_dump(std::ostream& stream, const std::string& nl_prefix) const override;
 
 protected:
     std::vector<Widget*> m_child;
@@ -210,7 +217,7 @@ private:
     graphics::Window::SizeCallback m_size_cb;
     graphics::Window::DrawCallback m_draw_cb;
     graphics::Window::KeyCallback m_key_cb;
-    graphics::Window::CharCallback m_char_cb;
+    graphics::Window::TextInputCallback m_text_cb;
     graphics::Window::MousePosCallback m_mpos_cb;
     graphics::Window::MouseBtnCallback m_mbtn_cb;
     graphics::Window::ScrollCallback m_scroll_cb;

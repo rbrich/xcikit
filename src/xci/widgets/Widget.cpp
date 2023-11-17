@@ -1,7 +1,7 @@
 // Widget.cpp created on 2018-04-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Widget.h"
@@ -39,13 +39,27 @@ void Widget::resize(View& view)
 }
 
 
-void Widget::partial_dump(std::ostream& stream, const std::string& nl_prefix)
+void Widget::partial_dump(std::ostream& stream, const std::string& nl_prefix) const
 {
     stream << core::type_name(typeid(*this))
            << "<" << std::hex << this << "> "
            << "pos=" << m_position << " "
            << "size=" << m_size << " "
            << "baseline=" << m_baseline << " ";
+}
+
+
+// -------------------------------------------------------------------------------------------------
+
+
+void Composite::set_focus(View& view, Widget* child)
+{
+    Widget* prev_focus = m_focus;
+    m_focus = child;
+    if (prev_focus)
+        prev_focus->focus_change(view, {false});
+    if (m_focus)
+        m_focus->focus_change(view, {true});
 }
 
 
@@ -67,7 +81,7 @@ void Composite::update(View& view, State state)
 {
     for (auto& child : m_child) {
         if (!child->is_hidden()) {
-            state.focused = (m_focus == child);
+            state.focused = has_focus(child);
             child->update(view, state);
         }
     }
@@ -97,10 +111,10 @@ bool Composite::key_event(View& view, const KeyEvent& ev)
 }
 
 
-void Composite::char_event(View& view, const CharEvent& ev)
+void Composite::text_input_event(View& view, const TextInputEvent& ev)
 {
     if (m_focus != nullptr)
-        m_focus->char_event(view, ev);
+        m_focus->text_input_event(view, ev);
 }
 
 
@@ -141,13 +155,13 @@ void Composite::scroll_event(View& view, const ScrollEvent& ev)
 bool Composite::click_focus(View& view, FramebufferCoords pos)
 {
     bool handled = false;
-    auto* original_focus = m_focus;
-    for (auto& child : m_child) {
+    const auto* original_focus = m_focus;
+    for (auto* child : m_child) {
         if (child->is_hidden())
             continue;
         // Propagate the event
         if (child->click_focus(view, pos - position())) {
-            m_focus = child;
+            set_focus(view, child);
             handled = true;
             break;
         }
@@ -174,14 +188,14 @@ bool Composite::tab_focus(View& view, int& step)
             });
             if (it == m_child.end())
                 return false;
-            m_focus = *it;
+            set_focus(view, *it);
         } else {
             auto it = std::find_if(m_child.rbegin(), m_child.rend(), [&view, &step](auto& w) {
                 return w->tab_focus(view, step);
             });
             if (it == m_child.rend())
                 return false;
-            m_focus = *it;
+            set_focus(view, *it);
         }
         resize(view);
         view.refresh();
@@ -189,8 +203,7 @@ bool Composite::tab_focus(View& view, int& step)
     }
 
     // Current focus child - propagate event, give it chance to consume the step
-    bool res = m_focus->tab_focus(view, step);
-    if (res && step == 0)
+    if (m_focus->tab_focus(view, step) && step == 0)
         return true;
 
     // Step to next focusable child
@@ -201,10 +214,10 @@ bool Composite::tab_focus(View& view, int& step)
             return w->tab_focus(view, step);
         });
         if (it != m_child.end()) {
-            m_focus = *it;
+            set_focus(view, *it);
             --step;
         } else {
-            reset_focus();
+            set_focus(view, nullptr);
         }
     }
     if (step < 0)  {
@@ -214,10 +227,10 @@ bool Composite::tab_focus(View& view, int& step)
             return w->tab_focus(view, step);
         });
         if (it != m_child.rend()) {
-            m_focus = *it;
+            set_focus(view, *it);
             ++step;
         } else {
-            reset_focus();
+            set_focus(view, nullptr);
         }
     }
 
@@ -227,19 +240,19 @@ bool Composite::tab_focus(View& view, int& step)
 }
 
 
-void Composite::partial_dump(std::ostream& stream, const std::string& nl_prefix)
+void Composite::partial_dump(std::ostream& stream, const std::string& nl_prefix) const
 {
     Widget::partial_dump(stream, nl_prefix);
-    for (auto& child : m_child) {
-        bool focus = (m_focus == child);
+    for (const auto* child : m_child) {
+        const bool focused = has_focus(child);
         stream << std::endl << nl_prefix;
         if (child != m_child.back()) {
             // intermediate child
-            stream << " " << (focus? ">" : " ") << "├ ";
+            stream << " " << (focused? ">" : " ") << "├ ";
             child->partial_dump(stream, nl_prefix + "  │ ");
         } else {
             // last child
-            stream << " " << (focus? ">" : " ") << "└ ";
+            stream << " " << (focused? ">" : " ") << "└ ";
             child->partial_dump(stream, nl_prefix + "    ");
         }
     }
@@ -312,12 +325,12 @@ Bind::Bind(graphics::Window& window, Widget& root)
         }
     });
 
-    m_char_cb = window.char_callback();
-    window.set_char_callback([&](View& v, const CharEvent& e) {
-        if (m_char_cb)
-            m_char_cb(v, e);
+    m_text_cb = window.text_input_callback();
+    window.set_text_input_callback([&](View& v, const TextInputEvent& e) {
+        if (m_text_cb)
+            m_text_cb(v, e);
         if (!root.is_hidden())
-            root.char_event(v, e);
+            root.text_input_event(v, e);
     });
 
     m_mpos_cb = window.mouse_position_callback();
@@ -353,7 +366,7 @@ Bind::~Bind()
     m_window.set_size_callback(m_size_cb);
     m_window.set_draw_callback(m_draw_cb);
     m_window.set_key_callback(m_key_cb);
-    m_window.set_char_callback(m_char_cb);
+    m_window.set_text_input_callback(m_text_cb);
     m_window.set_mouse_position_callback(m_mpos_cb);
     m_window.set_mouse_button_callback(m_mbtn_cb);
 }

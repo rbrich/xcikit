@@ -5,7 +5,7 @@
 #   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-ubuntu
 # CMake arguments (for Clion IDE):
 #   -DFORCE_COLORS=1
-#   -DCONAN_OPTIONS="-o;xcikit/*:system_glfw=True;-o;xcikit/*:system_vulkan=True;-o;xcikit/*:system_freetype=True;-o;xcikit/*:system_harfbuzz=True;-o;xcikit/*:system_benchmark=True;-o;xcikit/*:system_zlib=True;-o;xcikit/*:system_range_v3=True;-o;xcikit/*:with_hyperscan=True"
+#   -DCONAN_OPTIONS="-o;xcikit/*:system_sdl=True;-o;xcikit/*:system_vulkan=True;-o;xcikit/*:system_freetype=True;-o;xcikit/*:system_harfbuzz=True;-o;xcikit/*:system_benchmark=True;-o;xcikit/*:system_zlib=True;-o;xcikit/*:system_range_v3=True;-o;xcikit/*:with_hyperscan=True"
 
 FROM ubuntu:jammy AS builder
 
@@ -20,7 +20,7 @@ RUN echo "dev tools"; apt-get update && apt-get install --no-install-recommends 
 ENV CMAKE_GENERATOR=Ninja CONAN_CMAKE_GENERATOR=Ninja
 
 RUN echo "xcikit deps"; apt-get update && apt-get install --no-install-recommends -y \
-    librange-v3-dev libglfw3-dev glslang-tools libvulkan-dev libfreetype6-dev libharfbuzz-dev \
+    librange-v3-dev libsdl2-dev glslang-tools libvulkan-dev libfreetype6-dev libharfbuzz-dev \
     libhyperscan-dev libbenchmark-dev && rm -rf /var/lib/apt/lists/*
 
 RUN echo "conan"; pip3 --no-cache-dir install conan
