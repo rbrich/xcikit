@@ -213,7 +213,7 @@ jobs:
     - name: conan cache
       uses: actions/cache@v3
       with:
-        path: ${{ steps.tools.outputs.CONAN_HOME }}/p
+        path: ${{ steps.tools.outputs.CONAN_HOME }}
         key: ${{ matrix.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}-${{github.sha}}
         restore-keys: |
           ${{ matrix.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}-
