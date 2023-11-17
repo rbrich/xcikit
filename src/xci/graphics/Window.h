@@ -282,6 +282,7 @@ private:
     Color m_clear_color;
     std::chrono::microseconds m_timeout {0};
     FullscreenMode m_fullscreen_mode = FullscreenMode::Default;
+    uint32_t m_sdl_wakeup_event;
     bool m_quit = false;
     bool m_fullscreen = false;
     bool m_clear_timeout = false;

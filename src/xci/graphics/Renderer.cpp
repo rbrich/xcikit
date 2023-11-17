@@ -86,16 +86,12 @@ vulkan_debug_callback(
 Renderer::Renderer(Vfs& vfs)
         : m_vfs(vfs)
 {
-#if SDL_VERSION_ATLEAST(2,24,0)
-    SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
-#endif
-
     if (SDL_Init(SDL_INIT_VIDEO) != 0)
         VK_THROW(fmt::format("Couldn't initialize SDL: {}", SDL_GetError()));
 }
 
 
-bool Renderer::create_instance(SDL_Window* window)
+bool Renderer::create_instance()
 {
     const VkApplicationInfo application_info = {
             .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -114,14 +110,9 @@ bool Renderer::create_instance(SDL_Window* window)
             .pApplicationInfo = &application_info,
     };
 
-    std::vector<const char *> extensions;
-    {
-        unsigned int sdlExtensionCount = 0;
-        SDL_Vulkan_GetInstanceExtensions(window, &sdlExtensionCount, nullptr);
-        extensions.resize(sdlExtensionCount);
-        SDL_Vulkan_GetInstanceExtensions(window, &sdlExtensionCount, extensions.data());
-        extensions.resize(sdlExtensionCount);
-    }
+    uint32_t sdlExtensionCount = 0;
+    const auto* sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&sdlExtensionCount);
+    std::vector<const char*> extensions(sdlExtensions, sdlExtensions + sdlExtensionCount);
 
 #ifdef XCI_DEBUG_VULKAN
     // enable validation layers
@@ -369,10 +360,10 @@ Renderer::get_descriptor_pool(uint32_t reserved_sets, DescriptorPoolSizes pool_s
 
 bool Renderer::create_surface(SDL_Window* window)
 {
-    if (!create_instance(window))
+    if (!create_instance())
         return false;
 
-    if (SDL_Vulkan_CreateSurface(window, m_instance, &m_surface) == SDL_FALSE) {
+    if (SDL_Vulkan_CreateSurface(window, m_instance, nullptr, &m_surface) == SDL_FALSE) {
         log::error("{} failed", "SDL_Vulkan_CreateSurface");
         return false;
     }
@@ -385,7 +376,10 @@ bool Renderer::create_surface(SDL_Window* window)
     }
 
     int width, height;
-    SDL_Vulkan_GetDrawableSize(window, &width, &height);
+    if (SDL_GetWindowSizeInPixels(window, &width, &height) != 0) {
+        log::error("SDL_GetWindowSizeInPixels: {}", SDL_GetError());
+        return false;
+    }
 
     try {
         m_swapchain.query_surface_capabilities(m_physical_device, { uint32_t(width), uint32_t(height) });

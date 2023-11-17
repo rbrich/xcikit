@@ -115,7 +115,7 @@ public:
     VkFramebuffer vk_framebuffer(uint32_t index) const { return m_swapchain.vk_framebuffer(index); }
 
 private:
-    bool create_instance(SDL_Window* window);
+    bool create_instance();
     void create_device();
     void destroy_device();
     void create_renderpass();

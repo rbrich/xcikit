@@ -104,7 +104,7 @@ find_package(pegtl REQUIRED)
 
 # SDL
 if (XCI_GRAPHICS OR XCI_WIDGETS)
-    find_package(SDL2 REQUIRED)
+    find_package(SDL3 CONFIG REQUIRED)
 endif()
 
 # range-v3
