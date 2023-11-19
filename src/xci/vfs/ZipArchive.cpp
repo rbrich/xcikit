@@ -20,7 +20,7 @@ bool ZipArchiveLoader::can_load_stream(std::istream& stream)
     stream.seekg(0);
     stream.read(magic, sizeof(magic));
     if (!stream) {
-        log::debug("Vfs: ZipArchiveLoader: couldn't read magic: first 2 bytes");
+        log::debug("Vfs: ZipArchiveLoader: Couldn't read magic: first 2 bytes");
         return {};
     }
     return (magic[0] == 'P' && magic[1] == 'K');
@@ -177,7 +177,7 @@ VfsFile ZipArchive::read_file(const std::string& path) const
     if (zip_stat((zip_t*) m_zip, path.c_str(), ZIP_FL_ENC_RAW, &st) == -1) {
         auto* err = zip_get_error((zip_t*) m_zip);
         if (err->zip_err == ZIP_ER_NOENT) {
-            log::error("ZipArchive: Not found in archive: {}", path);
+            log::debug("ZipArchive: Not found in archive: {}", path);
         } else {
             log::error("ZipArchive: Cannot read: {}: {}", path, err->str);
         }

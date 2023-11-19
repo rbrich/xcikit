@@ -88,7 +88,7 @@ bool Vfs::mount(const fs::path& fs_path, std::string target_path)
         // Not directory - open as regular file
         auto f = std::make_unique<std::ifstream>(real_path, std::ios::binary);
         if (!*f) {
-            log::error("Vfs: failed to open file {}: {m}", real_path);
+            log::error("Vfs: Failed to mount {}: {m}", real_path);
             return false;
         }
         // Try each loader
@@ -102,14 +102,14 @@ bool Vfs::mount(const fs::path& fs_path, std::string target_path)
     }
 
     if (!vfs_directory) {
-        log::warning("Vfs: no loader found for {}", real_path);
+        log::warning("Vfs: No loader found for {}", real_path);
         return false;
     }
 
     // Success, record the mounted dir
     lstrip(target_path, '/');
     rstrip(target_path, '/');
-    log::info("Vfs: mounted {} '{}' to /{}", loader_name, real_path, target_path);
+    log::info("Vfs: Mounted {} '{}' to /{}", loader_name, real_path, target_path);
     m_mounted_dir.push_back({std::move(target_path), std::move(vfs_directory)});
     return true;
 }
@@ -150,22 +150,24 @@ bool Vfs::mount_memory(const std::byte* data, size_t size, std::string target_pa
 VfsFile Vfs::read_file(std::string path) const
 {
     lstrip(path, '/');
-    log::debug("Vfs: try open: {}", path);
+    log::debug("Vfs: Try open: {}", path);
     for (const auto& path_loader : m_mounted_dir) {
         // Is the loader applicable for requested path?
+        auto spath = path;  // path relative to mount point
         if (!path_loader.path.empty()) {
-            if (!remove_prefix(path, path_loader.path))
+            if (!remove_prefix(spath, path_loader.path))
                 continue;
-            if (path.front() != '/')
+            if (spath.front() != '/')
                 continue;
-            lstrip(path, '/');
+            lstrip(spath, '/');
         }
         // Open the path with loader
-        auto f = path_loader.vfs_dir->read_file(path);
+        log::debug("Vfs: Trying {} mounted at /{}", path_loader.vfs_dir->type(), path_loader.path);
+        auto f = path_loader.vfs_dir->read_file(spath);
         if (f.is_open())
             return f;
     }
-    log::debug("Vfs: failed to open file");
+    log::error("Vfs: File not found: {}", path);
     return {};
 }
 

@@ -64,7 +64,7 @@ VfsFile DarArchive::read_file(const std::string& path) const
         return entry.name == path;
     });
     if (entry_it == m_entries.cend()) {
-        log::error("Vfs: DarArchive: Not found in archive: {}", path);
+        log::debug("Vfs: DarArchive: Not found in archive: {}", path);
         return {};
     }
 

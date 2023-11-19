@@ -22,12 +22,11 @@ auto RealDirectoryLoader::load_fs_dir(const fs::path& path) -> std::shared_ptr<V
 VfsFile RealDirectory::read_file(const std::string& path) const
 {
     auto full_path = m_dir_path / path;
-    log::debug("VfsDirLoader: open file: {}", full_path);
 
     // open the file
     auto buffer_ptr = read_binary_file(full_path);
     if (!buffer_ptr) {
-        log::error("VfsDirLoader: Failed to read file: {}: {m}", full_path);
+        log::debug("Vfs: RealDirectory: Failed to read file: {}: {m}", full_path);
         return {};
     }
 

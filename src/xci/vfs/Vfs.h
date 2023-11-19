@@ -26,10 +26,10 @@ namespace fs = std::filesystem;
 /// Holds the data loaded from file in memory until released
 class VfsFile final {
 public:
-    // create empty file (eg. when reading failed)
+    /// Create unopened file (eg. when reading failed)
     VfsFile() = default;
 
-    // create file object with path and data
+    /// Create file object with path and data
     explicit VfsFile(fs::path path, BufferPtr content)
         : m_path(std::move(path)), m_content(std::move(content)) {}
 
@@ -197,6 +197,10 @@ public:
     /// - WAD - DOOM 1 format
     /// - ZIP - zip format via libzip
     ///
+    /// The target_path is absolute path inside the VFS (a mount point).
+    /// Leading and trailing slashes are ignored, i.e. "" is same as "/",
+    /// "path/to" is same as "/path/to/", etc.
+    ///
     /// \param fs_path          FS path to a directory or archive.
     /// \param target_path      The target path inside the VFS
     /// \returns true if successfully mounted (archive format identified and supported)
@@ -206,6 +210,10 @@ public:
     /// mount an archive that is already loaded in memory.
     bool mount_memory(const std::byte* data, size_t size, std::string target_path="");
 
+    /// Read file from VFS.
+    /// Tries all mounted dirs/archives that apply for the path, in mounting order.
+    /// \param path             The path inside VFS
+    /// \returns unopened VfsFile on failure (with bool operator evaluating to false)
     VfsFile read_file(std::string path) const;
 
     // FIXME: wrap to replace shared_ptr by ref
