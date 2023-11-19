@@ -1,13 +1,13 @@
 // raw_string.cpp created on 2021-05-06 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021 Radek Brich
+// Copyright 2021–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "raw_string.h"
 #include <cstddef>  // std::ptrdiff_t
 
-namespace xci::script {
+namespace xci::core::parser {
 
 
 /// Skip spaces and tabs, success on a newline, fail on any other char
@@ -75,4 +75,4 @@ std::string strip_raw_string(std::string&& content)
 }
 
 
-} // namespace xci::script
+} // namespace xci::core::parser

@@ -58,6 +58,7 @@ TEST_CASE( "Config syntax", "[ConfigParser]" )
     CHECK(p("int_item 123") == "int_item 123\n");
     CHECK(p("int_item 4.56") == "int_item 4.56\n");
     CHECK(p("string_item \"abc\"") == "string_item \"abc\"\n");
+    CHECK(p("raw_string_item \"\"\"\n   abc\n   def\n   \"\"\"\n") == "raw_string_item \"abc\\ndef\"\n");
     CHECK(p("int_item 1\nbool_item true") == "int_item 1\nbool_item true\n");
     CHECK(p("int_item 1; bool_item true") == "int_item 1\nbool_item true\n");
     CHECK(p("group {}") == "group {\n}\n");

@@ -6,7 +6,7 @@
 
 #include "Parser.h"
 #include "Error.h"
-#include "parser/raw_string.h"
+#include <xci/core/parser/raw_string.h>
 #include <xci/core/parser/unescape_rules.h>
 
 #include <tao/pegtl.hpp>
@@ -1469,7 +1469,7 @@ template<>
 struct Action<RawString> : change_states< std::string > {
     template<typename Input>
     static void success(const Input &in, std::string& str, LiteralHelper& helper) {
-        helper.content = strip_raw_string(std::move(str));
+        helper.content = core::parser::strip_raw_string(std::move(str));
         helper.type = ValueType::String;
     }
 };

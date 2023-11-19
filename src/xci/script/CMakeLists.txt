@@ -16,7 +16,6 @@ add_library(xci-script
     code/assembly_helpers.cpp
     code/optimize_copy_drop.cpp
     code/optimize_tail_call.cpp
-    parser/raw_string.cpp
     typing/TypeChecker.cpp
     typing/generic_resolver.cpp
     typing/overload_resolver.cpp
