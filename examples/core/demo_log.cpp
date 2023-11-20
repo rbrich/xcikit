@@ -59,6 +59,7 @@ int main()
     info("[sys] HOME = {}", home_directory_path());
     info("[sys] TEMP = {}", fs::temp_directory_path());
     info("[sys] self = {}", self_executable_path());
+    info("[sys] cpu time = {}s", get_cpu_time());
 
     // Log from threads
     std::thread a(thread_run, "thread1");

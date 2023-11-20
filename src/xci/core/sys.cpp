@@ -1,7 +1,7 @@
 // sys.cpp created on 2018-08-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2020 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "sys.h"
@@ -233,6 +233,24 @@ int cpu_count()
     if (sysctl(mib, 2, &value, &len, nullptr, 0) == 0)
         return value;
     return 2;  // generic default
+#endif
+}
+
+
+double get_cpu_time()
+{
+#ifdef __APPLE__
+    return double(clock_gettime_nsec_np(CLOCK_UPTIME_RAW)) / 1e9;
+#elif defined(_WIN32)
+    LARGE_INTEGER t {};
+    LARGE_INTEGER freq {};
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&t);
+    return double(t.QuadPart) / double(freq.QuadPart);
+#else // Linux
+    struct timespec ts {};
+    clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+    return double(ts.tv_sec) + double(ts.tv_nsec) / 1e9;
 #endif
 }
 
