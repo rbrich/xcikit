@@ -11,7 +11,7 @@
 #include <xci/graphics/Renderer.h>
 #include <xci/graphics/Texture.h>
 #include <xci/core/mixin.h>
-#include <xci/geometry/Vec2.h>
+#include <xci/math/Vec2.h>
 #include <xci/vfs/Vfs.h>
 
 #include <vector>

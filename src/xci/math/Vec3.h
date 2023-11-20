@@ -4,8 +4,8 @@
 // Copyright 2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#ifndef XCI_GEOMETRY_VEC3_H
-#define XCI_GEOMETRY_VEC3_H
+#ifndef XCI_MATH_VEC3_H
+#define XCI_MATH_VEC3_H
 
 #include <xci/compat/macros.h>
 #include <ostream>

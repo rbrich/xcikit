@@ -14,7 +14,7 @@
 #include <xci/graphics/View.h>
 #include <xci/graphics/Color.h>
 #include <xci/graphics/shape/Rectangle.h>
-#include <xci/geometry/Vec2.h>
+#include <xci/math/Vec2.h>
 #include <xci/core/container/ChunkedStack.h>
 
 #include <string>

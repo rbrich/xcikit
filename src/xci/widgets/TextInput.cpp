@@ -7,7 +7,7 @@
 #include "TextInput.h"
 #include <xci/core/string.h>
 #include <xci/core/log.h>
-#include <xci/geometry/Vec2.h>
+#include <xci/math/Vec2.h>
 
 #include <SDL.h>
 

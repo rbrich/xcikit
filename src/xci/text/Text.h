@@ -8,7 +8,7 @@
 #define XCI_TEXT_TEXT_H
 
 #include "Layout.h"
-#include <xci/geometry/Vec2.h>
+#include <xci/math/Vec2.h>
 #include <xci/graphics/View.h>
 
 #include <string>

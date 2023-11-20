@@ -8,7 +8,7 @@
 #define XCI_GRAPHICS_RENDERER_H
 
 #include "Shader.h"
-#include <xci/geometry/Vec2.h>
+#include <xci/math/Vec2.h>
 #include <xci/vfs/Vfs.h>
 #include <xci/config.h>
 #include <xci/graphics/vulkan/Swapchain.h>

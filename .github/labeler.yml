@@ -9,9 +9,9 @@ xci-core:
 xci-data:
   - src/xci/data/*.+(cpp|h)
   - src/xci/data/**/*.+(cpp|h)
-xci-geometry:
-  - src/xci/geometry/*.+(cpp|h)
-  - src/xci/geometry/**/*.+(cpp|h)
+xci-math:
+  - src/xci/math/*.+(cpp|h)
+  - src/xci/math/**/*.+(cpp|h)
 xci-graphics:
   - src/xci/graphics/*.+(cpp|h)
   - src/xci/graphics/**/*.+(cpp|h)

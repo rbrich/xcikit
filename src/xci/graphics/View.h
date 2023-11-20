@@ -7,8 +7,8 @@
 #ifndef XCI_GRAPHICS_VIEW_H
 #define XCI_GRAPHICS_VIEW_H
 
-#include <xci/geometry/Vec2.h>
-#include <xci/geometry/Rect.h>
+#include <xci/math/Vec2.h>
+#include <xci/math/Rect.h>
 #include <xci/compat/macros.h>
 
 #include <fmt/ostream.h>

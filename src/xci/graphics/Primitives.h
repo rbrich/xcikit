@@ -15,7 +15,7 @@
 #include "vulkan/DeviceMemory.h"
 #include "vulkan/Pipeline.h"
 #include "vulkan/DescriptorPool.h"
-#include <xci/geometry/Vec2.h>
+#include <xci/math/Vec2.h>
 #include <xci/core/mixin.h>
 
 #include <vulkan/vulkan.h>

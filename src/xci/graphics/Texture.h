@@ -8,8 +8,8 @@
 #ifndef XCI_GRAPHICS_TEXTURE_H
 #define XCI_GRAPHICS_TEXTURE_H
 
-#include <xci/geometry/Vec2.h>
-#include <xci/geometry/Rect.h>
+#include <xci/math/Vec2.h>
+#include <xci/math/Rect.h>
 #include "vulkan/DeviceMemory.h"
 
 #include <vulkan/vulkan.h>

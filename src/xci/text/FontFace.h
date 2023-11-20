@@ -8,7 +8,7 @@
 #define XCI_TEXT_FONTFACE_H
 
 #include <xci/text/FontLibrary.h>
-#include <xci/geometry/Vec2.h>
+#include <xci/math/Vec2.h>
 #include <xci/core/Buffer.h>
 #include <xci/core/mixin.h>
 

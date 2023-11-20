@@ -1,17 +1,17 @@
-// test_geometry.cpp created on 2019-05-01 as part of xcikit project
+// test_math.cpp created on 2019-05-01 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <xci/geometry/Vec2.h>
+#include <xci/math/Vec2.h>
 
 using namespace xci::core;
 
 
-TEST_CASE( "Vec2", "[geometry]" )
+TEST_CASE( "Vec2", "[math]" )
 {
     Vec2f vf1 {3.0, 4.0};
     CHECK(vf1.length() == 5.0);

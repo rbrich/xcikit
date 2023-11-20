@@ -166,7 +166,7 @@ Core utilities. These have little or no dependencies. Mostly just stdlib + OS AP
 * `string.h` - String manipulation, unicode utilities.
 * `sys.h` - A replacement for `std::this_thread::get_id()`, providing the canonical TID.
 
-=== xci::geometry
+=== xci::math
 
 Linear algebra: vectors, matrices, 2D rectangle, geometric computations.
 

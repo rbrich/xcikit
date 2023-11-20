@@ -32,7 +32,7 @@ if (EMSCRIPTEN)
     add_link_options(-sEXIT_RUNTIME=1)
 endif()
 
-add_catch_test(test_geometry test_geometry.cpp xci-core)
+add_catch_test(test_math test_math.cpp xci-core)
 add_catch_test(test_chunked_stack test_chunked_stack.cpp xci-core)
 add_catch_test(test_indexed_map test_indexed_map.cpp xci-core)
 add_catch_test(test_static_vec test_static_vec.cpp xci-core)
