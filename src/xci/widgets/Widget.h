@@ -119,6 +119,7 @@ public:
     void clear_children() { m_child.clear(); }
     size_t num_children() const { return m_child.size(); }
 
+    void set_focus(Widget* child) { m_focus = child; }  // does not emit focus_change event
     void set_focus(View& view, Widget* child);
     bool has_focus(const Widget* child) const { return m_focus == child; }
     Widget* focus() const { return m_focus; }

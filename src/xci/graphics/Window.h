@@ -269,7 +269,7 @@ private:
     void create_command_buffers();
     void resize_framebuffer();
     void draw();
-    void handle_event(SDL_Event& event);
+    void handle_event(const SDL_Event& event);
 
 public:
     static constexpr uint32_t cmd_buf_count = 2;

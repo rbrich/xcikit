@@ -325,7 +325,7 @@ static MouseButton translate_sdl_mouse_button(uint8_t button)
 }
 
 
-void Window::handle_event(SDL_Event& event)
+void Window::handle_event(const SDL_Event& event)
 {
     switch (event.type) {
         case SDL_QUIT:
