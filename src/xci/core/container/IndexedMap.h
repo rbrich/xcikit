@@ -56,12 +56,13 @@ public:
     /// the WeakIndex becomes invalid.
     /// When this safety is not needed, use just the Index part.
     struct WeakIndex {
-        Index index;
-        Tenant tenant;
+        Index index = ~0u;
+        Tenant tenant = ~0u;
+        bool operator==(const WeakIndex& rhs) const noexcept = default;
     };
 
     static constexpr Index no_index {~0u};
-    static constexpr WeakIndex not_found {~0u, ~0u};
+    static constexpr WeakIndex not_found {};
 
 private:
 
