@@ -151,6 +151,16 @@ TEST_CASE( "split", "[string]" )
 }
 
 
+TEST_CASE( "split_ws", "[string]" )
+{
+    using l = std::vector<std::string_view>;
+    CHECK(split_ws("one\ntwo\nthree") == l{"one", "two", "three"});
+    CHECK(split_ws("\none\ntwo\n\nthree\n") == l{"one", "two", "three"});
+    CHECK(split_ws("one  two\r\nthree\r\n") == l{"one", "two", "three"});
+    CHECK(split_ws("one two three\n", 1) == l{"one", "two three\n"});
+}
+
+
 TEST_CASE( "rsplit", "[string]" )
 {
     using l = std::vector<std::string_view>;

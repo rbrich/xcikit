@@ -84,6 +84,23 @@ vector<string_view> _split(string_view str, TDelim delim, size_t delim_len, int 
 std::vector<std::string_view> split(std::string_view str, char delim, int maxsplit) { return _split(str, delim, 1, maxsplit); }
 std::vector<std::string_view> split(std::string_view str, std::string_view delim, int maxsplit)  { return _split(str, delim, delim.size(), maxsplit); }
 
+vector<string_view> split_ws(string_view str, int maxsplit)
+{
+    constexpr const char* whitespace = " \n\r\t\v\f";
+    std::vector<string_view> res;
+    size_t pos = str.find_first_not_of(whitespace);
+    while (pos != string_view::npos && maxsplit != 0) {
+        size_t end = str.find_first_of(whitespace, pos);
+        if (end == string_view::npos)
+            break;
+        res.push_back(str.substr(pos, end - pos));
+        pos = str.find_first_not_of(whitespace, end);
+        --maxsplit;
+    }
+    if (pos != string_view::npos)
+        res.push_back(str.substr(pos, str.size() - pos));
+    return res;
+}
 
 template <class TDelim>
 vector<string_view> _rsplit(string_view str, TDelim delim, size_t delim_len, int maxsplit)

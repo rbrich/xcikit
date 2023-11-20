@@ -52,6 +52,10 @@ inline std::string indent(std::string_view str, unsigned indentation) {
 std::vector<std::string_view> split(std::string_view str, char delim, int maxsplit = -1);
 std::vector<std::string_view> split(std::string_view str, std::string_view delim, int maxsplit = -1);
 
+/// Split string at whitespace.
+/// Effectively strips the string at both sides, then splits at each sequence of whitespace characters. Never returns empty string(s) in the result.
+std::vector<std::string_view> split_ws(std::string_view str, int maxsplit = -1);
+
 std::vector<std::string_view> rsplit(std::string_view str, char delim, int maxsplit = -1);
 std::vector<std::string_view> rsplit(std::string_view str, std::string_view delim, int maxsplit = -1);
 
