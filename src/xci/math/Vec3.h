@@ -36,7 +36,16 @@ struct Vec3 {
         return *this;
     }
 
-    T& operator[] (unsigned i) const {
+    T& operator[] (unsigned i) {
+        switch (i) {
+            case 0: return x;
+            case 1: return y;
+            case 2: return z;
+        }
+        XCI_UNREACHABLE;
+    }
+
+    const T& operator[] (unsigned i) const {
         switch (i) {
             case 0: return x;
             case 1: return y;
