@@ -27,17 +27,10 @@ struct Index {
     unsigned tex_coord = -1u;
     unsigned normal = -1u;
 
-    unsigned& operator[] (unsigned i) {
-        switch (i) {
-            case 0: return vertex;
-            case 1: return tex_coord;
-            case 2: return normal;
-        }
-        XCI_UNREACHABLE;
-    }
-
     bool has_tex_coord() const { return tex_coord != -1u; }
     bool has_normal() const { return normal != -1u; }
+
+    bool operator==(const Index&) const noexcept = default;
 };
 
 struct Face {
@@ -70,7 +63,9 @@ struct Content {
 
 
 /// Loads Wavefront .obj file into memory structures
-/// See: https://en.wikipedia.org/wiki/Wavefront_.obj_file
+/// See:
+/// * https://en.wikipedia.org/wiki/Wavefront_.obj_file
+/// * https://fegemo.github.io/cefet-cg/attachments/obj-spec.pdf
 struct ObjParser {
     obj::Content content;
 
@@ -80,5 +75,23 @@ struct ObjParser {
 
 
 } // namespace xci
+
+
+// Specialize std::hash for obj::Index
+template<>
+struct std::hash<xci::obj::Index>
+{
+    std::size_t operator()(const xci::obj::Index& v) const noexcept {
+        std::size_t h1 = size_t(v.vertex);
+        std::size_t h2 = size_t(v.tex_coord);
+        std::size_t h3 = size_t(v.normal);
+#if SIZE_MAX == UINT64_MAX
+        return h1 ^ (h2 << 21) ^ (h3 << 42);
+#else
+        return h1 ^ (h2 << 11) ^ (h3 << 22);
+#endif
+    }
+};
+
 
 #endif  // XCI_SCENE_OBJ_PARSER_H

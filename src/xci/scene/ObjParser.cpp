@@ -57,7 +57,7 @@ struct FileContent: seq<star<Line>, SkipWS, must<eof>> {};
 struct State {
     obj::Content& content;
     Vec3<float> float_args {NAN, NAN, NAN};
-    Index index_arg;
+    Vec3<int> index_arg;
     std::vector<Index> indices;
     std::string usemtl;
     uint32_t n_args = 0;
@@ -151,7 +151,24 @@ template<>
 struct Action<IndexArg> {
     template<typename Input>
     static void apply(const Input& in, State& state) {
-        state.indices.push_back(state.index_arg);
+        // Convert reference numbers to 0-based global indices
+        int ref_v = state.index_arg.x;
+        int ref_vt = state.index_arg.y;
+        int ref_vn = state.index_arg.z;
+        Index idx;
+        if (ref_v < 0)
+            idx.vertex = unsigned(state.content.vertex.size() - ref_v);
+        else if (ref_v > 0)
+            idx.vertex = unsigned(ref_v - 1);
+        if (ref_vt < 0)
+            idx.tex_coord = unsigned(state.content.tex_coord.size() - ref_vt);
+        else if (ref_vt > 0)
+            idx.tex_coord = unsigned(ref_vt - 1);
+        if (ref_vn < 0)
+            idx.normal = unsigned(state.content.normal.size() - ref_vn);
+        else if (ref_vn > 0)
+            idx.normal = unsigned(ref_vn - 1);
+        state.indices.push_back(idx);
         state.reset_index_arg();
     }
 };
@@ -206,6 +223,7 @@ struct Action<GenericItem> : change_states<TypeAndArgs> {
                     it->active = true;
                 }
             }
+            return;
         }
         if (item.type == "s") {
             // These types are unsupported and just skipped
