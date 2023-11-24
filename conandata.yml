@@ -76,12 +76,12 @@ requirements:
       - shed_tool
   freetype:
     cmake: "Freetype/2.10.0"
-    conan: "freetype/2.13.0"
+    conan: "freetype/2.13.2"
     prereq:
       - text
   harfbuzz:
     cmake: "harfbuzz/"
-    conan: "harfbuzz/8.2.2"
+    conan: "harfbuzz/8.3.0"
     prereq:
       - text
   hyperscan:
