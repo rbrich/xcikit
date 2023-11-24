@@ -22,8 +22,6 @@ namespace xci::graphics {
 
 class Renderer;
 
-using xci::core::Vec2u;
-using xci::core::Rect_u;
 using std::uint8_t;
 
 

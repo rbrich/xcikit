@@ -160,15 +160,15 @@ public:
     struct GlyphPlacement {
         GlyphIndex glyph_index;
         uint32_t char_index;
-        core::Vec2i offset;
-        core::Vec2f advance;
+        Vec2i offset;
+        Vec2f advance;
     };
     std::vector<GlyphPlacement> shape_text(std::string_view utf8) const;
 
     struct Glyph {
-        core::Vec2i bearing;
-        core::Vec2f advance;
-        core::Vec2u bitmap_size;
+        Vec2i bearing;
+        Vec2f advance;
+        Vec2u bitmap_size;
         uint8_t* bitmap_buffer = nullptr;
         // Owned Freetype handle
         FT_Glyph ft_glyph = nullptr;

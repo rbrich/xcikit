@@ -16,10 +16,6 @@ namespace xci::graphics { class View; }
 
 namespace xci::graphics {
 
-using xci::core::Rect_u;
-using xci::core::Rect_f;
-using xci::core::Vec2f;
-
 // A collection of sprites (ie. alpha-blended textured quads)
 // sharing the same texture. Each sprite can display different
 // part of the texture.

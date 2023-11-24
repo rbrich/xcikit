@@ -7,12 +7,13 @@
 #ifndef XCI_MATH_VEC2_H
 #define XCI_MATH_VEC2_H
 
+#include <xci/compat/macros.h>
 #include <cmath>
 #include <algorithm>
 #include <ostream>
 #include <cstdint>
 
-namespace xci::core {
+namespace xci {
 
 
 // Return value as POD numeric type.
@@ -27,6 +28,9 @@ typename T::numeric_type cast_to_numeric(T var)
 
 template <typename T>
 struct Vec2 {
+    T x {};
+    T y {};
+
     Vec2() = default;
     Vec2(T x, T y) : x(x), y(y) {}
 
@@ -43,6 +47,10 @@ struct Vec2 {
     Vec2<T> norm() const {
         auto l = length();
         return { x / l, y / l };
+    }
+
+    T dot(const Vec2<T>& rhs) const {
+        return x * rhs.x + y * rhs.y;
     }
 
     T dist(const Vec2<T>& other) const {
@@ -69,6 +77,8 @@ struct Vec2 {
         return {x * c - y * s, x * s + y * c};
     }
 
+    const T& at(unsigned i) const { return operator[](i); }
+
     Vec2<T>& operator +=(const Vec2<T>& rhs) {
         x += rhs.x;
         y += rhs.y;
@@ -81,13 +91,25 @@ struct Vec2 {
         return *this;
     }
 
+    T& operator[] (unsigned i) {
+        switch (i) {
+            case 0: return x;
+            case 1: return y;
+        }
+        XCI_UNREACHABLE;
+    }
+
+    const T& operator[] (unsigned i) const {
+        switch (i) {
+            case 0: return x;
+            case 1: return y;
+        }
+        XCI_UNREACHABLE;
+    }
+
     explicit operator bool() const noexcept {
         return x != T{} || y != T{};
     }
-
-public:
-    T x {};
-    T y {};
 };
 
 // unary minus (opposite vector)
@@ -196,6 +218,6 @@ T dist_point_to_line(const Vec2<T>& point, const Vec2<T>& line_p1, const Vec2<T>
 }
 
 
-} // namespace xci::core
+} // namespace xci
 
 #endif // include guard

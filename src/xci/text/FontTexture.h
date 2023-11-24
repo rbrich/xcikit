@@ -14,8 +14,6 @@
 
 namespace xci::text {
 
-using core::Vec2u;
-using core::Rect_u;
 using graphics::Texture;
 using graphics::Renderer;
 

@@ -16,7 +16,6 @@
 
 namespace xci {
 
-using xci::core::Vec3;
 namespace fs = std::filesystem;
 
 
