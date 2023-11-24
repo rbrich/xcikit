@@ -45,7 +45,7 @@ requirements:
     public: True
   magic_enum:
     cmake: "magic_enum/0.7.3"
-    conan: "magic_enum/0.9.3"
+    conan: "magic_enum/0.9.5"
     public: True
     prereq:
       - data
@@ -76,7 +76,7 @@ requirements:
       - shed_tool
   freetype:
     cmake: "Freetype/2.10.0"
-    conan: "freetype/2.13.0"
+    conan: "freetype/2.13.2"
     prereq:
       - text
   harfbuzz:
