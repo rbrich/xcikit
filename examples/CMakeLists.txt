@@ -57,6 +57,12 @@ if (XCI_DATA)
     add_subdirectory(data)
 endif()
 
+# xci-scene
+
+if (XCI_SCENE)
+    add_subdirectory(scene)
+endif()
+
 # xci-script
 
 if (XCI_SCRIPT)

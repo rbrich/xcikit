@@ -115,6 +115,10 @@ Text rendering and text layout.
 
 The basic building blocks for rendering of text and UI elements.
 
+=== xci::scene
+
+Support for building 3D scenes.
+
 === xci::script
 
 Experimental scripting language with bytecode interpreter.
@@ -146,6 +150,25 @@ fire examples/script/some.firm
 
 Serialization and deserialization of structured data.
 
+=== xci::config
+
+Parse and dump config file. The format is custom:
+
+```
+bool_item false   // true/false
+int_item 1
+float_item 2.3
+string_item "abc\n"  // quotes are required, supports C-style escape sequences
+group {
+  value 1
+  subgroup { foo 42; bar "baz" }  // semicolon is used as a delimiter for multiple items on same line
+}
+```
+
+=== xci::math
+
+Linear algebra: vectors, matrices, 2D rectangle, geometric computations.
+
 === xci::core
 
 Core utilities. These have little or no dependencies. Mostly just stdlib + OS API.
@@ -165,10 +188,6 @@ Core utilities. These have little or no dependencies. Mostly just stdlib + OS AP
 * `rtti.h` - C++ demangled type names.
 * `string.h` - String manipulation, unicode utilities.
 * `sys.h` - A replacement for `std::this_thread::get_id()`, providing the canonical TID.
-
-=== xci::math
-
-Linear algebra: vectors, matrices, 2D rectangle, geometric computations.
 
 === xci::compat
 
