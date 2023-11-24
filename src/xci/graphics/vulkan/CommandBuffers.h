@@ -18,8 +18,6 @@ namespace xci::graphics {
 
 class Renderer;
 
-using xci::core::Rect_u;
-
 
 // Inherit this to add support for resource management
 class Resource {};

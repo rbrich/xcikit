@@ -63,19 +63,19 @@ struct Units {
 
 
 using FramebufferPixels = Units<float, Unit::FramebufferPixel>;
-using FramebufferCoords = core::Vec2<FramebufferPixels>;
+using FramebufferCoords = Vec2<FramebufferPixels>;
 using FramebufferSize = FramebufferCoords;
-using FramebufferRect = core::Rect<FramebufferPixels>;
+using FramebufferRect = Rect<FramebufferPixels>;
 
 using ScreenPixels = Units<float, Unit::ScreenPixel>;
-using ScreenCoords = core::Vec2<ScreenPixels>;
+using ScreenCoords = Vec2<ScreenPixels>;
 using ScreenSize = ScreenCoords;
-using ScreenRect = core::Rect<ScreenPixels>;
+using ScreenRect = Rect<ScreenPixels>;
 
 using ViewportUnits = Units<float, Unit::ViewportUnit>;
-using ViewportCoords = core::Vec2<ViewportUnits>;
+using ViewportCoords = Vec2<ViewportUnits>;
 using ViewportSize = ViewportCoords;
-using ViewportRect = core::Rect<ViewportUnits>;
+using ViewportRect = Rect<ViewportUnits>;
 
 namespace unit_literals {
 constexpr FramebufferPixels operator ""_fb (long double value) { return {float(value)}; }
@@ -133,17 +133,17 @@ private:
     int32_t m_storage = 0;
 };
 
-struct VariCoords: public core::Vec2<VariUnits> {
+struct VariCoords: public Vec2<VariUnits> {
     VariCoords() = default;
-    VariCoords(core::Vec2<VariUnits> v) : core::Vec2<VariUnits>(v) {}
-    VariCoords(FramebufferCoords v) : core::Vec2<VariUnits>(v.x, v.y) {}
-    VariCoords(ScreenCoords v) : core::Vec2<VariUnits>(v.x, v.y) {}
-    VariCoords(ViewportCoords v) : core::Vec2<VariUnits>(v.x, v.y) {}
-    VariCoords(VariUnits x, VariUnits y) : core::Vec2<VariUnits>(x, y) {}
+    VariCoords(Vec2<VariUnits> v) : Vec2<VariUnits>(v) {}
+    VariCoords(FramebufferCoords v) : Vec2<VariUnits>(v.x, v.y) {}
+    VariCoords(ScreenCoords v) : Vec2<VariUnits>(v.x, v.y) {}
+    VariCoords(ViewportCoords v) : Vec2<VariUnits>(v.x, v.y) {}
+    VariCoords(VariUnits x, VariUnits y) : Vec2<VariUnits>(x, y) {}
 };
 
 using VariSize = VariCoords;
-using VariRect = core::Rect<VariUnits>;
+using VariRect = Rect<VariUnits>;
 
 
 enum class ViewOrigin {
@@ -438,7 +438,7 @@ private:
 template <> struct fmt::formatter<xci::graphics::FramebufferPixels> : ostream_formatter {};
 template <> struct fmt::formatter<xci::graphics::ScreenPixels> : ostream_formatter {};
 template <> struct fmt::formatter<xci::graphics::ViewportUnits> : ostream_formatter {};
-template <typename T> struct fmt::formatter<xci::core::Vec2<T>> : ostream_formatter {};
-template <typename T> struct fmt::formatter<xci::core::Rect<T>> : ostream_formatter {};
+template <typename T> struct fmt::formatter<xci::Vec2<T>> : ostream_formatter {};
+template <typename T> struct fmt::formatter<xci::Rect<T>> : ostream_formatter {};
 
 #endif // XCI_GRAPHICS_VIEW_H

@@ -9,11 +9,16 @@
 
 #include "Vec2.h"
 
-namespace xci::core {
+namespace xci {
 
 
 template <typename T>
 struct Rect {
+    T x;  // left
+    T y;  // top
+    T w;  // width
+    T h;  // height
+
     Rect() : x(0), y(0), w(0), h(0) {}
     Rect(T x, T y, T w, T h) : x(x), y(y), w(w), h(h) {}
     Rect(const Vec2<T>& pos, const Vec2<T>& size) : x(pos.x), y(pos.y), w(size.x), h(size.y) {}
@@ -81,12 +86,6 @@ struct Rect {
     inline Vec2<T> top_left() const { return {x, y}; }
     inline Vec2<T> size() const { return {w, h}; }
     inline Vec2<T> center() const { return {x + w/2, y + h/2}; }
-
-public:
-    T x;  // left
-    T y;  // top
-    T w;  // width
-    T h;  // height
 };
 
 template <typename T>
@@ -100,6 +99,6 @@ using Rect_u = Rect<uint32_t>;
 using Rect_f = Rect<float>;
 
 
-} // namespace xci::core
+} // namespace xci
 
 #endif // include guard

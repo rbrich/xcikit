@@ -19,7 +19,7 @@ void Polygon::add_polygon(FramebufferCoords center, std::span<const FramebufferC
     // * set threshold for the outline (outline drawn where barycentric Z < 1.0)
     // All barycentric coords are multiplied by (distance from center to edge) / outline_thickness.
     assert(vertices.size() >= 2);
-    const auto d = xci::core::dist_point_to_line(center, vertices[0], vertices[1]);
+    const auto d = dist_point_to_line(center, vertices[0], vertices[1]);
     if (outline_thickness < 0.01f)
         outline_thickness = 0.01f;
     float b1 = (d / outline_thickness).value;
@@ -41,7 +41,7 @@ void ColoredPolygon::add_polygon(FramebufferCoords center, std::span<const Frame
                                  Color fill_color, Color outline_color, FramebufferPixels outline_thickness)
 {
     assert(vertices.size() >= 2);
-    const auto d = xci::core::dist_point_to_line(center, vertices[0], vertices[1]);
+    const auto d = dist_point_to_line(center, vertices[0], vertices[1]);
     if (outline_thickness < 0.01f)
         outline_thickness = 0.01f;
     float b1 = (d / outline_thickness).value;

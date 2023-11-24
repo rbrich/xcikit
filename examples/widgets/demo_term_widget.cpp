@@ -16,6 +16,7 @@
 #include <cstdlib>
 #include <cstdio>
 
+using namespace xci;
 using namespace xci::widgets;
 using namespace xci::graphics::unit_literals;
 using fmt::format;

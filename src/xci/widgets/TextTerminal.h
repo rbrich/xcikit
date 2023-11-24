@@ -305,11 +305,11 @@ public:
 
     /// Set requested terminal size in cells (i.e. do not scale the number of cells
     /// according to widget size - keep it fixed)
-    void set_size_in_cells(core::Vec2u cells) { m_cells = cells; m_resize_cells = false; }
+    void set_size_in_cells(Vec2u cells) { m_cells = cells; m_resize_cells = false; }
     void reset_req_cells() { m_resize_cells = true; }
 
     /// Retrieve current (actual) terminal size
-    core::Vec2u size_in_cells() const { return m_cells; }
+    Vec2u size_in_cells() const { return m_cells; }
 
     // ------------------------------------------------------------------------
     // Text buffer
@@ -356,10 +356,10 @@ public:
     // Cursor positioning
 
     /// Cursor position is 0-based
-    void set_cursor_pos(core::Vec2u pos) { set_cursor_x(pos.x); set_cursor_y(pos.y); }
+    void set_cursor_pos(Vec2u pos) { set_cursor_x(pos.x); set_cursor_y(pos.y); }
     void set_cursor_x(uint32_t x) { m_cursor.x = std::min(x, m_cells.x); }
     void set_cursor_y(uint32_t y);
-    core::Vec2u cursor_pos() const { return m_cursor; }
+    Vec2u cursor_pos() const { return m_cursor; }
 
     // ------------------------------------------------------------------------
     // Color attributes
@@ -425,12 +425,12 @@ private:
     FramebufferPixels m_font_size = 0;
     VariUnits m_font_size_requested { 14_px };
     FramebufferSize m_cell_size;
-    core::Vec2u m_cells = {80, 25};  // rows, columns
+    Vec2u m_cells = {80, 25};  // rows, columns
     bool m_resize_cells = true;
     std::unique_ptr<terminal::Buffer> m_buffer = std::make_unique<terminal::Buffer>();
     size_t m_buffer_offset = 0;  // offset to line in buffer which is first on page
     double m_scroll_offset = c_scroll_end;  // scroll back with mouse wheel
-    core::Vec2u m_cursor;  // x/y of cursor on screen
+    Vec2u m_cursor;  // x/y of cursor on screen
     terminal::Attributes m_attrs;  // current attributes
     std::chrono::nanoseconds m_bell_time {0};
     float m_bell_alpha = 0;  // state of visual bell (alpha channel of frame color)

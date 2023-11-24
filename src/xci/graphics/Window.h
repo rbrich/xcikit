@@ -26,9 +26,6 @@ union SDL_Event;
 
 namespace xci::graphics {
 
-using xci::core::Vec2u;
-using xci::core::Vec2f;
-using xci::core::Vec2i;
 
 // Key names come from GLFW, with only minor changes
 enum class Key: uint8_t {

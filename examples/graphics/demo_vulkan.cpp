@@ -15,6 +15,7 @@
 
 #include <cstdlib>
 
+using xci::Vec2;
 using namespace xci::graphics::unit_literals;
 
 

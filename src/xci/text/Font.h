@@ -20,7 +20,6 @@
 
 namespace xci::text {
 
-using core::Rect_u;
 using graphics::Renderer;
 using graphics::Texture;
 using xci::vfs::Vfs;
@@ -83,16 +82,16 @@ public:
 
     class Glyph {
     public:
-        core::Vec2u size() const { return m_tex_coords.size(); }
-        const core::Vec2i& bearing() const { return m_bearing; }
-        core::Vec2f advance() const { return m_advance; }
+        Vec2u size() const { return m_tex_coords.size(); }
+        const Vec2i& bearing() const { return m_bearing; }
+        Vec2f advance() const { return m_advance; }
 
         const Rect_u& tex_coords() const { return m_tex_coords; }
 
     private:
         Rect_u m_tex_coords;
-        core::Vec2i m_bearing;  // FT bitmap_left, bitmap_top
-        core::Vec2f m_advance;
+        Vec2i m_bearing;  // FT bitmap_left, bitmap_top
+        Vec2f m_advance;
 
         friend class Font;
     };
