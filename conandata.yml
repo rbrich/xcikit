@@ -90,7 +90,7 @@ requirements:
       - ff_tool
   boost:
     cmake: "Boost/1.75.0"
-    conan: "pfr/2.1.0"
+    conan: "pfr/2.2.0"
     public: True
     prereq:
       - data
