@@ -1,7 +1,7 @@
 // memoization.h created on 2020-10-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020–2023  Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// https://en.wikibooks.org/wiki/Optimizing_C%2B%2B/General_optimization_techniques/Memoization
@@ -25,7 +25,10 @@ template <unsigned n, typename FPtr, typename Ret, typename... Args>
 class Memoized<n, FPtr, Ret(*)(Args...)> {
     using FunctionPointer = typename FPtr::Type;
     using ArgsTuple = std::tuple<Args...>;
-    using ArgsStorage = typename std::aligned_storage<sizeof(ArgsTuple), alignof(ArgsTuple)>::type;
+    struct ArgsStorage {
+        // Aligned to allow memcmp optimization (compare using bigger chunks than bytes)
+        alignas(ArgsTuple) std::byte storage[sizeof(ArgsTuple)];
+    };
 
 public:
     explicit Memoized(FunctionPointer func): func(func) {}
@@ -43,7 +46,7 @@ public:
         ArgsTuple args_tuple{args...};
         int i = last_written;
         while (i <= valid) {
-            if (std::memcmp(&memo_args[i], &args_tuple, sizeof(ArgsTuple)) == 0)
+            if (std::memcmp(memo_args[i].storage, &args_tuple, sizeof(ArgsTuple)) == 0)
                 return memo_result[i];
             i = (i - 1 + n) % n;
             if (i == last_written)
@@ -54,7 +57,7 @@ public:
         last_written = i;
         if (valid < i)
             valid = i;
-        std::memcpy(&memo_args[i], &args_tuple, sizeof(ArgsTuple));
+        std::memcpy(memo_args[i].storage, &args_tuple, sizeof(ArgsTuple));
         return memo_result[i] = func(args...);
     }
 
