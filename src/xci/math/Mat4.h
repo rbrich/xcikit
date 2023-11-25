@@ -41,7 +41,7 @@ struct Mat4 {
         };
     }
 
-    static constexpr Mat4 translation(Vec3<T> t) {
+    static constexpr Mat4 translate(Vec3<T> t) {
         return {
             1,   0,   0,   0,
             0,   1,   0,   0,
@@ -200,6 +200,14 @@ constexpr Mat4<T> operator *(const Mat4<T>& lhs, const Mat4<T>& rhs) {
 template <typename T>
 constexpr bool operator ==(const Mat4<T>& lhs, const Mat4<T>& rhs) {
     return lhs.c1 == rhs.c1 && lhs.c2 == rhs.c2 && lhs.c3 == rhs.c3 && lhs.c4 == rhs.c4;
+}
+
+template <typename T>
+std::ostream& operator <<(std::ostream& s, Mat4<T> m) {
+    return s << "{{" << m.c1.x << ", " << m.c1.y << ", " << m.c1.z << ", " << m.c1.w << "},"
+             << " {" << m.c2.x << ", " << m.c2.y << ", " << m.c2.z << ", " << m.c2.w << "},"
+             << " {" << m.c3.x << ", " << m.c3.y << ", " << m.c3.z << ", " << m.c3.w << "},"
+             << " {" << m.c4.x << ", " << m.c4.y << ", " << m.c4.z << ", " << m.c4.w << "}}";
 }
 
 

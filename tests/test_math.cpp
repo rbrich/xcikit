@@ -13,6 +13,10 @@
 #include <xci/math/Mat3.h>
 #include <xci/math/Mat4.h>
 #include <xci/math/Rect.h>
+#include <xci/math/geometry.h>
+#include <xci/math/transform.h>
+
+#include <sstream>
 
 using namespace xci;
 
@@ -50,4 +54,22 @@ TEST_CASE( "Mat4", "[math]" )
     CHECK(Mat4f::identity().determinant() == 1.0f);
     auto m = Mat4f::rot_y(0.5f, 0.5f, {1.0f, 2.0f, 3.0f});
     CHECK(m * m.inverse() == Mat4f::identity());
+}
+
+template <typename T>
+static std::string to_str(const Mat4<T>& m) {
+    std::ostringstream s;
+    s << m;
+    return s.str();
+}
+
+TEST_CASE( "transform", "[math]" )
+{
+    CHECK(to_str(perspective_projection(1.2f, 4.0f / 3.0f, 1.0f, 1001.0f))
+          == to_str(Mat4f{
+                     1.09627, 0,       0,       0,
+                     0,       1.4617,  0,       0,
+                     0,       0,      -1.002,  -1,
+                     0,       0,      -2.002,   0,
+             }));
 }
