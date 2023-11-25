@@ -44,6 +44,9 @@ option(BUILD_TC_TOOL "Disable to skip building 'tc' (Term Ctl) tool." ON)
 
 # Optional installation artifacts:
 option(XCI_INSTALL_DEVEL "Install headers, CMake config, static libs." ON)
+option(XCI_INSTALL_EXAMPLES "Install headers, CMake config, static libs." ON)
+option(XCI_INSTALL_TESTS "Install tests." OFF)
+option(XCI_INSTALL_BENCHMARKS "Install benchmarks." ON)
 
 # Dependencies
 option(XCI_WITH_TERMINFO "Link with TermInfo and use it for TTY control sequences, instead of builtin sequences." OFF)
@@ -128,7 +131,7 @@ endif()
 
 # Google Benchmark
 if (BUILD_BENCHMARKS)
-    find_package(benchmark)
+    find_package(benchmark REQUIRED)
 endif()
 
 if (BUILD_EXAMPLES AND NOT WIN32 AND NOT EMSCRIPTEN)
@@ -280,7 +283,7 @@ endif()
 # Benchmarks   #
 # ------------ #
 
-if (benchmark_FOUND)
+if (BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
 

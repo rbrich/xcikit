@@ -31,7 +31,9 @@ function(add_demo TARGET)
         target_compile_definitions(${TARGET} PRIVATE ${ARG_CDEFS})
     endif()
 
-    install(TARGETS ${TARGET} EXPORT xcikit DESTINATION ${DEMO_DEST})
+    if (XCI_INSTALL_EXAMPLES)
+        install(TARGETS ${TARGET} EXPORT xcikit DESTINATION ${DEMO_DEST})
+    endif()
 endfunction()
 
 

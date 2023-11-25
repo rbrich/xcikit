@@ -18,7 +18,9 @@ macro(add_catch_test name source)
     else()
         catch_discover_tests(${name})
     endif()
-    install(TARGETS ${name} EXPORT xcikit DESTINATION tests)
+    if (XCI_INSTALL_TESTS)
+        install(TARGETS ${name} EXPORT xcikit DESTINATION tests)
+    endif()
 endmacro()
 
 
