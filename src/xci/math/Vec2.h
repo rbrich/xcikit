@@ -31,67 +31,67 @@ struct Vec2 {
     T x {};
     T y {};
 
-    Vec2() = default;
-    Vec2(T x, T y) : x(x), y(y) {}
+    constexpr Vec2() = default;
+    constexpr Vec2(T x, T y) : x(x), y(y) {}
 
     // Convert another type of vector (possibly foreign type)
     template <typename TVec>
-    explicit Vec2(const TVec& other) : x(other.x), y(other.y) {}
+    constexpr explicit Vec2(const TVec& other) : x(other.x), y(other.y) {}
 
-    T length() const {
+    constexpr T length() const {
         return static_cast<T>(std::hypot(
                 cast_to_numeric(x),
                 cast_to_numeric(y)));
     }
 
-    Vec2<T> norm() const {
+    constexpr Vec2<T> norm() const {
         auto l = length();
         return { x / l, y / l };
     }
 
-    T dot(const Vec2<T>& rhs) const {
+    constexpr T dot(const Vec2<T>& rhs) const {
         return x * rhs.x + y * rhs.y;
     }
 
-    T dist(const Vec2<T>& other) const {
+    constexpr T dist(const Vec2<T>& other) const {
         return static_cast<T>(std::hypot(
                 cast_to_numeric(x - other.x),
                 cast_to_numeric(y - other.y)));
     }
 
-    T dist_squared(const Vec2<T>& other) const {
+    constexpr T dist_squared(const Vec2<T>& other) const {
         auto dx = x - other.x;
         auto dy = y - other.y;
         return dx*dx + dy*dy;
     }
 
-    T dist_taxicab(const Vec2<T>& other) const {
+    constexpr T dist_taxicab(const Vec2<T>& other) const {
         auto dx = cast_to_numeric(x - other.x);
         auto dy = cast_to_numeric(y - other.y);
         return std::abs(dx) + std::abs(dy);
     }
 
-    Vec2<T> rotate(float angle_radians) const {
+    constexpr Vec2<T> rotate(float angle_radians) const {
         const float c = std::cos(angle_radians);
         const float s = std::sin(angle_radians);
         return {x * c - y * s, x * s + y * c};
     }
 
-    const T& at(unsigned i) const { return operator[](i); }
+    constexpr const T& at(unsigned i) const { return operator[](i); }
 
-    Vec2<T>& operator +=(const Vec2<T>& rhs) {
+    constexpr Vec2<T>& operator +=(const Vec2<T>& rhs) {
         x += rhs.x;
         y += rhs.y;
         return *this;
     }
 
-    Vec2<T>& operator -=(const Vec2<T>& rhs) {
+    constexpr Vec2<T>& operator -=(const Vec2<T>& rhs) {
         x -= rhs.x;
         y -= rhs.y;
         return *this;
     }
 
-    T& operator[] (unsigned i) {
+    constexpr T& operator[] (unsigned i) {
         switch (i) {
             case 0: return x;
             case 1: return y;
@@ -99,7 +99,7 @@ struct Vec2 {
         XCI_UNREACHABLE;
     }
 
-    const T& operator[] (unsigned i) const {
+    constexpr const T& operator[] (unsigned i) const {
         switch (i) {
             case 0: return x;
             case 1: return y;
@@ -107,65 +107,60 @@ struct Vec2 {
         XCI_UNREACHABLE;
     }
 
-    explicit operator bool() const noexcept {
+    constexpr explicit operator bool() const noexcept {
         return x != T{} || y != T{};
     }
 };
 
 // unary minus (opposite vector)
 template <typename T>
-Vec2<T> operator -(const Vec2<T>& rhs) {
+constexpr Vec2<T> operator -(const Vec2<T>& rhs) {
     return Vec2<T>(-rhs.x, -rhs.y);
 }
 
 template <typename T>
-Vec2<T> operator +(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+constexpr Vec2<T> operator +(const Vec2<T>& lhs, const Vec2<T>& rhs) {
     return Vec2<T>(lhs.x + rhs.x, lhs.y + rhs.y);
 }
 
 template <typename T>
-Vec2<T> operator +(const Vec2<T>& lhs, T rhs) {
+constexpr Vec2<T> operator +(const Vec2<T>& lhs, T rhs) {
     return Vec2<T>(lhs.x + rhs, lhs.y + rhs);
 }
 
 template <typename T>
-Vec2<T> operator -(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+constexpr Vec2<T> operator -(const Vec2<T>& lhs, const Vec2<T>& rhs) {
     return Vec2<T>(lhs.x - rhs.x, lhs.y - rhs.y);
 }
 
 template <typename T>
-Vec2<T> operator *(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+constexpr Vec2<T> operator *(const Vec2<T>& lhs, const Vec2<T>& rhs) {
     return Vec2<T>(lhs.x * rhs.x, lhs.y * rhs.y);
 }
 
 template <typename T>
-Vec2<T> operator *(const Vec2<T>& lhs, T rhs) {
+constexpr Vec2<T> operator *(const Vec2<T>& lhs, T rhs) {
     return Vec2<T>(lhs.x * rhs, lhs.y * rhs);
 }
 
 template <typename T, typename U>
-Vec2<T> operator *(U lhs, const Vec2<T>& rhs) {
+constexpr Vec2<T> operator *(U lhs, const Vec2<T>& rhs) {
     return Vec2<T>(lhs * rhs.x, lhs * rhs.y);
 }
 
 template <typename T>
-Vec2<T> operator /(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+constexpr Vec2<T> operator /(const Vec2<T>& lhs, const Vec2<T>& rhs) {
     return Vec2<T>(lhs.x / rhs.x, lhs.y / rhs.y);
 }
 
 template <typename T>
-Vec2<T> operator /(const Vec2<T>& lhs, T rhs) {
+constexpr Vec2<T> operator /(const Vec2<T>& lhs, T rhs) {
     return Vec2<T>(lhs.x / rhs, lhs.y / rhs);
 }
 
 template <typename T>
-bool operator ==(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+constexpr bool operator ==(const Vec2<T>& lhs, const Vec2<T>& rhs) {
     return lhs.x == rhs.x && lhs.y == rhs.y;
-}
-
-template <typename T>
-bool operator !=(const Vec2<T>& lhs, const Vec2<T>& rhs) {
-    return lhs.x != rhs.x || lhs.y != rhs.y;
 }
 
 template <typename T>

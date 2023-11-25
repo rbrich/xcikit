@@ -21,26 +21,26 @@ struct Vec4 {
     T z {};
     T w {};
 
-    Vec4() = default;
-    Vec4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
+    constexpr Vec4() = default;
+    constexpr Vec4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
 
     // Convert another type of vector (possibly foreign type)
     template <typename TVec>
-    explicit Vec4(const TVec& other) : x(other.x), y(other.y), z(other.z), w(other.w) {}
+    constexpr explicit Vec4(const TVec& other) : x(other.x), y(other.y), z(other.z), w(other.w) {}
 
-    T dot(const Vec4<T>& rhs) const {
+    constexpr T dot(const Vec4<T>& rhs) const {
         return x * rhs.x + y * rhs.y + z * rhs.z + w * rhs.w;
     }
 
-    Vec3<T> vec3(Vec3u i) const {
+    constexpr Vec3<T> vec3(Vec3u i) const {
         return {at(i.x), at(i.y), at(i.z)};
     }
 
-    Vec3<T> vec3() const { return {x, y, z}; }
+    constexpr Vec3<T> vec3() const { return {x, y, z}; }
 
-    const T& at(unsigned i) const { return operator[](i); }
+    constexpr const T& at(unsigned i) const { return operator[](i); }
 
-    Vec4<T>& operator +=(const Vec4<T>& rhs) {
+    constexpr Vec4<T>& operator +=(const Vec4<T>& rhs) {
         x += rhs.x;
         y += rhs.y;
         z += rhs.z;
@@ -48,7 +48,7 @@ struct Vec4 {
         return *this;
     }
 
-    Vec4<T>& operator -=(const Vec4<T>& rhs) {
+    constexpr Vec4<T>& operator -=(const Vec4<T>& rhs) {
         x -= rhs.x;
         y -= rhs.y;
         z -= rhs.z;
@@ -56,7 +56,7 @@ struct Vec4 {
         return *this;
     }
 
-    T& operator[] (unsigned i) {
+    constexpr T& operator[] (unsigned i) {
         switch (i) {
             case 0: return x;
             case 1: return y;
@@ -66,7 +66,7 @@ struct Vec4 {
         XCI_UNREACHABLE;
     }
 
-    const T& operator[] (unsigned i) const {
+    constexpr const T& operator[] (unsigned i) const {
         switch (i) {
             case 0: return x;
             case 1: return y;
@@ -76,65 +76,60 @@ struct Vec4 {
         XCI_UNREACHABLE;
     }
 
-    explicit operator bool() const noexcept {
+    constexpr explicit operator bool() const noexcept {
         return x != T{} || y != T{} || z != T{} || w != T{};
     }
 };
 
 // unary minus (opposite vector)
 template <typename T>
-Vec4<T> operator -(const Vec4<T>& rhs) {
+constexpr Vec4<T> operator -(const Vec4<T>& rhs) {
     return Vec4<T>(-rhs.x, -rhs.y, -rhs.z, -rhs.w);
 }
 
 template <typename T>
-Vec4<T> operator +(const Vec4<T>& lhs, const Vec4<T>& rhs) {
+constexpr Vec4<T> operator +(const Vec4<T>& lhs, const Vec4<T>& rhs) {
     return Vec4<T>(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w);
 }
 
 template <typename T>
-Vec4<T> operator +(const Vec4<T>& lhs, T rhs) {
+constexpr Vec4<T> operator +(const Vec4<T>& lhs, T rhs) {
     return Vec4<T>(lhs.x + rhs, lhs.y + rhs, lhs.z + rhs, lhs.w + rhs);
 }
 
 template <typename T>
-Vec4<T> operator -(const Vec4<T>& lhs, const Vec4<T>& rhs) {
+constexpr Vec4<T> operator -(const Vec4<T>& lhs, const Vec4<T>& rhs) {
     return Vec4<T>(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w);
 }
 
 template <typename T>
-Vec4<T> operator *(const Vec4<T>& lhs, const Vec4<T>& rhs) {
+constexpr Vec4<T> operator *(const Vec4<T>& lhs, const Vec4<T>& rhs) {
     return Vec4<T>(lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z, lhs.w * rhs.w);
 }
 
 template <typename T>
-Vec4<T> operator *(const Vec4<T>& lhs, T rhs) {
+constexpr Vec4<T> operator *(const Vec4<T>& lhs, T rhs) {
     return Vec4<T>(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs);
 }
 
 template <typename T, typename U>
-Vec4<T> operator *(U lhs, const Vec4<T>& rhs) {
+constexpr Vec4<T> operator *(U lhs, const Vec4<T>& rhs) {
     return Vec4<T>(lhs * rhs.x, lhs * rhs.y, lhs * rhs.z, lhs * rhs.w);
 }
 
 template <typename T>
-Vec4<T> operator /(const Vec4<T>& lhs, const Vec4<T>& rhs) {
+constexpr Vec4<T> operator /(const Vec4<T>& lhs, const Vec4<T>& rhs) {
     return Vec4<T>(lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w);
 }
 
 template <typename T>
-Vec4<T> operator /(const Vec4<T>& lhs, T rhs) {
+constexpr Vec4<T> operator /(const Vec4<T>& lhs, T rhs) {
     return Vec4<T>(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs);
 }
 
 template <typename T>
-bool operator ==(const Vec4<T>& lhs, const Vec4<T>& rhs) {
+constexpr bool operator ==(const Vec4<T>& lhs, const Vec4<T>& rhs) {
     return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;
-}
-
-template <typename T>
-bool operator !=(const Vec4<T>& lhs, const Vec4<T>& rhs) {
-    return lhs.x != rhs.x || lhs.y != rhs.y || lhs.z != rhs.z || lhs.w != rhs.w;
 }
 
 template <typename T>
