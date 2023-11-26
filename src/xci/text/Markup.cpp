@@ -170,7 +170,7 @@ struct Control : normal< Rule >
 } // namespace parser
 
 
-bool Markup::parse(const std::string &s)
+bool Markup::parse(std::string_view s)
 {
     using parser::Grammar;
     using parser::Action;

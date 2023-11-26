@@ -40,7 +40,7 @@ public:
     VfsFile& operator=(VfsFile&&) noexcept = default;
 
     /// \returns true if file was successfully read
-    bool is_open() const { return m_content != nullptr; }
+    bool is_open() const { return bool(m_content); }
     bool is_real_file() const { return !m_path.empty(); }
 
     /// path to file (only regular files, empty for archives)
@@ -49,6 +49,10 @@ public:
     /// memory buffer containing the file data
     /// or nullptr if there was error reading the file
     BufferPtr content() const { return m_content; }
+
+    /// View into content, unchecked.
+    /// Check content validity before calling this (operator bool or is_open).
+    std::string_view content_sv() const { return m_content->string_view(); }
 
     // convenience operators
     explicit operator bool() const { return is_open(); }

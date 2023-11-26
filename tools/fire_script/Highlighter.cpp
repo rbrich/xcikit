@@ -453,7 +453,7 @@ auto Highlighter::highlight(std::string_view input, unsigned cursor) -> HlResult
             tao::pegtl::tracking_mode::eager,
             tao::pegtl::eol::lf_crlf,
             const char*>  // pass source filename as non-owning char*
-    in(input.data(), input.size(), "<input>");
+    in(input, "<input>");
 
     m_output.clear();
     try {
