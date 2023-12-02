@@ -97,6 +97,9 @@ int main(int argc, const char* argv[])
     FramebufferPixels emoji_offset = 0.f;
 
     window.set_size_callback([&](View& view) {
+        font.clear_cache();
+        emoji_font.clear_cache();
+
         text.resize(view);
         emoji.resize(view);
         help_text.resize(view);

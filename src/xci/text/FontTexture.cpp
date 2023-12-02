@@ -1,7 +1,7 @@
 // FontTexture.cpp created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/text/FontTexture.h>
@@ -21,6 +21,7 @@ FontTexture::FontTexture(Renderer& renderer, unsigned int size, bool color)
     if (!m_texture.create({size, size}))
         throw std::runtime_error("Could not create font texture.");
     m_binpack.Init(int(size), int(size), false);
+    m_texture.clear();
 }
 
 

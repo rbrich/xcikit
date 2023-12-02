@@ -66,15 +66,14 @@ int main(int argc, const char* argv[])
 
     std::deque<Button> buttons;
     for (auto i : {0,1,2,3,4}) {
-        buttons.emplace_back(theme, std::to_string(i+1) + ". click me!");
-        buttons.back().set_position({-10_vp, -25_vp + i * 6_vp});
-        auto* btn_self = &buttons.back();
-        buttons.back().on_click([btn_self, &random_color](View& view) {
+        auto& btn = buttons.emplace_back(theme, std::to_string(i+1) + ". click me!");
+        btn.set_position({-10_vp, -25_vp + i * 6_vp});
+        buttons.back().on_click([&btn, &random_color](View& view) {
             view.finish_draw();
-            btn_self->set_text_color(random_color());
-            btn_self->resize(view);
+            btn.set_text_color(random_color());
+            btn.resize(view);
         });
-        root.add_child(buttons.back());
+        root.add_child(btn);
     }
 
     // Checkbox
