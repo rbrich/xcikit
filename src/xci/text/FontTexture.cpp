@@ -14,7 +14,7 @@ using namespace core::log;
 using graphics::ColorFormat;
 
 
-FontTexture::FontTexture(Renderer& renderer, unsigned int size, bool color)
+FontTexture::FontTexture(Renderer& renderer, uint32_t size, bool color)
     : m_renderer(renderer),
       m_texture(m_renderer, color ? ColorFormat::BGRA : ColorFormat::Grey)
 {

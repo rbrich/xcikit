@@ -48,7 +48,7 @@ int main(int argc, const char* argv[])
 
     setup_window(window, "XCI font demo", argv);
 
-    Font font {renderer};
+    Font font {renderer, 512u};
     if (!font.add_face(vfs, "fonts/Enriqueta/Enriqueta-Regular.ttf", 0))
         return EXIT_FAILURE;
     if (!font.add_face(vfs, "fonts/Enriqueta/Enriqueta-Bold.ttf", 0))
