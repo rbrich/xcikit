@@ -249,25 +249,21 @@ private:
 
 class BeginSpan: public Element {
 public:
-    explicit BeginSpan(std::string name) : m_name(std::move(name)) {}
     void apply(Page& page) override {
-        page.begin_span(m_name);
+        (void) page.begin_span();
     }
-
-private:
-    std::string m_name;
 };
 
 
 class EndSpan: public Element {
 public:
-    explicit EndSpan(std::string name) : m_name(std::move(name)) {}
+    explicit EndSpan(Page::SpanIndex index) : m_index(index) {}
     void apply(Page& page) override {
-        page.end_span(m_name);
+        (void) page.end_span(m_index);
     }
 
 private:
-    std::string m_name;
+    Page::SpanIndex m_index;
 };
 
 

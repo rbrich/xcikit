@@ -186,17 +186,22 @@ public:
     void add_word(const std::string& string);
 
     // ------------------------------------------------------------------------
-    // Spans allow to name part of the text and change its attributes later
+    // Spans allow to mark part of the text and change its attributes later
 
-    // Begin and end the span.
-    // Returns false on error:
-    // - Trying to begin a span of same name twice.
-    // - Trying to end not-started span.
-    bool begin_span(const std::string& name);
-    bool end_span(const std::string& name);
+    using SpanIndex = unsigned int;
 
-    // Returns NULL if the span does not exist.
-    Span* get_span(const std::string& name);
+    /// Begin new span
+    /// \returns index of the span
+    SpanIndex begin_span();
+
+    /// End a span previously started with `begin_span`
+    /// \param index  Span index as returned from begin_span.
+    /// \returns false is the index is invalid or the span is already closed
+    bool end_span(SpanIndex index);
+
+    /// Get a span previously created by begin_span, end_span
+    /// \returns Span with the index or nullptr if the index is invalid
+    Span* get_span(SpanIndex index);
 
     // ------------------------------------------------------------------------
 
@@ -226,7 +231,7 @@ private:
     // page content
     core::ChunkedStack<Word> m_words;
     std::vector<Line> m_lines;
-    std::map<std::string, Span> m_spans;
+    std::vector<Span> m_spans;
 };
 
 
