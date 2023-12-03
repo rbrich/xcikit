@@ -113,10 +113,10 @@ class Composite: public Widget {
 public:
     explicit Composite(Theme& theme) : Widget(theme) {}
 
-    void add_child(Widget& child) { m_child.push_back(&child); }
-    void remove_child(size_t child_index) { m_child.erase(m_child.begin() + child_index); }
+    void add_child(Widget& child) { m_child.push_back(&child); if (!m_focus && child.is_click_focusable()) m_focus = &child; }
+    void remove_child(size_t child_index) { m_child.erase(m_child.begin() + child_index); m_focus = nullptr; }
     void replace_child(size_t child_index, Widget& new_child) { m_child[child_index] = &new_child; }
-    void clear_children() { m_child.clear(); }
+    void clear_children() { m_child.clear(); m_focus = nullptr; }
     size_t num_children() const { return m_child.size(); }
 
     void set_focus(Widget* child) { m_focus = child; }  // does not emit focus_change event
