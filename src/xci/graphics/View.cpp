@@ -1,7 +1,7 @@
 // View.cpp created on 2018-03-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "View.h"
@@ -249,17 +249,6 @@ bool View::pop_refresh()
 void View::finish_draw()
 {
     window()->finish_draw();
-}
-
-
-void View::set_debug_flag(View::Debug flag, bool enabled) {
-    if (has_debug_flag(flag) != enabled)
-        m_debug ^= (DebugFlags) flag;
-}
-
-
-bool View::has_debug_flag(View::Debug flag) const {
-    return bool(m_debug & (DebugFlags)flag);
 }
 
 

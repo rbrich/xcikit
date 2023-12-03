@@ -413,8 +413,10 @@ public:
         PageBBox        = 1u << 6u,
     };
     void set_debug_flags(DebugFlags flags) { m_debug = flags; }
-    void set_debug_flag(Debug flag, bool enabled = true);
-    bool has_debug_flag(Debug flag) const;
+    void set_debug_flag(Debug flag, bool enabled = true) { if (enabled) m_debug |= (DebugFlags) flag; else m_debug &= ~(DebugFlags) flag; }
+    void toggle_debug_flag(Debug flag) { m_debug ^= (DebugFlags) flag; }
+    bool has_debug_flag(Debug flag) const { return bool(m_debug & (DebugFlags)flag); }
+    bool debug_flags() const { return m_debug; }
 
 private:
     void rescale_viewport();
