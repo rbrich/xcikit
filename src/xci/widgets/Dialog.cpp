@@ -188,7 +188,8 @@ bool Dialog::handle_mouse_release(View& view, MouseButton button, const Framebuf
             // Activate
             if (m_activation_cb)
                 m_activation_cb(view, m_items[m_selected_idx]);
-            clear_selection();
+            m_selection_type = SelectionType::Hover;
+            m_styles[m_items[m_selected_idx].hover_style].apply(*span);
             return true;
         }
     }

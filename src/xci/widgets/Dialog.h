@@ -19,12 +19,24 @@ class Dialog: public Widget, public Padded, public text::TextMixin {
 public:
     explicit Dialog(Theme& theme);
 
+    struct SpanStyle {
+        graphics::Color color;
+        void apply(text::layout::Span& span) const;
+    };
+    using StyleIndex = unsigned;
+    static constexpr StyleIndex default_normal_style = 0;
+    static constexpr StyleIndex default_hover_style = 1;
+    static constexpr StyleIndex default_focus_style = 2;
+    static constexpr StyleIndex default_active_style = 3;
+    StyleIndex add_style(SpanStyle&& style) { m_styles.push_back(std::move(style)); return m_styles.size() - 1; }
+    SpanStyle& style(StyleIndex index) { return m_styles[index]; }
+
     struct Item {
         std::string span_name;
-        uint16_t normal_style = 0;
-        uint16_t hover_style = 1;
-        uint16_t focus_style = 2;  // keyboard focus
-        uint16_t active_style = 3;  // clicked or key pressed
+        uint16_t normal_style = default_normal_style;
+        uint16_t hover_style = default_hover_style;
+        uint16_t focus_style = default_focus_style;  // keyboard focus
+        uint16_t active_style = default_active_style;  // clicked or key pressed
         graphics::Key key = graphics::Key::Unknown;  // hotkey to select the span
         graphics::Key alternative_key() const;  // for numeric keys, KeypadX is added automatically for NumX
     };
@@ -35,11 +47,6 @@ public:
     void create_items_from_spans();
     /// Get item by `span_name`
     Item* get_item(std::string span_name);
-
-    struct SpanStyle {
-        graphics::Color color;
-        void apply(text::layout::Span& span) const;
-    };
 
     using ActivationCallback = std::function<void(View&, Item&)>;
     void on_activation(ActivationCallback cb) { m_activation_cb = std::move(cb); }

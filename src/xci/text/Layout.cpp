@@ -22,6 +22,7 @@ void Layout::clear()
 {
     m_page.clear();
     m_elements.clear();
+    m_span_names.clear();
 }
 
 
