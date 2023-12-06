@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <vector>
 #include <string>
+#include <string_view>
 
 namespace xci {
 
@@ -69,7 +70,7 @@ struct ObjParser {
     obj::Content content;
 
     bool parse_file(const fs::path& path);
-    bool parse_string(const std::string& str);
+    bool parse_string(std::string_view sv);
 };
 
 

@@ -240,8 +240,11 @@ VkDevice Texture::device() const
 
 void Texture::destroy()
 {
-    if (m_staging_mapped != nullptr)
+    m_pending_regions.clear();
+    if (m_staging_mapped != nullptr) {
         m_staging_memory.unmap();
+        m_staging_mapped = nullptr;
+    }
     vkDestroySampler(device(), m_sampler, nullptr);
     vkDestroyImageView(device(), m_image_view, nullptr);
     vkDestroyImage(device(), m_image, nullptr);

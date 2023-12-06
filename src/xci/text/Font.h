@@ -31,7 +31,7 @@ class FontTexture;
 // Encapsulates the faces, styles and glyph caches for a font
 class Font: private core::NonCopyable {
 public:
-    explicit Font(Renderer& renderer, uint32_t texture_size = 512u);
+    explicit Font(Renderer& renderer, uint32_t texture_size = 1024u);
     ~Font();
 
     // Add a face. Call multiple times to add different strokes

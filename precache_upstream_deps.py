@@ -83,6 +83,7 @@ def main():
         run(["cmake", "-G", "Ninja",
              "-S", source_dir, "-B", build_dir,
              "-DCMAKE_BUILD_TYPE=Release",
+             "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
              f"-DCMAKE_INSTALL_PREFIX={install_dir}",
              *cmake_args])
         run(["cmake", "--build", build_dir])
@@ -93,4 +94,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except subprocess.CalledProcessError as e:
+        print(f"\nERROR: Command failed (exit code {e.returncode})", file=sys.stderr)
+        exit(1)

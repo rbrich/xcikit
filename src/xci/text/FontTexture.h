@@ -25,7 +25,7 @@ public:
     // The size is fixed. If the size request cannot be satisfied by HW,
     // smaller size will be used (HW maximum texture size).
     explicit FontTexture(Renderer& renderer,
-            unsigned int size=512, bool color=false);
+                         uint32_t size=1024u, bool color=false);
 
     // non-copyable
     FontTexture(const FontTexture&) = delete;

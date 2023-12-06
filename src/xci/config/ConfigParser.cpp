@@ -242,7 +242,7 @@ bool ConfigParser::parse_file(const fs::path& path)
 }
 
 
-bool ConfigParser::parse_string(const std::string &str)
+bool ConfigParser::parse_string(std::string_view str)
 {
     tao::pegtl::memory_input in(str, "<buffer>");
     return _parse(*this, in);

@@ -50,7 +50,7 @@ option(XCI_INSTALL_BENCHMARKS "Install benchmarks." ON)
 
 # Dependencies
 option(XCI_WITH_TERMINFO "Link with TermInfo and use it for TTY control sequences, instead of builtin sequences." OFF)
-option(XCI_WITH_HYPERSCAN "Hyperscan library is required to build ff tool." OFF)
+option(XCI_WITH_HYPERSCAN "Hyperscan / Vectorscan library is required to build ff tool." OFF)
 
 # negate it for use as option() initial value
 if (EMSCRIPTEN)

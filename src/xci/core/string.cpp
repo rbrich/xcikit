@@ -185,7 +185,7 @@ std::string gen_unescape(string_view str)
         tao::pegtl::tracking_mode::eager,
         tao::pegtl::eol::lf_crlf,
         const char*>
-    input(str.data(), str.size(), "<input>");
+    input(str, "<input>");
     std::string result;
     result.reserve(str.size());
 

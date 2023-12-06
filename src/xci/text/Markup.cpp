@@ -99,7 +99,8 @@ struct Action<CloseElem>
         }
         if (seq.starts_with("s:")) {
             auto name = seq.substr(2);
-            return ctx.get_layout().end_span(name);
+            (void) ctx.get_layout().end_span(name);
+            return;
         }
         // Unknown tag - leave uninterpreted
         ctx.get_layout().add_word(std::string("</") + seq + ">");
@@ -170,7 +171,7 @@ struct Control : normal< Rule >
 } // namespace parser
 
 
-bool Markup::parse(const std::string &s)
+bool Markup::parse(std::string_view s)
 {
     using parser::Grammar;
     using parser::Action;

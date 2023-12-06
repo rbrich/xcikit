@@ -304,9 +304,9 @@ bool ObjParser::parse_file(const fs::path& path)
 }
 
 
-bool ObjParser::parse_string(const std::string &str)
+bool ObjParser::parse_string(std::string_view sv)
 {
-    tao::pegtl::memory_input in(str, "<buffer>");
+    tao::pegtl::memory_input in(sv, "<buffer>");
     return _parse_obj(content, in);
 }
 

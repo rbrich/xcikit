@@ -100,7 +100,7 @@ bool Config::parse_file(const fs::path& path)
 }
 
 
-bool Config::parse_string(const std::string& str)
+bool Config::parse_string(std::string_view str)
 {
     RetainedConfigParser p(*this);
     return p.parse_string(str);

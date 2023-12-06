@@ -151,6 +151,7 @@ Font::Glyph* Font::get_glyph(GlyphIndex glyph_index)
     if (!m_texture->add_glyph(glyph_render.bitmap_size, glyph_render.bitmap_buffer,
                               glyph.m_tex_coords)) {
         // no more space in texture -> reset and try again
+        log::warning("Font: Glyph cache overflow");
         clear_cache();
         return get_glyph(glyph_index);
     }

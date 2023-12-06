@@ -26,7 +26,7 @@ requirements:
     cmake: "fmt/10.0.0"
     conan: "fmt/10.1.1"
     upstream: "github.com fmtlib/fmt 10.1.1"
-    cmake_defs: FMT_TEST=OFF FMT_DOC=OFF FMT_SYSTEM_HEADERS=ON CMAKE_POSITION_INDEPENDENT_CODE=ON
+    cmake_defs: FMT_TEST=OFF FMT_DOC=OFF FMT_SYSTEM_HEADERS=ON
     public: True
   range_v3:
     cmake: "range-v3/0.12.0"
@@ -46,6 +46,8 @@ requirements:
   magic_enum:
     cmake: "magic_enum/0.7.3"
     conan: "magic_enum/0.9.3"
+    upstream: "github.com Neargye/magic_enum v0.9.5"
+    cmake_defs: MAGIC_ENUM_OPT_BUILD_EXAMPLES=OFF MAGIC_ENUM_OPT_BUILD_TESTS=OFF
     public: True
     prereq:
       - data
@@ -86,6 +88,8 @@ requirements:
       - text
   hyperscan:
     cmake: "Hyperscan/"
+    upstream: "github.com VectorCamp/vectorscan vectorscan/5.4.11"
+    cmake_defs: BUILD_BENCHMARKS=OFF BUILD_EXAMPLES=OFF BUILD_SHARED_LIBS=ON
     prereq:
       - ff_tool
   boost:

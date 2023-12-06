@@ -45,7 +45,7 @@ int main(int argc, const char* argv[])
 
     setup_window(window, "XCI layout demo", argv);
 
-    Font font {renderer};
+    Font font {renderer, 512u};
     if (!font.add_face(vfs, "fonts/Lora/Lora[wght].ttf", 0))
         return EXIT_FAILURE;
     if (!font.add_face(vfs, "fonts/Lora/Lora-Italic[wght].ttf", 0))

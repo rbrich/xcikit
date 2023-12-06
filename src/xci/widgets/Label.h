@@ -4,8 +4,8 @@
 // Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#ifndef XCIKIT_LABEL_H
-#define XCIKIT_LABEL_H
+#ifndef XCI_WIDGETS_LABEL_H
+#define XCI_WIDGETS_LABEL_H
 
 #include <xci/widgets/Widget.h>
 #include <xci/text/Text.h>
@@ -27,4 +27,4 @@ public:
 
 } // namespace xci::widgets
 
-#endif // XCIKIT_LABEL_H
+#endif // XCI_WIDGETS_LABEL_H
