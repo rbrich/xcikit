@@ -101,7 +101,6 @@ public:
         using iterator_category = std::forward_iterator_tag;
 
         bool operator==(const const_iterator& rhs) const { return &m_dir == &rhs.m_dir && m_index == rhs.m_index; }
-        bool operator!=(const const_iterator& rhs) const { return &m_dir != &rhs.m_dir || m_index != rhs.m_index; }
 
         const_iterator& operator++() {
             ++m_index;

@@ -87,7 +87,6 @@ public:
     IndexedMap& operator=(IndexedMap&& other) noexcept;
 
     bool operator==(const IndexedMap& other) const;
-    bool operator!=(const IndexedMap& other) const { return !(*this == other); }
 
     /// Current capacity of underlying element storage.
     size_type capacity() const noexcept;
@@ -130,7 +129,6 @@ public:
         using iterator_category = std::forward_iterator_tag;
 
         bool operator==(const iterator& rhs) const { return m_chunk_idx == rhs.m_chunk_idx && m_slot_idx == rhs.m_slot_idx; }
-        bool operator!=(const iterator& rhs) const { return m_chunk_idx != rhs.m_chunk_idx || m_slot_idx != rhs.m_slot_idx; }
 
         iterator& operator++() {
             ++m_slot_idx;
@@ -169,7 +167,6 @@ public:
         using iterator_category = std::forward_iterator_tag;
 
         bool operator==(const const_iterator& rhs) const { return m_chunk_idx == rhs.m_chunk_idx && m_slot_idx == rhs.m_slot_idx; }
-        bool operator!=(const const_iterator& rhs) const { return m_chunk_idx != rhs.m_chunk_idx || m_slot_idx != rhs.m_slot_idx; }
 
         const_iterator& operator++() {
             ++m_slot_idx;

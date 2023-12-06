@@ -367,7 +367,6 @@ public:
     const_reference operator[](size_t i) const { return m_items[i]; }
 
     bool operator==(const Values& rhs) const { return m_items == rhs.m_items; }
-    bool operator!=(const Values& rhs) const { return m_items != rhs.m_items; }
 
     using iterator = std::vector<Value>::iterator;
     using const_iterator = std::vector<Value>::const_iterator;
@@ -435,7 +434,6 @@ public:
     const_reference operator[](size_t i) const { return m_items[i]; }
 
     bool operator==(const TypedValues& rhs) const { return m_items == rhs.m_items; }
-    bool operator!=(const TypedValues& rhs) const { return m_items != rhs.m_items; }
 
     using iterator = std::vector<TypedValue>::iterator;
     using const_iterator = std::vector<TypedValue>::const_iterator;

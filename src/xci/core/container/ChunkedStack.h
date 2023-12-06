@@ -70,7 +70,6 @@ public:
     ChunkedStack& operator=(const ChunkedStack& other);
     ChunkedStack& operator=(ChunkedStack&& other) noexcept;
     bool operator==(const ChunkedStack& other) const;
-    bool operator!=(const ChunkedStack& other) const { return !(*this == other); }
 
     void swap(ChunkedStack& other) noexcept;
 
@@ -113,7 +112,6 @@ public:
         using iterator_category = std::forward_iterator_tag;
 
         bool operator==(const iterator& rhs) const { return m_bucket == rhs.m_bucket && m_item == rhs.m_item; }
-        bool operator!=(const iterator& rhs) const { return m_bucket != rhs.m_bucket || m_item != rhs.m_item; }
 
         iterator& operator++();
         iterator operator++(int) { auto v = *this; ++*this; return v; }
@@ -135,13 +133,12 @@ public:
         friend ChunkedStack;
     public:
         using difference_type = typename ChunkedStack<T>::difference_type;
-        using value_type = typename ChunkedStack<T>::value_type;
+        using value_type = T;
         using reference = const T&;
         using pointer = const T*;
         using iterator_category = std::forward_iterator_tag;
 
         bool operator==(const const_iterator& rhs) const { return m_bucket == rhs.m_bucket && m_item == rhs.m_item; }
-        bool operator!=(const const_iterator& rhs) const { return m_bucket != rhs.m_bucket || m_item != rhs.m_item; }
 
         const_iterator& operator++();
         const_iterator operator++(int) { auto v = *this; ++*this; return v; }

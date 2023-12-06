@@ -89,10 +89,9 @@ struct Color {
     constexpr bool is_transparent() const { return a == 0; }
     constexpr bool is_opaque() const { return a == 255; }
 
-    // Comparison operators
+    // Comparison operator
     constexpr bool operator==(Color rhs) const
         { return std::tie(r, g, b, a) == std::tie(rhs.r, rhs.g, rhs.b, rhs.a); }
-    constexpr bool operator!=(Color rhs) const { return !(rhs == *this); }
 
     friend std::ostream& operator <<(std::ostream& s, Color c) {
         return s << "Color(" << int(c.r) << ',' << int(c.g) << ',' << int(c.b) << ',' << int(c.a) << ')';

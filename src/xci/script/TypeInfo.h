@@ -185,7 +185,6 @@ public:
     friend bool is_same_underlying(const TypeInfo& lhs, const TypeInfo& rhs);
 
     bool operator==(const TypeInfo& rhs) const;
-    bool operator!=(const TypeInfo& rhs) const { return !(*this == rhs); }
 
     explicit operator bool() const { return type() != Type::Unknown || generic_var(); }
 
@@ -345,7 +344,6 @@ struct Signature {
     explicit operator bool() const { return param_type || return_type; }
 
     bool operator==(const Signature& rhs) const = default;
-    bool operator!=(const Signature& rhs) const = default;
 
     template <class Archive>
     void serialize(Archive& ar) {
@@ -363,7 +361,6 @@ struct NamedType {
     TypeInfo type_info;
 
     bool operator==(const NamedType& rhs) const = default;
-    bool operator!=(const NamedType& rhs) const = default;
 
     template <class Archive>
     void serialize(Archive& ar) {

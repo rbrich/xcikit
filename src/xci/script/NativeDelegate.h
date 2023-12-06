@@ -43,7 +43,6 @@ public:
                m_data_1 == rhs.m_data_1 &&
                m_data_2 == rhs.m_data_2;
     }
-    bool operator!=(const NativeDelegate& rhs) const { return !(rhs == *this); }
 
     void operator()(Stack& stack) const {
         return m_func(stack, m_data_1, m_data_2);
