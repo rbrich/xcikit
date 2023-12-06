@@ -40,12 +40,11 @@ auto Dialog::get_item(std::string span_name) -> Item*
 void Dialog::resize(View& view)
 {
     view.finish_draw();
-    TextMixin::_resize(view);
-    for (const auto& item : m_items) {
-        auto* span = m_layout.get_span(item.span_name);
-        if (span)
-            m_styles[item.normal_style].apply(*span);
-    }
+    m_layout.typeset(view);
+    highlight_spans();
+    m_layout.update(view);
+    m_need_typeset = false;
+
     auto rect = m_layout.bbox();
     apply_padding(rect, view);
     set_size(rect.size());
@@ -56,7 +55,12 @@ void Dialog::resize(View& view)
 
 void Dialog::update(View& view, State state)
 {
-    TextMixin::_update(view);
+    if (m_need_typeset) {
+        layout().typeset(view);
+        highlight_spans();
+        m_need_typeset = false;
+    }
+    layout().update(view);
 }
 
 
@@ -95,6 +99,7 @@ bool Dialog::key_event(View& view, const KeyEvent& ev)
         auto* span = m_layout.get_span(found_item->span_name);
         if (span != nullptr)
             m_styles[found_item->active_style].apply(*span);
+        view.refresh();
         return true;
     }
     // Key release - if the key corresponds to selected item
@@ -103,6 +108,7 @@ bool Dialog::key_event(View& view, const KeyEvent& ev)
         if (m_activation_cb)
             m_activation_cb(view, *found_item);
         clear_selection();
+        view.refresh();
         return true;
     }
     return false;
@@ -112,7 +118,7 @@ bool Dialog::key_event(View& view, const KeyEvent& ev)
 void Dialog::mouse_pos_event(View& view, const MousePosEvent& ev)
 {
     auto pop_offset = view.push_offset(position() - m_layout.bbox().top_left() + padding_fb(view));
-    handle_mouse_move(ev.pos - view.offset());
+    handle_mouse_move(view, ev.pos - view.offset());
     Widget::mouse_pos_event(view, ev);
 }
 
@@ -120,7 +126,7 @@ void Dialog::mouse_pos_event(View& view, const MousePosEvent& ev)
 bool Dialog::mouse_button_event(View& view, const MouseBtnEvent& ev)
 {
     auto pop_offset = view.push_offset(position() - m_layout.bbox().top_left() + padding_fb(view));
-    if (ev.action == Action::Press && handle_mouse_press(ev.button, ev.pos - view.offset()))
+    if (ev.action == Action::Press && handle_mouse_press(view, ev.button, ev.pos - view.offset()))
         return true;
     if (ev.action == Action::Release && handle_mouse_release(view, ev.button, ev.pos - view.offset()))
         return true;
@@ -128,7 +134,7 @@ bool Dialog::mouse_button_event(View& view, const MouseBtnEvent& ev)
 }
 
 
-void Dialog::handle_mouse_move(const FramebufferCoords& coords)
+void Dialog::handle_mouse_move(View& view, const FramebufferCoords& coords)
 {
     // We're not in key-pressed state
     if (m_selection_type == SelectionType::KeyPress)
@@ -139,12 +145,14 @@ void Dialog::handle_mouse_move(const FramebufferCoords& coords)
             auto* span = m_layout.get_span(m_items[m_selected_idx].span_name);
             if (span != nullptr && !span->contains(coords)) {
                 clear_selection();
+                view.refresh();
             }
         }
         return;
     }
     // Look for an item under mouse cursor
     clear_selection();
+    view.refresh();
     for (Item& item : m_items) {
         auto* span = m_layout.get_span(item.span_name);
         if (span != nullptr && span->contains(coords)) {
@@ -157,7 +165,7 @@ void Dialog::handle_mouse_move(const FramebufferCoords& coords)
 }
 
 
-bool Dialog::handle_mouse_press(MouseButton button, const FramebufferCoords& coords)
+bool Dialog::handle_mouse_press(View& view, MouseButton button, const FramebufferCoords& coords)
 {
     // Left button pressed and not in key press state
     if (button != MouseButton::Left || m_selection_type == SelectionType::KeyPress)
@@ -169,6 +177,7 @@ bool Dialog::handle_mouse_press(MouseButton button, const FramebufferCoords& coo
             m_selected_idx = unsigned(&item - &m_items.front());
             m_selection_type = SelectionType::Click;
             m_styles[item.active_style].apply(*span);
+            view.refresh();
             return true;
         }
     }
@@ -190,10 +199,21 @@ bool Dialog::handle_mouse_release(View& view, MouseButton button, const Framebuf
                 m_activation_cb(view, m_items[m_selected_idx]);
             m_selection_type = SelectionType::Hover;
             m_styles[m_items[m_selected_idx].hover_style].apply(*span);
+            view.refresh();
             return true;
         }
     }
     return false;
+}
+
+
+void Dialog::highlight_spans()
+{
+    for (const auto& item : m_items) {
+        auto* span = m_layout.get_span(item.span_name);
+        if (span)
+            m_styles[item.normal_style].apply(*span);
+    }
 }
 
 

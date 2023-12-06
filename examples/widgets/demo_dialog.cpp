@@ -59,7 +59,7 @@ int main(int, const char* argv[])
     });
     root.add_child(output_text);
 
-    window.set_refresh_mode(RefreshMode::Periodic);
+    window.set_refresh_mode(RefreshMode::OnDemand);
 
     window.set_key_callback([&root, &window](View& view, const KeyEvent& ev) {
         if (ev.action != Action::Press)

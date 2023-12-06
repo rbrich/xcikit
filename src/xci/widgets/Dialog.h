@@ -60,9 +60,10 @@ public:
     bool mouse_button_event(View& view, const MouseBtnEvent& ev) override;
 
 private:
+    void highlight_spans();
     void clear_selection();
-    void handle_mouse_move(const FramebufferCoords& coords);
-    bool handle_mouse_press(MouseButton button, const FramebufferCoords& coords);
+    void handle_mouse_move(View& view, const FramebufferCoords& coords);
+    bool handle_mouse_press(View& view, MouseButton button, const FramebufferCoords& coords);
     bool handle_mouse_release(View& view, MouseButton button, const FramebufferCoords& coords);
 
     std::vector<Item> m_items;
