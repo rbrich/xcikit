@@ -17,6 +17,8 @@
 
 namespace xci::graphics {
 
+static constexpr VkDeviceSize c_mvp_size = sizeof(float) * 16;
+
 
 PrimitivesBuffers::~PrimitivesBuffers()
 {
@@ -105,9 +107,9 @@ void PrimitivesBuffers::bind(VkCommandBuffer cmd_buf)
 }
 
 
-void PrimitivesBuffers::copy_mvp(size_t cmd_buf_idx, const std::array<float, 16>& mvp)
+void PrimitivesBuffers::copy_mvp(size_t cmd_buf_idx, const Mat4f& mvp)
 {
-    m_device_memory.copy_data(m_uniform_offsets[cmd_buf_idx], c_mvp_size, mvp.data());
+    m_device_memory.copy_data(m_uniform_offsets[cmd_buf_idx], mvp.byte_size(), mvp.data());
 }
 
 
@@ -416,7 +418,7 @@ void Primitives::draw(View& view)
 
     // projection matrix
     auto mvp = view.projection_matrix();
-    static_assert(mvp.size() * sizeof(mvp[0]) == c_mvp_size);
+    static_assert(mvp.byte_size() == c_mvp_size);
     auto i = window->command_buffer_index();
     m_buffers->copy_mvp(i, mvp);
 

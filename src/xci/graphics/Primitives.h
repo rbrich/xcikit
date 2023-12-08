@@ -47,9 +47,6 @@ struct TextureBinding {
 };
 
 
-static constexpr VkDeviceSize c_mvp_size = sizeof(float) * 16;
-
-
 class PrimitivesBuffers: public Resource {
 public:
     explicit PrimitivesBuffers(Renderer& renderer)
@@ -64,7 +61,7 @@ public:
 
     void bind(VkCommandBuffer cmd_buf);
 
-    void copy_mvp(size_t cmd_buf_idx, const std::array<float, 16>& mvp);
+    void copy_mvp(size_t cmd_buf_idx, const Mat4f& mvp);
 
     VkBuffer vk_uniform_buffer(size_t cmd_buf_idx) const { return m_uniform_buffers[cmd_buf_idx]; }
 

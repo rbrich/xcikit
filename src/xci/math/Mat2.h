@@ -15,9 +15,10 @@ namespace xci {
 // Column-major 2x2 matrix, same as in GLSL and glm
 template <typename T>
 struct Mat2 {
-    // columns
-    Vec2<T> c1 {};
-    Vec2<T> c2 {};
+    union {
+        struct { Vec2<T> c1, c2; };  // columns
+        std::array<T, 2*2> arr;
+    };
 
     constexpr Mat2() = default;
     constexpr Mat2(Vec2<T> c1, Vec2<T> c2) : c1(c1), c2(c2) {}
@@ -52,6 +53,9 @@ struct Mat2 {
     constexpr explicit operator bool() const noexcept {
         return c1 || c2;
     }
+
+    constexpr const T* data() const { return arr.data(); }
+    constexpr size_t byte_size() const { return sizeof(T) * arr.size(); }
 };
 
 

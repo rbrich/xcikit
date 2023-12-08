@@ -16,11 +16,12 @@ namespace xci {
 
 template <typename T>
 struct Vec3 {
-    T x {};
-    T y {};
-    T z {};
+    union {
+        struct { T x, y, z; };
+        std::array<T, 3> arr;
+    };
 
-    constexpr Vec3() = default;
+    constexpr Vec3() : arr({}) {}
     constexpr Vec3(T x, T y, T z) : x(x), y(y), z(z) {}
 
     // Convert another type of vector (possibly foreign type)
@@ -66,27 +67,15 @@ struct Vec3 {
         return *this;
     }
 
-    constexpr T& operator[] (unsigned i) {
-        switch (i) {
-            case 0: return x;
-            case 1: return y;
-            case 2: return z;
-        }
-        XCI_UNREACHABLE;
-    }
-
-    constexpr const T& operator[] (unsigned i) const {
-        switch (i) {
-            case 0: return x;
-            case 1: return y;
-            case 2: return z;
-        }
-        XCI_UNREACHABLE;
-    }
+    constexpr T& operator[] (unsigned i) { return arr[i]; }
+    constexpr const T& operator[] (unsigned i) const { return arr[i]; }
 
     constexpr explicit operator bool() const noexcept {
         return x != T{} || y != T{} || z != T{};
     }
+
+    constexpr const T* data() const { return arr.data(); }
+    constexpr size_t byte_size() const { return sizeof(T) * arr.size(); }
 };
 
 // unary minus (opposite vector)

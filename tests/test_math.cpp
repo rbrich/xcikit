@@ -23,10 +23,17 @@ using namespace xci;
 
 TEST_CASE( "Vec2", "[math]" )
 {
+    Vec2f vf0;
+    CHECK(vf0.x == 0.0f);
+    CHECK(vf0.length() == 0.0f);
+
     Vec2f vf1 {3.0f, 4.0f};
     CHECK(vf1.length() == 5.0f);
     CHECK(vf1.norm() == Vec2f{0.6f, 0.8f});
     CHECK(vf1.dot(Vec2f{2.0f, -1.0f}) == 2.0f);
+
+    Vec2i vi0;
+    CHECK(vi0.byte_size() == 8);
 
     Vec2i vi1 {3, 4};
     CHECK(vi1.length() == 5);
@@ -51,6 +58,7 @@ TEST_CASE( "Mat3", "[math]" )
 
 TEST_CASE( "Mat4", "[math]" )
 {
+    CHECK(Mat4f().determinant() == 0.0f);
     CHECK(Mat4f::identity().determinant() == 1.0f);
     auto m = Mat4f::rot_y(0.5f, 0.5f, {1.0f, 2.0f, 3.0f});
     CHECK(m * m.inverse() == Mat4f::identity());

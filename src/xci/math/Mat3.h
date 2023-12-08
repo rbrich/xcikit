@@ -16,10 +16,10 @@ namespace xci {
 // Column-major 3x3 matrix, same as in GLSL and glm
 template <typename T>
 struct Mat3 {
-    // columns
-    Vec3<T> c1 {};
-    Vec3<T> c2 {};
-    Vec3<T> c3 {};
+    union {
+        struct { Vec3<T> c1, c2, c3; };  // columns
+        std::array<T, 2*2> arr;
+    };
 
     constexpr Mat3() = default;
     constexpr Mat3(Vec3<T> c1, Vec3<T> c2, Vec3<T> c3) : c1(c1), c2(c2), c3(c3) {}
@@ -68,6 +68,9 @@ struct Mat3 {
     constexpr explicit operator bool() const noexcept {
         return c1 || c2 || c3;
     }
+
+    constexpr const T* data() const { return arr.data(); }
+    constexpr size_t byte_size() const { return sizeof(T) * arr.size(); }
 };
 
 

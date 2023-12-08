@@ -18,11 +18,10 @@ namespace xci {
 // Column-major 4x4 matrix, same as in GLSL and glm
 template <typename T>
 struct Mat4 {
-    // columns
-    Vec4<T> c1 {};
-    Vec4<T> c2 {};
-    Vec4<T> c3 {};
-    Vec4<T> c4 {};
+    union {
+        struct { Vec4<T> c1, c2, c3, c4; };  // columns
+        std::array<T, 4*4> arr;
+    };
 
     constexpr Mat4() = default;
     constexpr Mat4(Vec4<T> c1, Vec4<T> c2, Vec4<T> c3, Vec4<T> c4) : c1(c1), c2(c2), c3(c3), c4(c4) {}
@@ -170,6 +169,9 @@ struct Mat4 {
     constexpr explicit operator bool() const noexcept {
         return c1 || c2 || c3 || c4;
     }
+
+    constexpr const T* data() const { return arr.data(); }
+    constexpr size_t byte_size() const { return sizeof(T) * arr.size(); }
 };
 
 
