@@ -24,6 +24,7 @@ class Shader;
 
 
 enum class VertexFormat {
+    // 2D
     V2,         // 2 vertex coords
     V2t2,       // 2 vertex coords, 2 texture coords (all float)
     V2t3,       // 2 vertex coords, 3 texture coords (or barycentric coords)
@@ -36,6 +37,9 @@ enum class VertexFormat {
     V2c44t3,    // 2 vertex coords, 2x RGBA color, 3 texture coords (or barycentric coords)
     V2c44t22,   // 2 vertex coords, 2x RGBA color, 2 + 2 texture coords (all float)
     V2c44t222,  // 2 vertex coords, 2x RGBA color, 2 + 2 + 2 texture coords (all float)
+
+    // 3D
+    V3n3t2,     // 3 vertex coords, 3 normals, 2 tex coords
 };
 
 /// Get stride or size of vertex format data.

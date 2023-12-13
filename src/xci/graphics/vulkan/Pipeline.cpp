@@ -30,6 +30,7 @@ unsigned get_vertex_format_stride(VertexFormat format)
         case VertexFormat::V2c44t3: return 13;
         case VertexFormat::V2c44t22: return 14;
         case VertexFormat::V2c44t222: return 16;
+        case VertexFormat::V3n3t2: return 8;
     }
     XCI_UNREACHABLE;
 }
@@ -262,59 +263,69 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
 {
     m_format = format;
     constexpr uint32_t sf = sizeof(float);
-    m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
     uint32_t attr_desc_count = 0;
     switch (format) {
         case VertexFormat::V2:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             attr_desc_count = 1;
             break;
         case VertexFormat::V2t2:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32_SFLOAT, 2 * sf};
             attr_desc_count = 2;
             break;
         case VertexFormat::V2t3:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32_SFLOAT, 2 * sf};
             attr_desc_count = 2;
             break;
         case VertexFormat::V2t22:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, 4 * sf};
             attr_desc_count = 3;
             break;
         case VertexFormat::V2t222:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, 4 * sf};
             m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 6 * sf};
             attr_desc_count = 4;
             break;
         case VertexFormat::V2c4:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
             attr_desc_count = 2;
             break;
         case VertexFormat::V2c4t2:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, 6 * sf};
             attr_desc_count = 3;
             break;
         case VertexFormat::V2c4t22:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, 6 * sf};
             m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 8 * sf};
             attr_desc_count = 4;
             break;
         case VertexFormat::V2c44t2:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 6 * sf};
             m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 10 * sf};
             attr_desc_count = 4;
             break;
         case VertexFormat::V2c44t3:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 6 * sf};
             m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32B32_SFLOAT, 10 * sf};
             attr_desc_count = 4;
             break;
         case VertexFormat::V2c44t22:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 6 * sf};
             m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 10 * sf};
@@ -322,6 +333,7 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
             attr_desc_count = 5;
             break;
         case VertexFormat::V2c44t222:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 6 * sf};
             m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 10 * sf};
@@ -329,9 +341,14 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
             m_attr_descs[5] = {5, 0, VK_FORMAT_R32G32_SFLOAT, 14 * sf};
             attr_desc_count = 6;
             break;
+        case VertexFormat::V3n3t2:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0};
+            m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32_SFLOAT, 3 * sf};
+            m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, 6 * sf};
+            attr_desc_count = 3;
+            break;
     }
-    assert(attr_desc_count != 0);
-    assert(attr_desc_count <= m_attr_descs.size());
+    assert(attr_desc_count > 0 && attr_desc_count <= m_attr_descs.size());
     m_binding_desc = {
             .binding = 0,
             .stride = get_vertex_format_stride(format) * sf,
