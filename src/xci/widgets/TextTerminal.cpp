@@ -584,11 +584,11 @@ void terminal::Caret::update(View& view, const FramebufferRect& rect)
 
     // pure white
     m_quad.clear_uniforms();
-    m_quad.add_uniform(1, {0.7, 0.7, 0.7}, {0.7, 0.7, 0.7});
+    m_quad.set_uniform(1, {0.7, 0.7, 0.7}, {0.7, 0.7, 0.7});
     // green
-    //m_quad.add_uniform(1, {0.0, 0.7, 0.3}, Color::Green());
+    //m_quad.set_uniform(1, {0.0, 0.7, 0.3}, Color::Green());
     // yellow
-    //m_quad.add_uniform(1, {0.7, 0.7, 0.3}, Color::Yellow());
+    //m_quad.set_uniform(1, {0.7, 0.7, 0.3}, Color::Yellow());
 
     m_quad.set_shader(m_shader);
     m_quad.set_blend(BlendFunc::InverseVideo);

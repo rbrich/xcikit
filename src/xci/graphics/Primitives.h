@@ -29,15 +29,16 @@ class Shader;
 class Renderer;
 
 
-enum class PrimitiveType {
+enum class PrimitiveType : uint8_t {
+    TriList,        // triangles list
     TriFans,        // also usable as quads
 };
 
 
 struct UniformBinding {
-    uint32_t binding;
-    VkDeviceSize offset;
-    VkDeviceSize range;
+    VkDeviceSize offset = 0;
+    VkDeviceSize range = 0;
+    explicit operator bool() const { return range != 0; }
 };
 
 
@@ -56,12 +57,11 @@ public:
     void create(
             const std::vector<float>& vertex_data,
             const std::vector<uint16_t>& index_data,
-            VkDeviceSize uniform_base,
             const std::vector<std::byte>& uniform_data);
 
     void bind(VkCommandBuffer cmd_buf);
 
-    void copy_mvp(size_t cmd_buf_idx, const Mat4f& mvp);
+    void copy_uniforms(size_t cmd_buf_idx, size_t offset, size_t size, const void* data);
 
     VkBuffer vk_uniform_buffer(size_t cmd_buf_idx) const { return m_uniform_buffers[cmd_buf_idx]; }
 
@@ -87,9 +87,8 @@ public:
 
     void update(
             const PrimitivesBuffers& buffers,
-            VkDeviceSize uniform_base,
             const std::vector<UniformBinding>& uniform_bindings,
-            const TextureBinding& texture_binding);
+            const std::vector<TextureBinding>& texture_bindings);
 
     void bind(VkCommandBuffer cmd_buf, size_t cmd_buf_idx,
               VkPipelineLayout pipeline_layout);
@@ -104,20 +103,22 @@ private:
 using PrimitivesBuffersPtr = std::shared_ptr<PrimitivesBuffers>;
 using PrimitivesDescriptorSetsPtr = std::shared_ptr<PrimitivesDescriptorSets>;
 
+using VertexData = std::vector<float>;
+using IndexData = std::vector<uint16_t>;
 
-class VertexData {
+class VertexDataBuilder {
 public:
 #ifndef NDEBUG
-    explicit VertexData(std::vector<float>& data, size_t expected) : m_vertex_data(data), m_expected(expected) {}
-    ~VertexData() { assert(m_expected == 0); }
+    explicit VertexDataBuilder(VertexData& data, size_t expected) : m_vertex_data(data), m_expected(expected) {}
+    ~VertexDataBuilder() { assert(m_expected == 0); }
 #else
-    explicit VertexData(std::vector<float>& data) : m_vertex_data(data) {}
+    explicit VertexDataBuilder(VertexData& data) : m_vertex_data(data) {}
 #endif
 
-    VertexData& uv(float u, float v) { add(u); add(v); return *this; }
-    VertexData& uv(Vec2f uv) { add(uv.x); add(uv.y); return *this; }
-    VertexData& uvw(float u, float v, float w) { add(u); add(v); add(w); return *this; }
-    VertexData& color(Color color) {
+    VertexDataBuilder& uv(float u, float v) { add(u); add(v); return *this; }
+    VertexDataBuilder& uv(Vec2f uv) { add(uv.x); add(uv.y); return *this; }
+    VertexDataBuilder& uvw(float u, float v, float w) { add(u); add(v); add(w); return *this; }
+    VertexDataBuilder& color(Color color) {
         add(color.red_f());
         add(color.green_f());
         add(color.blue_f());
@@ -132,7 +133,7 @@ private:
         assert(--m_expected >= 0);
 #endif
     }
-    std::vector<float>& m_vertex_data;
+    VertexData& m_vertex_data;
 #ifndef NDEBUG
     size_t m_expected;  // expected data (number of floats)
 #endif
@@ -154,7 +155,10 @@ public:
     /// Add vertex coords + data
     /// Example:
     ///     add_vertex({0.0f, 0.0f})(Color::Black())(1.0f, 2.0f);
-    VertexData add_vertex(FramebufferCoords xy);
+    VertexDataBuilder add_vertex(FramebufferCoords xy);
+
+    void set_vertex_data(VertexData vertex_data) { m_vertex_data = std::move(vertex_data); destroy_pipeline(); }
+    void set_index_data(IndexData index_data) { m_index_data = std::move(index_data); destroy_pipeline(); }
 
     void clear();
     bool empty() const { return m_vertex_data.empty(); }
@@ -162,11 +166,15 @@ public:
     void set_shader(Shader& shader);
 
     void clear_uniforms();
-    void add_uniform_data(uint32_t binding, const void* data, size_t size);
-    void add_uniform(uint32_t binding, float f) { add_uniform_data(binding, &f, sizeof(f)); }
-    void add_uniform(uint32_t binding, float f1, float f2);
-    void add_uniform(uint32_t binding, Color color);
-    void add_uniform(uint32_t binding, Color color1, Color color2);
+    void set_uniform_data(uint32_t binding, const void* data, size_t size);
+    void set_uniform(uint32_t binding, float f) { set_uniform_data(binding, &f, sizeof(f)); }
+    void set_uniform(uint32_t binding, Color color);
+    void set_uniform(uint32_t binding, Color color1, Color color2);
+    void set_uniform(uint32_t binding, const Vec2f& vec);
+    void set_uniform(uint32_t binding, const Vec3f& vec);
+    void set_uniform(uint32_t binding, const Vec4f& vec);
+    void set_uniform(uint32_t binding, const Mat3f& mat);
+    void set_uniform(uint32_t binding, const Mat4f& mat);
 
     void set_texture(uint32_t binding, Texture& texture);
 
@@ -184,13 +192,14 @@ private:
 
 private:
     VertexFormat m_format;
+    [[maybe_unused]] PrimitiveType m_primitive_type;
     int m_closed_vertices = 0;
     int m_open_vertices = -1;
-    std::vector<float> m_vertex_data;
-    std::vector<uint16_t> m_index_data;
+    VertexData m_vertex_data;
+    IndexData m_index_data;
     std::vector<std::byte> m_uniform_data;
-    std::vector<UniformBinding> m_uniforms;
-    TextureBinding m_texture;
+    std::vector<UniformBinding> m_uniforms;  // index = binding
+    std::vector<TextureBinding> m_textures;
     BlendFunc m_blend = BlendFunc::Off;
 
     Renderer& m_renderer;

@@ -97,8 +97,8 @@ int main(int argc, const char* argv[])
             vfs.read_file("shaders/polygon.vert.spv").path(),
             vfs.read_file("shaders/polygon.frag.spv").path());
     poly.set_shader(poly_shader);
-    poly.add_uniform(1, Color::Blue(), Color::Yellow());
-    poly.add_uniform(2, 0.8f, 2);  // softness, antialiasing
+    poly.set_uniform(1, Color::Blue(), Color::Yellow());
+    poly.set_uniform(2, {0.8f, 2});  // softness, antialiasing
     poly.set_blend(BlendFunc::AlphaBlend);
 
     // Higher-level object which wraps Primitives and can draw different basic shapes

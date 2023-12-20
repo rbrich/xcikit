@@ -23,7 +23,7 @@ class Renderer;
 class Shader;
 
 
-enum class VertexFormat {
+enum class VertexFormat : uint8_t {
     // 2D
     V2,         // 2 vertex coords
     V2t2,       // 2 vertex coords, 2 texture coords (all float)
@@ -64,12 +64,26 @@ public:
 
     size_t hash() const;
 
-    bool operator==(const PipelineLayoutCreateInfo& rhs) const;
+    bool operator==(const PipelineLayoutCreateInfo& rhs) const = default;
 
 private:
-    std::array<uint32_t, 8> m_uniform_bindings;
-    uint32_t m_uniform_binding_count = 0;
-    uint32_t m_texture_binding = uint32_t(-1);
+    struct LayoutBinding {
+        uint32_t binding = 0;
+        enum Flags {
+            TypeUniform         = 0x01,
+            TypeImageSampler    = 0x02,
+            StageVertex         = 0x04,
+            StageFragment       = 0x08,
+        };
+        uint32_t flags = 0;
+        VkDescriptorType vk_descriptor_type() const {
+            return (flags & TypeImageSampler)
+                    ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+                    : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        }
+        bool operator==(const LayoutBinding& rhs) const = default;
+    };
+    std::vector<LayoutBinding> m_layout_bindings;
 };
 
 

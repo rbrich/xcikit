@@ -381,6 +381,9 @@ public:
     bool has_crop() const { return !m_crop.empty(); }
     const FramebufferRect& get_crop() const { return m_crop.back(); }
 
+    // Apply crop as a scissor region in current VkCommandBuffer
+    void apply_crop();
+
     // ------------------------------------------------------------------------
     // Refresh
 

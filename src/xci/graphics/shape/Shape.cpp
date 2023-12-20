@@ -14,8 +14,8 @@ void UniformColorShape::update(Color fill_color, Color outline_color,
 {
     if (!m_primitives.empty()) {
         m_primitives.clear_uniforms();
-        m_primitives.add_uniform(1, fill_color, outline_color);
-        m_primitives.add_uniform(2, softness, antialiasing);
+        m_primitives.set_uniform(1, fill_color, outline_color);
+        m_primitives.set_uniform(2, {softness, antialiasing});
         m_primitives.set_shader(m_shader);
         m_primitives.set_blend(BlendFunc::AlphaBlend);
         m_primitives.update();
@@ -27,7 +27,7 @@ void VaryingColorShape::update(float softness, float antialiasing)
 {
     if (!m_primitives.empty()) {
         m_primitives.clear_uniforms();
-        m_primitives.add_uniform(1, softness, antialiasing);
+        m_primitives.set_uniform(1, {softness, antialiasing});
         m_primitives.set_shader(m_shader);
         m_primitives.set_blend(BlendFunc::AlphaBlend);
         m_primitives.update();

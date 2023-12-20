@@ -38,16 +38,15 @@ unsigned get_vertex_format_stride(VertexFormat format)
 
 void PipelineLayoutCreateInfo::add_uniform_binding(uint32_t binding)
 {
-    assert(m_uniform_binding_count < m_uniform_bindings.size());
-    m_uniform_bindings[m_uniform_binding_count] = binding;
-    ++m_uniform_binding_count;
+    m_layout_bindings.push_back({binding,
+        LayoutBinding::TypeUniform | LayoutBinding::StageVertex | LayoutBinding::StageFragment});
 }
 
 
 void PipelineLayoutCreateInfo::add_texture_binding(uint32_t binding)
 {
-    assert(m_texture_binding == uint32_t(-1));
-    m_texture_binding = binding;
+    m_layout_bindings.push_back({binding,
+        LayoutBinding::TypeImageSampler | LayoutBinding::StageFragment});
 }
 
 
@@ -55,33 +54,14 @@ std::vector<VkDescriptorSetLayoutBinding> PipelineLayoutCreateInfo::vk_layout_bi
 {
     std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
 
-    // mvp
-    layout_bindings.push_back({
-            .binding = 0,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-    });
-
-    // uniforms
-    for (unsigned i = 0; i != m_uniform_binding_count; ++i) {
+    for (const auto& item : m_layout_bindings) {
         layout_bindings.push_back({
-                .binding = m_uniform_bindings[i],
-                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .binding = item.binding,
+                .descriptorType = item.vk_descriptor_type(),
                 .descriptorCount = 1,
                 .stageFlags =
-                        VK_SHADER_STAGE_VERTEX_BIT |
-                        VK_SHADER_STAGE_FRAGMENT_BIT,
-        });
-    }
-
-    // texture
-    if (m_texture_binding != uint32_t(-1)) {
-        layout_bindings.push_back({
-                .binding = m_texture_binding,
-                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .descriptorCount = 1,
-                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+                        ((item.flags & LayoutBinding::StageVertex)? VK_SHADER_STAGE_VERTEX_BIT : 0u) |
+                        ((item.flags & LayoutBinding::StageFragment)? VK_SHADER_STAGE_FRAGMENT_BIT : 0u),
         });
     }
 
@@ -93,16 +73,17 @@ DescriptorPoolSizes PipelineLayoutCreateInfo::descriptor_pool_sizes() const
 {
     DescriptorPoolSizes sizes;
 
-    // mvp
-    sizes.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);
-
     // uniforms
-    if (m_uniform_binding_count != 0)
-        sizes.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_uniform_binding_count);
+    const auto uniform_count = std::count_if(m_layout_bindings.begin(), m_layout_bindings.end(),
+                         [](const auto& v) { return v.flags & LayoutBinding::TypeUniform; });
+    if (uniform_count)
+        sizes.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniform_count);
 
     // texture
-    if (m_texture_binding != uint32_t(-1))
-        sizes.add(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1);
+    const auto texture_count = std::count_if(m_layout_bindings.begin(), m_layout_bindings.end(),
+                         [](const auto& v) { return v.flags & LayoutBinding::TypeImageSampler; });
+    if (texture_count)
+        sizes.add(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, texture_count);
 
     return sizes;
 }
@@ -111,21 +92,10 @@ DescriptorPoolSizes PipelineLayoutCreateInfo::descriptor_pool_sizes() const
 size_t PipelineLayoutCreateInfo::hash() const
 {
     size_t h = 0;
-    for (unsigned i = 0; i != m_uniform_binding_count; ++i) {
-        h = std::rotl(h, 1) ^ m_uniform_bindings[i];
+    for (const auto& item : m_layout_bindings) {
+        h = std::rotl(h, 7) ^ ((item.binding << 4) | item.flags);
     }
-    if (m_texture_binding != uint32_t(-1))
-        h = std::rotl(h, 1) ^ m_texture_binding;
     return h;
-}
-
-
-bool PipelineLayoutCreateInfo::operator==(const PipelineLayoutCreateInfo& rhs) const
-{
-    return std::tie(m_uniform_binding_count, m_texture_binding) ==
-           std::tie(rhs.m_uniform_binding_count, rhs.m_texture_binding) &&
-           std::memcmp(m_uniform_bindings.data(), rhs.m_uniform_bindings.data(),
-                   m_uniform_binding_count * sizeof(decltype(m_uniform_bindings)::value_type)) == 0;
 }
 
 

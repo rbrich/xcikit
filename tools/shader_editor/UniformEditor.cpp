@@ -91,7 +91,7 @@ void UniformEditor::setup_uniforms(Primitives& prim)
         }, u.value);
         if (u.binding != ~0u) {
             // flush buffer
-            prim.add_uniform_data(u.binding, buffer.data(), buffer.size());
+            prim.set_uniform_data(u.binding, buffer.data(), buffer.size());
             buffer.clear();
         }
     }
