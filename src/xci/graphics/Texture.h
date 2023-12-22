@@ -26,22 +26,23 @@ using std::uint8_t;
 
 
 enum class ColorFormat {
-    Grey,  // 256 shades of grey
-    BGRA,  // 32bit color
+    Grey,       // 256 shades of grey
+    BGRA,       // 32bit color in linear RGB colorspace
+    BGRA_SRGB,  // 32bit color in sRGB colorspace
 };
 
 
 /// Gray-scale texture - 1 byte per pixel
 class Texture {
 public:
-    explicit Texture(Renderer& renderer, ColorFormat format);
+    explicit Texture(Renderer& renderer);
     ~Texture() { destroy(); }
 
     // Create or resize the texture
-    bool create(const Vec2u& size);
+    bool create(const Vec2u& size, ColorFormat format);
 
     // Write data to staging memory (don't forget to `update` the texture)
-    void write(const uint8_t* pixels);
+    void write(const void* pixels);
     void write(const uint8_t* pixels, const Rect_u& region);
     void clear();
 
@@ -63,7 +64,7 @@ private:
 
 private:
     Renderer& m_renderer;
-    ColorFormat m_format;
+    ColorFormat m_format = ColorFormat::Grey;
     Vec2u m_size;
     VkBuffer m_staging_buffer {};
     VkImage m_image {};

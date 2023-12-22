@@ -81,8 +81,8 @@ int main(int argc, const char* argv[])
     Primitives prim {renderer,
                      VertexFormat::V2c4t2, PrimitiveType::TriFans};
 
-    Texture texture{renderer, ColorFormat::Grey};
-    texture.create({256, 256});
+    Texture texture{renderer};
+    texture.create({256, 256}, ColorFormat::Grey);
     generate_checkerboard(texture);
 
     prim.set_shader(shader);

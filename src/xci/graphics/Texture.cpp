@@ -16,16 +16,17 @@
 namespace xci::graphics {
 
 
-Texture::Texture(Renderer& renderer, ColorFormat format)
-    : m_renderer(renderer), m_format(format),
+Texture::Texture(Renderer& renderer)
+    : m_renderer(renderer),
       m_staging_memory(renderer), m_image_memory(renderer)
 {}
 
 
-bool Texture::create(const Vec2u& size)
+bool Texture::create(const Vec2u& size, ColorFormat format)
 {
     destroy();
     m_size = size;
+    m_format = format;
 
     // staging buffer
     {
@@ -123,14 +124,17 @@ bool Texture::create(const Vec2u& size)
 
 static constexpr size_t format_pixel_size(ColorFormat format) {
     switch (format) {
-        case ColorFormat::Grey: return 1;
-        case ColorFormat::BGRA: return 4;
+        case ColorFormat::Grey:
+            return 1;
+        case ColorFormat::BGRA:
+        case ColorFormat::BGRA_SRGB:
+            return 4;
     }
     XCI_UNREACHABLE;
 }
 
 
-void Texture::write(const uint8_t* pixels)
+void Texture::write(const void* pixels)
 {
     assert(m_staging_mapped != nullptr);
     std::memcpy(m_staging_mapped, pixels, byte_size());
@@ -227,6 +231,7 @@ VkFormat Texture::vk_format() const
     switch (m_format) {
         case ColorFormat::Grey: return VK_FORMAT_R8_UNORM;
         case ColorFormat::BGRA: return VK_FORMAT_B8G8R8A8_UNORM;
+        case ColorFormat::BGRA_SRGB: return VK_FORMAT_B8G8R8A8_SRGB;
     }
     XCI_UNREACHABLE;
 }

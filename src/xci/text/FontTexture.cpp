@@ -16,9 +16,9 @@ using graphics::ColorFormat;
 
 FontTexture::FontTexture(Renderer& renderer, uint32_t size, bool color)
     : m_renderer(renderer),
-      m_texture(m_renderer, color ? ColorFormat::BGRA : ColorFormat::Grey)
+      m_texture(m_renderer)
 {
-    if (!m_texture.create({size, size}))
+    if (!m_texture.create({size, size}, color ? ColorFormat::BGRA : ColorFormat::Grey))
         throw std::runtime_error("Could not create font texture.");
     m_binpack.Init(int(size), int(size), false);
     m_texture.clear();

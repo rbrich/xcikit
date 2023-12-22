@@ -22,9 +22,9 @@ FpsDisplay::FpsDisplay(Theme& theme)
         : Widget(theme),
           m_quad(theme.renderer(), VertexFormat::V2t2, PrimitiveType::TriFans),
           m_shader(theme.renderer().get_shader(ShaderId::Fps)),
-          m_texture(theme.renderer(), ColorFormat::Grey)
+          m_texture(theme.renderer())
 {
-    m_texture.create({(unsigned)m_fps.resolution(), 1});
+    m_texture.create({(unsigned)m_fps.resolution(), 1}, ColorFormat::Grey);
 
     // default size in "scalable" units
     set_size({25_vp, 5_vp});
