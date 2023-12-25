@@ -25,74 +25,57 @@ namespace fs = std::filesystem;
 class Renderer;
 
 
-// predefined shaders
-enum class ShaderId {
-    Sprite = 0,
-    SpriteR,  // R channel as alpha, color from uniform
-    SpriteC,  // R channel as alpha, color from vertex
-    Line,
-    LineC,
-    Rectangle,
-    RectangleC,
-    RoundedRectangle,
-    RoundedRectangleC,
-    Ellipse,
-    EllipseC,
-    Triangle,
-    TriangleC,
-    Polygon,
-    PolygonC,
-    Fps,
-    Cursor,
+std::vector<std::uint32_t> read_spirv_file(const fs::path& pathname);
 
-    NumItems_
+
+class ShaderModule {
+public:
+    explicit ShaderModule(Renderer& renderer);
+    ~ShaderModule() { destroy(); }
+
+    /// Create shader directly from memory
+    bool create(std::span<const uint32_t> code);
+
+    /// Create shader directly from memory.
+    /// Note that the memory MUST be aligned to 4 bytes.
+    bool create(const char* data, size_t size);
+
+    /// Load shader from file
+    bool load_from_file(const fs::path& path);
+
+    /// Load shader from VFS
+    bool load_from_vfs(const Vfs& vfs, const std::string& path);
+
+    explicit operator bool() const { return m_module != VK_NULL_HANDLE; }
+
+    /// Get Vulkan handle
+    VkShaderModule vk() const { return m_module; }
+
+private:
+    void destroy() { vkDestroyShaderModule(m_device, m_module, nullptr); }
+
+    VkDevice m_device;
+    VkShaderModule m_module {};
 };
 
 
 class Shader {
 public:
-    explicit Shader(Renderer& renderer);
-    ~Shader() { clear(); }
+    Shader() = default;
+    Shader(const ShaderModule& vertex, const ShaderModule& fragment)
+            : m_vertex_module(&vertex)
+            , m_fragment_module(&fragment) {}
 
     /// Is this shader already loaded?
-    bool is_ready() const;
-
-    // Load and compile GLSL program:
-
-    /// Load program from VFS
-    /// This in turn calls either `load_from_file` or `load_from_memory`
-    /// depending on kind of VfsLoader used (real file or archive)
-    bool load_from_vfs(const Vfs& vfs, const std::string& vertex, const std::string& fragment);
-
-    /// Load program from a file (possibly adding a file watch for auto-reload)
-    bool load_from_file(const fs::path& vertex, const fs::path& fragment);
-
-    /// Load program directly from memory
-    /// Note that the memory MUST be aligned to at least 4 bytes.
-    bool load_from_memory(
-            const char* vertex_data, int vertex_size,
-            const char* fragment_data, int fragment_size);
-
-    /// Load program directly from memory
-    /// This overloads takes int32 code data.
-    bool load_from_memory(std::span<const uint32_t> vertex_code,
-                          std::span<const uint32_t> fragment_code);
+    explicit operator bool() const { return m_vertex_module && m_fragment_module; }
 
     // Vulkan handles:
-    VkShaderModule vk_vertex_module() const { return m_vertex_module; }
-    VkShaderModule vk_fragment_module() const { return m_fragment_module; }
-
-    /// Auxiliary function to read spirv file into int32 vector.
-    static std::vector<std::uint32_t> read_spirv_file(const fs::path& pathname);
+    VkShaderModule vk_vertex_module() const { return m_vertex_module->vk(); }
+    VkShaderModule vk_fragment_module() const { return m_fragment_module->vk(); }
 
 private:
-    VkShaderModule create_module(const uint32_t* code, size_t size);
-    void clear();
-
-private:
-    VkDevice m_device;
-    VkShaderModule m_vertex_module {};
-    VkShaderModule m_fragment_module {};
+    const ShaderModule* m_vertex_module = nullptr;
+    const ShaderModule* m_fragment_module = nullptr;
 };
 
 

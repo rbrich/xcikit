@@ -18,7 +18,8 @@ namespace xci::graphics {
 class Triangle: public UniformColorShape {
 public:
     explicit Triangle(Renderer& renderer)
-    : UniformColorShape(renderer, VertexFormat::V2t3, PrimitiveType::TriFans, ShaderId::Triangle) {}
+    : UniformColorShape(renderer, VertexFormat::V2t3, PrimitiveType::TriFans,
+                        "polygon", "triangle") {}
 
     /// Reserve memory for a number of triangles.
     void reserve(size_t triangles) { m_primitives.reserve(3 * triangles); }
@@ -38,7 +39,8 @@ public:
 class ColoredTriangle: public VaryingColorShape {
 public:
     explicit ColoredTriangle(Renderer& renderer)
-    : VaryingColorShape(renderer, VertexFormat::V2c44t3, PrimitiveType::TriFans, ShaderId::TriangleC) {}
+    : VaryingColorShape(renderer, VertexFormat::V2c44t3, PrimitiveType::TriFans,
+                        "polygon_c", "triangle_c") {}
 
     /// Reserve memory for a number of triangle edges.
     /// E.g. five six-edged triangles => 30 edges

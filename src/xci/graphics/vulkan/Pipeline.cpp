@@ -136,19 +136,20 @@ PipelineLayout::~PipelineLayout()
 
 
 PipelineCreateInfo::PipelineCreateInfo(
-        Shader& shader, VkPipelineLayout layout, VkRenderPass render_pass)
+        VkShaderModule vertex_shader, VkShaderModule fragment_shader,
+        VkPipelineLayout layout, VkRenderPass render_pass)
 {
     m_shader_stages[0] = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage = VK_SHADER_STAGE_VERTEX_BIT,
-            .module = shader.vk_vertex_module(),
+            .module = vertex_shader,
             .pName = "main",
     };
 
     m_shader_stages[1] = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .module = shader.vk_fragment_module(),
+            .module = fragment_shader,
             .pName = "main",
     };
 

@@ -72,11 +72,6 @@ int main(int argc, const char* argv[])
     Window window {renderer};
     setup_window(window, "XCI Vulkan Demo", argv);
 
-    Shader shader {renderer};
-    shader.load_from_file(
-            vfs.read_file("shaders/sprite_c.vert.spv").path(),
-            vfs.read_file("shaders/sprite_c.frag.spv").path());
-
     // Low-level object for drawing primitives (in this case, quads)
     Primitives prim {renderer,
                      VertexFormat::V2c4t2, PrimitiveType::TriFans};
@@ -85,18 +80,13 @@ int main(int argc, const char* argv[])
     texture.create({256, 256}, ColorFormat::Grey);
     generate_checkerboard(texture);
 
-    prim.set_shader(shader);
+    prim.set_shader(renderer.get_shader("sprite_c", "sprite_c"));
     prim.set_texture(1, texture);
     prim.set_blend(BlendFunc::AlphaBlend);
 
     // Colored polygon
-    Primitives poly {renderer,
-                     VertexFormat::V2t3, PrimitiveType::TriFans};
-    Shader poly_shader {renderer};
-    poly_shader.load_from_file(
-            vfs.read_file("shaders/polygon.vert.spv").path(),
-            vfs.read_file("shaders/polygon.frag.spv").path());
-    poly.set_shader(poly_shader);
+    Primitives poly {renderer, VertexFormat::V2t3, PrimitiveType::TriFans};
+    poly.set_shader(renderer.get_shader("polygon", "polygon"));
     poly.set_uniform(1, Color::Blue(), Color::Yellow());
     poly.set_uniform(2, {0.8f, 2});  // softness, antialiasing
     poly.set_blend(BlendFunc::AlphaBlend);

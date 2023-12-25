@@ -18,6 +18,9 @@
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/view/enumerate.hpp>
 #include <range/v3/view/take.hpp>
+
+#include <fmt/core.h>
+
 #include <memory>
 #include <bitset>
 #include <array>
@@ -230,100 +233,29 @@ Renderer::~Renderer()
 }
 
 
-Shader& Renderer::get_shader(ShaderId shader_id)
+Shader Renderer::get_shader(std::string_view vert_name, std::string_view frag_name)
 {
-    auto& shader = m_shader[(size_t) shader_id];
-    if (!shader) {
-        shader = std::make_unique<Shader>(*this);
-        if (!load_shader(shader_id, *shader))
-            VK_THROW("Shader not loaded!");
-    }
-    return *shader;
+    const auto vert_path = fmt::format("shaders/{}.vert.spv", vert_name);
+    auto* vert_module = load_shader_module(vert_path);
+    if (!vert_module)
+        VK_THROW(std::string("Failed to load shader: ") + vert_path);
+
+    const auto frag_path = fmt::format("shaders/{}.frag.spv", frag_name);
+    auto* frag_module = load_shader_module(frag_path);
+    if (!frag_module)
+        VK_THROW(std::string("Failed to load shader: ") + frag_path);
+
+    return Shader(*vert_module, *frag_module);
 }
 
 
-bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
+ShaderModule* Renderer::load_shader_module(const std::string& vfs_path)
 {
-    switch (shader_id) {
-        case ShaderId::Sprite:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/sprite.vert.spv",
-                    "shaders/sprite.frag.spv");
-        case ShaderId::SpriteR:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/sprite.vert.spv",
-                    "shaders/sprite_r.frag.spv");
-        case ShaderId::SpriteC:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/sprite_c.vert.spv",
-                    "shaders/sprite_c.frag.spv");
-        case ShaderId::Line:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/line.vert.spv",
-                    "shaders/line.frag.spv");
-        case ShaderId::LineC:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/line_c.vert.spv",
-                    "shaders/line_c.frag.spv");
-        case ShaderId::Rectangle:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/rectangle.vert.spv",
-                    "shaders/rectangle.frag.spv");
-        case ShaderId::RectangleC:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/rectangle_c.vert.spv",
-                    "shaders/rectangle_c.frag.spv");
-        case ShaderId::RoundedRectangle:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/rounded_rectangle.vert.spv",
-                    "shaders/rounded_rectangle.frag.spv");
-        case ShaderId::RoundedRectangleC:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/rounded_rectangle_c.vert.spv",
-                    "shaders/rounded_rectangle_c.frag.spv");
-        case ShaderId::Ellipse:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/ellipse.vert.spv",
-                    "shaders/ellipse.frag.spv");
-        case ShaderId::EllipseC:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/ellipse_c.vert.spv",
-                    "shaders/ellipse_c.frag.spv");
-        case ShaderId::Triangle:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/polygon.vert.spv",
-                    "shaders/triangle.frag.spv");
-        case ShaderId::TriangleC:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/polygon_c.vert.spv",
-                    "shaders/triangle_c.frag.spv");
-        case ShaderId::Polygon:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/polygon.vert.spv",
-                    "shaders/polygon.frag.spv");
-        case ShaderId::PolygonC:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/polygon_c.vert.spv",
-                    "shaders/polygon_c.frag.spv");
-        case ShaderId::Fps:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/fps.vert.spv",
-                    "shaders/fps.frag.spv");
-        case ShaderId::Cursor:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/cursor.vert.spv",
-                    "shaders/cursor.frag.spv");
-        case ShaderId::NumItems_:
-            return false;
-    }
-    XCI_UNREACHABLE;
-}
-
-
-void Renderer::clear_shader_cache()
-{
-    for (auto& shader : m_shader)
-        shader.reset();
+    auto [it, inserted] = m_shader_module.try_emplace(vfs_path, *this);
+    auto& shader_module = it->second;
+    if (!inserted || shader_module.load_from_vfs(m_vfs, vfs_path))
+        return &shader_module;
+    return {};
 }
 
 

@@ -50,7 +50,7 @@ private:
     Texture& m_texture;
     Color m_color;
     Primitives m_quads;
-    Shader& m_shader;
+    Shader m_shader;
 };
 
 
@@ -87,7 +87,7 @@ private:
     Texture& m_texture;
     Color m_color;
     Primitives m_quads;
-    Shader& m_shader;
+    Shader m_shader;
 };
 
 

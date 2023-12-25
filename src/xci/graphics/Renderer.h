@@ -19,6 +19,7 @@
 
 #include <unordered_map>
 #include <optional>
+#include <map>
 #include <memory>
 #include <array>
 #include <cstdint>
@@ -57,17 +58,17 @@ public:
     // -------------------------------------------------------------------------
     // Shaders
 
-    /// Get one of the predefined shaders
-    /// \param shader_id Use `Custom` to create new shader
-    /// \return shared_ptr to the shader or nullptr on error
-    Shader& get_shader(ShaderId shader_id);
+    /// Load or use cached shader modules to create a Shader program.
+    /// \param vert_name    Name of shader in VFS ("shaders/<name>.vert")
+    /// \param frag_name    Name of shader in VFS ("shaders/<name>.frag")
+    /// \throws VulkanError on error
+    Shader get_shader(std::string_view vert_name, std::string_view frag_name);
 
-    /// Load one of the predefined shaders
-    /// This creates new Shader object. Use `get_shader` to get one
-    /// from the cache instead.
-    bool load_shader(ShaderId shader_id, Shader& shader);
+    /// Load shader module (vertex or fragment shader), or return a cached one.
+    /// \returns Optional reference to the module. Null on failure.
+    ShaderModule* load_shader_module(const std::string& vfs_path);
 
-    void clear_shader_cache();
+    void clear_shader_cache() { m_shader_module.clear(); }
 
     // -------------------------------------------------------------------------
     // Pipelines
@@ -126,8 +127,7 @@ private:
     void load_device_limits(const VkPhysicalDeviceLimits& limits);
 
     Vfs& m_vfs;
-    static constexpr auto c_num_shaders = (size_t) ShaderId::NumItems_;
-    std::array<std::unique_ptr<Shader>, c_num_shaders> m_shader = {};
+    std::map<std::string, ShaderModule> m_shader_module = {};
 
     std::unordered_map<PipelineLayoutCreateInfo, PipelineLayout> m_pipeline_layout;
     std::unordered_map<PipelineCreateInfo, Pipeline> m_pipeline;

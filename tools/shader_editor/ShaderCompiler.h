@@ -25,7 +25,7 @@ public:
     ShaderCompiler();
 
     /// \returns Empty vector on error
-    std::vector<uint32_t> compile_shader(ShaderStage stage, const fs::path& filename);
+    std::vector<uint32_t> compile_shader(ShaderStage stage, const fs::path& filename) const;
 
     struct BlockMember {
         std::string name;
@@ -46,7 +46,7 @@ public:
     };
 
     /// \returns Empty vector if there are no uniforms in the shader or on error
-    ShaderResources reflect_shader(const std::vector<uint32_t>& spv);
+    ShaderResources reflect_shader(const std::vector<uint32_t>& spv) const;
 
 private:
     fs::path m_glslc = "glslc";

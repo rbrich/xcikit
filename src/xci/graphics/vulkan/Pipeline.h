@@ -105,7 +105,8 @@ private:
 class PipelineCreateInfo {
 public:
     explicit PipelineCreateInfo(
-            Shader& shader, VkPipelineLayout layout, VkRenderPass render_pass);
+            VkShaderModule vertex_shader, VkShaderModule fragment_shader,
+            VkPipelineLayout layout, VkRenderPass render_pass);
 
     void set_vertex_format(VertexFormat format);
     void set_color_blend(BlendFunc blend_func);

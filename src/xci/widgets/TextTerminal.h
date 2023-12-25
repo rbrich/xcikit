@@ -277,14 +277,14 @@ public:
     explicit Caret(graphics::Renderer& renderer)
     : m_quad(renderer, graphics::VertexFormat::V2t2,
              graphics::PrimitiveType::TriFans),
-      m_shader(renderer.get_shader(graphics::ShaderId::Cursor)) {}
+      m_shader(renderer.get_shader("cursor", "cursor")) {}
 
     void update(View& view, const FramebufferRect& rect);
     void draw(View& view, VariCoords pos);
 
 private:
     graphics::Primitives m_quad;
-    graphics::Shader& m_shader;
+    graphics::Shader m_shader;
 };
 
 

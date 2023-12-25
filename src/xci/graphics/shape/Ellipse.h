@@ -18,7 +18,8 @@ namespace xci::graphics {
 class Ellipse: public UniformColorShape {
 public:
     explicit Ellipse(Renderer& renderer)
-    : UniformColorShape(renderer, VertexFormat::V2t22, PrimitiveType::TriFans, ShaderId::Ellipse) {}
+    : UniformColorShape(renderer, VertexFormat::V2t22, PrimitiveType::TriFans,
+                        "ellipse", "ellipse") {}
 
     /// Reserve memory for a number of ellipses
     void reserve(size_t ellipses) { m_primitives.reserve(4 * ellipses); }
@@ -58,7 +59,8 @@ public:
 class ColoredEllipse: public VaryingColorShape {
 public:
     explicit ColoredEllipse(Renderer& renderer)
-    : VaryingColorShape(renderer, VertexFormat::V2c44t22, PrimitiveType::TriFans, ShaderId::EllipseC) {}
+    : VaryingColorShape(renderer, VertexFormat::V2c44t22, PrimitiveType::TriFans,
+                        "ellipse_c", "ellipse_c") {}
 
     /// Reserve memory for a number of ellipses
     void reserve(size_t ellipses) { m_primitives.reserve(4 * ellipses); }

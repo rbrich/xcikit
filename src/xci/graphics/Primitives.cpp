@@ -281,9 +281,9 @@ void Primitives::clear()
 }
 
 
-void Primitives::set_shader(Shader& shader)
+void Primitives::set_shader(Shader shader)
 {
-    m_shader = &shader;
+    m_shader = shader;
     destroy_pipeline();
 }
 
@@ -448,7 +448,7 @@ void Primitives::draw(View& view, VariCoords pos)
 
 void Primitives::update_pipeline()
 {
-    assert(m_shader != nullptr);
+    assert(m_shader);
     if (m_uniforms.empty() || !m_uniforms[0]) {
         set_uniform(0, Mat4f{});  // MVP
     }
@@ -462,7 +462,8 @@ void Primitives::update_pipeline()
         pipeline_layout_ci.add_texture_binding(texture.binding);
     }
     m_pipeline_layout = &m_renderer.get_pipeline_layout(pipeline_layout_ci);
-    PipelineCreateInfo pipeline_ci(*m_shader, m_pipeline_layout->vk(), m_renderer.vk_render_pass());
+    PipelineCreateInfo pipeline_ci(m_shader.vk_vertex_module(), m_shader.vk_fragment_module(),
+                                   m_pipeline_layout->vk(), m_renderer.vk_render_pass());
     pipeline_ci.set_vertex_format(m_format);
     pipeline_ci.set_color_blend(m_blend);
     m_pipeline = &m_renderer.get_pipeline(pipeline_ci);

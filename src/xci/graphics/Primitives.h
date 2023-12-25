@@ -163,7 +163,7 @@ public:
     void clear();
     bool empty() const { return m_vertex_data.empty(); }
 
-    void set_shader(Shader& shader);
+    void set_shader(Shader shader);
 
     void clear_uniforms();
     void set_uniform_data(uint32_t binding, const void* data, size_t size);
@@ -203,7 +203,7 @@ private:
     BlendFunc m_blend = BlendFunc::Off;
 
     Renderer& m_renderer;
-    Shader* m_shader = nullptr;
+    Shader m_shader;
 
     PipelineLayout* m_pipeline_layout = nullptr;
     SharedDescriptorPool m_descriptor_pool;
