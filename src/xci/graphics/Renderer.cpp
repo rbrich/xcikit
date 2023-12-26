@@ -371,6 +371,7 @@ void Renderer::create_device()
     };
     const char* const additional_device_extensions[] = {
             "VK_KHR_portability_subset",  // required if present on the device
+            VK_KHR_MAINTENANCE1_EXTENSION_NAME,  // enable option to flip Y for OpenGL compatibility
     };
     std::vector<const char*> chosen_device_extensions;
 

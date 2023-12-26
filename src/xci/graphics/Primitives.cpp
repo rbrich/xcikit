@@ -393,7 +393,7 @@ void Primitives::update()
 }
 
 
-void Primitives::draw(View& view)
+void Primitives::draw(View& view, PrimitiveDrawFlags flags)
 {
     if (empty())
         return;
@@ -409,7 +409,7 @@ void Primitives::draw(View& view)
     vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->vk());
 
     // set viewport
-    const VkViewport viewport = {
+    VkViewport viewport = {
             .x = 0.0f,
             .y = 0.0f,
             .width = (float) m_renderer.vk_image_extent().width,
@@ -417,6 +417,10 @@ void Primitives::draw(View& view)
             .minDepth = 0.0f,
             .maxDepth = 1.0f,
     };
+    if ((flags & PrimitiveDrawFlags::FlipViewportY) != PrimitiveDrawFlags::None) {
+        viewport.y = viewport.height;
+        viewport.height = -viewport.height;
+    }
     vkCmdSetViewport(cmd_buf, 0, 1, &viewport);
 
     // set scissor region
@@ -427,7 +431,7 @@ void Primitives::draw(View& view)
 
     // uniforms
     auto i = window->command_buffer_index();
-    if (m_format != VertexFormat::V3n3t2)
+    if ((flags & PrimitiveDrawFlags::Projection2D) != PrimitiveDrawFlags::None)
         set_uniform(0, view.projection_matrix());
     m_buffers->copy_uniforms(i, 0, m_uniform_data.size(), m_uniform_data.data());
 

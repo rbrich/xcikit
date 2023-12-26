@@ -35,6 +35,15 @@ enum class PrimitiveType : uint8_t {
 };
 
 
+enum class PrimitiveDrawFlags : uint8_t {
+    None          = 0x00,
+    Projection2D  = 0x01,  // set uniform binding 0 to View::projection_matrix
+    FlipViewportY = 0x02,  // OpenGL coords compatibility
+};
+inline PrimitiveDrawFlags operator|(PrimitiveDrawFlags a, PrimitiveDrawFlags b) { return PrimitiveDrawFlags(uint8_t(a) | uint8_t(b)); }
+inline PrimitiveDrawFlags operator&(PrimitiveDrawFlags a, PrimitiveDrawFlags b) { return PrimitiveDrawFlags(uint8_t(a) & uint8_t(b)); }
+
+
 struct UniformBinding {
     VkDeviceSize offset = 0;
     VkDeviceSize range = 0;
@@ -181,7 +190,8 @@ public:
     void set_blend(BlendFunc func);
 
     void update();
-    void draw(View& view);
+
+    void draw(View& view, PrimitiveDrawFlags flags = PrimitiveDrawFlags::Projection2D);
     void draw(View& view, VariCoords pos);
 
 private:
