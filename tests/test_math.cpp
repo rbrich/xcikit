@@ -73,11 +73,11 @@ static std::string to_str(const Mat4<T>& m) {
 
 TEST_CASE( "transform", "[math]" )
 {
-    CHECK(to_str(perspective_projection(1.2f, 4.0f / 3.0f, 1.0f, 1001.0f))
+    CHECK(to_str(perspective_projection(1.2f, 4.0f / 3.0f, 1.0f, 1000.0f))
           == to_str(Mat4f{
                      1.09627, 0,       0,       0,
                      0,       1.4617,  0,       0,
-                     0,       0,      -1.002,  -1,
-                     0,       0,      -2.002,   0,
+                     0,       0,      -1.001,  -1,
+                     0,       0,      -1.001,   0,
              }));
 }

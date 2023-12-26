@@ -25,10 +25,10 @@ template <typename T>
 Mat4<T> perspective_projection(T fov_y, T aspect, T near_z, T far_z)
 {
     const T t = std::tan(fov_y / T(2));
-    const T fy = T(1) / t;
     const T fx = T(1) / (t * aspect);
-    const T zs = -(far_z + near_z) / (far_z - near_z);
-    const T zt = -(T(2) * far_z * near_z) / (far_z - near_z);
+    const T fy = T(1) / t;
+    const T zs = -far_z / (far_z - near_z);
+    const T zt = -(far_z * near_z) / (far_z - near_z);
     return {
         fx, 0,  0,   0,
         0,  fy, 0,   0,
