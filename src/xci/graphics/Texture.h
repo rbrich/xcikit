@@ -11,6 +11,7 @@
 #include <xci/math/Vec2.h>
 #include <xci/math/Rect.h>
 #include "vulkan/DeviceMemory.h"
+#include "vulkan/Image.h"
 
 #include <vulkan/vulkan.h>
 
@@ -32,7 +33,6 @@ enum class ColorFormat {
 };
 
 
-/// Gray-scale texture - 1 byte per pixel
 class Texture {
 public:
     explicit Texture(Renderer& renderer);
@@ -55,7 +55,7 @@ public:
 
     // Vulkan handles
     VkSampler vk_sampler() const { return m_sampler; }
-    VkImageView vk_image_view() const { return m_image_view; }
+    VkImageView vk_image_view() const { return m_image_view.vk(); }
 
 private:
     VkFormat vk_format() const;
@@ -67,12 +67,11 @@ private:
     ColorFormat m_format = ColorFormat::Grey;
     Vec2u m_size;
     VkBuffer m_staging_buffer {};
-    VkImage m_image {};
-    VkImageView m_image_view {};
+    Image m_image;
+    ImageView m_image_view;
     VkImageLayout m_image_layout { VK_IMAGE_LAYOUT_UNDEFINED };
     VkSampler m_sampler {};
     DeviceMemory m_staging_memory;  // FIXME: pool the memory
-    DeviceMemory m_image_memory;  // FIXME: pool the memory
     void* m_staging_mapped = nullptr;
     std::vector<Rect_u> m_pending_regions;
     bool m_pending_clear = false;

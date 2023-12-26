@@ -27,6 +27,7 @@ add_library(xci-graphics
     vulkan/CommandBuffers.cpp
     vulkan/DescriptorPool.cpp
     vulkan/DeviceMemory.cpp
+    vulkan/Image.cpp
     vulkan/Pipeline.cpp
     vulkan/Swapchain.cpp
 )

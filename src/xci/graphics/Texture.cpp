@@ -8,7 +8,6 @@
 #include "Renderer.h"
 #include "vulkan/VulkanError.h"
 #include "vulkan/CommandBuffers.h"
-#include <xci/core/log.h>
 #include <xci/compat/macros.h>
 #include <cassert>
 #include <cstring>
@@ -18,7 +17,8 @@ namespace xci::graphics {
 
 Texture::Texture(Renderer& renderer)
     : m_renderer(renderer),
-      m_staging_memory(renderer), m_image_memory(renderer)
+      m_image(renderer),
+      m_staging_memory(renderer)
 {}
 
 
@@ -50,55 +50,10 @@ bool Texture::create(const Vec2u& size, ColorFormat format)
     }
 
     // image
-
-    VkImageCreateInfo image_ci = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-            .imageType = VK_IMAGE_TYPE_2D,
-            .format = vk_format(),
-            .extent = {
-                    .width = size.x,
-                    .height = size.y,
-                    .depth = 1,
-            },
-            .mipLevels = 1,
-            .arrayLayers = 1,
-            .samples = VK_SAMPLE_COUNT_1_BIT,
-            .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-    };
-    VK_TRY("vkCreateImage",
-            vkCreateImage(device(), &image_ci, nullptr, &m_image));
-    VkMemoryRequirements mem_req;
-    vkGetImageMemoryRequirements(device(), m_image, &mem_req);
-
-    auto offset = m_image_memory.reserve(mem_req);
-    assert(offset == 0);
-    m_image_memory.allocate(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    m_image_memory.bind_image(m_image, offset);
-
-    // image view
-
-    VkImageViewCreateInfo image_view_ci = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = m_image,
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = vk_format(),
-            .subresourceRange = {
-                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                    .baseMipLevel = 0,
-                    .levelCount = 1,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1,
-            },
-    };
-    VK_TRY("vkCreateImageView(texture)",
-            vkCreateImageView(device(), &image_view_ci,
-                    nullptr, &m_image_view));
+    m_image.create({size, vk_format(), VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT});
+    m_image_view.create(device(), m_image.vk(), vk_format());
 
     // sampler
-
     VkSamplerCreateInfo sampler_ci = {
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
             .magFilter = VK_FILTER_LINEAR,
@@ -175,7 +130,7 @@ void Texture::update()
     cmd_buf.create(m_renderer.vk_transient_command_pool(), 1);
     cmd_buf.begin();
 
-    cmd_buf.transition_image_layout(m_image,
+    cmd_buf.transition_image_layout(m_image.vk(),
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
             m_image_layout,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -191,7 +146,7 @@ void Texture::update()
         };
         VkClearColorValue clear_color {};
         vkCmdClearColorImage(cmd_buf.vk(),
-                m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                m_image.vk(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 &clear_color, 1, &range);
     }
 
@@ -205,12 +160,12 @@ void Texture::update()
         }
         cmd_buf.copy_buffer_to_image(m_staging_buffer,
                 (region.y * m_size.x + region.x) * pixel_size,
-                m_size.x, m_image, region);
+                m_size.x, m_image.vk(), region);
     }
     m_pending_regions.clear();
 
     m_image_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    cmd_buf.transition_image_layout(m_image,
+    cmd_buf.transition_image_layout(m_image.vk(),
             VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
             VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_image_layout);
@@ -251,9 +206,8 @@ void Texture::destroy()
         m_staging_mapped = nullptr;
     }
     vkDestroySampler(device(), m_sampler, nullptr);
-    vkDestroyImageView(device(), m_image_view, nullptr);
-    vkDestroyImage(device(), m_image, nullptr);
     vkDestroyBuffer(device(), m_staging_buffer, nullptr);
+    m_image_view.destroy(device());
 }
 
 

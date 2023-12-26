@@ -82,23 +82,8 @@ void Swapchain::create()
     vkGetSwapchainImagesKHR(device, m_swapchain, &m_image_count, m_images);
     assert(m_image_count <= max_image_count);
 
-    VkImageViewCreateInfo image_view_ci = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = m_surface_format.format,
-            .subresourceRange = {
-                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                    .baseMipLevel = 0,
-                    .levelCount = 1,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1,
-            },
-    };
     for (size_t i = 0; i < m_image_count; i++) {
-        image_view_ci.image = m_images[i];
-        VK_TRY("vkCreateImageView",
-                vkCreateImageView(device, &image_view_ci,
-                        nullptr, &m_image_views[i]));
+        m_image_views[i].create(device, m_images[i], m_surface_format.format);
     }
 }
 
@@ -108,7 +93,7 @@ void Swapchain::destroy()
     const auto device = m_renderer.vk_device();
     if (device != VK_NULL_HANDLE && m_swapchain != VK_NULL_HANDLE) {
         for (auto image_view : m_image_views | take(m_image_count)) {
-            vkDestroyImageView(device, image_view, nullptr);
+            image_view.destroy(device);
         }
         vkDestroySwapchainKHR(device, m_swapchain, nullptr);
         m_swapchain = nullptr;
@@ -119,7 +104,7 @@ void Swapchain::destroy()
 void Swapchain::create_framebuffers()
 {
     for (size_t i = 0; i < m_image_count; i++) {
-        VkImageView attachments[] = { m_image_views[i] };
+        VkImageView attachments[] = { m_image_views[i].vk() };
 
         const VkFramebufferCreateInfo framebuffer_ci = {
                 .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,

@@ -7,6 +7,7 @@
 #ifndef XCI_GRAPHICS_VULKAN_SWAPCHAIN_H
 #define XCI_GRAPHICS_VULKAN_SWAPCHAIN_H
 
+#include "Image.h"
 #include <vulkan/vulkan.h>
 
 namespace xci::graphics {
@@ -53,7 +54,7 @@ private:
 
     static constexpr uint32_t max_image_count = 8;
     VkImage m_images[max_image_count] {};
-    VkImageView m_image_views[max_image_count] {};
+    ImageView m_image_views[max_image_count];
     VkFramebuffer m_framebuffers[max_image_count] {};
 
     // create info
