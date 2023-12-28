@@ -526,7 +526,9 @@ void Renderer::destroy_device()
 
 void Renderer::create_renderpass()
 {
-    const VkAttachmentDescription color_attachment = {
+    const VkAttachmentDescription attachment[2] = {
+        // color attachment
+        {
             .format = m_swapchain.vk_surface_format().format,
             .samples = VK_SAMPLE_COUNT_1_BIT,
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
@@ -535,34 +537,52 @@ void Renderer::create_renderpass()
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
             .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+        },
+        // depth attachment
+        {
+            .format = VK_FORMAT_D32_SFLOAT,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        },
     };
 
     const VkAttachmentReference color_attachment_ref = {
             .attachment = 0,  // layout(location = 0)
             .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     };
+    const VkAttachmentReference depth_attachment_ref = {
+            .attachment = 1,
+            .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+    };
 
     const VkSubpassDescription subpass = {
             .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
             .colorAttachmentCount = 1,
             .pColorAttachments = &color_attachment_ref,
+            .pDepthStencilAttachment = depth_buffering() ? &depth_attachment_ref : nullptr,
     };
 
     const VkSubpassDependency dependency = {
             .srcSubpass = VK_SUBPASS_EXTERNAL,
             .dstSubpass = 0,
-            .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                            (depth_buffering() ? VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT : 0u),
+            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+                            (depth_buffering() ? VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT : 0u),
             .srcAccessMask = 0,
-            .dstAccessMask =
-                    VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
-                    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+                             (depth_buffering() ? VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT : 0u),
     };
 
     const VkRenderPassCreateInfo render_pass_ci = {
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-            .attachmentCount = 1,
-            .pAttachments = &color_attachment,
+            .attachmentCount = 1 + uint32_t(depth_buffering()),
+            .pAttachments = attachment,
             .subpassCount = 1,
             .pSubpasses = &subpass,
             .dependencyCount = 1,

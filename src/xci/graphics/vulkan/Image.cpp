@@ -50,13 +50,18 @@ void Image::create(const ImageCreateInfo& image_ci)
 }
 
 
-Image::~Image()
+void Image::destroy()
 {
-    vkDestroyImage(m_renderer.vk_device(), m_image, nullptr);
+    if (m_image) {
+        vkDestroyImage(m_renderer.vk_device(), m_image, nullptr);
+        m_image = VK_NULL_HANDLE;
+        m_image_memory.free();
+    }
 }
 
 
-void ImageView::create(VkDevice device, VkImage image, VkFormat format)
+void ImageView::create(VkDevice device, VkImage image, VkFormat format,
+                       VkImageAspectFlags aspect_mask)
 {
     const VkImageViewCreateInfo image_view_ci = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -64,7 +69,7 @@ void ImageView::create(VkDevice device, VkImage image, VkFormat format)
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = format,
             .subresourceRange = {
-                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .aspectMask = aspect_mask,
                     .baseMipLevel = 0,
                     .levelCount = 1,
                     .baseArrayLayer = 0,

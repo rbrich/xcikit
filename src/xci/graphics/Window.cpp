@@ -529,7 +529,11 @@ void Window::draw()
         m_command_buffers.release_resources(m_current_cmd_buf);
         m_command_buffers.begin(m_current_cmd_buf);
 
-        const FloatColor clear_value(m_clear_color);
+        FloatColor cc(m_clear_color);
+        VkClearValue clear_values[2] = {
+                { .color = {cc.r, cc.g, cc.b, cc.a} },
+                { .depthStencil = {1.0f, 0} }
+        };
         const VkRenderPassBeginInfo render_pass_info = {
                 .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
                 .renderPass = m_renderer.vk_render_pass(),
@@ -538,8 +542,8 @@ void Window::draw()
                         .offset = {0, 0},
                         .extent = m_renderer.vk_image_extent(),
                 },
-                .clearValueCount = 1,
-                .pClearValues = reinterpret_cast<const VkClearValue*>(&clear_value),  // float[4]
+                .clearValueCount = 1 + uint32_t(m_renderer.depth_buffering()),
+                .pClearValues = clear_values,
         };
         vkCmdBeginRenderPass(cmd_buf, &render_pass_info,
                 VK_SUBPASS_CONTENTS_INLINE);

@@ -47,10 +47,17 @@ enum class VertexFormat : uint8_t {
 unsigned get_vertex_format_stride(VertexFormat format);
 
 
-enum class BlendFunc {
+enum class BlendFunc : uint8_t {
     Off,
     AlphaBlend,
     InverseVideo,
+};
+
+
+enum class DepthTest : uint8_t {
+    Off,
+    Less,
+    LessOrEqual,
 };
 
 
@@ -110,6 +117,7 @@ public:
 
     void set_vertex_format(VertexFormat format);
     void set_color_blend(BlendFunc blend_func);
+    void set_depth_test(DepthTest depth_test);
 
     const VkGraphicsPipelineCreateInfo& vk() const { return m_pipeline_ci; }
 
@@ -130,6 +138,7 @@ private:
     VkPipelineViewportStateCreateInfo m_viewport_state_ci;
     VkPipelineRasterizationStateCreateInfo m_rasterization_ci;
     VkPipelineMultisampleStateCreateInfo m_multisample_ci;
+    VkPipelineDepthStencilStateCreateInfo m_depth_stencil_ci;
     VkPipelineColorBlendAttachmentState m_color_blend {};
     VkPipelineColorBlendStateCreateInfo m_color_blend_ci;
     std::array<VkDynamicState, 2> m_dynamic_states;

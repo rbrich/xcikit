@@ -1,7 +1,7 @@
 // DeviceMemory.cpp created on 2019-12-07 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "DeviceMemory.h"
@@ -49,8 +49,12 @@ void DeviceMemory::allocate(VkMemoryPropertyFlags properties)
 
 void DeviceMemory::free()
 {
-    vkFreeMemory(m_renderer.vk_device(), m_memory_pool, nullptr);
-    m_memory_pool = VK_NULL_HANDLE;
+    if (m_memory_pool) {
+        vkFreeMemory(m_renderer.vk_device(), m_memory_pool, nullptr);
+        m_memory_pool = VK_NULL_HANDLE;
+        m_alloc_size = 0;
+        m_type_bits = 0;
+    }
 }
 
 

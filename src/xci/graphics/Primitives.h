@@ -188,6 +188,7 @@ public:
     void set_texture(uint32_t binding, Texture& texture);
 
     void set_blend(BlendFunc func);
+    void set_depth_test(DepthTest depth_test);
 
     void update();
 
@@ -211,6 +212,7 @@ private:
     std::vector<UniformBinding> m_uniforms;  // index = binding
     std::vector<TextureBinding> m_textures;
     BlendFunc m_blend = BlendFunc::Off;
+    DepthTest m_depth_test = DepthTest::Off;
 
     Renderer& m_renderer;
     Shader m_shader;

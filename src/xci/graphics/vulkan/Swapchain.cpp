@@ -83,7 +83,15 @@ void Swapchain::create()
     assert(m_image_count <= max_image_count);
 
     for (size_t i = 0; i < m_image_count; i++) {
-        m_image_views[i].create(device, m_images[i], m_surface_format.format);
+        m_image_views[i].create(device, m_images[i], m_surface_format.format,
+                                VK_IMAGE_ASPECT_COLOR_BIT);
+    }
+
+    if (m_depth_buffering) {
+        m_depth_image.create({{m_extent.width, m_extent.height}, VK_FORMAT_D32_SFLOAT,
+                              VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT});
+        m_depth_image_view.create(device, m_depth_image.vk(), VK_FORMAT_D32_SFLOAT,
+                                  VK_IMAGE_ASPECT_DEPTH_BIT);
     }
 }
 
@@ -95,6 +103,8 @@ void Swapchain::destroy()
         for (auto image_view : m_image_views | take(m_image_count)) {
             image_view.destroy(device);
         }
+        m_depth_image_view.destroy(device);
+        m_depth_image.destroy();
         vkDestroySwapchainKHR(device, m_swapchain, nullptr);
         m_swapchain = nullptr;
     }
@@ -104,12 +114,12 @@ void Swapchain::destroy()
 void Swapchain::create_framebuffers()
 {
     for (size_t i = 0; i < m_image_count; i++) {
-        VkImageView attachments[] = { m_image_views[i].vk() };
+        VkImageView attachments[] = { m_image_views[i].vk(), m_depth_image_view.vk() };
 
         const VkFramebufferCreateInfo framebuffer_ci = {
                 .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
                 .renderPass = m_renderer.vk_render_pass(),
-                .attachmentCount = 1,
+                .attachmentCount = 1 + uint32_t(m_depth_buffering),
                 .pAttachments = attachments,
                 .width = m_extent.width,
                 .height = m_extent.height,

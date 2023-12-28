@@ -51,7 +51,7 @@ bool Texture::create(const Vec2u& size, ColorFormat format)
 
     // image
     m_image.create({size, vk_format(), VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT});
-    m_image_view.create(device(), m_image.vk(), vk_format());
+    m_image_view.create(device(), m_image.vk(), vk_format(), VK_IMAGE_ASPECT_COLOR_BIT);
 
     // sampler
     VkSamplerCreateInfo sampler_ci = {

@@ -46,6 +46,13 @@ public:
     void set_present_mode(PresentMode mode) { m_swapchain.set_present_mode(mode); }
     PresentMode present_mode() const { return m_swapchain.present_mode(); }
 
+    /// Enable depth buffering.
+    /// This is prerequisite for fragment depth test, which is enabled separately in Pipeline
+    /// (possibly via Primitives).
+    /// Default: disabled
+    void set_depth_buffering(bool enable) { m_swapchain.set_depth_buffering(enable); }
+    bool depth_buffering() const { return m_swapchain.depth_buffering(); }
+
     void set_device_id(uint32_t device_id) { m_device_id = device_id; }
 
     // -------------------------------------------------------------------------

@@ -192,6 +192,14 @@ PipelineCreateInfo::PipelineCreateInfo(
             .sampleShadingEnable = VK_FALSE,
     };
 
+    m_depth_stencil_ci = {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+            .depthTestEnable = VK_FALSE,
+            .depthWriteEnable = VK_FALSE,
+            .depthCompareOp = VK_COMPARE_OP_NEVER,
+            .depthBoundsTestEnable = VK_FALSE,
+    };
+
     m_color_blend_ci = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
             .logicOpEnable = VK_FALSE,
@@ -221,6 +229,7 @@ PipelineCreateInfo::PipelineCreateInfo(
             .pViewportState = &m_viewport_state_ci,
             .pRasterizationState = &m_rasterization_ci,
             .pMultisampleState = &m_multisample_ci,
+            .pDepthStencilState= &m_depth_stencil_ci,
             .pColorBlendState = &m_color_blend_ci,
             .pDynamicState = &m_dynamic_state_ci,
             .layout = layout,
@@ -368,6 +377,24 @@ void PipelineCreateInfo::set_color_blend(BlendFunc blend_func)
                     .alphaBlendOp = VK_BLEND_OP_ADD,
                     .colorWriteMask = color_mask,
             };
+            break;
+    }
+}
+
+
+void PipelineCreateInfo::set_depth_test(DepthTest depth_test)
+{
+    switch (depth_test) {
+        case DepthTest::Off:
+            m_depth_stencil_ci.depthTestEnable = VK_FALSE;
+            m_depth_stencil_ci.depthWriteEnable = VK_FALSE;
+            break;
+        case DepthTest::Less:
+        case DepthTest::LessOrEqual:
+            m_depth_stencil_ci.depthTestEnable = VK_TRUE;
+            m_depth_stencil_ci.depthWriteEnable = VK_TRUE;
+            m_depth_stencil_ci.depthCompareOp = (depth_test == DepthTest::Less)?
+                    VK_COMPARE_OP_LESS : VK_COMPARE_OP_LESS_OR_EQUAL;
             break;
     }
 }

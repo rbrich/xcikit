@@ -380,6 +380,13 @@ void Primitives::set_blend(BlendFunc func)
 }
 
 
+void Primitives::set_depth_test(DepthTest depth_test)
+{
+    m_depth_test = depth_test;
+    destroy_pipeline();
+}
+
+
 void Primitives::update()
 {
     if (empty())
@@ -470,6 +477,7 @@ void Primitives::update_pipeline()
                                    m_pipeline_layout->vk(), m_renderer.vk_render_pass());
     pipeline_ci.set_vertex_format(m_format);
     pipeline_ci.set_color_blend(m_blend);
+    pipeline_ci.set_depth_test(m_depth_test);
     m_pipeline = &m_renderer.get_pipeline(pipeline_ci);
 
     m_buffers = std::make_shared<PrimitivesBuffers>(m_renderer);

@@ -31,9 +31,10 @@ class Image: private core::NonCopyable {
 public:
     explicit Image(Renderer& renderer) : m_renderer(renderer), m_image_memory(renderer) {}
     explicit Image(Renderer& renderer, const ImageCreateInfo& image_ci) : Image(renderer) { create(image_ci); }
-    ~Image();
+    ~Image() { destroy(); }
 
     void create(const ImageCreateInfo& image_ci);
+    void destroy();
 
     VkImage vk() const { return m_image; }
 
@@ -46,7 +47,7 @@ private:
 
 class ImageView {
 public:
-    void create(VkDevice device, VkImage image, VkFormat format);
+    void create(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspect_mask);
     void destroy(VkDevice device);
 
     const VkImageView& vk() const { return m_image_view; }
