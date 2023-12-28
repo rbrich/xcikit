@@ -127,7 +127,7 @@ struct Mat4 {
         const auto cof = cofactor();
         const auto det = c1.x * cof.c1.x + c2.x * cof.c2.x + c3.x * cof.c3.x + c4.x * cof.c4.x;
         assert(det == determinant());
-        return cof * static_cast<T>(1.0 / det);
+        return cof * (static_cast<T>(1.0) / det);
     }
 
     constexpr Mat4 inverse() const {

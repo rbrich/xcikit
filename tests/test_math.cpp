@@ -53,6 +53,19 @@ TEST_CASE( "Mat2", "[math]" )
 TEST_CASE( "Mat3", "[math]" )
 {
     CHECK(Mat3f::identity().determinant() == 1.0f);
+
+    Mat3 m {0.1, 0.2, 0.3,
+            1.1, 1.2, 1.3,
+            2.1, 2.2, 2.3};
+    CHECK(m.transpose() == Mat3{0.1, 1.1, 2.1,
+                                0.2, 1.2, 2.2,
+                                0.3, 1.3, 2.3});
+    const auto det = m.determinant();
+    CHECK(det > 0.0); CHECK(det < 1e-15);
+
+    auto m2 = Mat4f::rot_y(0.5f, 0.5f, {1.0f, 2.0f, 3.0f}).mat3();
+    CHECK(m2.inverse() == Mat3f{1,0,1, 0,1,0, -1,0,1});
+    CHECK(m2.inverse() * m2 == Mat3f::identity());
 }
 
 

@@ -18,7 +18,7 @@ template <typename T>
 struct Mat3 {
     union {
         struct { Vec3<T> c1, c2, c3; };  // columns
-        std::array<T, 2*2> arr;
+        std::array<T, 3*3> arr;
     };
 
     constexpr Mat3() = default;
@@ -33,6 +33,24 @@ struct Mat3 {
             0, 1, 0,
             0, 0, 1,
         };
+    }
+
+    constexpr Mat3 transpose() const {
+        return {row(0), row(1), row(2)};
+    }
+
+    constexpr Mat3 inverse() const {
+        return Mat3{
+             (c2.y * c3.z - c3.y * c2.z),
+            -(c1.y * c3.z - c3.y * c1.z),
+             (c1.y * c2.z - c2.y * c1.z),
+            -(c2.x * c3.z - c3.x * c2.z),
+             (c1.x * c3.z - c3.x * c1.z),
+            -(c1.x * c2.z - c2.x * c1.z),
+             (c2.x * c3.y - c3.x * c2.y),
+            -(c1.x * c3.y - c3.x * c1.y),
+             (c1.x * c2.y - c2.x * c1.y),
+        } * (static_cast<T>(1.0) / determinant());
     }
 
     constexpr T determinant() const {
@@ -72,6 +90,41 @@ struct Mat3 {
     constexpr const T* data() const { return arr.data(); }
     constexpr size_t byte_size() const { return sizeof(T) * arr.size(); }
 };
+
+
+// Mat3 * T
+template <typename T>
+constexpr Mat3<T> operator *(const Mat3<T>& lhs, T rhs) {
+    return Mat3<T>(lhs.c1 * rhs, lhs.c2 * rhs, lhs.c3 * rhs);
+}
+
+// Mat3 * Vec3
+template <typename T>
+constexpr Vec3<T> operator *(const Mat3<T>& lhs, const Vec3<T>& rhs) {
+    return {lhs.row(0).dot(rhs),
+            lhs.row(1).dot(rhs),
+            lhs.row(2).dot(rhs)};
+}
+
+// Mat3 * Mat3
+template <typename T>
+constexpr Mat3<T> operator *(const Mat3<T>& lhs, const Mat3<T>& rhs) {
+    return {lhs * rhs.c1,
+            lhs * rhs.c2,
+            lhs * rhs.c3};
+}
+
+template <typename T>
+constexpr bool operator ==(const Mat3<T>& lhs, const Mat3<T>& rhs) {
+    return lhs.c1 == rhs.c1 && lhs.c2 == rhs.c2 && lhs.c3 == rhs.c3;
+}
+
+template <typename T>
+std::ostream& operator <<(std::ostream& s, Mat3<T> m) {
+    return s << "{{" << m.c1.x << ", " << m.c1.y << ", " << m.c1.z << "},"
+             << " {" << m.c2.x << ", " << m.c2.y << ", " << m.c2.z << "},"
+             << " {" << m.c3.x << ", " << m.c3.y << ", " << m.c3.z << "}}";
+}
 
 
 using Mat3f = Mat3<float>;
