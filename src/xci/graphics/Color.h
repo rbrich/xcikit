@@ -78,12 +78,15 @@ struct Color {
     /// an error message is logged and the color is set to Red.
     explicit Color(std::string_view spec);
 
-    // Convert components to linear float values (0.0 .. 1.0)
-    // See FloatColor for conversion of whole Color to float[4] format
-    float red_f() const { return to_linear_f(r); }
-    float green_f() const { return to_linear_f(g); }
-    float blue_f() const { return to_linear_f(b); }
+    // Convert components to float values (0.0 .. 1.0)
+    float red_f() const { return float(r) / 255.f; }
+    float green_f() const { return float(g) / 255.f; }
+    float blue_f() const { return float(b) / 255.f; }
     float alpha_f() const { return float(a) / 255.f; }
+    // See LinearColor for conversion of whole Color to linear float[4] format
+    float red_linear_f() const { return to_linear_f(r); }
+    float green_linear_f() const { return to_linear_f(g); }
+    float blue_linear_f() const { return to_linear_f(b); }
     static float to_linear_f(uint8_t v);
 
     // Test transparency
@@ -109,11 +112,11 @@ struct Color {
 /// RGBA color in 4x 32bit float format
 /// When constructing from Color, the values are converted from nonlinear sRGB colorspace.
 /// This format is intended for passing to GLSL shaders as vec4 uniform.
-struct FloatColor {
-    FloatColor(Color color)  // NOLINT (implicit conversion)
-            : r(color.red_f())
-            , g(color.green_f())
-            , b(color.blue_f())
+struct LinearColor {
+    LinearColor(Color color)  // NOLINT (implicit conversion)
+            : r(color.red_linear_f())
+            , g(color.green_linear_f())
+            , b(color.blue_linear_f())
             , a(color.alpha_f()) {}
 
     // Direct access to components

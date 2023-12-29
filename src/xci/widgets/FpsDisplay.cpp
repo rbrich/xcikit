@@ -24,7 +24,7 @@ FpsDisplay::FpsDisplay(Theme& theme)
           m_shader(theme.renderer().get_shader("fps", "fps")),
           m_texture(theme.renderer())
 {
-    m_texture.create({(unsigned)m_fps.resolution(), 1}, ColorFormat::Grey);
+    m_texture.create({(unsigned)m_fps.resolution(), 1}, ColorFormat::LinearGrey);
 
     // default size in "scalable" units
     set_size({25_vp, 5_vp});

@@ -332,14 +332,14 @@ void Primitives::set_uniform_data(uint32_t binding, const void* data, size_t siz
 
 void Primitives::set_uniform(uint32_t binding, Color color)
 {
-    FloatColor buf {color};
+    LinearColor buf {color};
     set_uniform_data(binding, &buf, sizeof(buf));
 }
 
 
 void Primitives::set_uniform(uint32_t binding, Color color1, Color color2)
 {
-    struct { FloatColor c1, c2; } buf { color1, color2 };
+    struct { LinearColor c1, c2; } buf { color1, color2 };
     set_uniform_data(binding, &buf, sizeof(buf));
 }
 

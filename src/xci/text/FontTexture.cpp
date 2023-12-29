@@ -18,7 +18,7 @@ FontTexture::FontTexture(Renderer& renderer, uint32_t size, bool color)
     : m_renderer(renderer),
       m_texture(m_renderer)
 {
-    if (!m_texture.create({size, size}, color ? ColorFormat::BGRA : ColorFormat::Grey))
+    if (!m_texture.create({size, size}, color ? ColorFormat::BGRA : ColorFormat::LinearGrey))
         throw std::runtime_error("Could not create font texture.");
     m_binpack.Init(int(size), int(size), false);
     m_texture.clear();

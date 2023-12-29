@@ -128,9 +128,9 @@ public:
     VertexDataBuilder& uv(Vec2f uv) { add(uv.x); add(uv.y); return *this; }
     VertexDataBuilder& uvw(float u, float v, float w) { add(u); add(v); add(w); return *this; }
     VertexDataBuilder& color(Color color) {
-        add(color.red_f());
-        add(color.green_f());
-        add(color.blue_f());
+        add(color.red_linear_f());
+        add(color.green_linear_f());
+        add(color.blue_linear_f());
         add(color.alpha_f());
         return *this;
     }

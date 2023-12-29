@@ -77,7 +77,7 @@ int main(int argc, const char* argv[])
                      VertexFormat::V2c4t2, PrimitiveType::TriFans};
 
     Texture texture{renderer};
-    texture.create({256, 256}, ColorFormat::Grey);
+    texture.create({256, 256}, ColorFormat::LinearGrey);
     generate_checkerboard(texture);
 
     prim.set_shader(renderer.get_shader("sprite_c", "sprite_c"));

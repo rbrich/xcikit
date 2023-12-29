@@ -81,7 +81,7 @@ void UniformEditor::setup_uniforms(Primitives& prim)
             using T = std::decay_t<decltype(v)>;
             const size_t ofs = buffer.size();
             if constexpr (std::is_same_v<T, Color>) {
-                const FloatColor data(v);
+                const LinearColor data(v);
                 buffer.resize(buffer.size() + sizeof(data));
                 std::memcpy(buffer.data() + ofs, &data, sizeof(data));
             } else {

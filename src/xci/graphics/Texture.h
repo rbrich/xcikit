@@ -27,9 +27,9 @@ using std::uint8_t;
 
 
 enum class ColorFormat {
-    Grey,       // 256 shades of grey
-    BGRA,       // 32bit color in linear RGB colorspace
-    BGRA_SRGB,  // 32bit color in sRGB colorspace
+    BGRA,          // 32bit color in sRGB colorspace (standard color texture)
+    LinearGrey,    // 256 shades of grey (linear intensity, e.g. font texture)
+    LinearBGRA,    // 32bit color in linear colorspace (e.g. normal-mapping texture)
 };
 
 
@@ -64,7 +64,7 @@ private:
 
 private:
     Renderer& m_renderer;
-    ColorFormat m_format = ColorFormat::Grey;
+    ColorFormat m_format = ColorFormat::LinearGrey;
     Vec2u m_size;
     VkBuffer m_staging_buffer {};
     Image m_image;

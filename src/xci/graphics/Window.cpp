@@ -529,7 +529,7 @@ void Window::draw()
         m_command_buffers.release_resources(m_current_cmd_buf);
         m_command_buffers.begin(m_current_cmd_buf);
 
-        FloatColor cc(m_clear_color);
+        LinearColor cc(m_clear_color);
         VkClearValue clear_values[2] = {
                 { .color = {cc.r, cc.g, cc.b, cc.a} },
                 { .depthStencil = {1.0f, 0} }
