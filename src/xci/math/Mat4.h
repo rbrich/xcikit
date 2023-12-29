@@ -30,6 +30,7 @@ struct Mat4 {
                    T x3, T y3, T z3, T w3,
                    T x4, T y4, T z4, T w4)
             : c1{x1, y1, z1, w1}, c2{x2, y2, z2, w2}, c3{x3, y3, z3, w3}, c4{x4, y4, z4, w4} {}
+    constexpr Mat4(const Mat3<T>& m) : c1(m.c1), c2(m.c2), c3(m.c3), c4{} {}
 
     static constexpr Mat4 identity() {
         return {

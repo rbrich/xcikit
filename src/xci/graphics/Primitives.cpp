@@ -172,21 +172,22 @@ void PrimitivesDescriptorSets::update(
         }
 
         // textures
-        VkDescriptorImageInfo image_info;  // keep alive for vkUpdateDescriptorSets()
+        std::vector<VkDescriptorImageInfo> image_info;
+        image_info.reserve(texture_bindings.size());
         for (const auto& texture_binding : texture_bindings) {
             auto* texture = texture_binding.ptr;
-            image_info = {
+            image_info.push_back({
                     .sampler = texture->vk_sampler(),
                     .imageView = texture->vk_image_view(),
                     .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            };
+            });
             write_descriptor_set.push_back(VkWriteDescriptorSet{
                     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                     .dstSet = m_descriptor_sets[i],
                     .dstBinding = texture_binding.binding,
                     .descriptorCount = 1,
                     .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    .pImageInfo = &image_info,
+                    .pImageInfo = &image_info.back(),
             });
         }
 
@@ -363,7 +364,8 @@ void Primitives::set_uniform(uint32_t binding, const Vec4f& vec)
 
 void Primitives::set_uniform(uint32_t binding, const Mat3f& mat)
 {
-    set_uniform_data(binding, mat.data(), mat.byte_size());
+    Mat4f m4(mat);
+    set_uniform_data(binding, m4.data(), m4.c1.byte_size() * 3);
 }
 
 

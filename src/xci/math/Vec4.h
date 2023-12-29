@@ -23,6 +23,7 @@ struct Vec4 {
 
     constexpr Vec4() = default;
     constexpr Vec4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
+    constexpr Vec4(const Vec3<T>& v) : x(v.x), y(v.y), z(v.z), w{} {}
 
     // Convert another type of vector (possibly foreign type)
     template <typename TVec>
