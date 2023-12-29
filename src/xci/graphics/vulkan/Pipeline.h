@@ -39,6 +39,7 @@ enum class VertexFormat : uint8_t {
     V2c44t222,  // 2 vertex coords, 2x RGBA color, 2 + 2 + 2 texture coords (all float)
 
     // 3D
+    V3n3,       // 3 vertex coords, 3 normals
     V3n3t2,     // 3 vertex coords, 3 normals, 2 tex coords
 };
 

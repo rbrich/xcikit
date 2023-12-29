@@ -210,6 +210,15 @@ void PrimitivesDescriptorSets::bind(
 // -----------------------------------------------------------------------------
 
 
+UniformDataBuilder::~UniformDataBuilder()
+{
+    m_prim.set_uniform_data(m_binding, m_data.data(), m_data.size() * sizeof(m_data.front()));
+}
+
+
+// -----------------------------------------------------------------------------
+
+
 Primitives::Primitives(Renderer& renderer,
         VertexFormat format, PrimitiveType type)
         : m_format(format), m_primitive_type(type), m_renderer(renderer)
@@ -269,6 +278,27 @@ VertexDataBuilder Primitives::add_vertex(FramebufferCoords xy)
 #else
     return VertexDataBuilder(m_vertex_data);
 #endif
+}
+
+
+VertexDataBuilder Primitives::add_vertex(const Vec3f& pos)
+{
+    m_vertex_data.push_back(pos.x);
+    m_vertex_data.push_back(pos.y);
+    m_vertex_data.push_back(pos.z);
+#ifndef NDEBUG
+    return VertexDataBuilder(m_vertex_data, get_vertex_format_stride(m_format) - 3);
+#else
+    return VertexDataBuilder(m_vertex_data);
+#endif
+}
+
+
+void Primitives::add_triangle_face(const Vec3u& indices)
+{
+    m_index_data.push_back(indices[0]);
+    m_index_data.push_back(indices[1]);
+    m_index_data.push_back(indices[2]);
 }
 
 

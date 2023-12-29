@@ -37,13 +37,13 @@ struct Vec3 {
         return {x * il, y * il, z * il};
     }
 
-    constexpr Vec3 cross(Vec3& rhs) const {
+    constexpr Vec3 cross(const Vec3& rhs) const {
         return Vec3(y * rhs.z - z * rhs.y,
                     z * rhs.x - x * rhs.z,
                     x * rhs.y - y * rhs.x);
     }
 
-    constexpr T dot(const Vec3<T>& rhs) const {
+    constexpr T dot(const Vec3& rhs) const {
         return x * rhs.x + y * rhs.y + z * rhs.z;
     }
 
@@ -53,14 +53,14 @@ struct Vec3 {
 
     constexpr const T& at(unsigned i) const { return operator[](i); }
 
-    constexpr Vec3<T>& operator +=(const Vec3<T>& rhs) {
+    constexpr Vec3& operator +=(const Vec3& rhs) {
         x += rhs.x;
         y += rhs.y;
         z += rhs.z;
         return *this;
     }
 
-    constexpr Vec3<T>& operator -=(const Vec3<T>& rhs) {
+    constexpr Vec3& operator -=(const Vec3& rhs) {
         x -= rhs.x;
         y -= rhs.y;
         z -= rhs.z;

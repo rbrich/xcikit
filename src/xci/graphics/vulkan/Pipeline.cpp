@@ -30,6 +30,7 @@ unsigned get_vertex_format_stride(VertexFormat format)
         case VertexFormat::V2c44t3: return 13;
         case VertexFormat::V2c44t22: return 14;
         case VertexFormat::V2c44t222: return 16;
+        case VertexFormat::V3n3: return 6;
         case VertexFormat::V3n3t2: return 8;
     }
     XCI_UNREACHABLE;
@@ -320,6 +321,11 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
             m_attr_descs[4] = {4, 0, VK_FORMAT_R32G32_SFLOAT, 12 * sf};
             m_attr_descs[5] = {5, 0, VK_FORMAT_R32G32_SFLOAT, 14 * sf};
             attr_desc_count = 6;
+            break;
+        case VertexFormat::V3n3:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0};
+            m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32_SFLOAT, 3 * sf};
+            attr_desc_count = 2;
             break;
         case VertexFormat::V3n3t2:
             m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0};

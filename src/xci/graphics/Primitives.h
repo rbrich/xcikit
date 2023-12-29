@@ -27,6 +27,7 @@ namespace xci::graphics {
 
 class Shader;
 class Renderer;
+class Primitives;
 
 
 enum class PrimitiveType : uint8_t {
@@ -124,6 +125,7 @@ public:
     explicit VertexDataBuilder(VertexData& data) : m_vertex_data(data) {}
 #endif
 
+    VertexDataBuilder& normal(const Vec3f& n) { add(n.x); add(n.y); add(n.z); return *this; }
     VertexDataBuilder& uv(float u, float v) { add(u); add(v); return *this; }
     VertexDataBuilder& uv(Vec2f uv) { add(uv.x); add(uv.y); return *this; }
     VertexDataBuilder& uvw(float u, float v, float w) { add(u); add(v); add(w); return *this; }
@@ -149,6 +151,32 @@ private:
 };
 
 
+class UniformDataBuilder {
+public:
+    explicit UniformDataBuilder(Primitives& prim, uint32_t binding) : m_prim(prim), m_binding(binding) {}
+    ~UniformDataBuilder();
+
+    UniformDataBuilder& f(float f) { add(f); return *this; }
+    UniformDataBuilder& vec4(const Vec4f& v) { add(v.x); add(v.y); add(v.z); add(v.w); return *this; }
+    UniformDataBuilder& mat4(const Mat4f& m) { m_data.insert(m_data.end(), m.data(), m.data() + m.size()); return *this; }
+
+    UniformDataBuilder& color(Color color) {
+        add(color.red_linear_f());
+        add(color.green_linear_f());
+        add(color.blue_linear_f());
+        add(color.alpha_f());
+        return *this;
+    }
+
+private:
+    void add(float d) { m_data.push_back(d); }
+
+    Primitives& m_prim;
+    std::vector<float> m_data;
+    uint32_t m_binding;
+};
+
+
 class Primitives: private core::NonCopyable {
 public:
     explicit Primitives(Renderer& renderer, VertexFormat format, PrimitiveType type);
@@ -163,8 +191,15 @@ public:
 
     /// Add vertex coords + data
     /// Example:
-    ///     add_vertex({0.0f, 0.0f})(Color::Black())(1.0f, 2.0f);
+    ///     add_vertex({0.0f, 0.0f}).color(Color::Black()).uv(1.0f, 2.0f);
     VertexDataBuilder add_vertex(FramebufferCoords xy);
+
+    /// Add 3D vertex
+    /// Do not use begin_primitive/end_primitive. Instead, use explicit add_triangle_face()
+    /// Example:
+    ///     add_vertex({0.0f, 0.0f, 0.0f}).uv({0.0f, 1.0f}).normal({0.0f, 1.0f, 0.0f});
+    VertexDataBuilder add_vertex(const Vec3f& pos);
+    void add_triangle_face(const Vec3u& indices);
 
     void set_vertex_data(VertexData vertex_data) { m_vertex_data = std::move(vertex_data); destroy_pipeline(); }
     void set_index_data(IndexData index_data) { m_index_data = std::move(index_data); destroy_pipeline(); }
@@ -184,6 +219,11 @@ public:
     void set_uniform(uint32_t binding, const Vec4f& vec);
     void set_uniform(uint32_t binding, const Mat3f& mat);
     void set_uniform(uint32_t binding, const Mat4f& mat);
+
+    /// Generic uniform block builder
+    /// Example:
+    ///     set_uniform(1).color(Color::White()).mat4(projection)
+    UniformDataBuilder set_uniform(uint32_t binding) { return UniformDataBuilder(*this, binding); }
 
     void set_texture(uint32_t binding, Texture& texture);
 

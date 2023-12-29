@@ -172,6 +172,7 @@ struct Mat4 {
     }
 
     constexpr const T* data() const { return arr.data(); }
+    constexpr size_t size() const { return arr.size(); }
     constexpr size_t byte_size() const { return sizeof(T) * arr.size(); }
 };
 

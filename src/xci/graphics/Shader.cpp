@@ -66,18 +66,20 @@ bool ShaderModule::create(const char* data, size_t size)
 
 bool ShaderModule::load_from_file(const fs::path& path)
 {
+    log::info("Loading shader: {}", path);
     auto code = read_spirv_file(path);
     if (code.empty())
         return false;
-    log::info("Loading shader: {}", path);
     return create(code);
 }
 
 
 bool ShaderModule::load_from_vfs(const Vfs& vfs, const std::string& path)
 {
-    auto data = vfs.read_file(path).content();
     log::info("Loading shader: {}", path);
+    auto data = vfs.read_file(path).content();
+    if (!data)
+        return false;
     return create(reinterpret_cast<const char*>(data->data()), data->size());
 }
 
