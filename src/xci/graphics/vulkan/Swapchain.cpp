@@ -205,14 +205,14 @@ bool Swapchain::query(VkPhysicalDevice device)
 
     bool fmt_found = false;
     for (const auto& fmt : formats) {
-        if (fmt.format == VK_FORMAT_B8G8R8A8_UNORM && fmt.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+        if (fmt.format == VK_FORMAT_B8G8R8A8_SRGB && fmt.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             m_surface_format = fmt;
             fmt_found = true;
             break;
         }
     }
     if (!fmt_found && format_count > 0) {
-        log::error("vulkan: surface format not supported: VK_FORMAT_B8G8R8A8_UNORM / VK_COLOR_SPACE_SRGB_NONLINEAR_KHR");
+        log::error("vulkan: surface format not supported: VK_FORMAT_B8G8R8A8_SRGB / VK_COLOR_SPACE_SRGB_NONLINEAR_KHR");
         return false;
     }
 
