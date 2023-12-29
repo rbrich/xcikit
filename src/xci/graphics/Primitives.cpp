@@ -510,6 +510,7 @@ void Primitives::update_pipeline()
     pipeline_ci.set_vertex_format(m_format);
     pipeline_ci.set_color_blend(m_blend);
     pipeline_ci.set_depth_test(m_depth_test);
+    pipeline_ci.set_sample_count(m_renderer.sample_count());
     m_pipeline = &m_renderer.get_pipeline(pipeline_ci);
 
     m_buffers = std::make_shared<PrimitivesBuffers>(m_renderer);

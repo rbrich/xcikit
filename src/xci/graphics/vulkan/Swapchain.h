@@ -25,7 +25,8 @@ enum class PresentMode : uint8_t {
 
 class Swapchain {
 public:
-    explicit Swapchain(Renderer& renderer) : m_renderer(renderer), m_depth_image(renderer) {}
+    explicit Swapchain(Renderer& renderer)
+            : m_renderer(renderer), m_depth_image(renderer), m_msaa_image(renderer) {}
     ~Swapchain() { destroy(); }
 
     void create();
@@ -41,6 +42,11 @@ public:
     /// Create depth buffer for the swapchain
     void set_depth_buffering(bool enable) { m_depth_buffering = enable; }
     bool depth_buffering() const { return m_depth_buffering; }
+
+    /// Multisampling (MSAA)
+    void set_sample_count(uint32_t count);
+    VkSampleCountFlagBits sample_count() const { return m_sample_count; }
+    bool is_multisample() const { return m_sample_count != VK_SAMPLE_COUNT_1_BIT; }
 
     void query_surface_capabilities(VkPhysicalDevice device, VkExtent2D new_size);
     bool query(VkPhysicalDevice device);
@@ -65,10 +71,15 @@ private:
     Image m_depth_image;
     ImageView m_depth_image_view;
 
+    // MSAA color buffer
+    Image m_msaa_image;
+    ImageView m_msaa_image_view;
+
     // create info
     VkSurfaceFormatKHR m_surface_format {};
     VkExtent2D m_extent {};
     uint32_t m_image_count = 0;  // <= max_image_count
+    VkSampleCountFlagBits m_sample_count = VK_SAMPLE_COUNT_1_BIT;  // MSAA
     PresentMode m_present_mode = PresentMode::Fifo;
     bool m_depth_buffering = false;  // create depth buffer?
 };

@@ -119,6 +119,7 @@ public:
     void set_vertex_format(VertexFormat format);
     void set_color_blend(BlendFunc blend_func);
     void set_depth_test(DepthTest depth_test);
+    void set_sample_count(uint32_t count) { m_multisample_ci.rasterizationSamples = (VkSampleCountFlagBits) count; }
 
     const VkGraphicsPipelineCreateInfo& vk() const { return m_pipeline_ci; }
 

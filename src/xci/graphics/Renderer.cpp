@@ -24,6 +24,7 @@
 #include <memory>
 #include <bitset>
 #include <array>
+#include <bit>
 #include <cstring>
 #include <cassert>
 
@@ -443,7 +444,7 @@ void Renderer::create_device()
         // save chosen device handle
         if (choose) {
             m_physical_device = device;
-            load_device_limits(device_props.limits);
+            load_device_properties(device_props);
         }
 
         if (m_device_id == device_props.deviceID && !choose) {
@@ -526,22 +527,24 @@ void Renderer::destroy_device()
 
 void Renderer::create_renderpass()
 {
-    const VkAttachmentDescription attachment[2] = {
+    const VkAttachmentDescription attachment[] = {
         // color attachment
         {
             .format = m_swapchain.vk_surface_format().format,
-            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .samples = m_swapchain.sample_count(),
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            .finalLayout = m_swapchain.is_multisample() ?
+                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL :
+                            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
         },
         // depth attachment
         {
             .format = VK_FORMAT_D32_SFLOAT,
-            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .samples = m_swapchain.sample_count(),
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
             .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -549,6 +552,17 @@ void Renderer::create_renderpass()
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
             .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         },
+        // resolve attachment for MSAA
+        {
+            .format = m_swapchain.vk_surface_format().format,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+       }
     };
 
     const VkAttachmentReference color_attachment_ref = {
@@ -559,11 +573,16 @@ void Renderer::create_renderpass()
             .attachment = 1,
             .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
     };
+    const VkAttachmentReference resolve_attachment_ref = {
+            .attachment = 2,
+            .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    };
 
     const VkSubpassDescription subpass = {
             .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
             .colorAttachmentCount = 1,
             .pColorAttachments = &color_attachment_ref,
+            .pResolveAttachments = m_swapchain.is_multisample() ? &resolve_attachment_ref : nullptr,
             .pDepthStencilAttachment = depth_buffering() ? &depth_attachment_ref : nullptr,
     };
 
@@ -581,7 +600,7 @@ void Renderer::create_renderpass()
 
     const VkRenderPassCreateInfo render_pass_ci = {
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-            .attachmentCount = 1 + uint32_t(depth_buffering()),
+            .attachmentCount = 1 + uint32_t(depth_buffering()) + uint32_t(m_swapchain.is_multisample()),
             .pAttachments = attachment,
             .subpassCount = 1,
             .pSubpasses = &subpass,
@@ -628,10 +647,16 @@ Renderer::query_queue_families(VkPhysicalDevice device)
 }
 
 
-void Renderer::load_device_limits(const VkPhysicalDeviceLimits& limits)
+void Renderer::load_device_properties(const VkPhysicalDeviceProperties& props)
 {
-    m_max_image_dimension_2d = limits.maxImageDimension2D;
-    m_min_uniform_offset_alignment = limits.minUniformBufferOffsetAlignment;
+    m_max_image_dimension_2d = props.limits.maxImageDimension2D;
+    m_min_uniform_offset_alignment = props.limits.minUniformBufferOffsetAlignment;
+
+    // Max sample count for combined color & depth buffer
+    VkSampleCountFlags flags = props.limits.framebufferColorSampleCounts &
+                               props.limits.framebufferDepthSampleCounts;
+    m_max_sample_count = (VkSampleCountFlagBits) std::bit_floor(flags);
+    set_sample_count(std::min(sample_count(), max_sample_count()));
 }
 
 

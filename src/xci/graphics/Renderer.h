@@ -53,6 +53,11 @@ public:
     void set_depth_buffering(bool enable) { m_swapchain.set_depth_buffering(enable); }
     bool depth_buffering() const { return m_swapchain.depth_buffering(); }
 
+    /// Multisampling (MSAA)
+    void set_sample_count(uint32_t count) { m_swapchain.set_sample_count(count); }
+    uint32_t sample_count() const { return m_swapchain.sample_count(); }
+    uint32_t max_sample_count() const { return uint32_t(m_max_sample_count); }
+
     void set_device_id(uint32_t device_id) { m_device_id = device_id; }
 
     // -------------------------------------------------------------------------
@@ -131,7 +136,7 @@ private:
 
     std::optional<uint32_t> query_queue_families(VkPhysicalDevice device);
 
-    void load_device_limits(const VkPhysicalDeviceLimits& limits);
+    void load_device_properties(const VkPhysicalDeviceProperties& props);
 
     Vfs& m_vfs;
     std::map<std::string, ShaderModule> m_shader_module = {};
@@ -159,6 +164,7 @@ private:
     // Device limits
     uint32_t m_max_image_dimension_2d = 0;
     VkDeviceSize m_min_uniform_offset_alignment = 0;
+    VkSampleCountFlagBits m_max_sample_count = VK_SAMPLE_COUNT_1_BIT;  // for MSAA
 };
 
 

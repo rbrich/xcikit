@@ -20,6 +20,8 @@ class ImageCreateInfo {
 public:
     ImageCreateInfo(const Vec2u& size, VkFormat format, VkImageUsageFlags usage);
 
+    ImageCreateInfo& set_samples(VkSampleCountFlagBits samples) { m_image_ci.samples = samples; return *this; }
+
     const VkImageCreateInfo& vk() const { return m_image_ci; }
 
 private:

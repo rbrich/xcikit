@@ -9,6 +9,7 @@
 #include <xci/graphics/Primitives.h>
 #include <xci/graphics/shape/Rectangle.h>
 #include <xci/math/transform.h>
+#include <xci/core/log.h>
 #include <xci/config.h>
 
 #include <numbers>
@@ -73,8 +74,14 @@ int main(int, const char* argv[])
     Renderer renderer(vfs);
     renderer.set_depth_buffering(true);
 
+    // MSAA must be set before creating window. The max_sample_count() will be known after that,
+    // but you can safely set more samples than supported, the value will be capped to max_sample_count.
+    renderer.set_sample_count(8);
+
     Window window {renderer};
     setup_window(window, "XCI 3D Demo", argv);
+
+    log::info("Multisampling: {}", renderer.sample_count());
 
     // Low-level object for drawing primitives (3D triangles)
     Primitives prim {renderer, VertexFormat::V3n3, PrimitiveType::TriList};

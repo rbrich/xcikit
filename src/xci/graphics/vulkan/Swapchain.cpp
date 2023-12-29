@@ -88,10 +88,22 @@ void Swapchain::create()
     }
 
     if (m_depth_buffering) {
-        m_depth_image.create({{m_extent.width, m_extent.height}, VK_FORMAT_D32_SFLOAT,
-                              VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT});
+        ImageCreateInfo image_ci{{m_extent.width, m_extent.height}, VK_FORMAT_D32_SFLOAT,
+                                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT};
+        image_ci.set_samples(m_sample_count);
+        m_depth_image.create(image_ci);
         m_depth_image_view.create(device, m_depth_image.vk(), VK_FORMAT_D32_SFLOAT,
                                   VK_IMAGE_ASPECT_DEPTH_BIT);
+    }
+
+    if (is_multisample()) {
+        ImageCreateInfo image_ci{{m_extent.width, m_extent.height}, m_surface_format.format,
+                                 VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
+                                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT};
+        image_ci.set_samples(m_sample_count);
+        m_msaa_image.create(image_ci);
+        m_msaa_image_view.create(device, m_msaa_image.vk(), m_surface_format.format,
+                                  VK_IMAGE_ASPECT_COLOR_BIT);
     }
 }
 
@@ -103,6 +115,8 @@ void Swapchain::destroy()
         for (auto image_view : m_image_views | take(m_image_count)) {
             image_view.destroy(device);
         }
+        m_msaa_image_view.destroy(device);
+        m_msaa_image.destroy();
         m_depth_image_view.destroy(device);
         m_depth_image.destroy();
         vkDestroySwapchainKHR(device, m_swapchain, nullptr);
@@ -114,12 +128,16 @@ void Swapchain::destroy()
 void Swapchain::create_framebuffers()
 {
     for (size_t i = 0; i < m_image_count; i++) {
-        VkImageView attachments[] = { m_image_views[i].vk(), m_depth_image_view.vk() };
+        VkImageView attachments[3] = { m_image_views[i].vk(), m_depth_image_view.vk(), nullptr};
+        if (is_multisample()) {
+            attachments[0] = m_msaa_image_view.vk();  // use multisample image as color attachment
+            attachments[2] = m_image_views[i].vk();  // resolve color to buffer for presentation
+        }
 
         const VkFramebufferCreateInfo framebuffer_ci = {
                 .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
                 .renderPass = m_renderer.vk_render_pass(),
-                .attachmentCount = 1 + uint32_t(m_depth_buffering),
+                .attachmentCount = 1 + uint32_t(m_depth_buffering) + uint32_t(is_multisample()),
                 .pAttachments = attachments,
                 .width = m_extent.width,
                 .height = m_extent.height,
@@ -169,6 +187,14 @@ void Swapchain::set_present_mode(PresentMode mode)
         VK_THROW("vulkan: physical device no longer usable");
 
     recreate();
+}
+
+
+void Swapchain::set_sample_count(uint32_t count)
+{
+    // Let's assume the VkSampleCountFlagBits values are same as actual sample count
+    m_sample_count = (VkSampleCountFlagBits) std::min(std::max(count, 1u),
+                                                      uint32_t(VK_SAMPLE_COUNT_64_BIT));
 }
 
 
