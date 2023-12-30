@@ -34,7 +34,7 @@ ImageCreateInfo::ImageCreateInfo(const Vec2u& size, VkFormat format,
 {}
 
 
-void Image::create(const ImageCreateInfo& image_ci)
+void Image::create(const ImageCreateInfo& image_ci, VkMemoryPropertyFlags memory_props)
 {
     auto* device = m_renderer.vk_device();
     VK_TRY("vkCreateImage",
@@ -45,7 +45,7 @@ void Image::create(const ImageCreateInfo& image_ci)
 
     auto offset = m_image_memory.reserve(mem_req);
     assert(offset == 0);
-    m_image_memory.allocate(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    m_image_memory.allocate(memory_props);
     m_image_memory.bind_image(m_image, offset);
 }
 

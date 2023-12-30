@@ -89,9 +89,10 @@ void Swapchain::create()
 
     if (m_depth_buffering) {
         ImageCreateInfo image_ci{{m_extent.width, m_extent.height}, VK_FORMAT_D32_SFLOAT,
+                                 VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
                                  VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT};
         image_ci.set_samples(m_sample_count);
-        m_depth_image.create(image_ci);
+        m_depth_image.create(image_ci, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT);
         m_depth_image_view.create(device, m_depth_image.vk(), VK_FORMAT_D32_SFLOAT,
                                   VK_IMAGE_ASPECT_DEPTH_BIT);
     }
@@ -101,7 +102,7 @@ void Swapchain::create()
                                  VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
                                  VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT};
         image_ci.set_samples(m_sample_count);
-        m_msaa_image.create(image_ci);
+        m_msaa_image.create(image_ci, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT);
         m_msaa_image_view.create(device, m_msaa_image.vk(), m_surface_format.format,
                                   VK_IMAGE_ASPECT_COLOR_BIT);
     }

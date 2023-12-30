@@ -102,15 +102,33 @@ void DeviceMemory::unmap()
 }
 
 
+static uint32_t lookup_memory_type(const VkPhysicalDeviceMemoryProperties& mem_props,
+                              VkMemoryPropertyFlags properties, uint32_t type_bits)
+{
+    for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) {
+        if ((type_bits & (1 << i))
+            && (mem_props.memoryTypes[i].propertyFlags & properties) == properties)
+            return i;
+    }
+    return ~0u;
+}
+
+
 uint32_t DeviceMemory::find_memory_type(VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties mem_props;
     vkGetPhysicalDeviceMemoryProperties(m_renderer.vk_physical_device(), &mem_props);
 
-    for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) {
-        if ((m_type_bits & (1 << i))
-            && (mem_props.memoryTypes[i].propertyFlags & properties) == properties)
-            return i;
+    auto found = lookup_memory_type(mem_props, properties, m_type_bits);
+    if (found != ~0u)
+        return found;
+
+    // VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT is optional, try again without it
+    if (properties & VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT) {
+        properties ^= VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
+        found = lookup_memory_type(mem_props, properties, m_type_bits);
+        if (found != ~0u)
+            return found;
     }
 
     VK_THROW("vkGetPhysicalDeviceMemoryProperties didn't return suitable memory type");

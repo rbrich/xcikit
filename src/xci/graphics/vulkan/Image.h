@@ -35,7 +35,8 @@ public:
     explicit Image(Renderer& renderer, const ImageCreateInfo& image_ci) : Image(renderer) { create(image_ci); }
     ~Image() { destroy(); }
 
-    void create(const ImageCreateInfo& image_ci);
+    void create(const ImageCreateInfo& image_ci,
+                VkMemoryPropertyFlags memory_props = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     void destroy();
 
     VkImage vk() const { return m_image; }

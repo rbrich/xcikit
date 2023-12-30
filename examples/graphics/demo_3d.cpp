@@ -6,6 +6,7 @@
 
 #include "common.h"
 
+#include <xci/widgets/FpsDisplay.h>
 #include <xci/graphics/Primitives.h>
 #include <xci/graphics/shape/Rectangle.h>
 #include <xci/math/transform.h>
@@ -17,6 +18,7 @@
 
 using namespace xci;
 using namespace xci::graphics::unit_literals;
+using namespace xci::widgets;
 
 
 static void create_unit_cube(Primitives& prim)
@@ -89,6 +91,13 @@ int main(int, const char* argv[])
     prim.set_depth_test(DepthTest::Less);
     prim.set_shader(renderer.get_shader("phong", "phong"));
 
+    Theme theme(renderer);
+    if (!theme.load_default())
+        return EXIT_FAILURE;
+
+    FpsDisplay fps_display(theme);
+    fps_display.set_position({-60_vp, 45_vp});
+
     float elapsed_acc = 0;
 
     auto projection = Mat4f::identity();
@@ -104,7 +113,7 @@ int main(int, const char* argv[])
         const Color light_ambient(0.0, 0.2, 0.0);
         const Color light_diffuse(0.5, 0.7, 0.5);
         const Color light_specular(0.6, 1.0, 0.6);
-        const float light_quad_att = 0.1;
+        const float light_quad_att = 0.1f;
 
         const Color mat_ambient(1.0, 1.0, 1.0);
         const Color mat_diffuse(1.0, 1.0, 1.0);
@@ -117,6 +126,8 @@ int main(int, const char* argv[])
                 .f(light_quad_att);
         prim.set_uniform(2).color(mat_ambient).color(mat_diffuse).color(mat_specular).f(mat_shininess);
         prim.update();
+
+        fps_display.resize(view);
     });
 
     window.set_update_callback([&](View& view, std::chrono::nanoseconds elapsed) {
@@ -129,14 +140,18 @@ int main(int, const char* argv[])
 
         prim.set_uniform(0).mat4(modelview_matrix).mat4(normal_matrix).mat4(projection);
         prim.update();
+
+        fps_display.update(view, State{ elapsed });
     });
 
     window.set_draw_callback([&](View& view) {
         prim.draw(view, PrimitiveDrawFlags::FlipViewportY);
+        fps_display.draw(view);
     });
 
     window.set_clear_color(Color(0.1, 0.0, 0.0));
     window.set_refresh_mode(RefreshMode::Periodic);
+    renderer.set_present_mode(PresentMode::Immediate);
     window.display();
     return EXIT_SUCCESS;
 }

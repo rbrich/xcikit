@@ -9,7 +9,6 @@
 
 #include <xci/config.h>
 #include <xci/core/log.h>
-#include <xci/compat/macros.h>
 
 #include <SDL.h>
 #include <SDL_vulkan.h>
@@ -533,7 +532,8 @@ void Renderer::create_renderpass()
             .format = m_swapchain.vk_surface_format().format,
             .samples = m_swapchain.sample_count(),
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .storeOp = m_swapchain.is_multisample() ? VK_ATTACHMENT_STORE_OP_DONT_CARE :
+                                                      VK_ATTACHMENT_STORE_OP_STORE,
             .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
