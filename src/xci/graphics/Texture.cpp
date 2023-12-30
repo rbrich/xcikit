@@ -53,26 +53,6 @@ bool Texture::create(const Vec2u& size, ColorFormat format)
     m_image.create({size, vk_format(), VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT});
     m_image_view.create(device(), m_image.vk(), vk_format(), VK_IMAGE_ASPECT_COLOR_BIT);
 
-    // sampler
-    VkSamplerCreateInfo sampler_ci = {
-            .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-            .magFilter = VK_FILTER_LINEAR,
-            .minFilter = VK_FILTER_LINEAR,
-            .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-            .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-            .anisotropyEnable = VK_FALSE,
-            .maxAnisotropy = 1.0,
-            .compareEnable = VK_FALSE,
-            .compareOp = VK_COMPARE_OP_ALWAYS,
-            .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
-            .unnormalizedCoordinates = VK_FALSE,
-    };
-
-    VK_TRY("vkCreateSampler",
-            vkCreateSampler(device(), &sampler_ci, nullptr,
-                    &m_sampler));
-
     return true;
 }
 
@@ -205,7 +185,6 @@ void Texture::destroy()
         m_staging_memory.unmap();
         m_staging_mapped = nullptr;
     }
-    vkDestroySampler(device(), m_sampler, nullptr);
     vkDestroyBuffer(device(), m_staging_buffer, nullptr);
     m_image_view.destroy(device());
 }

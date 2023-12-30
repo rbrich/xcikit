@@ -6,6 +6,7 @@
 
 #include "Font.h"
 
+#include <xci/graphics/Renderer.h>
 #include <xci/text/FontLibrary.h>
 #include <xci/text/FontTexture.h>
 #include <xci/core/log.h>
@@ -13,12 +14,17 @@
 namespace xci::text {
 
 using namespace xci::core;
+using namespace xci::graphics;
 
 
 // ctor+dtor have to be implemented in cpp file
 // to allow use of forward declaration in unique_ptr<FontTexture>
 Font::Font(Renderer& renderer, uint32_t texture_size)
-    : m_renderer(renderer), m_texture_size(texture_size) {}
+    : m_renderer(renderer),
+      m_sampler(renderer.get_sampler(SamplerAddressMode::ClampToEdge)),
+      m_texture_size(texture_size)
+{}
+
 Font::~Font() = default;
 
 

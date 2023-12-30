@@ -111,7 +111,7 @@ void Word::update(const graphics::View& target)
     }
 
     auto render_sprites = [&](std::optional<graphics::Sprites>& sprites, graphics::Color color) {
-        sprites.emplace(renderer, font->texture(), color);
+        sprites.emplace(renderer, font->texture(), font->sampler(), color);
 
         FramebufferCoords pen;
         for (const auto& shaped_glyph : m_shaped) {

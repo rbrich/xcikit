@@ -175,10 +175,9 @@ void PrimitivesDescriptorSets::update(
         std::vector<VkDescriptorImageInfo> image_info;
         image_info.reserve(texture_bindings.size());
         for (const auto& texture_binding : texture_bindings) {
-            auto* texture = texture_binding.ptr;
             image_info.push_back({
-                    .sampler = texture->vk_sampler(),
-                    .imageView = texture->vk_image_view(),
+                    .sampler = texture_binding.sampler->vk(),
+                    .imageView = texture_binding.texture->vk_image_view(),
                     .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
             });
             write_descriptor_set.push_back(VkWriteDescriptorSet{
@@ -221,7 +220,7 @@ UniformDataBuilder::~UniformDataBuilder()
 
 Primitives::Primitives(Renderer& renderer,
         VertexFormat format, PrimitiveType type)
-        : m_format(format), m_primitive_type(type), m_renderer(renderer)
+        : m_renderer(renderer), m_format(format), m_primitive_type(type)
 {}
 
 
@@ -319,16 +318,23 @@ void Primitives::set_shader(Shader shader)
 }
 
 
-void Primitives::set_texture(uint32_t binding, Texture& texture)
+void Primitives::set_texture(uint32_t binding, Texture& texture, Sampler& sampler)
 {
     const auto it = std::find_if(m_textures.begin(), m_textures.end(),
                  [binding](const TextureBinding& t) { return t.binding == binding; });
     if (it == m_textures.end()) {
-        m_textures.push_back({binding, &texture});
+        m_textures.push_back({binding, &texture, &sampler});
     } else {
-        it->ptr = &texture;
+        it->texture = &texture;
+        it->sampler = &sampler;
     }
     destroy_pipeline();
+}
+
+
+void Primitives::set_texture(uint32_t binding, Texture& texture)
+{
+    set_texture(binding, texture, m_renderer.get_sampler());
 }
 
 
@@ -427,7 +433,7 @@ void Primitives::update()
         update_pipeline();
     }
     for (const auto& texture : m_textures) {
-        texture.ptr->update();
+        texture.texture->update();
     }
 }
 

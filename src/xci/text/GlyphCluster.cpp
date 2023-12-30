@@ -1,7 +1,7 @@
 // GlyphCluster.cpp created on 2019-12-16 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "GlyphCluster.h"
@@ -16,7 +16,7 @@ using namespace xci::core;
 
 
 GlyphCluster::GlyphCluster(graphics::Renderer& renderer, Font& font)
-    : m_font(font), m_sprites(renderer, font.texture())
+    : m_font(font), m_sprites(renderer, font.texture(), font.sampler())
 {}
 
 

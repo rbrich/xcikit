@@ -54,7 +54,6 @@ public:
     ColorFormat color_format() const { return m_format; }
 
     // Vulkan handles
-    VkSampler vk_sampler() const { return m_sampler; }
     VkImageView vk_image_view() const { return m_image_view.vk(); }
 
 private:
@@ -70,7 +69,6 @@ private:
     Image m_image;
     ImageView m_image_view;
     VkImageLayout m_image_layout { VK_IMAGE_LAYOUT_UNDEFINED };
-    VkSampler m_sampler {};
     DeviceMemory m_staging_memory;  // FIXME: pool the memory
     void* m_staging_mapped = nullptr;
     std::vector<Rect_u> m_pending_regions;

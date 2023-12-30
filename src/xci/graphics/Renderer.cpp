@@ -259,6 +259,24 @@ ShaderModule* Renderer::load_shader_module(const std::string& vfs_path)
 }
 
 
+Sampler& Renderer::get_sampler(SamplerAddressMode address_mode, float anisotropy)
+{
+    SamplerCreateInfo ci(address_mode, std::min(anisotropy, m_max_sampler_anisotropy));
+    auto [it, added] = m_sampler.try_emplace(ci);
+    if (added)
+        it->second.create(vk_device(), ci);
+    return it->second;
+}
+
+
+void Renderer::clear_sampler_cache()
+{
+    for (auto&& [ci, sampler] : m_sampler)
+        sampler.destroy(vk_device());
+    m_sampler.clear();
+}
+
+
 PipelineLayout& Renderer::get_pipeline_layout(const PipelineLayoutCreateInfo& ci)
 {
     auto [it, added] = m_pipeline_layout.try_emplace(ci, *this, ci);
@@ -344,6 +362,7 @@ void Renderer::destroy_surface()
         return;
 
     clear_shader_cache();
+    clear_sampler_cache();
     clear_pipeline_cache();
     clear_descriptor_pool_cache();
     m_swapchain.destroy_framebuffers();
@@ -651,6 +670,7 @@ void Renderer::load_device_properties(const VkPhysicalDeviceProperties& props)
 {
     m_max_image_dimension_2d = props.limits.maxImageDimension2D;
     m_min_uniform_offset_alignment = props.limits.minUniformBufferOffsetAlignment;
+    m_max_sampler_anisotropy = props.limits.maxSamplerAnisotropy;
 
     // Max sample count for combined color & depth buffer
     VkSampleCountFlags flags = props.limits.framebufferColorSampleCounts &

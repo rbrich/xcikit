@@ -87,7 +87,7 @@ int main(int argc, const char* argv[])
     info_text.set_color(Color(200, 100, 50));
     info_text.set_font_size(3.5_vp);
 
-    Sprites font_texture(renderer, font.texture(), Color(0, 50, 255));
+    Sprites font_texture(renderer, font.texture(), font.sampler(), Color(0, 50, 255));
 
     window.set_key_callback([&](View& view, KeyEvent ev) {
         if (ev.action != Action::Press)

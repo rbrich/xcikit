@@ -85,7 +85,7 @@ int main(int argc, const char* argv[])
     help_text_3.set_color(Color(200, 100, 50));
     help_text_3.set_font_size(3_vp);
 
-    Sprites font_texture(renderer, font.texture(), Color(0, 50, 255));
+    Sprites font_texture(renderer, font.texture(), font.sampler(), Color(0, 50, 255));
 
     View::DebugFlags debug_flags = 0;
     window.set_key_callback([&](View& view, KeyEvent ev) {

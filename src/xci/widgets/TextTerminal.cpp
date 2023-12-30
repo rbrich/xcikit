@@ -607,8 +607,8 @@ void terminal::Caret::draw(View& view, VariCoords pos)
 
 TextTerminal::TextTerminal(Theme& theme)
         : Widget(theme),
-          m_sprites(theme.renderer(), theme.base_font().texture(), Color(7)),
-          m_emoji_sprites(theme.renderer(), theme.emoji_font().texture(), Color(7)),
+          m_sprites(theme.renderer(), theme.base_font().texture(), theme.base_font().sampler(), Color(7)),
+          m_emoji_sprites(theme.renderer(), theme.emoji_font().texture(), theme.emoji_font().sampler(), Color(7)),
           m_boxes(theme.renderer()),
           m_caret(theme.renderer()),
           m_frame(theme.renderer())

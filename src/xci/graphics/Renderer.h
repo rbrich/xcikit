@@ -14,6 +14,7 @@
 #include <xci/graphics/vulkan/Swapchain.h>
 #include <xci/graphics/vulkan/Pipeline.h>
 #include <xci/graphics/vulkan/DescriptorPool.h>
+#include <xci/graphics/vulkan/Sampler.h>
 
 #include <vulkan/vulkan.h>
 
@@ -83,6 +84,20 @@ public:
     void clear_shader_cache() { m_shader_module.clear(); }
 
     // -------------------------------------------------------------------------
+    // Samplers
+
+    float max_sampler_anisotropy() const { return m_max_sampler_anisotropy; }
+
+    /// Get existing sampler or create a new one.
+    /// \param address_mode     Addressing mode for both U, V coords
+    /// \param anisotropy       Max anisotropy level. Use 0.f to disable.
+    ///                         Capped at max_sampler_anisotropy(), which is usually 16.
+    Sampler& get_sampler(SamplerAddressMode address_mode = SamplerAddressMode::ClampToEdge,
+                         float anisotropy = 0.f);
+
+    void clear_sampler_cache();
+
+    // -------------------------------------------------------------------------
     // Pipelines
 
     PipelineLayout& get_pipeline_layout(const PipelineLayoutCreateInfo& ci);
@@ -141,9 +156,11 @@ private:
     Vfs& m_vfs;
     std::map<std::string, ShaderModule> m_shader_module = {};
 
+    // Vulkan object deduplication caches
     std::unordered_map<PipelineLayoutCreateInfo, PipelineLayout> m_pipeline_layout;
     std::unordered_map<PipelineCreateInfo, Pipeline> m_pipeline;
     std::unordered_map<DescriptorPoolSizes, std::vector<DescriptorPool>> m_descriptor_pool;
+    std::unordered_map<SamplerCreateInfo, Sampler> m_sampler;
 
     VkInstance m_instance {};
     VkSurfaceKHR m_surface {};
@@ -164,6 +181,7 @@ private:
     // Device limits
     uint32_t m_max_image_dimension_2d = 0;
     VkDeviceSize m_min_uniform_offset_alignment = 0;
+    float m_max_sampler_anisotropy = 1.0;
     VkSampleCountFlagBits m_max_sample_count = VK_SAMPLE_COUNT_1_BIT;  // for MSAA
 };
 

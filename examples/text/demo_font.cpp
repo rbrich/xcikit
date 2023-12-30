@@ -89,8 +89,8 @@ int main(int argc, const char* argv[])
         help_text.layout().update(view);
     };
 
-    Sprites font_texture(renderer, font.texture(), Color::Blue());
-    Sprites emoji_font_texture(renderer, emoji_font.texture(), Color::Blue());
+    Sprites font_texture(renderer, font.texture(), font.sampler(), Color::Blue());
+    Sprites emoji_font_texture(renderer, emoji_font.texture(), emoji_font.sampler(), Color::Blue());
 
     Rectangle rects(renderer);
 

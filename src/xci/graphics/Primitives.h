@@ -12,6 +12,7 @@
 #include "Color.h"
 #include "Shader.h"
 #include "Texture.h"
+#include "vulkan/Sampler.h"
 #include "vulkan/DeviceMemory.h"
 #include "vulkan/Pipeline.h"
 #include "vulkan/DescriptorPool.h"
@@ -54,7 +55,8 @@ struct UniformBinding {
 
 struct TextureBinding {
     uint32_t binding = 0;
-    Texture* ptr = nullptr;
+    Texture* texture = nullptr;
+    Sampler* sampler = nullptr;
 };
 
 
@@ -225,7 +227,8 @@ public:
     ///     set_uniform(1).color(Color::White()).mat4(projection)
     UniformDataBuilder set_uniform(uint32_t binding) { return UniformDataBuilder(*this, binding); }
 
-    void set_texture(uint32_t binding, Texture& texture);
+    void set_texture(uint32_t binding, Texture& texture, Sampler& sampler);
+    void set_texture(uint32_t binding, Texture& texture);  // use default sampler
 
     void set_blend(BlendFunc func);
     void set_depth_test(DepthTest depth_test);
@@ -242,6 +245,8 @@ private:
     VkDeviceSize align_uniform(VkDeviceSize offset);
 
 private:
+    Renderer& m_renderer;
+
     VertexFormat m_format;
     [[maybe_unused]] PrimitiveType m_primitive_type;
     int m_closed_vertices = 0;
@@ -253,15 +258,12 @@ private:
     std::vector<TextureBinding> m_textures;
     BlendFunc m_blend = BlendFunc::Off;
     DepthTest m_depth_test = DepthTest::Off;
-
-    Renderer& m_renderer;
     Shader m_shader;
 
     PipelineLayout* m_pipeline_layout = nullptr;
     SharedDescriptorPool m_descriptor_pool;
     PrimitivesBuffersPtr m_buffers;
     PrimitivesDescriptorSetsPtr m_descriptor_sets;
-
     Pipeline* m_pipeline = nullptr;
 };
 

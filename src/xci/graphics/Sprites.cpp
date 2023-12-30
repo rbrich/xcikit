@@ -11,8 +11,8 @@
 namespace xci::graphics {
 
 
-Sprites::Sprites(Renderer& renderer, Texture& texture, Color color)
-        : m_texture(texture), m_color(color),
+Sprites::Sprites(Renderer& renderer, Texture& texture, Sampler& sampler, Color color)
+        : m_texture(texture), m_sampler(sampler), m_color(color),
           m_quads(renderer, VertexFormat::V2t2, PrimitiveType::TriFans),
           m_shader(renderer.get_shader("sprite",
                       texture.color_format() == ColorFormat::LinearGrey ? "sprite_r" : "sprite"))
@@ -59,7 +59,7 @@ void Sprites::update()
     m_quads.clear_uniforms();
     m_quads.set_uniform(1, m_color);
     m_quads.set_blend(BlendFunc::AlphaBlend);
-    m_quads.set_texture(2, m_texture);
+    m_quads.set_texture(2, m_texture, m_sampler);
     m_quads.set_shader(m_shader);
     m_quads.update();
 }
@@ -75,8 +75,8 @@ void Sprites::draw(View& view, VariCoords pos)
 
 
 ColoredSprites::ColoredSprites(Renderer& renderer,
-                               Texture& texture, Color color)
-    : m_texture(texture), m_color(color),
+                               Texture& texture, Sampler& sampler, Color color)
+    : m_texture(texture), m_sampler(sampler), m_color(color),
       m_quads(renderer, VertexFormat::V2c4t2, PrimitiveType::TriFans),
       m_shader(renderer.get_shader("sprite_c", "sprite_c"))
 {}
@@ -119,7 +119,7 @@ void ColoredSprites::add_sprite(const FramebufferRect& rect, const Rect_u& texre
 
 void ColoredSprites::update()
 {
-    m_quads.set_texture(1, m_texture);
+    m_quads.set_texture(1, m_texture, m_sampler);
     m_quads.set_shader(m_shader);
     m_quads.set_blend(BlendFunc::AlphaBlend);
     m_quads.update();
