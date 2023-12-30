@@ -18,7 +18,8 @@ namespace xci::graphics {
 class Line: public UniformColorShape {
 public:
     explicit Line(Renderer& renderer)
-    : UniformColorShape(renderer, VertexFormat::V2t2, PrimitiveType::TriFans, ShaderId::Line) {}
+    : UniformColorShape(renderer, VertexFormat::V2t2, PrimitiveType::TriFans,
+                        "line", "line") {}
 
     /// Reserve memory for a number of lines.
     void reserve(size_t lines) { m_primitives.reserve(4 * lines); }
@@ -49,7 +50,8 @@ public:
 class ColoredLine: public VaryingColorShape {
 public:
     explicit ColoredLine(Renderer& renderer)
-    : VaryingColorShape(renderer, VertexFormat::V2c44t2, PrimitiveType::TriFans, ShaderId::LineC) {}
+    : VaryingColorShape(renderer, VertexFormat::V2c44t2, PrimitiveType::TriFans,
+                        "line_c", "line_c") {}
 
     /// Reserve memory for a number of lines.
     void reserve(size_t lines) { m_primitives.reserve(4 * lines); }

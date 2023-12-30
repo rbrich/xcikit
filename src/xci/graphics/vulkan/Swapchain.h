@@ -7,6 +7,7 @@
 #ifndef XCI_GRAPHICS_VULKAN_SWAPCHAIN_H
 #define XCI_GRAPHICS_VULKAN_SWAPCHAIN_H
 
+#include "Image.h"
 #include <vulkan/vulkan.h>
 
 namespace xci::graphics {
@@ -24,7 +25,8 @@ enum class PresentMode : uint8_t {
 
 class Swapchain {
 public:
-    explicit Swapchain(Renderer& renderer) : m_renderer(renderer) {}
+    explicit Swapchain(Renderer& renderer)
+            : m_renderer(renderer), m_depth_image(renderer), m_msaa_image(renderer) {}
     ~Swapchain() { destroy(); }
 
     void create();
@@ -36,6 +38,15 @@ public:
 
     void set_present_mode(PresentMode mode);
     PresentMode present_mode() const { return m_present_mode; }
+
+    /// Create depth buffer for the swapchain
+    void set_depth_buffering(bool enable) { m_depth_buffering = enable; }
+    bool depth_buffering() const { return m_depth_buffering; }
+
+    /// Multisampling (MSAA)
+    void set_sample_count(uint32_t count);
+    VkSampleCountFlagBits sample_count() const { return m_sample_count; }
+    bool is_multisample() const { return m_sample_count != VK_SAMPLE_COUNT_1_BIT; }
 
     void query_surface_capabilities(VkPhysicalDevice device, VkExtent2D new_size);
     bool query(VkPhysicalDevice device);
@@ -53,14 +64,24 @@ private:
 
     static constexpr uint32_t max_image_count = 8;
     VkImage m_images[max_image_count] {};
-    VkImageView m_image_views[max_image_count] {};
+    ImageView m_image_views[max_image_count];
     VkFramebuffer m_framebuffers[max_image_count] {};
+
+    // depth buffer
+    Image m_depth_image;
+    ImageView m_depth_image_view;
+
+    // MSAA color buffer
+    Image m_msaa_image;
+    ImageView m_msaa_image_view;
 
     // create info
     VkSurfaceFormatKHR m_surface_format {};
     VkExtent2D m_extent {};
-    PresentMode m_present_mode = PresentMode::Fifo;
     uint32_t m_image_count = 0;  // <= max_image_count
+    VkSampleCountFlagBits m_sample_count = VK_SAMPLE_COUNT_1_BIT;  // MSAA
+    PresentMode m_present_mode = PresentMode::Fifo;
+    bool m_depth_buffering = false;  // create depth buffer?
 };
 
 

@@ -7,11 +7,11 @@
 #ifndef XCI_MATH_VEC2_H
 #define XCI_MATH_VEC2_H
 
-#include <xci/compat/macros.h>
-#include <cmath>
+#include <array>
 #include <algorithm>
 #include <ostream>
 #include <cstdint>
+#include <cmath>
 
 namespace xci {
 
@@ -28,10 +28,12 @@ typename T::numeric_type cast_to_numeric(T var)
 
 template <typename T>
 struct Vec2 {
-    T x {};
-    T y {};
+    union {
+        struct { T x, y; };
+        std::array<T, 2> arr;
+    };
 
-    constexpr Vec2() = default;
+    constexpr Vec2() : arr({}) {}
     constexpr Vec2(T x, T y) : x(x), y(y) {}
 
     // Convert another type of vector (possibly foreign type)
@@ -91,25 +93,15 @@ struct Vec2 {
         return *this;
     }
 
-    constexpr T& operator[] (unsigned i) {
-        switch (i) {
-            case 0: return x;
-            case 1: return y;
-        }
-        XCI_UNREACHABLE;
-    }
-
-    constexpr const T& operator[] (unsigned i) const {
-        switch (i) {
-            case 0: return x;
-            case 1: return y;
-        }
-        XCI_UNREACHABLE;
-    }
+    constexpr T& operator[] (unsigned i) { return arr[i]; }
+    constexpr const T& operator[] (unsigned i) const { return arr[i]; }
 
     constexpr explicit operator bool() const noexcept {
         return x != T{} || y != T{};
     }
+
+    constexpr const T* data() const { return arr.data(); }
+    constexpr size_t byte_size() const { return sizeof(T) * arr.size(); }
 };
 
 // unary minus (opposite vector)

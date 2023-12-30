@@ -8,6 +8,7 @@
 #define XCI_GRAPHICS_VIEW_H
 
 #include <xci/math/Vec2.h>
+#include <xci/math/Mat4.h>
 #include <xci/math/Rect.h>
 #include <xci/compat/macros.h>
 
@@ -163,7 +164,7 @@ public:
     Window* window() const { return m_window; }
 
     // Compute projection matrix based on viewport size and offset
-    std::array<float, 16> projection_matrix() const;
+    Mat4f projection_matrix() const;
 
     // ------------------------------------------------------------------------
     // Sizes, coordinates
@@ -379,6 +380,9 @@ public:
     PopHelper<FramebufferRect> push_crop(const FramebufferRect& region);
     bool has_crop() const { return !m_crop.empty(); }
     const FramebufferRect& get_crop() const { return m_crop.back(); }
+
+    // Apply crop as a scissor region in current VkCommandBuffer
+    void apply_crop();
 
     // ------------------------------------------------------------------------
     // Refresh

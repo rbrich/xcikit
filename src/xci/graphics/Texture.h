@@ -11,6 +11,7 @@
 #include <xci/math/Vec2.h>
 #include <xci/math/Rect.h>
 #include "vulkan/DeviceMemory.h"
+#include "vulkan/Image.h"
 
 #include <vulkan/vulkan.h>
 
@@ -26,22 +27,22 @@ using std::uint8_t;
 
 
 enum class ColorFormat {
-    Grey,  // 256 shades of grey
-    BGRA,  // 32bit color
+    BGRA,          // 32bit color in sRGB colorspace (standard color texture)
+    LinearGrey,    // 256 shades of grey (linear intensity, e.g. font texture)
+    LinearBGRA,    // 32bit color in linear colorspace (e.g. normal-mapping texture)
 };
 
 
-/// Gray-scale texture - 1 byte per pixel
 class Texture {
 public:
-    explicit Texture(Renderer& renderer, ColorFormat format);
+    explicit Texture(Renderer& renderer);
     ~Texture() { destroy(); }
 
     // Create or resize the texture
-    bool create(const Vec2u& size);
+    bool create(const Vec2u& size, ColorFormat format);
 
     // Write data to staging memory (don't forget to `update` the texture)
-    void write(const uint8_t* pixels);
+    void write(const void* pixels);
     void write(const uint8_t* pixels, const Rect_u& region);
     void clear();
 
@@ -53,8 +54,7 @@ public:
     ColorFormat color_format() const { return m_format; }
 
     // Vulkan handles
-    VkSampler vk_sampler() const { return m_sampler; }
-    VkImageView vk_image_view() const { return m_image_view; }
+    VkImageView vk_image_view() const { return m_image_view.vk(); }
 
 private:
     VkFormat vk_format() const;
@@ -63,15 +63,13 @@ private:
 
 private:
     Renderer& m_renderer;
-    ColorFormat m_format;
+    ColorFormat m_format = ColorFormat::LinearGrey;
     Vec2u m_size;
     VkBuffer m_staging_buffer {};
-    VkImage m_image {};
-    VkImageView m_image_view {};
+    Image m_image;
+    ImageView m_image_view;
     VkImageLayout m_image_layout { VK_IMAGE_LAYOUT_UNDEFINED };
-    VkSampler m_sampler {};
     DeviceMemory m_staging_memory;  // FIXME: pool the memory
-    DeviceMemory m_image_memory;  // FIXME: pool the memory
     void* m_staging_mapped = nullptr;
     std::vector<Rect_u> m_pending_regions;
     bool m_pending_clear = false;

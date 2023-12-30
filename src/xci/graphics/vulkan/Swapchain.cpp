@@ -82,23 +82,29 @@ void Swapchain::create()
     vkGetSwapchainImagesKHR(device, m_swapchain, &m_image_count, m_images);
     assert(m_image_count <= max_image_count);
 
-    VkImageViewCreateInfo image_view_ci = {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = m_surface_format.format,
-            .subresourceRange = {
-                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                    .baseMipLevel = 0,
-                    .levelCount = 1,
-                    .baseArrayLayer = 0,
-                    .layerCount = 1,
-            },
-    };
     for (size_t i = 0; i < m_image_count; i++) {
-        image_view_ci.image = m_images[i];
-        VK_TRY("vkCreateImageView",
-                vkCreateImageView(device, &image_view_ci,
-                        nullptr, &m_image_views[i]));
+        m_image_views[i].create(device, m_images[i], m_surface_format.format,
+                                VK_IMAGE_ASPECT_COLOR_BIT);
+    }
+
+    if (m_depth_buffering) {
+        ImageCreateInfo image_ci{{m_extent.width, m_extent.height}, VK_FORMAT_D32_SFLOAT,
+                                 VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
+                                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT};
+        image_ci.set_samples(m_sample_count);
+        m_depth_image.create(image_ci, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT);
+        m_depth_image_view.create(device, m_depth_image.vk(), VK_FORMAT_D32_SFLOAT,
+                                  VK_IMAGE_ASPECT_DEPTH_BIT);
+    }
+
+    if (is_multisample()) {
+        ImageCreateInfo image_ci{{m_extent.width, m_extent.height}, m_surface_format.format,
+                                 VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
+                                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT};
+        image_ci.set_samples(m_sample_count);
+        m_msaa_image.create(image_ci, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT);
+        m_msaa_image_view.create(device, m_msaa_image.vk(), m_surface_format.format,
+                                  VK_IMAGE_ASPECT_COLOR_BIT);
     }
 }
 
@@ -108,8 +114,12 @@ void Swapchain::destroy()
     const auto device = m_renderer.vk_device();
     if (device != VK_NULL_HANDLE && m_swapchain != VK_NULL_HANDLE) {
         for (auto image_view : m_image_views | take(m_image_count)) {
-            vkDestroyImageView(device, image_view, nullptr);
+            image_view.destroy(device);
         }
+        m_msaa_image_view.destroy(device);
+        m_msaa_image.destroy();
+        m_depth_image_view.destroy(device);
+        m_depth_image.destroy();
         vkDestroySwapchainKHR(device, m_swapchain, nullptr);
         m_swapchain = nullptr;
     }
@@ -119,12 +129,16 @@ void Swapchain::destroy()
 void Swapchain::create_framebuffers()
 {
     for (size_t i = 0; i < m_image_count; i++) {
-        VkImageView attachments[] = { m_image_views[i] };
+        VkImageView attachments[3] = { m_image_views[i].vk(), m_depth_image_view.vk(), nullptr};
+        if (is_multisample()) {
+            attachments[0] = m_msaa_image_view.vk();  // use multisample image as color attachment
+            attachments[2] = m_image_views[i].vk();  // resolve color to buffer for presentation
+        }
 
         const VkFramebufferCreateInfo framebuffer_ci = {
                 .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
                 .renderPass = m_renderer.vk_render_pass(),
-                .attachmentCount = 1,
+                .attachmentCount = 1 + uint32_t(m_depth_buffering) + uint32_t(is_multisample()),
                 .pAttachments = attachments,
                 .width = m_extent.width,
                 .height = m_extent.height,
@@ -177,6 +191,14 @@ void Swapchain::set_present_mode(PresentMode mode)
 }
 
 
+void Swapchain::set_sample_count(uint32_t count)
+{
+    // Let's assume the VkSampleCountFlagBits values are same as actual sample count
+    m_sample_count = (VkSampleCountFlagBits) std::min(std::max(count, 1u),
+                                                      uint32_t(VK_SAMPLE_COUNT_64_BIT));
+}
+
+
 void Swapchain::query_surface_capabilities(VkPhysicalDevice device, VkExtent2D new_size)
 {
     VkSurfaceCapabilitiesKHR capabilities;
@@ -210,14 +232,14 @@ bool Swapchain::query(VkPhysicalDevice device)
 
     bool fmt_found = false;
     for (const auto& fmt : formats) {
-        if (fmt.format == VK_FORMAT_B8G8R8A8_UNORM && fmt.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+        if (fmt.format == VK_FORMAT_B8G8R8A8_SRGB && fmt.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             m_surface_format = fmt;
             fmt_found = true;
             break;
         }
     }
     if (!fmt_found && format_count > 0) {
-        log::error("vulkan: surface format not supported: VK_FORMAT_B8G8R8A8_UNORM / VK_COLOR_SPACE_SRGB_NONLINEAR_KHR");
+        log::error("vulkan: surface format not supported: VK_FORMAT_B8G8R8A8_SRGB / VK_COLOR_SPACE_SRGB_NONLINEAR_KHR");
         return false;
     }
 

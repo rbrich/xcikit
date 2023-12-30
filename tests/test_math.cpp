@@ -23,10 +23,17 @@ using namespace xci;
 
 TEST_CASE( "Vec2", "[math]" )
 {
+    Vec2f vf0;
+    CHECK(vf0.x == 0.0f);
+    CHECK(vf0.length() == 0.0f);
+
     Vec2f vf1 {3.0f, 4.0f};
     CHECK(vf1.length() == 5.0f);
     CHECK(vf1.norm() == Vec2f{0.6f, 0.8f});
     CHECK(vf1.dot(Vec2f{2.0f, -1.0f}) == 2.0f);
+
+    Vec2i vi0;
+    CHECK(vi0.byte_size() == 8);
 
     Vec2i vi1 {3, 4};
     CHECK(vi1.length() == 5);
@@ -46,11 +53,25 @@ TEST_CASE( "Mat2", "[math]" )
 TEST_CASE( "Mat3", "[math]" )
 {
     CHECK(Mat3f::identity().determinant() == 1.0f);
+
+    Mat3 m {0.1, 0.2, 0.3,
+            1.1, 1.2, 1.3,
+            2.1, 2.2, 2.3};
+    CHECK(m.transpose() == Mat3{0.1, 1.1, 2.1,
+                                0.2, 1.2, 2.2,
+                                0.3, 1.3, 2.3});
+    const auto det = m.determinant();
+    CHECK(det > 0.0); CHECK(det < 1e-15);
+
+    auto m2 = Mat4f::rot_y(0.5f, 0.5f, {1.0f, 2.0f, 3.0f}).mat3();
+    CHECK(m2.inverse() == Mat3f{1,0,1, 0,1,0, -1,0,1});
+    CHECK(m2.inverse() * m2 == Mat3f::identity());
 }
 
 
 TEST_CASE( "Mat4", "[math]" )
 {
+    CHECK(Mat4f().determinant() == 0.0f);
     CHECK(Mat4f::identity().determinant() == 1.0f);
     auto m = Mat4f::rot_y(0.5f, 0.5f, {1.0f, 2.0f, 3.0f});
     CHECK(m * m.inverse() == Mat4f::identity());
@@ -65,11 +86,11 @@ static std::string to_str(const Mat4<T>& m) {
 
 TEST_CASE( "transform", "[math]" )
 {
-    CHECK(to_str(perspective_projection(1.2f, 4.0f / 3.0f, 1.0f, 1001.0f))
+    CHECK(to_str(perspective_projection(1.2f, 4.0f / 3.0f, 1.0f, 1000.0f))
           == to_str(Mat4f{
                      1.09627, 0,       0,       0,
                      0,       1.4617,  0,       0,
-                     0,       0,      -1.002,  -1,
-                     0,       0,      -2.002,   0,
+                     0,       0,      -1.001,  -1,
+                     0,       0,      -1.001,   0,
              }));
 }

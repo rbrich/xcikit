@@ -10,6 +10,7 @@
 #include <array>
 #include <string_view>
 #include <sstream>
+#include <cmath>
 
 namespace xci::graphics {
 
@@ -142,6 +143,12 @@ Color::Color(std::string_view spec)
     // not matched
     log::error("Color: could not interpret \"{}\"", spec);
     *this = Color::Red();
+}
+
+
+float Color::to_linear_f(uint8_t v)
+{
+    return v > 10 ? std::pow((v / 255.f + 0.055f) / 1.055f, 2.4f) : v / (255 * 12.92f);
 }
 
 

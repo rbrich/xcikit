@@ -19,7 +19,8 @@ namespace xci::graphics {
 class Polygon: public UniformColorShape {
 public:
     explicit Polygon(Renderer& renderer)
-    : UniformColorShape(renderer, VertexFormat::V2t3, PrimitiveType::TriFans, ShaderId::Polygon) {}
+    : UniformColorShape(renderer, VertexFormat::V2t3, PrimitiveType::TriFans,
+                        "polygon", "polygon") {}
 
     /// Reserve memory for a number of polygon edges.
     /// E.g. five six-edged polygons => 30 edges
@@ -44,7 +45,8 @@ public:
 class ColoredPolygon: public VaryingColorShape {
 public:
     explicit ColoredPolygon(Renderer& renderer)
-    : VaryingColorShape(renderer, VertexFormat::V2c44t3, PrimitiveType::TriFans, ShaderId::PolygonC) {}
+    : VaryingColorShape(renderer, VertexFormat::V2c44t3, PrimitiveType::TriFans,
+                        "polygon_c", "polygon_c") {}
 
     /// Reserve memory for a number of polygon edges.
     /// E.g. five six-edged polygons => 30 edges

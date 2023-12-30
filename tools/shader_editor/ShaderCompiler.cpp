@@ -31,7 +31,7 @@ ShaderCompiler::ShaderCompiler()
 
 
 std::vector<uint32_t>
-ShaderCompiler::compile_shader(ShaderStage stage, const fs::path& filename)
+ShaderCompiler::compile_shader(ShaderStage stage, const fs::path& filename) const
 {
     fs::path tmp = "/tmp/xci-shader.spv";  // FIXME: mktemp
     std::string cmd = fmt::format("'{}' {} -o {}", m_glslc, filename, tmp);
@@ -40,11 +40,11 @@ ShaderCompiler::compile_shader(ShaderStage stage, const fs::path& filename)
         return {};
     }
 
-    return Shader::read_spirv_file(tmp);
+    return read_spirv_file(tmp);
 }
 
 
-auto ShaderCompiler::reflect_shader(const std::vector<uint32_t>& spv) -> ShaderResources
+auto ShaderCompiler::reflect_shader(const std::vector<uint32_t>& spv) const -> ShaderResources
 {
     const CompilerGLSL glsl(spv);
     auto resources = glsl.get_shader_resources();

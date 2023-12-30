@@ -8,20 +8,26 @@
 #define XCI_TEXT_FONT_H
 
 #include <xci/text/FontFace.h>
-#include <xci/graphics/Renderer.h>
-#include <xci/graphics/Texture.h>
 #include <xci/core/mixin.h>
 #include <xci/math/Vec2.h>
+#include <xci/math/Rect.h>
 #include <xci/vfs/Vfs.h>
 
 #include <vector>
 #include <map>
 #include <cassert>
 
+namespace xci::graphics {
+class Renderer;
+class Texture;
+class Sampler;
+}
+
 namespace xci::text {
 
 using graphics::Renderer;
 using graphics::Texture;
+using graphics::Sampler;
 using xci::vfs::Vfs;
 
 
@@ -112,7 +118,9 @@ public:
     float max_advance() { return face().max_advance(); }
     float ascender() const { return face().ascender(); }
     float descender() const { return face().descender(); }
+
     Texture& texture();
+    Sampler& sampler() { return m_sampler; }
 
     // Throw away any rendered glyphs
     void clear_cache();
@@ -123,6 +131,7 @@ private:
 
 private:
     Renderer& m_renderer;
+    Sampler& m_sampler;
     size_t m_current_face = 0;
     std::vector<std::unique_ptr<FontFace>> m_faces;  // faces for different strokes (eg. normal, bold, italic)
     std::unique_ptr<FontTexture> m_texture;  // glyph tables for different styles (size, outline)

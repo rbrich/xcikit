@@ -16,11 +16,12 @@ namespace xci {
 
 template <typename T>
 struct Vec3 {
-    T x {};
-    T y {};
-    T z {};
+    union {
+        struct { T x, y, z; };
+        std::array<T, 3> arr;
+    };
 
-    constexpr Vec3() = default;
+    constexpr Vec3() : arr({}) {}
     constexpr Vec3(T x, T y, T z) : x(x), y(y), z(z) {}
 
     // Convert another type of vector (possibly foreign type)
@@ -36,13 +37,13 @@ struct Vec3 {
         return {x * il, y * il, z * il};
     }
 
-    constexpr Vec3 cross(Vec3& rhs) const {
+    constexpr Vec3 cross(const Vec3& rhs) const {
         return Vec3(y * rhs.z - z * rhs.y,
                     z * rhs.x - x * rhs.z,
                     x * rhs.y - y * rhs.x);
     }
 
-    constexpr T dot(const Vec3<T>& rhs) const {
+    constexpr T dot(const Vec3& rhs) const {
         return x * rhs.x + y * rhs.y + z * rhs.z;
     }
 
@@ -52,41 +53,29 @@ struct Vec3 {
 
     constexpr const T& at(unsigned i) const { return operator[](i); }
 
-    constexpr Vec3<T>& operator +=(const Vec3<T>& rhs) {
+    constexpr Vec3& operator +=(const Vec3& rhs) {
         x += rhs.x;
         y += rhs.y;
         z += rhs.z;
         return *this;
     }
 
-    constexpr Vec3<T>& operator -=(const Vec3<T>& rhs) {
+    constexpr Vec3& operator -=(const Vec3& rhs) {
         x -= rhs.x;
         y -= rhs.y;
         z -= rhs.z;
         return *this;
     }
 
-    constexpr T& operator[] (unsigned i) {
-        switch (i) {
-            case 0: return x;
-            case 1: return y;
-            case 2: return z;
-        }
-        XCI_UNREACHABLE;
-    }
-
-    constexpr const T& operator[] (unsigned i) const {
-        switch (i) {
-            case 0: return x;
-            case 1: return y;
-            case 2: return z;
-        }
-        XCI_UNREACHABLE;
-    }
+    constexpr T& operator[] (unsigned i) { return arr[i]; }
+    constexpr const T& operator[] (unsigned i) const { return arr[i]; }
 
     constexpr explicit operator bool() const noexcept {
         return x != T{} || y != T{} || z != T{};
     }
+
+    constexpr const T* data() const { return arr.data(); }
+    constexpr size_t byte_size() const { return sizeof(T) * arr.size(); }
 };
 
 // unary minus (opposite vector)

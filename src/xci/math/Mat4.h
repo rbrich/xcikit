@@ -18,11 +18,10 @@ namespace xci {
 // Column-major 4x4 matrix, same as in GLSL and glm
 template <typename T>
 struct Mat4 {
-    // columns
-    Vec4<T> c1 {};
-    Vec4<T> c2 {};
-    Vec4<T> c3 {};
-    Vec4<T> c4 {};
+    union {
+        struct { Vec4<T> c1, c2, c3, c4; };  // columns
+        std::array<T, 4*4> arr;
+    };
 
     constexpr Mat4() = default;
     constexpr Mat4(Vec4<T> c1, Vec4<T> c2, Vec4<T> c3, Vec4<T> c4) : c1(c1), c2(c2), c3(c3), c4(c4) {}
@@ -31,6 +30,7 @@ struct Mat4 {
                    T x3, T y3, T z3, T w3,
                    T x4, T y4, T z4, T w4)
             : c1{x1, y1, z1, w1}, c2{x2, y2, z2, w2}, c3{x3, y3, z3, w3}, c4{x4, y4, z4, w4} {}
+    constexpr Mat4(const Mat3<T>& m) : c1(m.c1), c2(m.c2), c3(m.c3), c4{} {}
 
     static constexpr Mat4 identity() {
         return {
@@ -128,7 +128,7 @@ struct Mat4 {
         const auto cof = cofactor();
         const auto det = c1.x * cof.c1.x + c2.x * cof.c2.x + c3.x * cof.c3.x + c4.x * cof.c4.x;
         assert(det == determinant());
-        return cof * static_cast<T>(1.0 / det);
+        return cof * (static_cast<T>(1.0) / det);
     }
 
     constexpr Mat4 inverse() const {
@@ -170,6 +170,10 @@ struct Mat4 {
     constexpr explicit operator bool() const noexcept {
         return c1 || c2 || c3 || c4;
     }
+
+    constexpr const T* data() const { return arr.data(); }
+    constexpr size_t size() const { return arr.size(); }
+    constexpr size_t byte_size() const { return sizeof(T) * arr.size(); }
 };
 
 

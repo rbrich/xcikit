@@ -29,18 +29,25 @@ using namespace xci::shed;
 static constexpr auto c_version = "0.1";
 
 
-static bool reload_shader(ShaderCompiler& sc, Shader& shader, UniformEditor& unifed,
-                          fs::path vert_path, fs::path frag_path)
+static bool reload_vertex_shader(const ShaderCompiler& sc, ShaderModule& shader, fs::path path)
 {
-    auto vert_spv = sc.compile_shader(ShaderStage::Vertex, vert_path);
+    auto vert_spv = sc.compile_shader(ShaderStage::Vertex, path);
     if (vert_spv.empty()) {
-        log::error("Vertex shader failed to compile: {}", vert_path);
+        log::error("Vertex shader failed to compile: {}", path);
         return false;
     }
 
-    auto frag_spv = sc.compile_shader(ShaderStage::Fragment, frag_path);
+    shader.create(vert_spv);
+    return true;
+}
+
+
+static bool reload_fragment_shader(const ShaderCompiler& sc, ShaderModule& shader,
+                                   UniformEditor& unifed, fs::path path)
+{
+    auto frag_spv = sc.compile_shader(ShaderStage::Fragment, path);
     if (frag_spv.empty()) {
-        log::error("Fragment shader failed to compile: {}", frag_path);
+        log::error("Fragment shader failed to compile: {}", path);
         return false;
     }
 
@@ -48,7 +55,8 @@ static bool reload_shader(ShaderCompiler& sc, Shader& shader, UniformEditor& uni
     if (res)
         unifed.populate_form(res);
 
-    return shader.load_from_memory(vert_spv, frag_spv);
+    shader.create(frag_spv);
+    return true;
 }
 
 
@@ -113,11 +121,14 @@ int main(int argc, const char* argv[])
         prim.update();
     });
 
-    Shader shader {renderer};
+    ShaderModule vert_shader {renderer};
+    ShaderModule frag_shader {renderer};
     ShaderCompiler compiler;
-    if (!reload_shader(compiler, shader, unifed, vert_path, frag_path))
+    if (!reload_vertex_shader(compiler, vert_shader, vert_path))
         return EXIT_FAILURE;
-    prim.set_shader(shader);
+    if (!reload_fragment_shader(compiler, frag_shader, unifed, frag_path))
+        return EXIT_FAILURE;
+    prim.set_shader(Shader(vert_shader, frag_shader));
     unifed.setup_uniforms(prim);
 
     CoordEditor coord_editor(theme, prim);
@@ -156,8 +167,9 @@ int main(int argc, const char* argv[])
 
         if (reload) {
             reload = false;
-            (void) reload_shader(compiler, shader, unifed, vert_path, frag_path);
-            prim.set_shader(shader);
+            (void) reload_vertex_shader(compiler, vert_shader, vert_path);
+            (void) reload_fragment_shader(compiler, frag_shader, unifed, frag_path);
+            prim.set_shader(Shader(vert_shader, frag_shader));
             unifed.setup_uniforms(prim);
             prim.update();
             unifed.resize(view);

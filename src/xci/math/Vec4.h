@@ -16,13 +16,14 @@ namespace xci {
 
 template <typename T>
 struct Vec4 {
-    T x {};
-    T y {};
-    T z {};
-    T w {};
+    union {
+        struct { T x, y, z, w; };
+        std::array<T, 4> arr;
+    };
 
     constexpr Vec4() = default;
     constexpr Vec4(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
+    constexpr Vec4(const Vec3<T>& v) : x(v.x), y(v.y), z(v.z), w{} {}
 
     // Convert another type of vector (possibly foreign type)
     template <typename TVec>
@@ -56,29 +57,15 @@ struct Vec4 {
         return *this;
     }
 
-    constexpr T& operator[] (unsigned i) {
-        switch (i) {
-            case 0: return x;
-            case 1: return y;
-            case 2: return z;
-            case 3: return w;
-        }
-        XCI_UNREACHABLE;
-    }
-
-    constexpr const T& operator[] (unsigned i) const {
-        switch (i) {
-            case 0: return x;
-            case 1: return y;
-            case 2: return z;
-            case 3: return w;
-        }
-        XCI_UNREACHABLE;
-    }
+    constexpr T& operator[] (unsigned i) { return arr[i]; }
+    constexpr const T& operator[] (unsigned i) const { return arr[i]; }
 
     constexpr explicit operator bool() const noexcept {
         return x != T{} || y != T{} || z != T{} || w != T{};
     }
+
+    constexpr const T* data() const { return arr.data(); }
+    constexpr size_t byte_size() const { return sizeof(T) * arr.size(); }
 };
 
 // unary minus (opposite vector)

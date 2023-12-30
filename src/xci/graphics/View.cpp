@@ -6,6 +6,9 @@
 
 #include "View.h"
 #include "Window.h"
+
+#include <vulkan/vulkan.h>
+
 #include <cassert>
 
 namespace xci::graphics {
@@ -89,7 +92,7 @@ std::ostream& operator<<(std::ostream& s, VariUnits rhs)
 }
 
 
-std::array<float, 16> View::projection_matrix() const
+Mat4f View::projection_matrix() const
 {
     float xs = 2.0f / framebuffer_size().x.value;
     float ys = 2.0f / framebuffer_size().y.value;
@@ -99,12 +102,12 @@ std::array<float, 16> View::projection_matrix() const
         xt -= 1.0;
         yt -= 1.0;
     }
-    return {{
+    return {
             xs,   0.0f, 0.0f, 0.0f,
             0.0f, ys,  0.0f, 0.0f,
             0.0f, 0.0f, 1.0f, 0.0f,
             xt,   yt,  0.0f, 1.0f,
-    }};
+    };
 }
 
 
@@ -235,6 +238,28 @@ auto View::push_crop(const FramebufferRect& region) -> PopHelper<FramebufferRect
         m_crop.push_back(region.moved(offset()).intersection(m_crop.back()));
     }
     return {m_crop};
+}
+
+
+void View::apply_crop()
+{
+    if (!m_window)
+        return;
+    const auto cmd_buf = m_window->vk_command_buffer();
+
+    // set scissor region
+    VkRect2D scissor = {
+        .offset = {0, 0},
+        .extent = { INT32_MAX, INT32_MAX },
+    };
+    if (has_crop()) {
+        const auto crop = get_crop().moved(framebuffer_origin());
+        scissor.offset.x = crop.x.as<int32_t>();
+        scissor.offset.y = crop.y.as<int32_t>();
+        scissor.extent.width = crop.w.as<uint32_t>();
+        scissor.extent.height = crop.h.as<uint32_t>();
+    }
+    vkCmdSetScissor(cmd_buf, 0, 1, &scissor);
 }
 
 

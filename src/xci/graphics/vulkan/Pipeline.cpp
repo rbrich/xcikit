@@ -30,6 +30,8 @@ unsigned get_vertex_format_stride(VertexFormat format)
         case VertexFormat::V2c44t3: return 13;
         case VertexFormat::V2c44t22: return 14;
         case VertexFormat::V2c44t222: return 16;
+        case VertexFormat::V3n3: return 6;
+        case VertexFormat::V3n3t2: return 8;
     }
     XCI_UNREACHABLE;
 }
@@ -37,16 +39,15 @@ unsigned get_vertex_format_stride(VertexFormat format)
 
 void PipelineLayoutCreateInfo::add_uniform_binding(uint32_t binding)
 {
-    assert(m_uniform_binding_count < m_uniform_bindings.size());
-    m_uniform_bindings[m_uniform_binding_count] = binding;
-    ++m_uniform_binding_count;
+    m_layout_bindings.push_back({binding,
+        LayoutBinding::TypeUniform | LayoutBinding::StageVertex | LayoutBinding::StageFragment});
 }
 
 
 void PipelineLayoutCreateInfo::add_texture_binding(uint32_t binding)
 {
-    assert(m_texture_binding == uint32_t(-1));
-    m_texture_binding = binding;
+    m_layout_bindings.push_back({binding,
+        LayoutBinding::TypeImageSampler | LayoutBinding::StageFragment});
 }
 
 
@@ -54,33 +55,14 @@ std::vector<VkDescriptorSetLayoutBinding> PipelineLayoutCreateInfo::vk_layout_bi
 {
     std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
 
-    // mvp
-    layout_bindings.push_back({
-            .binding = 0,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-    });
-
-    // uniforms
-    for (unsigned i = 0; i != m_uniform_binding_count; ++i) {
+    for (const auto& item : m_layout_bindings) {
         layout_bindings.push_back({
-                .binding = m_uniform_bindings[i],
-                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .binding = item.binding,
+                .descriptorType = item.vk_descriptor_type(),
                 .descriptorCount = 1,
                 .stageFlags =
-                        VK_SHADER_STAGE_VERTEX_BIT |
-                        VK_SHADER_STAGE_FRAGMENT_BIT,
-        });
-    }
-
-    // texture
-    if (m_texture_binding != uint32_t(-1)) {
-        layout_bindings.push_back({
-                .binding = m_texture_binding,
-                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .descriptorCount = 1,
-                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+                        ((item.flags & LayoutBinding::StageVertex)? VK_SHADER_STAGE_VERTEX_BIT : 0u) |
+                        ((item.flags & LayoutBinding::StageFragment)? VK_SHADER_STAGE_FRAGMENT_BIT : 0u),
         });
     }
 
@@ -92,16 +74,17 @@ DescriptorPoolSizes PipelineLayoutCreateInfo::descriptor_pool_sizes() const
 {
     DescriptorPoolSizes sizes;
 
-    // mvp
-    sizes.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);
-
     // uniforms
-    if (m_uniform_binding_count != 0)
-        sizes.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_uniform_binding_count);
+    const auto uniform_count = std::count_if(m_layout_bindings.begin(), m_layout_bindings.end(),
+                         [](const auto& v) { return v.flags & LayoutBinding::TypeUniform; });
+    if (uniform_count)
+        sizes.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniform_count);
 
     // texture
-    if (m_texture_binding != uint32_t(-1))
-        sizes.add(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1);
+    const auto texture_count = std::count_if(m_layout_bindings.begin(), m_layout_bindings.end(),
+                         [](const auto& v) { return v.flags & LayoutBinding::TypeImageSampler; });
+    if (texture_count)
+        sizes.add(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, texture_count);
 
     return sizes;
 }
@@ -110,21 +93,10 @@ DescriptorPoolSizes PipelineLayoutCreateInfo::descriptor_pool_sizes() const
 size_t PipelineLayoutCreateInfo::hash() const
 {
     size_t h = 0;
-    for (unsigned i = 0; i != m_uniform_binding_count; ++i) {
-        h = std::rotl(h, 1) ^ m_uniform_bindings[i];
+    for (const auto& item : m_layout_bindings) {
+        h = std::rotl(h, 7) ^ ((item.binding << 4) | item.flags);
     }
-    if (m_texture_binding != uint32_t(-1))
-        h = std::rotl(h, 1) ^ m_texture_binding;
     return h;
-}
-
-
-bool PipelineLayoutCreateInfo::operator==(const PipelineLayoutCreateInfo& rhs) const
-{
-    return std::tie(m_uniform_binding_count, m_texture_binding) ==
-           std::tie(rhs.m_uniform_binding_count, rhs.m_texture_binding) &&
-           std::memcmp(m_uniform_bindings.data(), rhs.m_uniform_bindings.data(),
-                   m_uniform_binding_count * sizeof(decltype(m_uniform_bindings)::value_type)) == 0;
 }
 
 
@@ -165,19 +137,20 @@ PipelineLayout::~PipelineLayout()
 
 
 PipelineCreateInfo::PipelineCreateInfo(
-        Shader& shader, VkPipelineLayout layout, VkRenderPass render_pass)
+        VkShaderModule vertex_shader, VkShaderModule fragment_shader,
+        VkPipelineLayout layout, VkRenderPass render_pass)
 {
     m_shader_stages[0] = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage = VK_SHADER_STAGE_VERTEX_BIT,
-            .module = shader.vk_vertex_module(),
+            .module = vertex_shader,
             .pName = "main",
     };
 
     m_shader_stages[1] = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .module = shader.vk_fragment_module(),
+            .module = fragment_shader,
             .pName = "main",
     };
 
@@ -220,6 +193,14 @@ PipelineCreateInfo::PipelineCreateInfo(
             .sampleShadingEnable = VK_FALSE,
     };
 
+    m_depth_stencil_ci = {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+            .depthTestEnable = VK_FALSE,
+            .depthWriteEnable = VK_FALSE,
+            .depthCompareOp = VK_COMPARE_OP_NEVER,
+            .depthBoundsTestEnable = VK_FALSE,
+    };
+
     m_color_blend_ci = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
             .logicOpEnable = VK_FALSE,
@@ -249,6 +230,7 @@ PipelineCreateInfo::PipelineCreateInfo(
             .pViewportState = &m_viewport_state_ci,
             .pRasterizationState = &m_rasterization_ci,
             .pMultisampleState = &m_multisample_ci,
+            .pDepthStencilState= &m_depth_stencil_ci,
             .pColorBlendState = &m_color_blend_ci,
             .pDynamicState = &m_dynamic_state_ci,
             .layout = layout,
@@ -262,59 +244,69 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
 {
     m_format = format;
     constexpr uint32_t sf = sizeof(float);
-    m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
     uint32_t attr_desc_count = 0;
     switch (format) {
         case VertexFormat::V2:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             attr_desc_count = 1;
             break;
         case VertexFormat::V2t2:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32_SFLOAT, 2 * sf};
             attr_desc_count = 2;
             break;
         case VertexFormat::V2t3:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32_SFLOAT, 2 * sf};
             attr_desc_count = 2;
             break;
         case VertexFormat::V2t22:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, 4 * sf};
             attr_desc_count = 3;
             break;
         case VertexFormat::V2t222:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, 4 * sf};
             m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 6 * sf};
             attr_desc_count = 4;
             break;
         case VertexFormat::V2c4:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
             attr_desc_count = 2;
             break;
         case VertexFormat::V2c4t2:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, 6 * sf};
             attr_desc_count = 3;
             break;
         case VertexFormat::V2c4t22:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, 6 * sf};
             m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 8 * sf};
             attr_desc_count = 4;
             break;
         case VertexFormat::V2c44t2:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 6 * sf};
             m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 10 * sf};
             attr_desc_count = 4;
             break;
         case VertexFormat::V2c44t3:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 6 * sf};
             m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32B32_SFLOAT, 10 * sf};
             attr_desc_count = 4;
             break;
         case VertexFormat::V2c44t22:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 6 * sf};
             m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 10 * sf};
@@ -322,6 +314,7 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
             attr_desc_count = 5;
             break;
         case VertexFormat::V2c44t222:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32_SFLOAT, 0};
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 6 * sf};
             m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 10 * sf};
@@ -329,9 +322,19 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
             m_attr_descs[5] = {5, 0, VK_FORMAT_R32G32_SFLOAT, 14 * sf};
             attr_desc_count = 6;
             break;
+        case VertexFormat::V3n3:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0};
+            m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32_SFLOAT, 3 * sf};
+            attr_desc_count = 2;
+            break;
+        case VertexFormat::V3n3t2:
+            m_attr_descs[0] = {0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0};
+            m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32_SFLOAT, 3 * sf};
+            m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, 6 * sf};
+            attr_desc_count = 3;
+            break;
     }
-    assert(attr_desc_count != 0);
-    assert(attr_desc_count <= m_attr_descs.size());
+    assert(attr_desc_count > 0 && attr_desc_count <= m_attr_descs.size());
     m_binding_desc = {
             .binding = 0,
             .stride = get_vertex_format_stride(format) * sf,
@@ -380,6 +383,24 @@ void PipelineCreateInfo::set_color_blend(BlendFunc blend_func)
                     .alphaBlendOp = VK_BLEND_OP_ADD,
                     .colorWriteMask = color_mask,
             };
+            break;
+    }
+}
+
+
+void PipelineCreateInfo::set_depth_test(DepthTest depth_test)
+{
+    switch (depth_test) {
+        case DepthTest::Off:
+            m_depth_stencil_ci.depthTestEnable = VK_FALSE;
+            m_depth_stencil_ci.depthWriteEnable = VK_FALSE;
+            break;
+        case DepthTest::Less:
+        case DepthTest::LessOrEqual:
+            m_depth_stencil_ci.depthTestEnable = VK_TRUE;
+            m_depth_stencil_ci.depthWriteEnable = VK_TRUE;
+            m_depth_stencil_ci.depthCompareOp = (depth_test == DepthTest::Less)?
+                    VK_COMPARE_OP_LESS : VK_COMPARE_OP_LESS_OR_EQUAL;
             break;
     }
 }

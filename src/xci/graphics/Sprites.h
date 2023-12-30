@@ -22,7 +22,7 @@ namespace xci::graphics {
 
 class Sprites {
 public:
-    explicit Sprites(Renderer& renderer, Texture& texture,
+    explicit Sprites(Renderer& renderer, Texture& texture, Sampler& sampler,
                      Color color = Color::White());
 
     // Reserve memory for `num` sprites.
@@ -48,9 +48,10 @@ public:
 
 private:
     Texture& m_texture;
+    Sampler& m_sampler;
     Color m_color;
     Primitives m_quads;
-    Shader& m_shader;
+    Shader m_shader;
 };
 
 
@@ -58,7 +59,7 @@ private:
 
 class ColoredSprites {
 public:
-    explicit ColoredSprites(Renderer& renderer, Texture& texture,
+    explicit ColoredSprites(Renderer& renderer, Texture& texture, Sampler& sampler,
                             Color color = Color::White());
 
     // Reserve memory for `num` sprites.
@@ -85,9 +86,10 @@ public:
 
 private:
     Texture& m_texture;
+    Sampler& m_sampler;
     Color m_color;
     Primitives m_quads;
-    Shader& m_shader;
+    Shader m_shader;
 };
 
 

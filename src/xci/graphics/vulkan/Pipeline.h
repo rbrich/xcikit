@@ -23,7 +23,8 @@ class Renderer;
 class Shader;
 
 
-enum class VertexFormat {
+enum class VertexFormat : uint8_t {
+    // 2D
     V2,         // 2 vertex coords
     V2t2,       // 2 vertex coords, 2 texture coords (all float)
     V2t3,       // 2 vertex coords, 3 texture coords (or barycentric coords)
@@ -36,6 +37,10 @@ enum class VertexFormat {
     V2c44t3,    // 2 vertex coords, 2x RGBA color, 3 texture coords (or barycentric coords)
     V2c44t22,   // 2 vertex coords, 2x RGBA color, 2 + 2 texture coords (all float)
     V2c44t222,  // 2 vertex coords, 2x RGBA color, 2 + 2 + 2 texture coords (all float)
+
+    // 3D
+    V3n3,       // 3 vertex coords, 3 normals
+    V3n3t2,     // 3 vertex coords, 3 normals, 2 tex coords
 };
 
 /// Get stride or size of vertex format data.
@@ -43,10 +48,17 @@ enum class VertexFormat {
 unsigned get_vertex_format_stride(VertexFormat format);
 
 
-enum class BlendFunc {
+enum class BlendFunc : uint8_t {
     Off,
     AlphaBlend,
     InverseVideo,
+};
+
+
+enum class DepthTest : uint8_t {
+    Off,
+    Less,
+    LessOrEqual,
 };
 
 
@@ -60,12 +72,26 @@ public:
 
     size_t hash() const;
 
-    bool operator==(const PipelineLayoutCreateInfo& rhs) const;
+    bool operator==(const PipelineLayoutCreateInfo& rhs) const = default;
 
 private:
-    std::array<uint32_t, 8> m_uniform_bindings;
-    uint32_t m_uniform_binding_count = 0;
-    uint32_t m_texture_binding = uint32_t(-1);
+    struct LayoutBinding {
+        uint32_t binding = 0;
+        enum Flags {
+            TypeUniform         = 0x01,
+            TypeImageSampler    = 0x02,
+            StageVertex         = 0x04,
+            StageFragment       = 0x08,
+        };
+        uint32_t flags = 0;
+        VkDescriptorType vk_descriptor_type() const {
+            return (flags & TypeImageSampler)
+                    ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+                    : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        }
+        bool operator==(const LayoutBinding& rhs) const = default;
+    };
+    std::vector<LayoutBinding> m_layout_bindings;
 };
 
 
@@ -87,10 +113,13 @@ private:
 class PipelineCreateInfo {
 public:
     explicit PipelineCreateInfo(
-            Shader& shader, VkPipelineLayout layout, VkRenderPass render_pass);
+            VkShaderModule vertex_shader, VkShaderModule fragment_shader,
+            VkPipelineLayout layout, VkRenderPass render_pass);
 
     void set_vertex_format(VertexFormat format);
     void set_color_blend(BlendFunc blend_func);
+    void set_depth_test(DepthTest depth_test);
+    void set_sample_count(uint32_t count) { m_multisample_ci.rasterizationSamples = (VkSampleCountFlagBits) count; }
 
     const VkGraphicsPipelineCreateInfo& vk() const { return m_pipeline_ci; }
 
@@ -111,6 +140,7 @@ private:
     VkPipelineViewportStateCreateInfo m_viewport_state_ci;
     VkPipelineRasterizationStateCreateInfo m_rasterization_ci;
     VkPipelineMultisampleStateCreateInfo m_multisample_ci;
+    VkPipelineDepthStencilStateCreateInfo m_depth_stencil_ci;
     VkPipelineColorBlendAttachmentState m_color_blend {};
     VkPipelineColorBlendStateCreateInfo m_color_blend_ci;
     std::array<VkDynamicState, 2> m_dynamic_states;

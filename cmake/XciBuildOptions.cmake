@@ -107,12 +107,13 @@ if (ENABLE_WARNINGS)
         # - C4100: unreferenced formal parameter (noisy)
         # - C4146: unary minus operator applied to unsigned type, result still unsigned (intentional)
         # - C4200: nonstandard extension used: zero-sized array in struct/union (intentional)
+        # - C4201: nonstandard extension used: nameless struct/union (intentional)
         # - C4244: conversion from 'int' to 'uint8_t' ... (FP)
         # - C4267: warns on static_cast<uint32_t>(size_t_value) - noisy and irrelevant
         # - C4324: structure was padded due to alignment specifier (FP? triggered by std::variant)
         # - C4702: unreachable code (tons of FPs in std::visit)
         # - C5105: macro expansion producing 'defined' has undefined behavior (only in Windows headers)
-        add_compile_options(/W4 /wd4100 /wd4146 /wd4200 /wd4244 /wd4267 /wd4324 /wd4702 /wd5105)
+        add_compile_options(/W4 /wd4100 /wd4146 /wd4200 /wd4201 /wd4244 /wd4267 /wd4324 /wd4702 /wd5105)
         # https://docs.microsoft.com/en-us/cpp/c-runtime-library/compatibility?view=vs-2019
         add_compile_definitions(
             _CRT_NONSTDC_NO_WARNINGS

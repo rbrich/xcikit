@@ -14,11 +14,13 @@
 #include <xci/graphics/vulkan/Swapchain.h>
 #include <xci/graphics/vulkan/Pipeline.h>
 #include <xci/graphics/vulkan/DescriptorPool.h>
+#include <xci/graphics/vulkan/Sampler.h>
 
 #include <vulkan/vulkan.h>
 
 #include <unordered_map>
 #include <optional>
+#include <map>
 #include <memory>
 #include <array>
 #include <cstdint>
@@ -45,6 +47,18 @@ public:
     void set_present_mode(PresentMode mode) { m_swapchain.set_present_mode(mode); }
     PresentMode present_mode() const { return m_swapchain.present_mode(); }
 
+    /// Enable depth buffering.
+    /// This is prerequisite for fragment depth test, which is enabled separately in Pipeline
+    /// (possibly via Primitives).
+    /// Default: disabled
+    void set_depth_buffering(bool enable) { m_swapchain.set_depth_buffering(enable); }
+    bool depth_buffering() const { return m_swapchain.depth_buffering(); }
+
+    /// Multisampling (MSAA)
+    void set_sample_count(uint32_t count) { m_swapchain.set_sample_count(count); }
+    uint32_t sample_count() const { return m_swapchain.sample_count(); }
+    uint32_t max_sample_count() const { return uint32_t(m_max_sample_count); }
+
     void set_device_id(uint32_t device_id) { m_device_id = device_id; }
 
     // -------------------------------------------------------------------------
@@ -57,17 +71,31 @@ public:
     // -------------------------------------------------------------------------
     // Shaders
 
-    /// Get one of the predefined shaders
-    /// \param shader_id Use `Custom` to create new shader
-    /// \return shared_ptr to the shader or nullptr on error
-    Shader& get_shader(ShaderId shader_id);
+    /// Load or use cached shader modules to create a Shader program.
+    /// \param vert_name    Name of shader in VFS ("shaders/<name>.vert")
+    /// \param frag_name    Name of shader in VFS ("shaders/<name>.frag")
+    /// \throws VulkanError on error
+    Shader get_shader(std::string_view vert_name, std::string_view frag_name);
 
-    /// Load one of the predefined shaders
-    /// This creates new Shader object. Use `get_shader` to get one
-    /// from the cache instead.
-    bool load_shader(ShaderId shader_id, Shader& shader);
+    /// Load shader module (vertex or fragment shader), or return a cached one.
+    /// \returns Optional reference to the module. Null on failure.
+    ShaderModule* load_shader_module(const std::string& vfs_path);
 
-    void clear_shader_cache();
+    void clear_shader_cache() { m_shader_module.clear(); }
+
+    // -------------------------------------------------------------------------
+    // Samplers
+
+    float max_sampler_anisotropy() const { return m_max_sampler_anisotropy; }
+
+    /// Get existing sampler or create a new one.
+    /// \param address_mode     Addressing mode for both U, V coords
+    /// \param anisotropy       Max anisotropy level. Use 0.f to disable.
+    ///                         Capped at max_sampler_anisotropy(), which is usually 16.
+    Sampler& get_sampler(SamplerAddressMode address_mode = SamplerAddressMode::ClampToEdge,
+                         float anisotropy = 0.f);
+
+    void clear_sampler_cache();
 
     // -------------------------------------------------------------------------
     // Pipelines
@@ -123,15 +151,16 @@ private:
 
     std::optional<uint32_t> query_queue_families(VkPhysicalDevice device);
 
-    void load_device_limits(const VkPhysicalDeviceLimits& limits);
+    void load_device_properties(const VkPhysicalDeviceProperties& props);
 
     Vfs& m_vfs;
-    static constexpr auto c_num_shaders = (size_t) ShaderId::NumItems_;
-    std::array<std::unique_ptr<Shader>, c_num_shaders> m_shader = {};
+    std::map<std::string, ShaderModule> m_shader_module = {};
 
+    // Vulkan object deduplication caches
     std::unordered_map<PipelineLayoutCreateInfo, PipelineLayout> m_pipeline_layout;
     std::unordered_map<PipelineCreateInfo, Pipeline> m_pipeline;
     std::unordered_map<DescriptorPoolSizes, std::vector<DescriptorPool>> m_descriptor_pool;
+    std::unordered_map<SamplerCreateInfo, Sampler> m_sampler;
 
     VkInstance m_instance {};
     VkSurfaceKHR m_surface {};
@@ -152,6 +181,8 @@ private:
     // Device limits
     uint32_t m_max_image_dimension_2d = 0;
     VkDeviceSize m_min_uniform_offset_alignment = 0;
+    float m_max_sampler_anisotropy = 1.0;
+    VkSampleCountFlagBits m_max_sample_count = VK_SAMPLE_COUNT_1_BIT;  // for MSAA
 };
 
 
