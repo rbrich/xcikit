@@ -50,12 +50,13 @@ struct Mat4 {
         };
     }
 
-    static constexpr Mat4 scale(Vec3<T> s) {
+    /// Create a matrix for scaling, followed by translation by `t`
+    static constexpr Mat4 scale(Vec3<T> s, Vec3<T> t = {}) {
         return {
             s.x,   0,   0,   0,
             0,   s.y,   0,   0,
             0,   0,   s.z,   0,
-            0,   0,     0,   1,
+            t.x, t.y, t.z,   1,
         };
     }
 

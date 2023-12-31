@@ -397,6 +397,9 @@ void Renderer::create_device()
     // queue family index - queried here, used later
     uint32_t graphics_queue_family = 0;
 
+    // features of chose device
+    VkBool32 has_sampler_anisotropy = VK_FALSE;
+
     log::info("Vulkan: {} devices available:", device_count);
     for (const auto& device : devices | take(device_count)) {
         VkPhysicalDeviceProperties device_props;
@@ -462,6 +465,7 @@ void Renderer::create_device()
         // save chosen device handle
         if (choose) {
             m_physical_device = device;
+            has_sampler_anisotropy = device_features.samplerAnisotropy;
             load_device_properties(device_props);
         }
 
@@ -490,7 +494,9 @@ void Renderer::create_device()
                 .pQueuePriorities = queue_priorities,
         };
 
-        const VkPhysicalDeviceFeatures device_features = {};
+        const VkPhysicalDeviceFeatures device_features = {
+                .samplerAnisotropy = has_sampler_anisotropy,  // enable if available
+        };
 
         const VkDeviceCreateInfo device_create_info = {
                 .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,

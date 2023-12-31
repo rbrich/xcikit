@@ -181,7 +181,7 @@ private:
     // Device limits
     uint32_t m_max_image_dimension_2d = 0;
     VkDeviceSize m_min_uniform_offset_alignment = 0;
-    float m_max_sampler_anisotropy = 1.0;
+    float m_max_sampler_anisotropy = 0.0f;
     VkSampleCountFlagBits m_max_sample_count = VK_SAMPLE_COUNT_1_BIT;  // for MSAA
 };
 
