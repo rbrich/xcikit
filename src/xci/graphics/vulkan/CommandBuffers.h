@@ -1,13 +1,14 @@
 // CommandBuffers.h created on 2019-12-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_VULKAN_COMMAND_BUFFERS_H
 #define XCI_GRAPHICS_VULKAN_COMMAND_BUFFERS_H
 
 #include <vulkan/vulkan.h>
+#include <xci/core/mixin.h>
 #include <xci/math/Vec2.h>
 #include <xci/math/Rect.h>
 #include <array>
@@ -24,7 +25,7 @@ class Resource {};
 using ResourcePtr = std::shared_ptr<Resource>;
 
 
-class CommandBuffers {
+class CommandBuffers : private core::NonCopyable {
 public:
     explicit CommandBuffers(Renderer& renderer) : m_renderer(renderer) {}
     ~CommandBuffers();

@@ -1,7 +1,7 @@
 // Primitives.h created on 2018-04-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_PRIMITIVES_H
@@ -66,16 +66,10 @@ public:
         : m_renderer(renderer), m_device_memory(renderer) {}
     ~PrimitivesBuffers();
 
-    void create(
-            const std::vector<float>& vertex_data,
-            const std::vector<uint16_t>& index_data,
-            const std::vector<std::byte>& uniform_data);
+    void create(const std::vector<float>& vertex_data,
+                const std::vector<uint16_t>& index_data);
 
     void bind(VkCommandBuffer cmd_buf);
-
-    void copy_uniforms(size_t cmd_buf_idx, size_t offset, size_t size, const void* data);
-
-    VkBuffer vk_uniform_buffer(size_t cmd_buf_idx) const { return m_uniform_buffers[cmd_buf_idx]; }
 
 private:
     VkDevice device() const;
@@ -83,37 +77,57 @@ private:
     Renderer& m_renderer;
     VkBuffer m_vertex_buffer {};
     VkBuffer m_index_buffer {};
-    VkBuffer m_uniform_buffers[Window::cmd_buf_count] {};
-    VkDeviceSize m_uniform_offsets[Window::cmd_buf_count] {};
     DeviceMemory m_device_memory;
 };
 
 
-class PrimitivesDescriptorSets: public Resource {
+class UniformBuffers: public Resource {
 public:
-    explicit PrimitivesDescriptorSets(Renderer& renderer, DescriptorPool& descriptor_pool)
+    explicit UniformBuffers(Renderer& renderer)
+        : m_renderer(renderer), m_device_memory(renderer) {}
+    ~UniformBuffers();
+
+    void create(const std::vector<std::byte>& uniform_data);
+
+    void copy_uniforms(size_t offset, size_t size, const void* data);
+
+    VkBuffer vk_uniform_buffer() const { return m_buffer; }
+
+private:
+    VkDevice device() const;
+
+    Renderer& m_renderer;
+    VkBuffer m_buffer {};
+    VkDeviceSize m_uniform_offsets {};
+    DeviceMemory m_device_memory;
+};
+
+
+class UniformDescriptorSets: public Resource {
+public:
+    explicit UniformDescriptorSets(Renderer& renderer, DescriptorPool& descriptor_pool)
         : m_renderer(renderer), m_descriptor_pool(descriptor_pool) {}
-    ~PrimitivesDescriptorSets();
+    ~UniformDescriptorSets();
 
     void create(VkDescriptorSetLayout layout);
 
     void update(
-            const PrimitivesBuffers& buffers,
+            const UniformBuffers& uniform_buffers,
             const std::vector<UniformBinding>& uniform_bindings,
             const std::vector<TextureBinding>& texture_bindings);
 
-    void bind(VkCommandBuffer cmd_buf, size_t cmd_buf_idx,
-              VkPipelineLayout pipeline_layout);
+    void bind(VkCommandBuffer cmd_buf, VkPipelineLayout pipeline_layout);
 
 private:
     Renderer& m_renderer;
     DescriptorPool& m_descriptor_pool;
-    VkDescriptorSet m_descriptor_sets[Window::cmd_buf_count] {};
+    VkDescriptorSet m_descriptor_sets {};
 };
 
 
 using PrimitivesBuffersPtr = std::shared_ptr<PrimitivesBuffers>;
-using PrimitivesDescriptorSetsPtr = std::shared_ptr<PrimitivesDescriptorSets>;
+using UniformBuffersPtr = std::shared_ptr<UniformBuffers>;
+using PrimitivesDescriptorSetsPtr = std::shared_ptr<UniformDescriptorSets>;
 
 using VertexData = std::vector<float>;
 using IndexData = std::vector<uint16_t>;
@@ -262,9 +276,11 @@ private:
 
     PipelineLayout* m_pipeline_layout = nullptr;
     SharedDescriptorPool m_descriptor_pool;
+    UniformBuffersPtr m_uniform_buffers;
     PrimitivesBuffersPtr m_buffers;
     PrimitivesDescriptorSetsPtr m_descriptor_sets;
     Pipeline* m_pipeline = nullptr;
+    bool m_uniforms_changed = false;
 };
 
 
