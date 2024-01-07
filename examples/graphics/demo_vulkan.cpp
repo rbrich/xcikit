@@ -1,7 +1,7 @@
 // demo_vulkan.cpp created on 2019-10-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "common.h"
@@ -87,7 +87,7 @@ int main(int argc, const char* argv[])
     // Colored polygon
     Primitives poly {renderer, VertexFormat::V2t3, PrimitiveType::TriFans};
     poly.set_shader(renderer.get_shader("polygon", "polygon"));
-    poly.set_uniform(1, Color::Blue(), Color::Yellow());
+    poly.set_uniform(1).color(Color::Blue()).color(Color::Yellow());
     poly.set_uniform(2, {0.8f, 2});  // softness, antialiasing
     poly.set_blend(BlendFunc::AlphaBlend);
 

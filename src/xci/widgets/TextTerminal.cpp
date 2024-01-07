@@ -1,7 +1,7 @@
 // TextTerminal.cpp created on 2018-07-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TextTerminal.h"
@@ -584,11 +584,11 @@ void terminal::Caret::update(View& view, const FramebufferRect& rect)
 
     // pure white
     m_quad.clear_uniforms();
-    m_quad.set_uniform(1, {0.7, 0.7, 0.7}, {0.7, 0.7, 0.7});
+    m_quad.set_uniform(1).color({0.7, 0.7, 0.7}).color({0.7, 0.7, 0.7});
     // green
-    //m_quad.set_uniform(1, {0.0, 0.7, 0.3}, Color::Green());
+    //m_quad.set_uniform(1.color({0.0, 0.7, 0.3}).color(Color::Green());
     // yellow
-    //m_quad.set_uniform(1, {0.7, 0.7, 0.3}, Color::Yellow());
+    //m_quad.set_uniform(1.color({0.7, 0.7, 0.3}).color(Color::Yellow());
 
     m_quad.set_shader(m_shader);
     m_quad.set_blend(BlendFunc::InverseVideo);

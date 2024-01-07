@@ -14,6 +14,7 @@
 #include <array>
 #include <vector>
 #include <memory>
+#include <functional>
 
 namespace xci::graphics {
 
@@ -51,8 +52,9 @@ public:
             VkImage image, const Rect_u& region);
 
     // Resources used by current command buffer
-    void add_resource(size_t i, const ResourcePtr& resource) { m_resources[i].push_back(resource); }
-    void release_resources(size_t i) { m_resources[i].clear(); }
+    void add_resource(size_t i, const ResourcePtr& resource) { m_resources[i].push_back([resource]{}); }
+    void add_resource_deleter(size_t i, std::function<void()>&& deleter) { m_resources[i].push_back(std::move(deleter)); }
+    void release_resources(size_t i);
 
     VkCommandBuffer vk() const { return m_command_buffers[0]; }
     VkCommandBuffer operator[](size_t i) const { return m_command_buffers[i]; }
@@ -62,7 +64,7 @@ private:
     VkCommandPool m_command_pool = VK_NULL_HANDLE;
     static constexpr size_t max_count = 2;
     std::array<VkCommandBuffer, max_count> m_command_buffers {};
-    std::array<std::vector<ResourcePtr>, max_count> m_resources;
+    std::array<std::vector<std::function<void()>>, max_count> m_resources;
     unsigned m_count = 0;
 };
 

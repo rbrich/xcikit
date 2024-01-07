@@ -22,6 +22,15 @@ namespace xci::graphics {
 using ranges::views::enumerate;
 
 
+static VkDeviceSize align_to(VkDeviceSize offset, VkDeviceSize alignment)
+{
+    auto unaligned = offset % alignment;
+    if (unaligned > 0)
+        offset += alignment - unaligned;
+    return offset;
+}
+
+
 PrimitivesBuffers::~PrimitivesBuffers()
 {
     m_device_memory.free();
@@ -90,6 +99,11 @@ VkDevice PrimitivesBuffers::device() const
 // -----------------------------------------------------------------------------
 
 
+UniformBuffers::UniformBuffers(Renderer& renderer)
+    : m_renderer(renderer), m_device_memory(renderer),
+      m_min_alignment(m_renderer.min_uniform_offset_alignment()) {}
+
+
 UniformBuffers::~UniformBuffers()
 {
     m_device_memory.free();
@@ -97,12 +111,13 @@ UniformBuffers::~UniformBuffers()
 }
 
 
-void UniformBuffers::create(const std::vector<std::byte>& uniform_data)
+void UniformBuffers::create(size_t static_size, size_t dynamic_size)
 {
     // uniform buffers
+    const auto dynamic_offset = align_to(static_size, m_min_alignment);
     const VkBufferCreateInfo uniform_buffer_ci = {
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = uniform_data.size(),
+            .size = dynamic_offset + dynamic_size,
             .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
@@ -111,21 +126,56 @@ void UniformBuffers::create(const std::vector<std::byte>& uniform_data)
                           nullptr, &m_buffer));
     VkMemoryRequirements mem_req;
     vkGetBufferMemoryRequirements(device(), m_buffer, &mem_req);
-    m_uniform_offsets = m_device_memory.reserve(mem_req);
+    m_uniform_base = m_device_memory.reserve(mem_req);
+    assert(m_uniform_base == 0);  // This is currently expected (the memory is not pooled)
+    m_dynamic_base = m_uniform_base + dynamic_offset;
+    m_dynamic_size = dynamic_size;
 
     // allocate memory and copy data
-    m_device_memory.allocate();
-    m_device_memory.bind_buffer(m_buffer, m_uniform_offsets);
-    if (!uniform_data.empty()) {
-        m_device_memory.copy_data(m_uniform_offsets,
-                                  uniform_data.size(), uniform_data.data());
+    m_device_memory.allocate(); //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    m_device_memory.bind_buffer(m_buffer, m_uniform_base);
+}
+
+
+size_t UniformBuffers::allocate_dynamic_uniform(size_t size)
+{
+    const auto aligned_size = align_to(size, m_min_alignment);
+    if (m_dynamic_free_offset + aligned_size > m_dynamic_size) {
+        m_dynamic_used_size += m_dynamic_size - m_dynamic_free_offset;  // mark the rest of area as used
+        m_dynamic_free_offset = 0;
+    }
+    if (m_dynamic_used_size + aligned_size > m_dynamic_size) {
+        throw VulkanError(fmt::format("Dynamic uniform area overflow (used {} of {})",
+                                      m_dynamic_used_size, m_dynamic_size));
+    }
+    m_dynamic_used_size += aligned_size;
+    m_dynamic_free_offset += aligned_size;
+    return m_dynamic_free_offset - aligned_size;
+}
+
+
+void UniformBuffers::free_dynamic_uniform_mark(size_t mark)
+{
+    // The new used area is between mark (original free offset) and the current free offset
+    if (mark <= m_dynamic_free_offset) {
+        m_dynamic_used_size = m_dynamic_free_offset - mark;
+    } else {
+        // buffer was cycled
+        m_dynamic_used_size = m_dynamic_size - mark  // the rest until end
+                              + m_dynamic_free_offset;    // start to the free offset
     }
 }
 
 
 void UniformBuffers::copy_uniforms(size_t offset, size_t size, const void* data)
 {
-    m_device_memory.copy_data(m_uniform_offsets + offset, size, data);
+    m_device_memory.copy_data(m_uniform_base + offset, size, data);
+}
+
+
+void UniformBuffers::copy_dynamic_uniforms(size_t offset, size_t size, const void* data)
+{
+    m_device_memory.copy_data(m_dynamic_base + offset, size, data);
 }
 
 
@@ -167,7 +217,7 @@ void UniformDescriptorSets::update(
             continue;
         buffer_info.push_back({
                 .buffer = uniform_buffers.vk_uniform_buffer(),
-                .offset = uniform.offset,
+                .offset = uniform.dynamic? uniform_buffers.dynamic_base() : uniform.offset,
                 .range = uniform.range,
         });
         write_descriptor_set.push_back(VkWriteDescriptorSet{
@@ -175,7 +225,9 @@ void UniformDescriptorSets::update(
                 .dstSet = m_descriptor_sets,
                 .dstBinding = uint32_t(binding),
                 .descriptorCount = 1,
-                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .descriptorType = uniform.dynamic
+                                      ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
+                                      : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 .pBufferInfo = &buffer_info.back(),
         });
     }
@@ -204,11 +256,13 @@ void UniformDescriptorSets::update(
 }
 
 
-void UniformDescriptorSets::bind(VkCommandBuffer cmd_buf, VkPipelineLayout pipeline_layout)
+void UniformDescriptorSets::bind(VkCommandBuffer cmd_buf, VkPipelineLayout pipeline_layout,
+                                 std::span<const uint32_t> dynamic_offsets)
 {
     vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
             pipeline_layout, 0, 1,
-            &m_descriptor_sets, 0, nullptr);
+            &m_descriptor_sets,
+            dynamic_offsets.size(), dynamic_offsets.data());
 }
 
 
@@ -217,7 +271,9 @@ void UniformDescriptorSets::bind(VkCommandBuffer cmd_buf, VkPipelineLayout pipel
 
 UniformDataBuilder::~UniformDataBuilder()
 {
-    m_prim.set_uniform_data(m_binding, m_data.data(), m_data.size() * sizeof(m_data.front()));
+    m_prim.set_uniform_data(m_binding,
+                            m_data.data(), m_data.size() * sizeof(m_data.front()),
+                            m_dynamic);
 }
 
 
@@ -352,7 +408,7 @@ void Primitives::clear_uniforms()
 }
 
 
-void Primitives::set_uniform_data(uint32_t binding, const void* data, size_t size)
+void Primitives::set_uniform_data(uint32_t binding, const void* data, size_t size, bool dynamic)
 {
     if (binding >= m_uniforms.size())
         m_uniforms.resize(binding + 1);
@@ -360,9 +416,14 @@ void Primitives::set_uniform_data(uint32_t binding, const void* data, size_t siz
     if (uniform.range != 0) {
         // update existing uniform
         assert(uniform.range == size);  // cannot resize existing uniform
+        assert(uniform.dynamic == dynamic);  // cannot change uniform type
         if (std::memcmp(&m_uniform_data[uniform.offset], data, size) != 0) {
             std::memcpy(&m_uniform_data[uniform.offset], data, size);
-            m_uniforms_changed = true;
+            if (uniform.dynamic) {
+                m_dynamic_uniforms_changed = true;
+            } else {
+                m_uniforms_changed = true;
+            }
         }
         return;
     }
@@ -370,7 +431,7 @@ void Primitives::set_uniform_data(uint32_t binding, const void* data, size_t siz
     auto offset = align_uniform(m_uniform_data.size());
     m_uniform_data.resize(offset + size);
     std::memcpy(&m_uniform_data[offset], data, size);
-    m_uniforms[binding] = {offset, size};
+    m_uniforms[binding] = {offset, size, dynamic};
     destroy_pipeline();
 }
 
@@ -382,41 +443,10 @@ void Primitives::set_uniform(uint32_t binding, Color color)
 }
 
 
-void Primitives::set_uniform(uint32_t binding, Color color1, Color color2)
-{
-    struct { LinearColor c1, c2; } buf { color1, color2 };
-    set_uniform_data(binding, &buf, sizeof(buf));
-}
-
-
-void Primitives::set_uniform(uint32_t binding, const Vec2f& vec)
-{
-    set_uniform_data(binding, vec.data(), vec.byte_size());
-}
-
-
-void Primitives::set_uniform(uint32_t binding, const Vec3f& vec)
-{
-    set_uniform_data(binding, vec.data(), vec.byte_size());
-}
-
-
-void Primitives::set_uniform(uint32_t binding, const Vec4f& vec)
-{
-    set_uniform_data(binding, vec.data(), vec.byte_size());
-}
-
-
 void Primitives::set_uniform(uint32_t binding, const Mat3f& mat)
 {
     Mat4f m4(mat);
     set_uniform_data(binding, m4.data(), m4.c1.byte_size() * 3);
-}
-
-
-void Primitives::set_uniform(uint32_t binding, const Mat4f& mat)
-{
-    set_uniform_data(binding, mat.data(), mat.byte_size());
 }
 
 
@@ -443,6 +473,13 @@ void Primitives::update()
     }
     for (const auto& texture : m_textures) {
         texture.texture->update();
+    }
+    for (auto& uniform : m_uniforms) {
+        if (uniform && uniform.dynamic && m_dynamic_uniforms_changed) {
+            const auto size = uniform.range;
+            uniform.dynamic_offset = m_uniform_buffers->allocate_dynamic_uniform(size);
+            m_uniform_buffers->copy_dynamic_uniforms(uniform.dynamic_offset, size, &m_uniform_data[uniform.offset]);
+        }
     }
 }
 
@@ -486,9 +523,18 @@ void Primitives::draw(View& view, PrimitiveDrawFlags flags)
     // uniforms
     if ((flags & PrimitiveDrawFlags::Projection2D) != PrimitiveDrawFlags::None)
         set_uniform(0, view.projection_matrix());
+    if (m_dynamic_uniforms_changed) {
+        // Free dynamic uniforms allocated for this frame at the end of render pass
+        const auto mark = m_uniform_buffers->get_dynamic_uniform_mark();
+        window->add_command_buffer_resource_deleter(
+                [buf = m_uniform_buffers, mark]{ buf->free_dynamic_uniform_mark(mark); });
+        m_dynamic_uniforms_changed = false;
+    }
     if (m_uniforms_changed) {
+        const auto dynamic_size = m_uniform_buffers->dynamic_size();
         m_uniform_buffers = std::make_shared<UniformBuffers>(m_renderer);
-        m_uniform_buffers->create(m_uniform_data);
+        m_uniform_buffers->create(m_uniform_data.size(), dynamic_size);
+        copy_uniforms();
         m_uniforms_changed = false;
 
         m_descriptor_sets = std::make_shared<UniformDescriptorSets>(m_renderer, m_descriptor_pool.get());
@@ -497,8 +543,13 @@ void Primitives::draw(View& view, PrimitiveDrawFlags flags)
     }
     window->add_command_buffer_resource(m_uniform_buffers);
 
-    // descriptor sets
-    m_descriptor_sets->bind(cmd_buf, m_pipeline_layout->vk());
+    // bind descriptor sets
+    std::vector<uint32_t> dynamic_offsets;
+    for (auto& uniform : m_uniforms) {
+        if (uniform && uniform.dynamic)
+            dynamic_offsets.push_back(uniform.dynamic_offset);
+    }
+    m_descriptor_sets->bind(cmd_buf, m_pipeline_layout->vk(), dynamic_offsets);
     window->add_command_buffer_resource(m_descriptor_sets);
 
     vkCmdDrawIndexed(cmd_buf, static_cast<uint32_t>(m_index_data.size()), 1, 0, 0, 0);
@@ -520,9 +571,13 @@ void Primitives::update_pipeline()
     }
 
     PipelineLayoutCreateInfo pipeline_layout_ci;
+    uint32_t dynamic_size = 0;
     for (const auto& [binding, uniform] : m_uniforms | enumerate) {
         if (uniform)
-            pipeline_layout_ci.add_uniform_binding(binding);
+            pipeline_layout_ci.add_uniform_binding(binding, uniform.dynamic);
+        if (uniform.dynamic) {
+            dynamic_size += 10000 * align_uniform(uniform.range);
+        }
     }
     for (const auto& texture : m_textures) {
         pipeline_layout_ci.add_texture_binding(texture.binding);
@@ -540,7 +595,8 @@ void Primitives::update_pipeline()
     m_buffers->create(m_vertex_data, m_index_data);
 
     m_uniform_buffers = std::make_shared<UniformBuffers>(m_renderer);
-    m_uniform_buffers->create(m_uniform_data);
+    m_uniform_buffers->create(m_uniform_data.size(), dynamic_size);
+    copy_uniforms();
     m_uniforms_changed = false;
 
     m_descriptor_pool = m_renderer.get_descriptor_pool(Window::cmd_buf_count, pipeline_layout_ci.descriptor_pool_sizes());
@@ -564,10 +620,18 @@ void Primitives::destroy_pipeline()
 VkDeviceSize Primitives::align_uniform(VkDeviceSize offset)
 {
     const auto min_alignment = m_renderer.min_uniform_offset_alignment();
-    auto unaligned = offset % min_alignment;
-    if (unaligned > 0)
-        offset += min_alignment - unaligned;
-    return offset;
+    return align_to(offset, min_alignment);
+}
+
+
+void Primitives::copy_uniforms()
+{
+    m_uniform_buffers->copy_uniforms(0, m_uniform_data.size(), m_uniform_data.data());
+    for (auto& uniform : m_uniforms) {
+        if (uniform && uniform.dynamic)
+            m_uniform_buffers->copy_dynamic_uniforms(uniform.dynamic_offset,
+                                                     uniform.range, m_uniform_data.data() + uniform.offset);
+    }
 }
 
 

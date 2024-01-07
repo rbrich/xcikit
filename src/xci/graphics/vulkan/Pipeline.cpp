@@ -1,7 +1,7 @@
 // Pipeline.cpp created on 2021-08-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2023 Radek Brich
+// Copyright 2021–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Pipeline.h"
@@ -37,10 +37,11 @@ unsigned get_vertex_format_stride(VertexFormat format)
 }
 
 
-void PipelineLayoutCreateInfo::add_uniform_binding(uint32_t binding)
+void PipelineLayoutCreateInfo::add_uniform_binding(uint32_t binding, bool dynamic)
 {
     m_layout_bindings.push_back({binding,
-        LayoutBinding::TypeUniform | LayoutBinding::StageVertex | LayoutBinding::StageFragment});
+        (dynamic ? LayoutBinding::TypeDynamicUniform : 0)
+                 | LayoutBinding::StageVertex | LayoutBinding::StageFragment});
 }
 
 
@@ -76,13 +77,20 @@ DescriptorPoolSizes PipelineLayoutCreateInfo::descriptor_pool_sizes() const
 
     // uniforms
     const auto uniform_count = std::count_if(m_layout_bindings.begin(), m_layout_bindings.end(),
-                         [](const auto& v) { return v.flags & LayoutBinding::TypeUniform; });
+             [](const auto& v) { return (v.flags & LayoutBinding::TypeMask) == 0; });
     if (uniform_count)
         sizes.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniform_count);
 
+    // dynamic uniforms
+    const auto dyn_uniform_count = std::count_if(m_layout_bindings.begin(), m_layout_bindings.end(),
+             [](const auto& v) { return (v.flags & LayoutBinding::TypeMask) == LayoutBinding::TypeDynamicUniform; });
+    if (dyn_uniform_count)
+        sizes.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, dyn_uniform_count);
+
     // texture
     const auto texture_count = std::count_if(m_layout_bindings.begin(), m_layout_bindings.end(),
-                         [](const auto& v) { return v.flags & LayoutBinding::TypeImageSampler; });
+             [](const auto& v)
+             { return (v.flags & LayoutBinding::TypeMask) == LayoutBinding::TypeImageSampler; });
     if (texture_count)
         sizes.add(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, texture_count);
 
