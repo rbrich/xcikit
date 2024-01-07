@@ -1,18 +1,20 @@
 // CommandBuffers.h created on 2019-12-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_VULKAN_COMMAND_BUFFERS_H
 #define XCI_GRAPHICS_VULKAN_COMMAND_BUFFERS_H
 
 #include <vulkan/vulkan.h>
+#include <xci/core/mixin.h>
 #include <xci/math/Vec2.h>
 #include <xci/math/Rect.h>
 #include <array>
 #include <vector>
 #include <memory>
+#include <functional>
 
 namespace xci::graphics {
 
@@ -24,7 +26,7 @@ class Resource {};
 using ResourcePtr = std::shared_ptr<Resource>;
 
 
-class CommandBuffers {
+class CommandBuffers : private core::NonCopyable {
 public:
     explicit CommandBuffers(Renderer& renderer) : m_renderer(renderer) {}
     ~CommandBuffers();
@@ -50,8 +52,9 @@ public:
             VkImage image, const Rect_u& region);
 
     // Resources used by current command buffer
-    void add_resource(size_t i, const ResourcePtr& resource) { m_resources[i].push_back(resource); }
-    void release_resources(size_t i) { m_resources[i].clear(); }
+    void add_resource(size_t i, const ResourcePtr& resource) { m_resources[i].push_back([resource]{}); }
+    void add_resource_deleter(size_t i, std::function<void()>&& deleter) { m_resources[i].push_back(std::move(deleter)); }
+    void release_resources(size_t i);
 
     VkCommandBuffer vk() const { return m_command_buffers[0]; }
     VkCommandBuffer operator[](size_t i) const { return m_command_buffers[i]; }
@@ -61,7 +64,7 @@ private:
     VkCommandPool m_command_pool = VK_NULL_HANDLE;
     static constexpr size_t max_count = 2;
     std::array<VkCommandBuffer, max_count> m_command_buffers {};
-    std::array<std::vector<ResourcePtr>, max_count> m_resources;
+    std::array<std::vector<std::function<void()>>, max_count> m_resources;
     unsigned m_count = 0;
 };
 

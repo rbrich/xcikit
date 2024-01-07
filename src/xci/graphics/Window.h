@@ -1,7 +1,7 @@
 // Window.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_WINDOW_H
@@ -259,6 +259,7 @@ public:
     VkCommandBuffer vk_command_buffer() const { return m_command_buffers[m_current_cmd_buf]; }
     uint32_t command_buffer_index() const { return m_current_cmd_buf; }
     void add_command_buffer_resource(const ResourcePtr& resource) { m_command_buffers.add_resource(m_current_cmd_buf, resource); }
+    void add_command_buffer_resource_deleter(std::function<void()>&& deleter) { m_command_buffers.add_resource_deleter(m_current_cmd_buf, std::move(deleter)); }
 
 private:
     void setup_view();

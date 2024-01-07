@@ -1,7 +1,7 @@
 // DeviceMemory.cpp created on 2019-12-07 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "DeviceMemory.h"
@@ -76,15 +76,6 @@ void DeviceMemory::bind_image(VkImage image, VkDeviceSize offset)
 }
 
 
-void DeviceMemory::copy_data(VkDeviceSize offset, VkDeviceSize size,
-        const void* src_data)
-{
-    void* mapped = map(offset, size);
-    std::memcpy(mapped, src_data, (size_t) size);
-    unmap();
-}
-
-
 void* DeviceMemory::map(VkDeviceSize offset, VkDeviceSize size)
 {
     assert(m_memory_pool != VK_NULL_HANDLE);  // must be allocated
@@ -99,6 +90,37 @@ void* DeviceMemory::map(VkDeviceSize offset, VkDeviceSize size)
 void DeviceMemory::unmap()
 {
     vkUnmapMemory(m_renderer.vk_device(), m_memory_pool);
+}
+
+
+void DeviceMemory::flush(std::span<MappedMemoryRange> ranges)
+{
+    const auto atom_size = m_renderer.non_coherent_atom_size();
+    std::vector<VkMappedMemoryRange> vk_ranges;
+    vk_ranges.reserve(ranges.size());
+    for (const auto& range : ranges) {
+        vk_ranges.push_back({
+                .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+                .memory = m_memory_pool,
+                .offset = range.offset,
+                .size = align_to(range.size, atom_size)
+        });
+    }
+    VK_TRY("vkFlushMappedMemoryRanges",
+           vkFlushMappedMemoryRanges(m_renderer.vk_device(), vk_ranges.size(), vk_ranges.data()));
+}
+
+
+void DeviceMemory::flush(VkDeviceSize offset, VkDeviceSize size)
+{
+    VkMappedMemoryRange range{
+            .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+            .memory = m_memory_pool,
+            .offset = offset,
+            .size = align_to(size, m_renderer.non_coherent_atom_size()),
+    };
+    VK_TRY("vkFlushMappedMemoryRanges",
+           vkFlushMappedMemoryRanges(m_renderer.vk_device(), 1, &range));
 }
 
 

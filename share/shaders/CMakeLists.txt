@@ -22,6 +22,8 @@ set(SHADER_SOURCES
     ellipse.frag
     ellipse_c.vert
     ellipse_c.frag
+    flat.vert
+    flat.frag
     flat_c.vert
     flat_c.frag
     fps.vert

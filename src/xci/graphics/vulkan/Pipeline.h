@@ -1,7 +1,7 @@
 // Pipeline.h created on 2021-08-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2023 Radek Brich
+// Copyright 2021–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_VULKAN_PIPELINE_H
@@ -64,7 +64,7 @@ enum class DepthTest : uint8_t {
 
 class PipelineLayoutCreateInfo {
 public:
-    void add_uniform_binding(uint32_t binding);
+    void add_uniform_binding(uint32_t binding, bool dynamic = false);
     void add_texture_binding(uint32_t binding);
 
     std::vector<VkDescriptorSetLayoutBinding> vk_layout_bindings() const;
@@ -77,9 +77,10 @@ public:
 private:
     struct LayoutBinding {
         uint32_t binding = 0;
-        enum Flags {
-            TypeUniform         = 0x01,
+        enum Flags : uint32_t {
+            TypeDynamicUniform  = 0x01,
             TypeImageSampler    = 0x02,
+            TypeMask            = 0x03,
             StageVertex         = 0x04,
             StageFragment       = 0x08,
         };
@@ -87,7 +88,9 @@ private:
         VkDescriptorType vk_descriptor_type() const {
             return (flags & TypeImageSampler)
                     ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-                    : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                    : (flags & TypeDynamicUniform)
+                           ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
+                           : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         }
         bool operator==(const LayoutBinding& rhs) const = default;
     };

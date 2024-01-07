@@ -1,7 +1,7 @@
 // CommandBuffers.cpp created on 2019-12-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <cassert>
@@ -174,6 +174,14 @@ CommandBuffers::copy_buffer_to_image(
     vkCmdCopyBufferToImage(m_command_buffers[0], buffer, image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             1, &copy_region);
+}
+
+
+void CommandBuffers::release_resources(size_t i)
+{
+    for (auto& deleter : m_resources[i])
+        deleter();
+    m_resources[i].clear();
 }
 
 

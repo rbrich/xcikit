@@ -94,20 +94,15 @@ std::ostream& operator<<(std::ostream& s, VariUnits rhs)
 
 Mat4f View::projection_matrix() const
 {
-    float xs = 2.0f / framebuffer_size().x.value;
-    float ys = 2.0f / framebuffer_size().y.value;
+    const float xs = 2.0f / framebuffer_size().x.value;
+    const float ys = 2.0f / framebuffer_size().y.value;
     float xt = offset().x.value * xs;
     float yt = offset().y.value * ys;
     if (m_origin == ViewOrigin::TopLeft) {
         xt -= 1.0;
         yt -= 1.0;
     }
-    return {
-            xs,   0.0f, 0.0f, 0.0f,
-            0.0f, ys,  0.0f, 0.0f,
-            0.0f, 0.0f, 1.0f, 0.0f,
-            xt,   yt,  0.0f, 1.0f,
-    };
+    return Mat4f::scale({xs, ys, 1.0f}, {xt, yt, 0.0f});
 }
 
 

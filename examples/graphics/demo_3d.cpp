@@ -1,7 +1,7 @@
 // demo_3d.cpp created on 2023-12-29 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "common.h"
@@ -120,7 +120,7 @@ int main(int, const char* argv[])
         const Color mat_specular(0.2, 0.2, 0.2);
         const float mat_shininess = 50.f;
 
-        prim.set_uniform(0).mat4(modelview_matrix).mat4(normal_matrix).mat4(projection);
+        prim.set_dynamic_uniform(0).mat4(modelview_matrix).mat4(normal_matrix).mat4(projection);
         prim.set_uniform(1).vec4(light_pos)
                 .color(light_ambient).color(light_diffuse).color(light_specular)
                 .f(light_quad_att);
@@ -138,7 +138,7 @@ int main(int, const char* argv[])
         modelview_matrix = view_matrix * Mat4f::scale({2,2,2}) * Mat4f::rot_z(cos(phi), sin(phi));
         normal_matrix = modelview_matrix.inverse_transpose();
 
-        prim.set_uniform(0).mat4(modelview_matrix).mat4(normal_matrix).mat4(projection);
+        prim.set_dynamic_uniform(0).mat4(modelview_matrix).mat4(normal_matrix).mat4(projection);
         prim.update();
 
         fps_display.update(view, State{ elapsed });

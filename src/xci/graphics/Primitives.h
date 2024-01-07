@@ -1,7 +1,7 @@
 // Primitives.h created on 2018-04-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_PRIMITIVES_H
@@ -23,6 +23,7 @@
 
 #include <array>
 #include <memory>
+#include <span>
 
 namespace xci::graphics {
 
@@ -49,6 +50,8 @@ inline PrimitiveDrawFlags operator&(PrimitiveDrawFlags a, PrimitiveDrawFlags b) 
 struct UniformBinding {
     VkDeviceSize offset = 0;
     VkDeviceSize range = 0;
+    bool dynamic = false;
+    uint32_t dynamic_offset = 0;
     explicit operator bool() const { return range != 0; }
 };
 
@@ -66,16 +69,10 @@ public:
         : m_renderer(renderer), m_device_memory(renderer) {}
     ~PrimitivesBuffers();
 
-    void create(
-            const std::vector<float>& vertex_data,
-            const std::vector<uint16_t>& index_data,
-            const std::vector<std::byte>& uniform_data);
+    void create(const std::vector<float>& vertex_data,
+                const std::vector<uint16_t>& index_data);
 
     void bind(VkCommandBuffer cmd_buf);
-
-    void copy_uniforms(size_t cmd_buf_idx, size_t offset, size_t size, const void* data);
-
-    VkBuffer vk_uniform_buffer(size_t cmd_buf_idx) const { return m_uniform_buffers[cmd_buf_idx]; }
 
 private:
     VkDevice device() const;
@@ -83,37 +80,79 @@ private:
     Renderer& m_renderer;
     VkBuffer m_vertex_buffer {};
     VkBuffer m_index_buffer {};
-    VkBuffer m_uniform_buffers[Window::cmd_buf_count] {};
-    VkDeviceSize m_uniform_offsets[Window::cmd_buf_count] {};
     DeviceMemory m_device_memory;
 };
 
 
-class PrimitivesDescriptorSets: public Resource {
+class UniformBuffers: public Resource {
 public:
-    explicit PrimitivesDescriptorSets(Renderer& renderer, DescriptorPool& descriptor_pool)
+    explicit UniformBuffers(Renderer& renderer);
+    ~UniformBuffers();
+
+    void create(size_t static_size, size_t dynamic_size);
+    size_t dynamic_base() const { return m_dynamic_base; }
+    size_t dynamic_size() const { return m_dynamic_size; }
+
+    size_t allocate_dynamic_uniform(size_t size);
+
+    // Basic sanity check for the circular buffer.
+    // After updating dynamic uniforms, remember mark.
+    // When finished rendering the frame, call free_dynamic_uniform_mark for the mark.
+    size_t get_dynamic_uniform_mark() const { return m_dynamic_free_offset; }
+    void free_dynamic_uniform_mark(size_t mark);
+
+    /// Copy uniform data to device memory
+    void copy_uniforms(size_t offset, size_t size, const void* data);
+    void copy_dynamic_uniforms(size_t offset, size_t size, const void* data)
+        { copy_uniforms(m_dynamic_base + offset, size, data); }
+
+    /// Flush pending device memory changes (via copy_*)
+    void flush();
+
+    VkBuffer vk_uniform_buffer() const { return m_buffer; }
+
+private:
+    VkDevice device() const;
+
+    Renderer& m_renderer;
+    VkBuffer m_buffer {};
+    VkDeviceSize m_dynamic_base {};    // base offset for dynamic uniforms
+    size_t m_dynamic_size {};          // size of dynamic uniforms allocation area (circular buffer)
+    size_t m_dynamic_free_offset {};   // offset inside dynamic area pointing to next free block
+    size_t m_dynamic_used_size {};     // size of used part of dynamic area
+    DeviceMemory m_device_memory;
+    void* m_device_memory_mapped = nullptr;
+    std::vector<DeviceMemory::MappedMemoryRange> m_pending_flush;
+    const VkDeviceSize m_min_alignment;
+};
+
+
+class UniformDescriptorSets: public Resource {
+public:
+    explicit UniformDescriptorSets(Renderer& renderer, DescriptorPool& descriptor_pool)
         : m_renderer(renderer), m_descriptor_pool(descriptor_pool) {}
-    ~PrimitivesDescriptorSets();
+    ~UniformDescriptorSets();
 
     void create(VkDescriptorSetLayout layout);
 
     void update(
-            const PrimitivesBuffers& buffers,
+            const UniformBuffers& uniform_buffers,
             const std::vector<UniformBinding>& uniform_bindings,
             const std::vector<TextureBinding>& texture_bindings);
 
-    void bind(VkCommandBuffer cmd_buf, size_t cmd_buf_idx,
-              VkPipelineLayout pipeline_layout);
+    void bind(VkCommandBuffer cmd_buf, VkPipelineLayout pipeline_layout,
+              std::span<const uint32_t> dynamic_offsets);
 
 private:
     Renderer& m_renderer;
     DescriptorPool& m_descriptor_pool;
-    VkDescriptorSet m_descriptor_sets[Window::cmd_buf_count] {};
+    VkDescriptorSet m_descriptor_sets {};
 };
 
 
 using PrimitivesBuffersPtr = std::shared_ptr<PrimitivesBuffers>;
-using PrimitivesDescriptorSetsPtr = std::shared_ptr<PrimitivesDescriptorSets>;
+using UniformBuffersPtr = std::shared_ptr<UniformBuffers>;
+using PrimitivesDescriptorSetsPtr = std::shared_ptr<UniformDescriptorSets>;
 
 using VertexData = std::vector<float>;
 using IndexData = std::vector<uint16_t>;
@@ -155,7 +194,8 @@ private:
 
 class UniformDataBuilder {
 public:
-    explicit UniformDataBuilder(Primitives& prim, uint32_t binding) : m_prim(prim), m_binding(binding) {}
+    explicit UniformDataBuilder(Primitives& prim, uint32_t binding, bool dynamic)
+            : m_prim(prim), m_binding(binding), m_dynamic(dynamic) {}
     ~UniformDataBuilder();
 
     UniformDataBuilder& f(float f) { add(f); return *this; }
@@ -176,6 +216,7 @@ private:
     Primitives& m_prim;
     std::vector<float> m_data;
     uint32_t m_binding;
+    bool m_dynamic;
 };
 
 
@@ -212,20 +253,27 @@ public:
     void set_shader(Shader shader);
 
     void clear_uniforms();
-    void set_uniform_data(uint32_t binding, const void* data, size_t size);
+    void set_uniform_data(uint32_t binding, const void* data, size_t size, bool dynamic = false);
+
+    // Uniform type helpers. See uniform block builder below for creating uniform blocks.
     void set_uniform(uint32_t binding, float f) { set_uniform_data(binding, &f, sizeof(f)); }
     void set_uniform(uint32_t binding, Color color);
-    void set_uniform(uint32_t binding, Color color1, Color color2);
-    void set_uniform(uint32_t binding, const Vec2f& vec);
-    void set_uniform(uint32_t binding, const Vec3f& vec);
-    void set_uniform(uint32_t binding, const Vec4f& vec);
+    void set_uniform(uint32_t binding, const Vec2f& vec) { set_uniform_data(binding, vec.data(), vec.byte_size()); }
+    void set_uniform(uint32_t binding, const Vec3f& vec) { set_uniform_data(binding, vec.data(), vec.byte_size()); }
+    void set_uniform(uint32_t binding, const Vec4f& vec) { set_uniform_data(binding, vec.data(), vec.byte_size()); }
     void set_uniform(uint32_t binding, const Mat3f& mat);
-    void set_uniform(uint32_t binding, const Mat4f& mat);
+    void set_uniform(uint32_t binding, const Mat4f& mat) { set_uniform_data(binding, mat.data(), mat.byte_size()); }
 
     /// Generic uniform block builder
     /// Example:
     ///     set_uniform(1).color(Color::White()).mat4(projection)
-    UniformDataBuilder set_uniform(uint32_t binding) { return UniformDataBuilder(*this, binding); }
+    UniformDataBuilder set_uniform(uint32_t binding) { return UniformDataBuilder(*this, binding, false); }
+
+    /// Create or update a dynamic uniform.
+    /// This type of uniform can be cheaply updated for each frame.
+    /// Updating non-dynamic uniforms is also supported, but it will lead to costly
+    /// re-creation of Vulkan objects and re-allocation of device memory.
+    UniformDataBuilder set_dynamic_uniform(uint32_t binding) { return UniformDataBuilder(*this, binding, true); }
 
     void set_texture(uint32_t binding, Texture& texture, Sampler& sampler);
     void set_texture(uint32_t binding, Texture& texture);  // use default sampler
@@ -243,6 +291,7 @@ private:
     void destroy_pipeline();
 
     VkDeviceSize align_uniform(VkDeviceSize offset);
+    void copy_uniforms();
 
 private:
     Renderer& m_renderer;
@@ -262,9 +311,12 @@ private:
 
     PipelineLayout* m_pipeline_layout = nullptr;
     SharedDescriptorPool m_descriptor_pool;
+    UniformBuffersPtr m_uniform_buffers;
     PrimitivesBuffersPtr m_buffers;
     PrimitivesDescriptorSetsPtr m_descriptor_sets;
     Pipeline* m_pipeline = nullptr;
+    bool m_uniforms_changed = false;
+    bool m_dynamic_uniforms_changed = false;
 };
 
 
