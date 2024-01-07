@@ -11,6 +11,7 @@
 #include "Texture.h"
 #include "Shader.h"
 #include "vulkan/VulkanError.h"
+#include <xci/core/memory.h>
 
 #include <range/v3/view/enumerate.hpp>
 
@@ -20,15 +21,7 @@
 namespace xci::graphics {
 
 using ranges::views::enumerate;
-
-
-static VkDeviceSize align_to(VkDeviceSize offset, VkDeviceSize alignment)
-{
-    auto unaligned = offset % alignment;
-    if (unaligned > 0)
-        offset += alignment - unaligned;
-    return offset;
-}
+using core::align_to;
 
 
 PrimitivesBuffers::~PrimitivesBuffers()
@@ -72,13 +65,19 @@ void PrimitivesBuffers::create(
     auto index_offset = m_device_memory.reserve(index_mem_req);
 
     // allocate memory and copy data
-    m_device_memory.allocate();
+    m_device_memory.allocate(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
     m_device_memory.bind_buffer(m_vertex_buffer, vertex_offset);
-    m_device_memory.copy_data(vertex_offset, vertex_buffer_ci.size,
-                              vertex_data.data());
+    void* mapped = m_device_memory.map(vertex_offset, vertex_buffer_ci.size);
+    std::memcpy(mapped, vertex_data.data(), vertex_buffer_ci.size);
+    m_device_memory.flush(vertex_offset);
+    m_device_memory.unmap();
+
     m_device_memory.bind_buffer(m_index_buffer, index_offset);
-    m_device_memory.copy_data(index_offset, index_buffer_ci.size,
-                              index_data.data());
+    mapped = m_device_memory.map(index_offset, index_buffer_ci.size);
+    std::memcpy(mapped, index_data.data(), index_buffer_ci.size);
+    m_device_memory.flush(index_offset);
+    m_device_memory.unmap();
 }
 
 
@@ -106,6 +105,8 @@ UniformBuffers::UniformBuffers(Renderer& renderer)
 
 UniformBuffers::~UniformBuffers()
 {
+    if (m_device_memory_mapped)
+        m_device_memory.unmap();
     m_device_memory.free();
     vkDestroyBuffer(device(), m_buffer, nullptr);
 }
@@ -114,10 +115,11 @@ UniformBuffers::~UniformBuffers()
 void UniformBuffers::create(size_t static_size, size_t dynamic_size)
 {
     // uniform buffers
-    const auto dynamic_offset = align_to(static_size, m_min_alignment);
+    m_dynamic_base = align_to(static_size, size_t(m_min_alignment));
+    m_dynamic_size = dynamic_size;
     const VkBufferCreateInfo uniform_buffer_ci = {
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = dynamic_offset + dynamic_size,
+            .size = m_dynamic_base + m_dynamic_size,
             .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
@@ -126,20 +128,19 @@ void UniformBuffers::create(size_t static_size, size_t dynamic_size)
                           nullptr, &m_buffer));
     VkMemoryRequirements mem_req;
     vkGetBufferMemoryRequirements(device(), m_buffer, &mem_req);
-    m_uniform_base = m_device_memory.reserve(mem_req);
-    assert(m_uniform_base == 0);  // This is currently expected (the memory is not pooled)
-    m_dynamic_base = m_uniform_base + dynamic_offset;
-    m_dynamic_size = dynamic_size;
+    const auto base = m_device_memory.reserve(mem_req);
+    assert(base == 0);  // This is currently expected (the memory is not pooled)
 
     // allocate memory and copy data
-    m_device_memory.allocate(); //VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    m_device_memory.bind_buffer(m_buffer, m_uniform_base);
+    m_device_memory.allocate(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    m_device_memory.bind_buffer(m_buffer, base);
+    m_device_memory_mapped = m_device_memory.map(base, m_dynamic_base + m_dynamic_size);
 }
 
 
 size_t UniformBuffers::allocate_dynamic_uniform(size_t size)
 {
-    const auto aligned_size = align_to(size, m_min_alignment);
+    const auto aligned_size = align_to(size, size_t(m_min_alignment));
     if (m_dynamic_free_offset + aligned_size > m_dynamic_size) {
         m_dynamic_used_size += m_dynamic_size - m_dynamic_free_offset;  // mark the rest of area as used
         m_dynamic_free_offset = 0;
@@ -169,13 +170,14 @@ void UniformBuffers::free_dynamic_uniform_mark(size_t mark)
 
 void UniformBuffers::copy_uniforms(size_t offset, size_t size, const void* data)
 {
-    m_device_memory.copy_data(m_uniform_base + offset, size, data);
+    std::memcpy((char*)(m_device_memory_mapped) + offset, data, size);
+    m_pending_flush.push_back({offset, size});
 }
 
 
-void UniformBuffers::copy_dynamic_uniforms(size_t offset, size_t size, const void* data)
+void UniformBuffers::flush()
 {
-    m_device_memory.copy_data(m_dynamic_base + offset, size, data);
+    m_device_memory.flush(m_pending_flush);
 }
 
 
@@ -598,6 +600,7 @@ void Primitives::update_pipeline()
     m_uniform_buffers->create(m_uniform_data.size(), dynamic_size);
     copy_uniforms();
     m_uniforms_changed = false;
+    m_dynamic_uniforms_changed = false;
 
     m_descriptor_pool = m_renderer.get_descriptor_pool(Window::cmd_buf_count, pipeline_layout_ci.descriptor_pool_sizes());
 
@@ -632,6 +635,7 @@ void Primitives::copy_uniforms()
             m_uniform_buffers->copy_dynamic_uniforms(uniform.dynamic_offset,
                                                      uniform.range, m_uniform_data.data() + uniform.offset);
     }
+    m_uniform_buffers->flush();
 }
 
 

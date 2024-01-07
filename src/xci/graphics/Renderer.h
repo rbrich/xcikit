@@ -1,7 +1,7 @@
 // Renderer.h created on 2018-04-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_RENDERER_H
@@ -67,6 +67,7 @@ public:
     // Max texture size
     uint32_t max_image_dimension_2d() const { return m_max_image_dimension_2d; }
     VkDeviceSize min_uniform_offset_alignment() const { return m_min_uniform_offset_alignment; }
+    VkDeviceSize non_coherent_atom_size() const { return m_non_coherent_atom_size; }
 
     // -------------------------------------------------------------------------
     // Shaders
@@ -181,6 +182,7 @@ private:
     // Device limits
     uint32_t m_max_image_dimension_2d = 0;
     VkDeviceSize m_min_uniform_offset_alignment = 0;
+    VkDeviceSize m_non_coherent_atom_size = 0;
     float m_max_sampler_anisotropy = 0.0f;
     VkSampleCountFlagBits m_max_sample_count = VK_SAMPLE_COUNT_1_BIT;  // for MSAA
 };

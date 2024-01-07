@@ -103,7 +103,11 @@ public:
 
     /// Copy uniform data to device memory
     void copy_uniforms(size_t offset, size_t size, const void* data);
-    void copy_dynamic_uniforms(size_t offset, size_t size, const void* data);
+    void copy_dynamic_uniforms(size_t offset, size_t size, const void* data)
+        { copy_uniforms(m_dynamic_base + offset, size, data); }
+
+    /// Flush pending device memory changes (via copy_*)
+    void flush();
 
     VkBuffer vk_uniform_buffer() const { return m_buffer; }
 
@@ -112,12 +116,13 @@ private:
 
     Renderer& m_renderer;
     VkBuffer m_buffer {};
-    VkDeviceSize m_uniform_base {};    // base offset for static uniforms
     VkDeviceSize m_dynamic_base {};    // base offset for dynamic uniforms
     size_t m_dynamic_size {};          // size of dynamic uniforms allocation area (circular buffer)
     size_t m_dynamic_free_offset {};   // offset inside dynamic area pointing to next free block
     size_t m_dynamic_used_size {};     // size of used part of dynamic area
     DeviceMemory m_device_memory;
+    void* m_device_memory_mapped = nullptr;
+    std::vector<DeviceMemory::MappedMemoryRange> m_pending_flush;
     const VkDeviceSize m_min_alignment;
 };
 
