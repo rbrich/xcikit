@@ -1,7 +1,7 @@
 // Texture.cpp created on 2019-10-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Texture.h"
@@ -113,7 +113,7 @@ void Texture::update()
     cmd_buf.transition_image_layout(m_image.vk(),
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-            m_image_layout,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            m_image_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     if (m_pending_clear) {
         m_pending_clear = false;

@@ -9,7 +9,7 @@ layout(location = 0) out vec4 out_color;
 
 void main() {
     float t = texture(u_tex_sampler, in_tex_coord).r;
-    if (in_tex_coord.y >= t) {
+    if (in_tex_coord.y < t) {
         out_color = vec4(0.0, 0.2, 0.2, 1.0);
     } else {
         out_color = vec4(0.0, 0.0, 0.0, 1.0);

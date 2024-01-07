@@ -1,13 +1,13 @@
 // FpsCounter.h created on 2018-04-13 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_FPSCOUNTER_H
 #define XCI_CORE_FPSCOUNTER_H
 
-#include <vector>
+#include <array>
 #include <functional>
 #include <cstddef>
 #include <cstdint>
@@ -23,12 +23,8 @@ namespace xci::core {
 
 class FpsCounter {
 public:
-    FpsCounter() : FpsCounter(60) {}
-    explicit FpsCounter(size_t resolution)
-      : m_fraction(1.0f / resolution), m_samples(resolution)
-      { assert(resolution < max_resolution); }
-
-    static constexpr size_t max_resolution = 240;
+    static constexpr size_t resolution = 60;
+    static constexpr float fraction = 1.0f / float(resolution);
 
     /// Append new frame time to the counter
     void tick(float frame_time);
@@ -41,12 +37,8 @@ public:
 
     // Export for FpsDisplay
     void foreach_sample(const std::function<void(float)>& cb) const;
-    size_t resolution() const { return m_samples.size(); }
 
 private:
-    float m_fraction;
-    float m_delta = 0;
-
     struct Sample {
         float total_time = 0.f;
         uint16_t num_frames = 0;
@@ -62,9 +54,10 @@ private:
         }
     };
 
-    std::vector<Sample> m_samples;
-    size_t m_idx = 0;  // current sample
+    std::array<Sample, resolution> m_samples;
     Sample m_sum;  // sum of all samples
+    uint32_t m_idx = 0;  // current sample
+    float m_delta = 0;
 };
 
 
