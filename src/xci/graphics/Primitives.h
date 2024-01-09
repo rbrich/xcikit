@@ -199,6 +199,8 @@ public:
     ~UniformDataBuilder();
 
     UniformDataBuilder& f(float f) { add(f); return *this; }
+    UniformDataBuilder& vec2(const Vec2f& v) { add(v.x); add(v.y); return *this; }
+    UniformDataBuilder& vec3(const Vec3f& v) { add(v.x); add(v.y); add(v.z); return *this; }
     UniformDataBuilder& vec4(const Vec4f& v) { add(v.x); add(v.y); add(v.z); add(v.w); return *this; }
     UniformDataBuilder& mat4(const Mat4f& m) { m_data.insert(m_data.end(), m.data(), m.data() + m.size()); return *this; }
 

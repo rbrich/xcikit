@@ -93,8 +93,10 @@ public:
     /// \param address_mode     Addressing mode for both U, V coords
     /// \param anisotropy       Max anisotropy level. Use 0.f to disable.
     ///                         Capped at max_sampler_anisotropy(), which is usually 16.
+    /// \param max_lod          Max mipmap level. Can be bigger than mip levels available in the texture.
+    ///                         Set to 0 to disable mipmaps.
     Sampler& get_sampler(SamplerAddressMode address_mode = SamplerAddressMode::ClampToEdge,
-                         float anisotropy = 0.f);
+                         float anisotropy = 0.f, unsigned max_lod = 16);
 
     void clear_sampler_cache();
 

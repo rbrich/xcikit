@@ -1,7 +1,7 @@
 // Image.cpp created on 2023-12-26 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Image.h"
@@ -61,7 +61,7 @@ void Image::destroy()
 
 
 void ImageView::create(VkDevice device, VkImage image, VkFormat format,
-                       VkImageAspectFlags aspect_mask)
+                       VkImageAspectFlags aspect_mask, uint32_t mip_levels)
 {
     const VkImageViewCreateInfo image_view_ci = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -71,7 +71,7 @@ void ImageView::create(VkDevice device, VkImage image, VkFormat format,
             .subresourceRange = {
                     .aspectMask = aspect_mask,
                     .baseMipLevel = 0,
-                    .levelCount = 1,
+                    .levelCount = mip_levels,
                     .baseArrayLayer = 0,
                     .layerCount = 1,
             },

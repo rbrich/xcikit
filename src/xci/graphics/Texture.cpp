@@ -9,10 +9,17 @@
 #include "vulkan/VulkanError.h"
 #include "vulkan/CommandBuffers.h"
 #include <xci/compat/macros.h>
+#include <bit>
 #include <cassert>
 #include <cstring>
 
 namespace xci::graphics {
+
+
+uint32_t mip_levels_for_size(Vec2u size)
+{
+    return std::bit_width(size.x | size.y);
+}
 
 
 Texture::Texture(Renderer& renderer)
@@ -22,11 +29,12 @@ Texture::Texture(Renderer& renderer)
 {}
 
 
-bool Texture::create(const Vec2u& size, ColorFormat format)
+bool Texture::create(const Vec2u& size, ColorFormat format, TextureFlags flags)
 {
     destroy();
     m_size = size;
     m_format = format;
+    m_flags = flags;
 
     // staging buffer
     {
@@ -50,8 +58,11 @@ bool Texture::create(const Vec2u& size, ColorFormat format)
     }
 
     // image
-    m_image.create({size, vk_format(), VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT});
-    m_image_view.create(device(), m_image.vk(), vk_format(), VK_IMAGE_ASPECT_COLOR_BIT);
+    ImageCreateInfo image_ci {size, vk_format(),
+                             (has_mipmaps() ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0u) |
+                             VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT};
+    m_image.create(image_ci.set_mip_levels(mip_levels()));
+    m_image_view.create(device(), m_image.vk(), vk_format(), VK_IMAGE_ASPECT_COLOR_BIT, mip_levels());
 
     return true;
 }
@@ -113,14 +124,15 @@ void Texture::update()
     cmd_buf.transition_image_layout(m_image.vk(),
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-            m_image_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            m_image_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            0, mip_levels());
 
     if (m_pending_clear) {
         m_pending_clear = false;
         VkImageSubresourceRange range {
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .baseMipLevel = 0,
-                .levelCount = 1,
+                .levelCount = mip_levels(),
                 .baseArrayLayer = 0,
                 .layerCount = 1,
         };
@@ -144,11 +156,15 @@ void Texture::update()
     }
     m_pending_regions.clear();
 
-    m_image_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    cmd_buf.transition_image_layout(m_image.vk(),
-            VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-            VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_image_layout);
+    if (has_mipmaps()) {
+        generate_mipmaps(cmd_buf);
+    } else {
+        m_image_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        cmd_buf.transition_image_layout(m_image.vk(),
+                VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_image_layout);
+    }
 
     cmd_buf.end();
     cmd_buf.submit();
@@ -175,6 +191,60 @@ VkFormat Texture::vk_format() const
 VkDevice Texture::device() const
 {
     return m_renderer.vk_device();
+}
+
+
+void Texture::generate_mipmaps(CommandBuffers& cmd_buf)
+{
+    Vec2i mip_size = Vec2i(m_size);
+    const auto num_levels = mip_levels();
+    for (uint32_t i = 1; i < num_levels; i++) {
+        cmd_buf.transition_image_layout(m_image.vk(),
+                                        VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+                                        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                                        i - 1, 1);
+
+        VkImageBlit blit {
+            .srcSubresource = {
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .mipLevel = i - 1,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+            },
+            .srcOffsets = {{ 0, 0, 0 }, {mip_size.x, mip_size.y, 1}},
+            .dstSubresource = {
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .mipLevel = i,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+            },
+            .dstOffsets = {{ 0, 0, 0 }, { mip_size.x > 1 ? mip_size.x / 2 : 1,
+                                          mip_size.y > 1 ? mip_size.y / 2 : 1, 1 }},
+        };
+        vkCmdBlitImage(cmd_buf.vk(),
+                       m_image.vk(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                       m_image.vk(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                       1, &blit,
+                       VK_FILTER_LINEAR);
+
+        cmd_buf.transition_image_layout(m_image.vk(),
+                                        VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+                                        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                                        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                        i - 1, 1);
+
+        if (mip_size.x > 1)
+            mip_size.x /= 2;
+        if (mip_size.y > 1)
+            mip_size.y /= 2;
+    }
+
+    cmd_buf.transition_image_layout(m_image.vk(),
+                                    VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+                                    VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                    num_levels - 1, 1);
 }
 
 

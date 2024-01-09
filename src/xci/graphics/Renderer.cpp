@@ -259,9 +259,9 @@ ShaderModule* Renderer::load_shader_module(const std::string& vfs_path)
 }
 
 
-Sampler& Renderer::get_sampler(SamplerAddressMode address_mode, float anisotropy)
+Sampler& Renderer::get_sampler(SamplerAddressMode address_mode, float anisotropy, unsigned max_lod)
 {
-    SamplerCreateInfo ci(address_mode, std::min(anisotropy, m_max_sampler_anisotropy));
+    SamplerCreateInfo ci(address_mode, std::min(anisotropy, m_max_sampler_anisotropy), max_lod);
     auto [it, added] = m_sampler.try_emplace(ci);
     if (added)
         it->second.create(vk_device(), ci);

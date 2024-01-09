@@ -43,7 +43,8 @@ public:
     void transition_image_layout(VkImage image,
             VkAccessFlags src_access, VkAccessFlags dst_access,
             VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage,
-            VkImageLayout old_layout, VkImageLayout new_layout);
+            VkImageLayout old_layout, VkImageLayout new_layout,
+            uint32_t mip_base = 0, uint32_t mip_count = 1);
     void transition_buffer(VkBuffer buffer, VkDeviceSize size,
             VkAccessFlags src_access, VkAccessFlags dst_access,
             VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage);

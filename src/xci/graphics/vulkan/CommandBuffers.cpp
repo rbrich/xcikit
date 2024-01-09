@@ -97,7 +97,8 @@ void CommandBuffers::submit(unsigned idx)
 void CommandBuffers::transition_image_layout(VkImage image,
         VkAccessFlags src_access, VkAccessFlags dst_access,
         VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage,
-        VkImageLayout old_layout, VkImageLayout new_layout)
+        VkImageLayout old_layout, VkImageLayout new_layout,
+        uint32_t mip_base, uint32_t mip_count)
 {
     VkImageMemoryBarrier barrier = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -110,8 +111,8 @@ void CommandBuffers::transition_image_layout(VkImage image,
             .image = image,
             .subresourceRange = {
                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                    .baseMipLevel = 0,
-                    .levelCount = 1,
+                    .baseMipLevel = mip_base,
+                    .levelCount = mip_count,
                     .baseArrayLayer = 0,
                     .layerCount = 1,
             },
