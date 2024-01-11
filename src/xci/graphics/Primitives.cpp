@@ -402,6 +402,31 @@ void Primitives::set_texture(uint32_t binding, Texture& texture)
 }
 
 
+void Primitives::clear_push_constants()
+{
+    m_push_constants.clear();
+    destroy_pipeline();
+}
+
+
+void Primitives::reserve_push_constants(size_t size)
+{
+    m_push_constants.resize(size);
+    destroy_pipeline();
+}
+
+
+void Primitives::set_push_constants_data(const void* data, size_t size)
+{
+    if (m_push_constants.size() != size) {
+        // new push constants, updating pipeline layout
+        destroy_pipeline();
+        m_push_constants.resize(size);
+    }
+    std::memcpy(m_push_constants.data(), data, size);
+}
+
+
 void Primitives::clear_uniforms()
 {
     m_uniform_data.clear();
@@ -522,6 +547,12 @@ void Primitives::draw(View& view, PrimitiveDrawFlags flags)
     m_buffers->bind(cmd_buf);
     window->add_command_buffer_resource(m_buffers);
 
+    // push constants
+    if (!m_push_constants.empty())
+        vkCmdPushConstants(cmd_buf, m_pipeline_layout->vk(),
+                           VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                           0, uint32_t(m_push_constants.size()), m_push_constants.data());
+
     // uniforms
     if ((flags & PrimitiveDrawFlags::Projection2D) != PrimitiveDrawFlags::None)
         set_uniform(0, view.projection_matrix());
@@ -573,6 +604,9 @@ void Primitives::update_pipeline()
     }
 
     PipelineLayoutCreateInfo pipeline_layout_ci;
+    if (!m_push_constants.empty()) {
+        pipeline_layout_ci.add_push_constant_range(0, uint32_t(m_push_constants.size()));
+    }
     uint32_t dynamic_size = 0;
     for (const auto& [binding, uniform] : m_uniforms | enumerate) {
         if (uniform)

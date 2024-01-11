@@ -254,6 +254,10 @@ public:
 
     void set_shader(Shader shader);
 
+    void clear_push_constants();
+    void reserve_push_constants(size_t size);
+    void set_push_constants_data(const void* data, size_t size);
+
     void clear_uniforms();
     void set_uniform_data(uint32_t binding, const void* data, size_t size, bool dynamic = false);
 
@@ -304,6 +308,7 @@ private:
     int m_open_vertices = -1;
     VertexData m_vertex_data;
     IndexData m_index_data;
+    std::vector<std::byte> m_push_constants;
     std::vector<std::byte> m_uniform_data;
     std::vector<UniformBinding> m_uniforms;  // index = binding
     std::vector<TextureBinding> m_textures;

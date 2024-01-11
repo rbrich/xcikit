@@ -66,8 +66,10 @@ class PipelineLayoutCreateInfo {
 public:
     void add_uniform_binding(uint32_t binding, bool dynamic = false);
     void add_texture_binding(uint32_t binding);
+    void add_push_constant_range(uint32_t offset, uint32_t size);
 
     std::vector<VkDescriptorSetLayoutBinding> vk_layout_bindings() const;
+    std::vector<VkPushConstantRange> vk_push_constant_ranges() const;
     DescriptorPoolSizes descriptor_pool_sizes() const;
 
     size_t hash() const;
@@ -95,6 +97,14 @@ private:
         bool operator==(const LayoutBinding& rhs) const = default;
     };
     std::vector<LayoutBinding> m_layout_bindings;
+
+    struct PushConstantRange {
+        uint32_t offset;
+        uint32_t size;
+        PushConstantRange(uint32_t offset, uint32_t size) : offset(offset), size(size) {}
+        bool operator==(const PushConstantRange& rhs) const = default;
+    };
+    std::vector<PushConstantRange> m_push_constant_ranges;
 };
 
 

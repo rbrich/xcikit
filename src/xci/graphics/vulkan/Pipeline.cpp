@@ -52,10 +52,15 @@ void PipelineLayoutCreateInfo::add_texture_binding(uint32_t binding)
 }
 
 
+void PipelineLayoutCreateInfo::add_push_constant_range(uint32_t offset, uint32_t size)
+{
+    m_push_constant_ranges.emplace_back(offset, size);
+}
+
+
 std::vector<VkDescriptorSetLayoutBinding> PipelineLayoutCreateInfo::vk_layout_bindings() const
 {
     std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
-
     for (const auto& item : m_layout_bindings) {
         layout_bindings.push_back({
                 .binding = item.binding,
@@ -66,8 +71,21 @@ std::vector<VkDescriptorSetLayoutBinding> PipelineLayoutCreateInfo::vk_layout_bi
                         ((item.flags & LayoutBinding::StageFragment)? VK_SHADER_STAGE_FRAGMENT_BIT : 0u),
         });
     }
-
     return layout_bindings;
+}
+
+
+std::vector<VkPushConstantRange> PipelineLayoutCreateInfo::vk_push_constant_ranges() const
+{
+    std::vector<VkPushConstantRange> ranges;
+    for (const auto& item : m_push_constant_ranges) {
+        ranges.push_back({
+                .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                .offset = item.offset,
+                .size = item.size,
+        });
+    }
+    return ranges;
 }
 
 
@@ -104,6 +122,9 @@ size_t PipelineLayoutCreateInfo::hash() const
     for (const auto& item : m_layout_bindings) {
         h = std::rotl(h, 7) ^ ((item.binding << 4) | item.flags);
     }
+    for (const auto& item : m_push_constant_ranges) {
+        h = std::rotl(h, 7) ^ ((item.offset << 4) | item.size);
+    }
     return h;
 }
 
@@ -123,11 +144,14 @@ PipelineLayout::PipelineLayout(Renderer& renderer, const PipelineLayoutCreateInf
                     m_renderer.vk_device(), &layout_ci,
                     nullptr, &m_descriptor_set_layout));
 
+    auto push_constant_ranges = ci.vk_push_constant_ranges();
+
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
             .setLayoutCount = 1,
             .pSetLayouts = &m_descriptor_set_layout,
-            .pushConstantRangeCount = 0,
+            .pushConstantRangeCount = (uint32_t) push_constant_ranges.size(),
+            .pPushConstantRanges = push_constant_ranges.data(),
     };
 
     VK_TRY("vkCreatePipelineLayout",
