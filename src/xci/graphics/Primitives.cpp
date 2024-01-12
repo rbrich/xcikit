@@ -563,7 +563,7 @@ void Primitives::update()
 }
 
 
-void Primitives::draw(CommandBuffer& cmd_buf, Attachments& attachments,
+void Primitives::draw(CommandBuffer& cmd_buf, const Attachments& attachments,
                       View& view, PrimitiveDrawFlags flags)
 {
     if (empty())
@@ -584,7 +584,7 @@ void Primitives::draw(CommandBuffer& cmd_buf, Attachments& attachments,
     pipeline_ci.set_vertex_format(m_format);
     pipeline_ci.set_color_blend(m_blend);
     pipeline_ci.set_depth_test(m_depth_test);
-    Pipeline& pipeline = m_renderer.get_pipeline(pipeline_ci);
+    const Pipeline& pipeline = m_renderer.get_pipeline(pipeline_ci);
     vkCmdBindPipeline(vk_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.vk());
 
     // set scissor region

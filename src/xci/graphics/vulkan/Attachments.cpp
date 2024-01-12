@@ -13,6 +13,7 @@ namespace xci::graphics {
 void Attachments::create_renderpass(VkDevice device)
 {
     std::vector<VkAttachmentDescription> attachment_desc;
+    attachment_desc.reserve(m_color_attachments.size() * (has_msaa()?2:1) + int(has_depth_stencil()));
 
     // color attachments
     for (const auto& color : m_color_attachments) {
@@ -63,6 +64,7 @@ void Attachments::create_renderpass(VkDevice device)
     // attachment references
     uint32_t index = 0;
     std::vector<VkAttachmentReference> attachment_ref;
+    attachment_ref.reserve(attachment_desc.size());
     for ([[maybe_unused]] const auto& color : m_color_attachments) {
         attachment_ref.push_back({
             .attachment = index++,  // layout(location = X)
@@ -174,6 +176,7 @@ VkFormat Attachments::depth_stencil_format() const
 auto Attachments::vk_clear_values() const -> std::vector<VkClearValue>
 {
     std::vector<VkClearValue> clear_values;
+    clear_values.reserve(m_color_attachments.size() + int(has_depth_stencil()));
     for (const auto& color_attachment : m_color_attachments) {
         clear_values.push_back(VkClearValue{.color = color_attachment.clear_value});
     }

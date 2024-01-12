@@ -69,6 +69,7 @@ void PipelineLayoutCreateInfo::add_push_constant_range(uint32_t offset, uint32_t
 std::vector<VkDescriptorSetLayoutBinding> PipelineLayoutCreateInfo::vk_layout_bindings() const
 {
     std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
+    layout_bindings.reserve(m_layout_bindings.size());
     for (const auto& item : m_layout_bindings) {
         VkShaderStageFlags stage_flags {};
         if (item.flags & LayoutBinding::StageVertex)
@@ -89,6 +90,7 @@ std::vector<VkDescriptorSetLayoutBinding> PipelineLayoutCreateInfo::vk_layout_bi
 std::vector<VkPushConstantRange> PipelineLayoutCreateInfo::vk_push_constant_ranges() const
 {
     std::vector<VkPushConstantRange> ranges;
+    ranges.reserve(m_push_constant_ranges.size());
     for (const auto& item : m_push_constant_ranges) {
         ranges.push_back({
                 .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,

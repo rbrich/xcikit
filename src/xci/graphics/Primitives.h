@@ -319,7 +319,7 @@ public:
 
     void update();
 
-    void draw(CommandBuffer& cmd_buf, Attachments& attachments,
+    void draw(CommandBuffer& cmd_buf, const Attachments& attachments,
               View& view, PrimitiveDrawFlags flags);
     void draw(View& view, PrimitiveDrawFlags flags = { .projection_2d = true });
     void draw(View& view, VariCoords pos);

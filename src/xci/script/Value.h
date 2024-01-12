@@ -1,7 +1,7 @@
 // Value.h created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_VALUE_H
@@ -24,7 +24,6 @@
 #include <variant>
 #include <cstring>
 #include <cstdint>
-#include <cstddef>  // byte
 
 namespace xci::script {
 
@@ -108,7 +107,7 @@ struct StringV {
 
 struct ListV {
     ListV() = default;
-    explicit ListV(size_t length, const TypeInfo& elem_type, const std::byte* elem_data = nullptr);
+    explicit ListV(size_t length, const TypeInfo& elem_type, const void* elem_data = nullptr);
     explicit ListV(HeapSlot&& slot) : slot(std::move(slot)) {}
     bool operator ==(const ListV& rhs) const { return slot.slot() == rhs.slot.slot(); }  // same slot - cannot compare content without elem_type
     size_t length() const;

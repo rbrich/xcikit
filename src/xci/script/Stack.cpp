@@ -1,7 +1,7 @@
 // Stack.cpp created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Stack.h"
@@ -141,7 +141,7 @@ void Stack::drop(StackRel first, size_t size)
 }
 
 
-void Stack::swap(size_t first, size_t second)
+void Stack::swap(size_t first, size_t second)  // NOLINT(performance-noexcept-swap), not that kind of swap...
 {
     assert(first + second <= Stack::size());
     // swap also m_stack_types, check type boundaries
@@ -186,7 +186,7 @@ std::ostream& operator<<(std::ostream& os, const Stack& v)
         // print frame boundary (only on exact match, note that
         // it may point to middle of a value after DROP)
         if (base == pos)
-            cout << " --- ---  (frame " << frame << ")" << endl;
+            cout << " --- ---  (frame " << frame << ")\n";
         // recompute base, frame for following stack values
         if (base <= pos && frame > 0)
             base = v.to_rel(v.frame(--frame).base);

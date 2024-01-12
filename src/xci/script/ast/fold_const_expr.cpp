@@ -1,7 +1,7 @@
 // fold_const_expr.cpp created on 2019-06-13 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "fold_const_expr.h"
@@ -66,7 +66,7 @@ public:
                 break;
             case Symbol::Function: {
                 assert(v.index != no_index);
-                Function& fn = v.module->get_scope(v.index).function();
+                const Function& fn = v.module->get_scope(v.index).function();
                 if (fn.is_assembly()) {
                     m_const_value = TypedValue(value::Closure(fn), TypeInfo{fn.signature_ptr()});
                     return;
