@@ -1,7 +1,7 @@
 // Swapchain.cpp created on 2023-10-31 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Swapchain.h"
@@ -65,12 +65,16 @@ void Swapchain::create()
             .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
             .presentMode = present_mode_to_vk(m_present_mode),
             .clipped = VK_TRUE,
-            .oldSwapchain = VK_NULL_HANDLE,
+            .oldSwapchain = m_swapchain,
     };
 
+    VkSwapchainKHR new_swapchain = VK_NULL_HANDLE;
     VK_TRY("vkCreateSwapchainKHR",
             vkCreateSwapchainKHR(device, &swapchain_create_info,
-                    nullptr, &m_swapchain));
+                    nullptr, &new_swapchain));
+
+    destroy();
+    m_swapchain = new_swapchain;
 
     TRACE("Vulkan: swapchain image count: {}", m_image_count);
     vkGetSwapchainImagesKHR(device, m_swapchain,
@@ -266,7 +270,6 @@ bool Swapchain::query(VkPhysicalDevice device)
 void Swapchain::recreate()
 {
     destroy_framebuffers();
-    destroy();
     create();
     create_framebuffers();
 }
