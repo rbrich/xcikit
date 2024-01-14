@@ -22,7 +22,7 @@
 namespace xci::graphics {
 
 class Renderer;
-class CommandBuffers;
+class CommandBuffer;
 
 using std::uint8_t;
 
@@ -72,7 +72,7 @@ public:
 private:
     VkFormat vk_format() const;
     VkDevice device() const;
-    void generate_mipmaps(CommandBuffers& cmd_buf);
+    void generate_mipmaps(CommandBuffer& cmd_buf);
     void destroy();
 
     Renderer& m_renderer;

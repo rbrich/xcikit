@@ -398,7 +398,8 @@ void Renderer::create_device()
     uint32_t graphics_queue_family = 0;
 
     // features of chose device
-    VkBool32 has_sampler_anisotropy = VK_FALSE;
+    bool has_sampler_anisotropy = VK_FALSE;
+    bool has_fragment_stores_and_atomics = VK_FALSE;
 
     log::info("Vulkan: {} devices available:", device_count);
     for (const auto& device : devices | take(device_count)) {
@@ -465,7 +466,8 @@ void Renderer::create_device()
         // save chosen device handle
         if (choose) {
             m_physical_device = device;
-            has_sampler_anisotropy = device_features.samplerAnisotropy;
+            has_sampler_anisotropy = (bool) device_features.samplerAnisotropy;
+            has_fragment_stores_and_atomics = (bool) device_features.fragmentStoresAndAtomics;
             load_device_properties(device_props);
         }
 
@@ -496,6 +498,7 @@ void Renderer::create_device()
 
         const VkPhysicalDeviceFeatures device_features = {
                 .samplerAnisotropy = has_sampler_anisotropy,  // enable if available
+                .fragmentStoresAndAtomics = has_fragment_stores_and_atomics,  // enable if available
         };
 
         const VkDeviceCreateInfo device_create_info = {

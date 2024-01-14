@@ -63,38 +63,61 @@ void CommandBuffers::reset()
 }
 
 
-void CommandBuffers::begin(unsigned idx)
+void CommandBuffer::begin()
 {
     VkCommandBufferBeginInfo begin_info = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
             .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     };
     VK_TRY("vkBeginCommandBuffer",
-            vkBeginCommandBuffer(m_command_buffers[idx], &begin_info));
+            vkBeginCommandBuffer(m_vk_command_buffer, &begin_info));
 }
 
 
-void CommandBuffers::end(unsigned idx)
+void CommandBuffer::end()
 {
-    VK_TRY("vkEndCommandBuffer", vkEndCommandBuffer(m_command_buffers[idx]));
+    VK_TRY("vkEndCommandBuffer", vkEndCommandBuffer(m_vk_command_buffer));
 }
 
 
-void CommandBuffers::submit(unsigned idx)
+void CommandBuffer::submit(VkQueue queue)
 {
     VkSubmitInfo submit_info = {
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
             .commandBufferCount = 1,
-            .pCommandBuffers = &m_command_buffers[idx],
+            .pCommandBuffers = &m_vk_command_buffer,
     };
     VK_TRY("vkQueueSubmit",
-            vkQueueSubmit(m_renderer.vk_queue(), 1, &submit_info,
-                    VK_NULL_HANDLE));
-    VK_TRY("vkQueueWaitIdle", vkQueueWaitIdle(m_renderer.vk_queue()));
+            vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE));
+    VK_TRY("vkQueueWaitIdle", vkQueueWaitIdle(queue));
 }
 
 
-void CommandBuffers::transition_image_layout(VkImage image,
+void CommandBuffer::submit(VkQueue queue, VkSemaphore wait, VkPipelineStageFlags wait_stage,
+                           VkSemaphore signal, VkFence fence)
+{
+    const VkSubmitInfo submit_info = {
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = &wait,
+            .pWaitDstStageMask = &wait_stage,
+            .commandBufferCount = 1,
+            .pCommandBuffers = &m_vk_command_buffer,
+            .signalSemaphoreCount = 1,
+            .pSignalSemaphores = &signal,
+    };
+    VK_TRY("vkQueueSubmit",
+           vkQueueSubmit(queue, 1, &submit_info, fence));
+}
+
+
+void CommandBuffers::submit(unsigned int idx)
+{
+    buffer(idx).submit(m_renderer.vk_queue());
+}
+
+
+void CommandBuffer::transition_image_layout(VkImage image,
         VkAccessFlags src_access, VkAccessFlags dst_access,
         VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage,
         VkImageLayout old_layout, VkImageLayout new_layout,
@@ -118,7 +141,7 @@ void CommandBuffers::transition_image_layout(VkImage image,
             },
     };
     vkCmdPipelineBarrier(
-            m_command_buffers[0],
+            m_vk_command_buffer,
             src_stage, dst_stage,
             0,
             0, nullptr,
@@ -128,7 +151,7 @@ void CommandBuffers::transition_image_layout(VkImage image,
 }
 
 
-void CommandBuffers::transition_buffer(
+void CommandBuffer::transition_buffer(
     VkBuffer buffer, VkDeviceSize size,
     VkAccessFlags src_access, VkAccessFlags dst_access,
     VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage)
@@ -144,7 +167,7 @@ void CommandBuffers::transition_buffer(
         .size = size,
     };
     vkCmdPipelineBarrier(
-        m_command_buffers[0],
+        m_vk_command_buffer,
         src_stage, dst_stage,
         0,
         0, nullptr,
@@ -154,8 +177,7 @@ void CommandBuffers::transition_buffer(
 }
 
 
-void
-CommandBuffers::copy_buffer_to_image(
+void CommandBuffer::copy_buffer_to_image(
         VkBuffer buffer, VkDeviceSize buffer_offset, uint32_t buffer_row_len,
         VkImage image, const Rect_u& region)
 {
@@ -172,7 +194,7 @@ CommandBuffers::copy_buffer_to_image(
             .imageOffset = {int32_t(region.x), int32_t(region.y), 0},
             .imageExtent = {region.w, region.h, 1},
     };
-    vkCmdCopyBufferToImage(m_command_buffers[0], buffer, image,
+    vkCmdCopyBufferToImage(m_vk_command_buffer, buffer, image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             1, &copy_region);
 }
@@ -183,6 +205,25 @@ void CommandBuffers::release_resources(size_t i)
     for (auto& deleter : m_resources[i])
         deleter();
     m_resources[i].clear();
+}
+
+
+void CommandBuffers::remove_callbacks(void* owner)
+{
+    std::erase_if(m_callbacks, [owner](const CallbackInfo& info) {
+        return info.owner == owner;
+    });
+}
+
+
+void CommandBuffers::trigger_callbacks(Event event, unsigned i)
+{
+    CommandBuffer cmd_buf = buffer(i);
+    for (const CallbackInfo& info : m_callbacks) {
+        if (info.event == event) {
+            info.cb(cmd_buf);
+        }
+    }
 }
 
 

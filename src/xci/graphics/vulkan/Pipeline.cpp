@@ -52,6 +52,13 @@ void PipelineLayoutCreateInfo::add_texture_binding(uint32_t binding)
 }
 
 
+void PipelineLayoutCreateInfo::add_storage_binding(uint32_t binding)
+{
+    m_layout_bindings.push_back({binding,
+        LayoutBinding::TypeStorageBuffer | LayoutBinding::StageFragment});
+}
+
+
 void PipelineLayoutCreateInfo::add_push_constant_range(uint32_t offset, uint32_t size)
 {
     m_push_constant_ranges.emplace_back(offset, size);
@@ -95,7 +102,7 @@ DescriptorPoolSizes PipelineLayoutCreateInfo::descriptor_pool_sizes() const
 
     // uniforms
     const auto uniform_count = std::count_if(m_layout_bindings.begin(), m_layout_bindings.end(),
-             [](const auto& v) { return (v.flags & LayoutBinding::TypeMask) == 0; });
+             [](const auto& v) { return (v.flags & LayoutBinding::TypeMask) == LayoutBinding::TypeUniform; });
     if (uniform_count)
         sizes.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniform_count);
 
@@ -111,6 +118,12 @@ DescriptorPoolSizes PipelineLayoutCreateInfo::descriptor_pool_sizes() const
              { return (v.flags & LayoutBinding::TypeMask) == LayoutBinding::TypeImageSampler; });
     if (texture_count)
         sizes.add(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, texture_count);
+
+    // storage buffer
+    const auto storage_count = std::count_if(m_layout_bindings.begin(), m_layout_bindings.end(),
+             [](const auto& v) { return (v.flags & LayoutBinding::TypeMask) == LayoutBinding::TypeStorageBuffer; });
+    if (storage_count)
+        sizes.add(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, storage_count);
 
     return sizes;
 }

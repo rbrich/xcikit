@@ -37,7 +37,7 @@ public:
     void bind_image(VkImage image, VkDeviceSize offset);
 
     [[nodiscard]]
-    void* map(VkDeviceSize offset, VkDeviceSize size);
+    void* map(VkDeviceSize offset, VkDeviceSize size = VK_WHOLE_SIZE);
     void unmap();
 
     struct MappedMemoryRange {

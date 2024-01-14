@@ -256,10 +256,12 @@ public:
     SDL_Window* sdl_window() const { return m_window; }
 
     // Vulkan - current command buffer
-    VkCommandBuffer vk_command_buffer() const { return m_command_buffers[m_current_cmd_buf]; }
+    CommandBuffer command_buffer() const { return m_command_buffers.buffer(m_current_cmd_buf); }
+    VkCommandBuffer vk_command_buffer() const { return m_command_buffers.vk(m_current_cmd_buf); }
     uint32_t command_buffer_index() const { return m_current_cmd_buf; }
-    void add_command_buffer_resource(const ResourcePtr& resource) { m_command_buffers.add_resource(m_current_cmd_buf, resource); }
-    void add_command_buffer_resource_deleter(std::function<void()>&& deleter) { m_command_buffers.add_resource_deleter(m_current_cmd_buf, std::move(deleter)); }
+    CommandBuffers& command_buffers() { return m_command_buffers; }
+    template <typename T> void add_command_buffer_resource(const T& resource) { m_command_buffers.add_resource(m_current_cmd_buf, resource); }
+    void add_command_buffer_cleanup(std::function<void()>&& cb) { m_command_buffers.add_cleanup(m_current_cmd_buf, std::move(cb)); }
 
 private:
     void setup_view();

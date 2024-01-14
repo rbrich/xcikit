@@ -10,6 +10,7 @@
 #include "DescriptorPool.h"
 
 #include <xci/core/mixin.h>
+#include <xci/compat/macros.h>
 
 #include <vulkan/vulkan.h>
 
@@ -66,6 +67,7 @@ class PipelineLayoutCreateInfo {
 public:
     void add_uniform_binding(uint32_t binding, bool dynamic = false);
     void add_texture_binding(uint32_t binding);
+    void add_storage_binding(uint32_t binding);
     void add_push_constant_range(uint32_t offset, uint32_t size);
 
     std::vector<VkDescriptorSetLayoutBinding> vk_layout_bindings() const;
@@ -80,19 +82,25 @@ private:
     struct LayoutBinding {
         uint32_t binding = 0;
         enum Flags : uint32_t {
+            TypeUniform         = 0x00,  // default type
             TypeDynamicUniform  = 0x01,
             TypeImageSampler    = 0x02,
+            TypeStorageBuffer   = 0x03,
             TypeMask            = 0x03,
+
             StageVertex         = 0x04,
             StageFragment       = 0x08,
+            StageMask           = 0x0C,
         };
         uint32_t flags = 0;
         VkDescriptorType vk_descriptor_type() const {
-            return (flags & TypeImageSampler)
-                    ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-                    : (flags & TypeDynamicUniform)
-                           ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
-                           : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            switch (flags & TypeMask) {
+                case TypeUniform: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                case TypeDynamicUniform: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+                case TypeImageSampler: return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                case TypeStorageBuffer: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            }
+            XCI_UNREACHABLE;
         }
         bool operator==(const LayoutBinding& rhs) const = default;
     };

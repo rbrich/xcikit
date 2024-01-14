@@ -1,7 +1,7 @@
 // Window.cpp created on 2019-10-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Window.h"
@@ -516,9 +516,8 @@ void Window::draw()
         return;
     }
 
-    auto* cmd_buf = m_command_buffers[m_current_cmd_buf];
-
     {
+        auto cmd_buf = m_command_buffers[m_current_cmd_buf];
         VK_TRY("vkWaitForFences",
                 vkWaitForFences(m_renderer.vk_device(),
                         1, &m_cmd_buf_fences[m_current_cmd_buf], VK_TRUE, UINT64_MAX));
@@ -527,7 +526,9 @@ void Window::draw()
                         1, &m_cmd_buf_fences[m_current_cmd_buf]));
 
         m_command_buffers.release_resources(m_current_cmd_buf);
-        m_command_buffers.begin(m_current_cmd_buf);
+
+        cmd_buf.begin();
+        m_command_buffers.trigger_callbacks(CommandBuffers::Event::Init, m_current_cmd_buf);
 
         LinearColor cc(m_clear_color);
         VkClearValue clear_values[2] = {
@@ -545,39 +546,29 @@ void Window::draw()
                 .clearValueCount = 1 + uint32_t(m_renderer.depth_buffering()),
                 .pClearValues = clear_values,
         };
-        vkCmdBeginRenderPass(cmd_buf, &render_pass_info,
+        vkCmdBeginRenderPass(cmd_buf.vk(), &render_pass_info,
                 VK_SUBPASS_CONTENTS_INLINE);
 
         if (m_draw_cb)
             m_draw_cb(m_view);
 
-        vkCmdEndRenderPass(cmd_buf);
+        vkCmdEndRenderPass(cmd_buf.vk());
 
-        m_command_buffers.end(m_current_cmd_buf);
+        m_command_buffers.trigger_callbacks(CommandBuffers::Event::Finish, m_current_cmd_buf);
+        cmd_buf.end();
+
+        cmd_buf.submit(m_renderer.vk_queue(),
+                       m_image_semaphore[m_current_cmd_buf],
+                       VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                       m_render_semaphore[m_current_cmd_buf],
+                       m_cmd_buf_fences[m_current_cmd_buf]);
     }
-
-    VkSemaphore wait_semaphores[] = {m_image_semaphore[m_current_cmd_buf]};
-    VkSemaphore signal_semaphores[] = {m_render_semaphore[m_current_cmd_buf]};
-    VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    const VkSubmitInfo submit_info = {
-            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            .waitSemaphoreCount = 1,
-            .pWaitSemaphores = wait_semaphores,
-            .pWaitDstStageMask = wait_stages,
-            .commandBufferCount = 1,
-            .pCommandBuffers = &cmd_buf,
-            .signalSemaphoreCount = 1,
-            .pSignalSemaphores = signal_semaphores,
-    };
-    VK_TRY("vkQueueSubmit",
-            vkQueueSubmit(m_renderer.vk_queue(), 1, &submit_info,
-                    m_cmd_buf_fences[m_current_cmd_buf]));
 
     VkSwapchainKHR swapchains[] = {m_renderer.vk_swapchain()};
     const VkPresentInfoKHR present_info = {
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             .waitSemaphoreCount = 1,
-            .pWaitSemaphores = signal_semaphores,
+            .pWaitSemaphores = &m_render_semaphore[m_current_cmd_buf],
             .swapchainCount = 1,
             .pSwapchains = swapchains,
             .pImageIndices = &image_index,

@@ -21,24 +21,15 @@ namespace xci::graphics {
 class Renderer;
 
 
-// Inherit this to add support for resource management
-class Resource {};
-using ResourcePtr = std::shared_ptr<Resource>;
-
-
-class CommandBuffers : private core::NonCopyable {
+class CommandBuffer {
 public:
-    explicit CommandBuffers(Renderer& renderer) : m_renderer(renderer) {}
-    ~CommandBuffers();
+    explicit CommandBuffer(VkCommandBuffer vk) : m_vk_command_buffer(vk) {}
 
-    void create(VkCommandPool command_pool, uint32_t count);
-    void destroy();
-
-    void reset();
-
-    void begin(unsigned idx = 0);
-    void end(unsigned idx = 0);
-    void submit(unsigned idx = 0);
+    void begin();
+    void end();
+    void submit(VkQueue queue);
+    void submit(VkQueue queue, VkSemaphore wait, VkPipelineStageFlags wait_stage,
+                VkSemaphore signal, VkFence fence);
 
     void transition_image_layout(VkImage image,
             VkAccessFlags src_access, VkAccessFlags dst_access,
@@ -52,13 +43,39 @@ public:
             VkDeviceSize buffer_offset, uint32_t buffer_row_len,
             VkImage image, const Rect_u& region);
 
-    // Resources used by current command buffer
-    void add_resource(size_t i, const ResourcePtr& resource) { m_resources[i].push_back([resource]{}); }
-    void add_resource_deleter(size_t i, std::function<void()>&& deleter) { m_resources[i].push_back(std::move(deleter)); }
+    VkCommandBuffer vk() const { return m_vk_command_buffer; }
+
+private:
+    VkCommandBuffer m_vk_command_buffer;
+};
+
+
+class CommandBuffers : private core::NonCopyable {
+public:
+    explicit CommandBuffers(Renderer& renderer) : m_renderer(renderer) {}
+    ~CommandBuffers();
+
+    void create(VkCommandPool command_pool, uint32_t count);
+    void destroy();
+
+    void reset();
+    void submit(unsigned idx = 0);
+
+    CommandBuffer buffer(unsigned i = 0) const { return CommandBuffer(m_command_buffers[i]); }
+    CommandBuffer operator[](size_t i) const { return CommandBuffer(m_command_buffers[i]); }
+
+    // Cleanup routines for resources used by current command buffer
+    template <typename T> void add_resource(size_t i, const T& resource) { add_cleanup(i, [resource]{}); }
+    void add_cleanup(size_t i, std::function<void()>&& cb) { m_resources[i].push_back(std::move(cb)); }
     void release_resources(size_t i);
 
-    VkCommandBuffer vk() const { return m_command_buffers[0]; }
-    VkCommandBuffer operator[](size_t i) const { return m_command_buffers[i]; }
+    using CommandBufferCallback = std::function<void(CommandBuffer& cmd_buf)>;
+    enum class Event { Init, Finish };
+    void add_callback(Event event, void* owner, CommandBufferCallback cb) { m_callbacks.push_back({std::move(cb), owner, event}); }
+    void remove_callbacks(void* owner);
+    void trigger_callbacks(Event event, unsigned i = 0);
+
+    VkCommandBuffer vk(unsigned i = 0) const { return m_command_buffers[i]; }
 
 private:
     Renderer& m_renderer;
@@ -66,6 +83,14 @@ private:
     static constexpr size_t max_count = 2;
     std::array<VkCommandBuffer, max_count> m_command_buffers {};
     std::array<std::vector<std::function<void()>>, max_count> m_resources;
+
+    struct CallbackInfo {
+        CommandBufferCallback cb;
+        void* owner;
+        Event event;
+    };
+    std::vector<CallbackInfo> m_callbacks;
+
     unsigned m_count = 0;
 };
 

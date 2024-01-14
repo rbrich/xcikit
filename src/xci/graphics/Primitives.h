@@ -63,7 +63,17 @@ struct TextureBinding {
 };
 
 
-class PrimitivesBuffers: public Resource {
+using StorageReadCb = std::function<void(const void* data, size_t size)>;
+
+struct StorageBinding {
+    uint32_t binding = 0;
+    VkDeviceSize offset = 0;
+    VkDeviceSize range = 0;
+    StorageReadCb read_cb;
+};
+
+
+class PrimitivesBuffers {
 public:
     explicit PrimitivesBuffers(Renderer& renderer)
         : m_renderer(renderer), m_device_memory(renderer) {}
@@ -84,14 +94,15 @@ private:
 };
 
 
-class UniformBuffers: public Resource {
+class UniformBuffers {
 public:
     explicit UniformBuffers(Renderer& renderer);
     ~UniformBuffers();
 
-    void create(size_t static_size, size_t dynamic_size);
+    void create(size_t static_size, size_t dynamic_size, size_t storage_size);
     size_t dynamic_base() const { return m_dynamic_base; }
     size_t dynamic_size() const { return m_dynamic_size; }
+    size_t storage_size() const { return m_storage_size; }
 
     size_t allocate_dynamic_uniform(size_t size);
 
@@ -101,15 +112,20 @@ public:
     size_t get_dynamic_uniform_mark() const { return m_dynamic_free_offset; }
     void free_dynamic_uniform_mark(size_t mark);
 
-    /// Copy uniform data to device memory
-    void copy_uniforms(size_t offset, size_t size, const void* data);
-    void copy_dynamic_uniforms(size_t offset, size_t size, const void* data)
-        { copy_uniforms(m_dynamic_base + offset, size, data); }
+    /// Write uniform data to device memory
+    void write_uniforms(size_t offset, size_t size, const void* data);
+    void write_dynamic_uniforms(size_t offset, size_t size, const void* data)
+        { write_uniforms(m_dynamic_base + offset, size, data); }
+    void write_storage(size_t offset, size_t size, const void* data);
 
     /// Flush pending device memory changes (via copy_*)
     void flush();
 
+    /// Get address of mapped storage memory
+    void* mapped_storage(size_t offset);
+
     VkBuffer vk_uniform_buffer() const { return m_buffer; }
+    VkBuffer vk_storage_buffer() const { return m_storage_buffer; }
 
 private:
     VkDevice device() const;
@@ -120,24 +136,27 @@ private:
     size_t m_dynamic_size {};          // size of dynamic uniforms allocation area (circular buffer)
     size_t m_dynamic_free_offset {};   // offset inside dynamic area pointing to next free block
     size_t m_dynamic_used_size {};     // size of used part of dynamic area
+    VkBuffer m_storage_buffer {};
+    VkDeviceSize m_storage_offset {};
+    size_t m_storage_size {};
     DeviceMemory m_device_memory;
     void* m_device_memory_mapped = nullptr;
     std::vector<DeviceMemory::MappedMemoryRange> m_pending_flush;
-    const VkDeviceSize m_min_alignment;
 };
 
 
-class UniformDescriptorSets: public Resource {
+class DescriptorSets {
 public:
-    explicit UniformDescriptorSets(Renderer& renderer, DescriptorPool& descriptor_pool)
+    explicit DescriptorSets(Renderer& renderer, DescriptorPool& descriptor_pool)
         : m_renderer(renderer), m_descriptor_pool(descriptor_pool) {}
-    ~UniformDescriptorSets();
+    ~DescriptorSets();
 
     void create(VkDescriptorSetLayout layout);
 
     void update(
             const UniformBuffers& uniform_buffers,
             const std::vector<UniformBinding>& uniform_bindings,
+            const std::vector<StorageBinding>& storage_bindings,
             const std::vector<TextureBinding>& texture_bindings);
 
     void bind(VkCommandBuffer cmd_buf, VkPipelineLayout pipeline_layout,
@@ -146,13 +165,13 @@ public:
 private:
     Renderer& m_renderer;
     DescriptorPool& m_descriptor_pool;
-    VkDescriptorSet m_descriptor_sets {};
+    VkDescriptorSet m_vk_descriptor_set {};
 };
 
 
 using PrimitivesBuffersPtr = std::shared_ptr<PrimitivesBuffers>;
 using UniformBuffersPtr = std::shared_ptr<UniformBuffers>;
-using PrimitivesDescriptorSetsPtr = std::shared_ptr<UniformDescriptorSets>;
+using DescriptorSetsPtr = std::shared_ptr<DescriptorSets>;
 
 using VertexData = std::vector<float>;
 using IndexData = std::vector<uint16_t>;
@@ -281,6 +300,15 @@ public:
     /// re-creation of Vulkan objects and re-allocation of device memory.
     UniformDataBuilder set_dynamic_uniform(uint32_t binding) { return UniformDataBuilder(*this, binding, true); }
 
+    void clear_storage();
+    void reserve_storage(uint32_t binding, size_t size);
+    void set_storage_data(uint32_t binding, const void* data, size_t size);
+
+    /// Set callback to be called when storage can be read back (when finished rendering the frame)
+    /// If reserve_storage was called, size must be same.
+    /// If it wasn't, a new storage binding will be created.
+    void set_storage_read_cb(uint32_t binding, size_t size, StorageReadCb cb);
+
     void set_texture(uint32_t binding, Texture& texture, Sampler& sampler);
     void set_texture(uint32_t binding, Texture& texture);  // use default sampler
 
@@ -297,7 +325,8 @@ private:
     void destroy_pipeline();
 
     VkDeviceSize align_uniform(VkDeviceSize offset);
-    void copy_uniforms();
+    void copy_all_uniforms();
+    void copy_updated_uniforms();
 
 private:
     Renderer& m_renderer;
@@ -310,8 +339,10 @@ private:
     IndexData m_index_data;
     std::vector<std::byte> m_push_constants;
     std::vector<std::byte> m_uniform_data;
+    std::vector<std::byte> m_storage_data;
     std::vector<UniformBinding> m_uniforms;  // index = binding
     std::vector<TextureBinding> m_textures;
+    std::vector<StorageBinding> m_storage;
     BlendFunc m_blend = BlendFunc::Off;
     DepthTest m_depth_test = DepthTest::Off;
     Shader m_shader;
@@ -320,10 +351,11 @@ private:
     SharedDescriptorPool m_descriptor_pool;
     UniformBuffersPtr m_uniform_buffers;
     PrimitivesBuffersPtr m_buffers;
-    PrimitivesDescriptorSetsPtr m_descriptor_sets;
+    DescriptorSetsPtr m_descriptor_sets;
     Pipeline* m_pipeline = nullptr;
-    bool m_uniforms_changed = false;
-    bool m_dynamic_uniforms_changed = false;
+    bool m_uniforms_updated = false;
+    bool m_dynamic_uniforms_updated = false;
+    bool m_storage_updated = false;
 };
 
 

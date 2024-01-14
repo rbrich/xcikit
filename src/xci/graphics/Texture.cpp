@@ -117,8 +117,9 @@ void Texture::update()
     if (m_pending_regions.empty())
         return;
 
-    CommandBuffers cmd_buf(m_renderer);
-    cmd_buf.create(m_renderer.vk_transient_command_pool(), 1);
+    CommandBuffers cmd_buffers(m_renderer);
+    cmd_buffers.create(m_renderer.vk_transient_command_pool(), 1);
+    CommandBuffer cmd_buf = cmd_buffers.buffer();
     cmd_buf.begin();
 
     cmd_buf.transition_image_layout(m_image.vk(),
@@ -167,7 +168,7 @@ void Texture::update()
     }
 
     cmd_buf.end();
-    cmd_buf.submit();
+    cmd_buffers.submit();
 }
 
 
@@ -194,7 +195,7 @@ VkDevice Texture::device() const
 }
 
 
-void Texture::generate_mipmaps(CommandBuffers& cmd_buf)
+void Texture::generate_mipmaps(CommandBuffer& cmd_buf)
 {
     Vec2i mip_size = Vec2i(m_size);
     const auto num_levels = mip_levels();
