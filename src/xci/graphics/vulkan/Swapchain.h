@@ -1,13 +1,15 @@
 // Swapchain.h created on 2023-10-31 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_VULKAN_SWAPCHAIN_H
 #define XCI_GRAPHICS_VULKAN_SWAPCHAIN_H
 
 #include "Image.h"
+#include <xci/graphics/vulkan/Attachments.h>
+
 #include <vulkan/vulkan.h>
 
 namespace xci::graphics {
@@ -40,16 +42,19 @@ public:
     PresentMode present_mode() const { return m_present_mode; }
 
     /// Create depth buffer for the swapchain
-    void set_depth_buffering(bool enable) { m_depth_buffering = enable; }
-    bool depth_buffering() const { return m_depth_buffering; }
+    void set_depth_buffering(bool enable) { m_attachments.set_depth_bits(enable ? 32 : 0); }
+    bool depth_buffering() const { return m_attachments.depth_bits() > 0; }
 
     /// Multisampling (MSAA)
     void set_sample_count(uint32_t count);
-    VkSampleCountFlagBits sample_count() const { return m_sample_count; }
-    bool is_multisample() const { return m_sample_count != VK_SAMPLE_COUNT_1_BIT; }
+    VkSampleCountFlagBits sample_count() const { return (VkSampleCountFlagBits) m_attachments.msaa_samples(); }
+    bool is_multisample() const { return m_attachments.has_msaa(); }
 
     void query_surface_capabilities(VkPhysicalDevice device, VkExtent2D new_size);
     bool query(VkPhysicalDevice device);
+
+    const Attachments& attachments() const { return m_attachments; }
+    Attachments& attachments() { return m_attachments; }
 
     VkSwapchainKHR vk() const { return m_swapchain; }
     VkSurfaceFormatKHR vk_surface_format() const { return m_surface_format; }
@@ -61,6 +66,8 @@ private:
 
     Renderer& m_renderer;
     VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;
+
+    Attachments m_attachments;
 
     static constexpr uint32_t max_image_count = 8;
     VkImage m_images[max_image_count] {};
@@ -79,9 +86,7 @@ private:
     VkSurfaceFormatKHR m_surface_format {};
     VkExtent2D m_extent {};
     uint32_t m_image_count = 0;  // <= max_image_count
-    VkSampleCountFlagBits m_sample_count = VK_SAMPLE_COUNT_1_BIT;  // MSAA
     PresentMode m_present_mode = PresentMode::Fifo;
-    bool m_depth_buffering = false;  // create depth buffer?
 };
 
 

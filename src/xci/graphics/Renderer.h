@@ -142,7 +142,7 @@ public:
     VkCommandPool vk_command_pool() const { return m_command_pool; }
     VkCommandPool vk_transient_command_pool() const { return m_transient_command_pool; }
     VkExtent2D vk_image_extent() const { return m_swapchain.vk_image_extent(); }
-    VkRenderPass vk_render_pass() const { return m_render_pass; }
+    VkRenderPass vk_render_pass() const { return m_swapchain.attachments().render_pass(); }
     VkFramebuffer vk_framebuffer(uint32_t index) const { return m_swapchain.vk_framebuffer(index); }
 
 private:
@@ -171,7 +171,6 @@ private:
     VkDevice m_device {};
     VkQueue m_queue {};
     Swapchain m_swapchain {*this};
-    VkRenderPass m_render_pass {};
     VkCommandPool m_command_pool {};
     VkCommandPool m_transient_command_pool {};
 
