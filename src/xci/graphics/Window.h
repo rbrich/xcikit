@@ -223,7 +223,7 @@ public:
     ScrollCallback scroll_callback() { return m_scroll_cb; }
 
     /// Color used to clear the framebuffer after swapping. Default: black
-    void set_clear_color(Color color) { m_clear_color = color; }
+    void set_clear_color(Color color);
 
     // Refresh mode:
     // - OnDemand is energy-saving mode, good for normal GUI applications (forms etc.)
@@ -278,7 +278,6 @@ private:
     SDL_Window* m_window = nullptr;
     View m_view {this};
     RefreshMode m_refresh_mode = RefreshMode::OnDemand;
-    Color m_clear_color;
     std::chrono::microseconds m_timeout {0};
     FullscreenMode m_fullscreen_mode = FullscreenMode::Default;
     bool m_quit = false;

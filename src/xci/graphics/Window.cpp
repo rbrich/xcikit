@@ -187,6 +187,13 @@ void Window::set_draw_callback(Window::DrawCallback draw_cb)
 }
 
 
+void Window::set_clear_color(Color color)
+{
+    LinearColor c(color);
+    m_renderer.swapchain().attachments().set_clear_color_value(0, {c.r, c.g, c.b, c.a});
+}
+
+
 void Window::set_refresh_timeout(std::chrono::microseconds timeout,
                                        bool periodic)
 {
@@ -530,11 +537,8 @@ void Window::draw()
         cmd_buf.begin();
         m_command_buffers.trigger_callbacks(CommandBuffers::Event::Init, m_current_cmd_buf);
 
-        LinearColor cc(m_clear_color);
-        VkClearValue clear_values[2] = {
-                { .color = {cc.r, cc.g, cc.b, cc.a} },
-                { .depthStencil = {1.0f, 0} }
-        };
+        auto clear_values = m_renderer.swapchain().attachments().vk_clear_values();
+
         const VkRenderPassBeginInfo render_pass_info = {
                 .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
                 .renderPass = m_renderer.vk_render_pass(),
@@ -543,8 +547,8 @@ void Window::draw()
                         .offset = {0, 0},
                         .extent = m_renderer.vk_image_extent(),
                 },
-                .clearValueCount = 1 + uint32_t(m_renderer.depth_buffering()),
-                .pClearValues = clear_values,
+                .clearValueCount = (uint32_t) clear_values.size(),
+                .pClearValues = clear_values.data(),
         };
         vkCmdBeginRenderPass(cmd_buf.vk(), &render_pass_info,
                 VK_SUBPASS_CONTENTS_INLINE);

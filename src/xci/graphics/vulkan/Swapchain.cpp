@@ -51,8 +51,7 @@ void Swapchain::create()
         m_attachments.add_color_attachment(vk_surface_format().format,
                                            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     } else {
-        m_attachments.set_color_attachment(0, vk_surface_format().format,
-                                           VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        m_attachments.set_color_attachment(0, vk_surface_format().format);
     }
 
     const auto device = m_renderer.vk_device();

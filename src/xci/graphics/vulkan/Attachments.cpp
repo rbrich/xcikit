@@ -161,4 +161,17 @@ VkFormat Attachments::depth_stencil_format() const
 }
 
 
+auto Attachments::vk_clear_values() const -> std::vector<VkClearValue>
+{
+    std::vector<VkClearValue> clear_values;
+    for (const auto& color_attachment : m_color_attachments) {
+        clear_values.push_back(VkClearValue{.color = color_attachment.clear_value});
+    }
+    if (has_depth_stencil()) {
+        clear_values.push_back(VkClearValue{.depthStencil = {1.0f, 0}});
+    }
+    return clear_values;
+}
+
+
 } // namespace xci::graphics

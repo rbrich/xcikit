@@ -107,7 +107,7 @@ int main(int, const char* argv[])
 
     window.set_size_callback([&](View& view) {
         const auto size = view.framebuffer_size();
-        projection = perspective_projection(1.2f, float(size.x.value / size.y.value), 1.f, 100.f);
+        projection = perspective_projection(1.2f, float(size.x.value / size.y.value), 0.1f, 10.f);
 
         const auto light_pos = view_matrix * Vec4f(1.0, -2.0, 4.0, 1.0);
         const Color light_ambient(0.0, 0.2, 0.0);

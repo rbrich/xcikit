@@ -39,6 +39,7 @@ public:
     struct ColorAttachment {
         VkFormat format = VK_FORMAT_UNDEFINED;
         VkImageLayout final_layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        VkClearColorValue clear_value {};
     };
     const std::vector<ColorAttachment>& color_attachments() const { return m_color_attachments; }
 
@@ -49,16 +50,21 @@ public:
         m_color_attachments.emplace_back(ColorAttachment{format, final_layout});
         return m_color_attachments.size() - 1;
     }
-    void set_color_attachment(uint32_t location, VkFormat format, VkImageLayout final_layout) {
+    void set_color_attachment(uint32_t location, VkFormat format) {
         assert(m_color_attachments.size() > location);
-        m_color_attachments[location] = ColorAttachment{format, final_layout};
+        m_color_attachments[location].format = format;
     }
     void clear_color_attachments() { m_color_attachments.clear(); }
     size_t color_attachment_count() const { return m_color_attachments.size(); }
 
+    void set_clear_color_value(uint32_t location, VkClearColorValue value) { m_color_attachments[location].clear_value = value; }
+
     void create_renderpass(VkDevice device);
     void destroy_renderpass(VkDevice device);
     VkRenderPass render_pass() const { return m_render_pass; }
+
+    /// Build array of clear values for VkRenderPassBeginInfo
+    std::vector<VkClearValue> vk_clear_values() const;
 
 private:
     VkSampleCountFlagBits sample_count_flag() const { return (VkSampleCountFlagBits) m_msaa_samples; }
