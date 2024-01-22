@@ -201,7 +201,7 @@ private:
     void add(float d) {
         m_vertex_data.push_back(d);
 #ifndef NDEBUG
-        assert(--m_expected >= 0);
+        assert(m_expected-- > 0);
 #endif
     }
     VertexData& m_vertex_data;

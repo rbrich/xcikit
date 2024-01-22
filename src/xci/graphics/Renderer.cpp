@@ -176,20 +176,22 @@ bool Renderer::create_instance(SDL_Window* window)
     instance_create_info.pNext = &debugCreateInfo;
 #endif
 
-#ifdef VK_KHR_portability_enumeration
-    // Required for MoltenVK
-    extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-#endif
-
     uint32_t ext_count = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, nullptr);
     std::vector<VkExtensionProperties> ext_props(ext_count);
     vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, ext_props.data());
     log::info("Vulkan: {} extensions available:", ext_count);
     for (const auto& props : ext_props) {
-        const bool enable = any_of(extensions, [&](const char* name) {
+        bool enable = any_of(extensions, [&props](const char* name) {
             return strcmp(name, props.extensionName) == 0;
         });
+#ifdef VK_KHR_portability_enumeration
+        if (strcmp(props.extensionName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) == 0) {
+            // Required for MoltenVK
+            extensions.push_back(props.extensionName);
+            enable = true;
+        }
+#endif
         log::info("[{}] {} (spec {})",
                  enable ? 'x' : ' ',
                  props.extensionName, props.specVersion);
