@@ -8,7 +8,8 @@
 #define XCI_GRAPHICS_VULKAN_SWAPCHAIN_H
 
 #include "Image.h"
-#include <xci/graphics/vulkan/Attachments.h>
+#include "Framebuffer.h"
+#include "Attachments.h"
 
 #include <vulkan/vulkan.h>
 
@@ -28,7 +29,7 @@ enum class PresentMode : uint8_t {
 class Swapchain {
 public:
     explicit Swapchain(Renderer& renderer)
-            : m_renderer(renderer), m_depth_image(renderer), m_msaa_image(renderer) {}
+            : m_renderer(renderer), m_framebuffer(renderer) {}
     ~Swapchain() { destroy(); }
 
     void create();
@@ -56,10 +57,12 @@ public:
     const Attachments& attachments() const { return m_attachments; }
     Attachments& attachments() { return m_attachments; }
 
+    const Framebuffer& framebuffer() const { return m_framebuffer; }
+
     VkSwapchainKHR vk() const { return m_swapchain; }
     VkSurfaceFormatKHR vk_surface_format() const { return m_surface_format; }
     VkExtent2D vk_image_extent() const { return m_extent; }
-    VkFramebuffer vk_framebuffer(uint32_t index) const { return m_framebuffers[index]; }
+    VkFramebuffer vk_framebuffer(uint32_t index) const { return m_framebuffer[index]; }
 
 private:
     void recreate();
@@ -69,18 +72,8 @@ private:
 
     Attachments m_attachments;
 
-    static constexpr uint32_t max_image_count = 8;
-    VkImage m_images[max_image_count] {};
-    ImageView m_image_views[max_image_count];
-    VkFramebuffer m_framebuffers[max_image_count] {};
-
-    // depth buffer
-    Image m_depth_image;
-    ImageView m_depth_image_view;
-
-    // MSAA color buffer
-    Image m_msaa_image;
-    ImageView m_msaa_image_view;
+    VkImage m_images[Framebuffer::max_image_count] {};
+    Framebuffer m_framebuffer;
 
     // create info
     VkSurfaceFormatKHR m_surface_format {};

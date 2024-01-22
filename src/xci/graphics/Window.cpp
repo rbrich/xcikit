@@ -450,7 +450,7 @@ void Window::create_command_buffers()
             .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
     const VkSemaphoreCreateInfo semaphore_ci = {
-           .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
     for (size_t i = 0; i < cmd_buf_count; ++i) {
         VK_TRY("vkCreateFence",
@@ -517,7 +517,6 @@ void Window::draw()
     }
 
     {
-        auto cmd_buf = m_command_buffers[m_current_cmd_buf];
         VK_TRY("vkWaitForFences",
                 vkWaitForFences(m_renderer.vk_device(),
                         1, &m_cmd_buf_fences[m_current_cmd_buf], VK_TRUE, UINT64_MAX));
@@ -527,6 +526,7 @@ void Window::draw()
 
         m_command_buffers.release_resources(m_current_cmd_buf);
 
+        auto cmd_buf = m_command_buffers[m_current_cmd_buf];
         cmd_buf.begin();
         m_command_buffers.trigger_callbacks(CommandBuffers::Event::Init, m_current_cmd_buf);
 

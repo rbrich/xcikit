@@ -10,12 +10,9 @@
 #include <xci/core/log.h>
 #include <cassert>
 
-#include <range/v3/view/take.hpp>
-
 namespace xci::graphics {
 
 using namespace xci::core;
-using ranges::cpp20::views::take;
 
 
 static_assert(int(PresentMode::Immediate) == int(VK_PRESENT_MODE_IMMEDIATE_KHR));
@@ -85,39 +82,12 @@ void Swapchain::create()
     m_swapchain = new_swapchain;
 
     TRACE("Vulkan: swapchain image count: {}", m_image_count);
-    vkGetSwapchainImagesKHR(device, m_swapchain,
-            &m_image_count, nullptr);
+    vkGetSwapchainImagesKHR(device, m_swapchain, &m_image_count, nullptr);
 
-    if (m_image_count > max_image_count)
+    if (m_image_count > Framebuffer::max_image_count)
         VK_THROW("vulkan: too many swapchain images");
 
     vkGetSwapchainImagesKHR(device, m_swapchain, &m_image_count, m_images);
-    assert(m_image_count <= max_image_count);
-
-    for (size_t i = 0; i < m_image_count; i++) {
-        m_image_views[i].create(device, m_images[i], m_surface_format.format,
-                                VK_IMAGE_ASPECT_COLOR_BIT);
-    }
-
-    if (m_attachments.has_depth()) {
-        ImageCreateInfo image_ci{{m_extent.width, m_extent.height}, VK_FORMAT_D32_SFLOAT,
-                                 VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
-                                 VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT};
-        image_ci.set_samples(sample_count());
-        m_depth_image.create(image_ci, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT);
-        m_depth_image_view.create(device, m_depth_image.vk(), VK_FORMAT_D32_SFLOAT,
-                                  VK_IMAGE_ASPECT_DEPTH_BIT);
-    }
-
-    if (is_multisample()) {
-        ImageCreateInfo image_ci{{m_extent.width, m_extent.height}, m_surface_format.format,
-                                 VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
-                                 VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT};
-        image_ci.set_samples(sample_count());
-        m_msaa_image.create(image_ci, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT);
-        m_msaa_image_view.create(device, m_msaa_image.vk(), m_surface_format.format,
-                                  VK_IMAGE_ASPECT_COLOR_BIT);
-    }
 }
 
 
@@ -125,13 +95,6 @@ void Swapchain::destroy()
 {
     const auto device = m_renderer.vk_device();
     if (device != VK_NULL_HANDLE && m_swapchain != VK_NULL_HANDLE) {
-        for (auto image_view : m_image_views | take(m_image_count)) {
-            image_view.destroy(device);
-        }
-        m_msaa_image_view.destroy(device);
-        m_msaa_image.destroy();
-        m_depth_image_view.destroy(device);
-        m_depth_image.destroy();
         vkDestroySwapchainKHR(device, m_swapchain, nullptr);
         m_swapchain = nullptr;
     }
@@ -140,36 +103,13 @@ void Swapchain::destroy()
 
 void Swapchain::create_framebuffers()
 {
-    for (size_t i = 0; i < m_image_count; i++) {
-        VkImageView attachments[3] = { m_image_views[i].vk(), m_depth_image_view.vk(), nullptr};
-        if (is_multisample()) {
-            attachments[0] = m_msaa_image_view.vk();  // use multisample image as color attachment
-            attachments[2] = m_image_views[i].vk();  // resolve color to buffer for presentation
-        }
-
-        const VkFramebufferCreateInfo framebuffer_ci = {
-                .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-                .renderPass = m_renderer.vk_render_pass(),
-                .attachmentCount = uint32_t(m_attachments.color_attachment_count()) +
-                                   uint32_t(m_attachments.has_depth()) + uint32_t(is_multisample()),
-                .pAttachments = attachments,
-                .width = m_extent.width,
-                .height = m_extent.height,
-                .layers = 1,
-        };
-
-        VK_TRY("vkCreateFramebuffer",
-                vkCreateFramebuffer(m_renderer.vk_device(), &framebuffer_ci,
-                        nullptr, &m_framebuffers[i]));
-    }
+    m_framebuffer.create(m_attachments, m_extent, m_image_count, m_images);
 }
 
 
 void Swapchain::destroy_framebuffers()
 {
-    for (auto framebuffer : m_framebuffers | take(m_image_count)) {
-        vkDestroyFramebuffer(m_renderer.vk_device(), framebuffer, nullptr);
-    }
+    m_framebuffer.destroy();
 }
 
 
@@ -228,7 +168,7 @@ void Swapchain::query_surface_capabilities(VkPhysicalDevice device, VkExtent2D n
     m_extent.height = std::clamp(m_extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
     // evaluate min image count
-    m_image_count = capabilities.minImageCount + 1;
+    m_image_count = std::max(3u, capabilities.minImageCount);
     if (capabilities.maxImageCount > 0 && m_image_count > capabilities.maxImageCount)
         m_image_count = capabilities.maxImageCount;
 }

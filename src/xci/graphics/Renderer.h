@@ -131,6 +131,7 @@ public:
     bool create_surface(SDL_Window* window);
     void destroy_surface();
     void reset_framebuffer(VkExtent2D new_size = {UINT32_MAX, UINT32_MAX}) { m_swapchain.reset_framebuffer(new_size); }
+    Swapchain& swapchain() { return m_swapchain; }
 
     // Vulkan handles
     VkInstance vk_instance() const { return m_instance; }
@@ -149,8 +150,6 @@ private:
     bool create_instance(SDL_Window* window);
     void create_device();
     void destroy_device();
-    void create_renderpass();
-    void destroy_renderpass();
 
     std::optional<uint32_t> query_queue_families(VkPhysicalDevice device);
 

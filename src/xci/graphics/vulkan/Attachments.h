@@ -19,6 +19,7 @@ public:
     /// Multisampling (MSAA)
     void set_msaa_samples(uint8_t count) { m_msaa_samples = count; }
     uint8_t msaa_samples() const { return m_msaa_samples; }
+    VkSampleCountFlagBits msaa_samples_flag() const { return (VkSampleCountFlagBits) m_msaa_samples; }
     bool has_msaa() const { return m_msaa_samples > 1; }
 
     /// Depth buffer
@@ -33,6 +34,13 @@ public:
 
     /// Depth and/or stencil attachment is enabled
     bool has_depth_stencil() const { return has_depth() || has_stencil(); }
+    VkFormat depth_stencil_format() const;
+
+    struct ColorAttachment {
+        VkFormat format = VK_FORMAT_UNDEFINED;
+        VkImageLayout final_layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    };
+    const std::vector<ColorAttachment>& color_attachments() const { return m_color_attachments; }
 
     /// Add a color attachment, starting with location=0.
     /// None exists initially.
@@ -54,14 +62,8 @@ public:
 
 private:
     VkSampleCountFlagBits sample_count_flag() const { return (VkSampleCountFlagBits) m_msaa_samples; }
-    VkFormat depth_stencil_format() const;
 
     VkRenderPass m_render_pass = nullptr;
-
-    struct ColorAttachment {
-        VkFormat format = VK_FORMAT_UNDEFINED;
-        VkImageLayout final_layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    };
     std::vector<ColorAttachment> m_color_attachments;
 
     uint8_t m_depth_bits = 0;  // 0 (disabled) | 16 | 24 | 32
@@ -72,4 +74,4 @@ private:
 
 } // namespace xci::graphics
 
-#endif  // XCIKIT_ATTACHMENTS_H
+#endif  // XCI_GRAPHICS_ATTACHMENTS_H

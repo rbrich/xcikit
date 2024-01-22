@@ -350,7 +350,7 @@ bool Renderer::create_surface(SDL_Window* window)
     }
 
     m_swapchain.create();
-    create_renderpass();
+    m_swapchain.attachments().create_renderpass(m_device);
     m_swapchain.create_framebuffers();
     return true;
 }
@@ -366,7 +366,7 @@ void Renderer::destroy_surface()
     clear_pipeline_cache();
     clear_descriptor_pool_cache();
     m_swapchain.destroy_framebuffers();
-    destroy_renderpass();
+    m_swapchain.attachments().destroy_renderpass(m_device);
     m_swapchain.destroy();
     destroy_device();
 
@@ -553,19 +553,6 @@ void Renderer::destroy_device()
     vkDestroyCommandPool(m_device, m_command_pool, nullptr);
     vkDestroyCommandPool(m_device, m_transient_command_pool, nullptr);
     vkDestroyDevice(m_device, nullptr);
-}
-
-
-void Renderer::create_renderpass()
-{
-    m_swapchain.attachments().create_renderpass(m_device);
-}
-
-
-void Renderer::destroy_renderpass()
-{
-    if (m_device != VK_NULL_HANDLE)
-        m_swapchain.attachments().destroy_renderpass(m_device);
 }
 
 
