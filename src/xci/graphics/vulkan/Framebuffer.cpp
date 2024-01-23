@@ -45,7 +45,7 @@ void Framebuffer::create(const Attachments& attachments, VkExtent2D size, uint32
     m_image_count = image_count;
     const auto device = m_renderer.vk_device();
 
-    // color buffers
+    // Prepare color buffers
     for (const auto& color : attachments.color_attachments()) {
         if (swapchain_images) {
             m_borrowed_count = m_image_count;
@@ -59,14 +59,14 @@ void Framebuffer::create(const Attachments& attachments, VkExtent2D size, uint32
         for (unsigned i = 0; i < m_image_count; i++) {
             ImageCreateInfo image_ci{{size.width, size.height}, color.format,
                                      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                                     VK_IMAGE_USAGE_TRANSFER_SRC_BIT};
+                                     color.usage};
             auto& image = m_images.emplace_back();
             create_image_defer(image_ci, image);
             deferred_views.push_back({image, color.format, VK_IMAGE_ASPECT_COLOR_BIT});
         }
     }
 
-    // depth buffer
+    // Prepare depth buffer
     if (attachments.has_depth()) {
         VkFormat format = attachments.depth_stencil_format();
         ImageCreateInfo image_ci{{size.width, size.height}, format,
@@ -78,7 +78,7 @@ void Framebuffer::create(const Attachments& attachments, VkExtent2D size, uint32
         deferred_views.push_back({image, format, VK_IMAGE_ASPECT_DEPTH_BIT});
     }
 
-    // MSAA color buffers
+    // Prepare MSAA color buffers
     if (attachments.has_msaa()) {
         for (const auto& color : attachments.color_attachments()) {
             ImageCreateInfo image_ci{{size.width, size.height}, color.format,
@@ -91,19 +91,20 @@ void Framebuffer::create(const Attachments& attachments, VkExtent2D size, uint32
         }
     }
 
+    // Allocate memory, bind images
     m_image_memory.allocate(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     for (const auto& deferred : deferred_bind) {
         m_image_memory.bind_image(deferred.image, deferred.offset);
     }
 
+    // Create image views
     m_image_views.reserve(deferred_views.size());
     for (const auto& deferred : deferred_views) {
         auto& view = m_image_views.emplace_back();
         view.create(device, deferred.image, deferred.format, deferred.aspect);
     }
 
-    //
-
+    // Create framebuffers
     for (size_t i = 0; i < m_image_count; i++) {
         std::vector<VkImageView> attachment_views;
         uint32_t base = 0;
@@ -125,7 +126,7 @@ void Framebuffer::create(const Attachments& attachments, VkExtent2D size, uint32
 
         const VkFramebufferCreateInfo framebuffer_ci = {
                 .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-                .renderPass = m_renderer.vk_render_pass(),
+                .renderPass = attachments.render_pass(),
                 .attachmentCount = (uint32_t) attachment_views.size(),
                 .pAttachments = attachment_views.data(),
                 .width = size.width,

@@ -36,6 +36,8 @@ VkDeviceSize DeviceMemory::reserve(const VkMemoryRequirements& requirements)
 
 void DeviceMemory::allocate(VkMemoryPropertyFlags properties)
 {
+    if (m_alloc_size == 0)
+        return;
     VkMemoryAllocateInfo alloc_info = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
             .allocationSize = m_alloc_size,
@@ -121,6 +123,19 @@ void DeviceMemory::flush(VkDeviceSize offset, VkDeviceSize size)
     };
     VK_TRY("vkFlushMappedMemoryRanges",
            vkFlushMappedMemoryRanges(m_renderer.vk_device(), 1, &range));
+}
+
+
+void DeviceMemory::invalidate(VkDeviceSize offset, VkDeviceSize size)
+{
+    VkMappedMemoryRange range{
+            .sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+            .memory = m_memory_pool,
+            .offset = offset,
+            .size = align_to(size, m_renderer.non_coherent_atom_size()),
+    };
+    VK_TRY("vkInvalidateMappedMemoryRanges",
+           vkInvalidateMappedMemoryRanges(m_renderer.vk_device(), 1, &range));
 }
 
 

@@ -30,6 +30,7 @@ namespace xci::graphics {
 class Shader;
 class Renderer;
 class Primitives;
+class Attachments;
 
 
 enum class PrimitiveType : uint8_t {
@@ -41,7 +42,6 @@ enum class PrimitiveType : uint8_t {
 enum class PrimitiveDrawFlags : uint8_t {
     None          = 0x00,
     Projection2D  = 0x01,  // set uniform binding 0 to View::projection_matrix
-    FlipViewportY = 0x02,  // OpenGL coords compatibility
 };
 inline PrimitiveDrawFlags operator|(PrimitiveDrawFlags a, PrimitiveDrawFlags b) { return PrimitiveDrawFlags(uint8_t(a) | uint8_t(b)); }
 inline PrimitiveDrawFlags operator&(PrimitiveDrawFlags a, PrimitiveDrawFlags b) { return PrimitiveDrawFlags(uint8_t(a) & uint8_t(b)); }
@@ -312,11 +312,13 @@ public:
     void set_texture(uint32_t binding, Texture& texture, Sampler& sampler);
     void set_texture(uint32_t binding, Texture& texture);  // use default sampler
 
-    void set_blend(BlendFunc func);
-    void set_depth_test(DepthTest depth_test);
+    void set_blend(BlendFunc func) { m_blend = func; }
+    void set_depth_test(DepthTest depth_test) { m_depth_test = depth_test; }
 
     void update();
 
+    void draw(CommandBuffer& cmd_buf, Attachments& attachments,
+              View& view, PrimitiveDrawFlags flags);
     void draw(View& view, PrimitiveDrawFlags flags = PrimitiveDrawFlags::Projection2D);
     void draw(View& view, VariCoords pos);
 
@@ -352,7 +354,6 @@ private:
     UniformBuffersPtr m_uniform_buffers;
     PrimitivesBuffersPtr m_buffers;
     DescriptorSetsPtr m_descriptor_sets;
-    Pipeline* m_pipeline = nullptr;
     bool m_uniforms_updated = false;
     bool m_dynamic_uniforms_updated = false;
     bool m_storage_updated = false;

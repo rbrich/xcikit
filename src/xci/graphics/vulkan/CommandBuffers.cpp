@@ -12,15 +12,6 @@
 namespace xci::graphics {
 
 
-CommandBuffers::~CommandBuffers()
-{
-    if (m_command_pool != VK_NULL_HANDLE) {
-        vkFreeCommandBuffers(m_renderer.vk_device(), m_command_pool,
-                m_count, m_command_buffers.data());
-    }
-}
-
-
 void CommandBuffers::create(VkCommandPool command_pool, uint32_t count)
 {
     assert(count <= max_count);
@@ -34,31 +25,37 @@ void CommandBuffers::create(VkCommandPool command_pool, uint32_t count)
             .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
             .commandBufferCount = m_count,
     };
+    std::array<VkCommandBuffer, max_count> pointers;
     VK_TRY("vkAllocateCommandBuffers",
             vkAllocateCommandBuffers(m_renderer.vk_device(), &alloc_info,
-                    m_command_buffers.data()));
+                                    pointers.data()));
+    for (unsigned i = 0; i != m_count; ++i) {
+        m_command_buffers[i].m_vk_command_buffer = pointers[i];
+    }
 }
 
 
 void CommandBuffers::destroy()
 {
+    std::array<VkCommandBuffer, max_count> pointers;
+    for (unsigned i = 0; i != m_count; ++i) {
+        pointers[i] = m_command_buffers[i].vk();
+    }
     if (m_command_pool != VK_NULL_HANDLE) {
         vkFreeCommandBuffers(m_renderer.vk_device(), m_command_pool,
-                m_count, m_command_buffers.data());
+                             m_count, pointers.data());
         m_command_pool = VK_NULL_HANDLE;
         for (unsigned i = 0; i != m_count; ++i)
-            release_resources(i);
+            m_command_buffers[i].release_resources();
     }
 }
 
 
-void CommandBuffers::reset()
+void CommandBuffer::reset()
 {
-    for (unsigned i = 0; i != m_count; ++i) {
-        if (m_command_buffers[i] != nullptr) {
-            VK_TRY("vkResetCommandBuffer",
-                    vkResetCommandBuffer(m_command_buffers[i], 0));
-        }
+    if (m_vk_command_buffer) {
+        VK_TRY("vkResetCommandBuffer",
+                vkResetCommandBuffer(m_vk_command_buffer, 0));
     }
 }
 
@@ -80,7 +77,7 @@ void CommandBuffer::end()
 }
 
 
-void CommandBuffer::submit(VkQueue queue)
+void CommandBuffer::submit(VkQueue queue, VkFence fence)
 {
     VkSubmitInfo submit_info = {
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -88,7 +85,7 @@ void CommandBuffer::submit(VkQueue queue)
             .pCommandBuffers = &m_vk_command_buffer,
     };
     VK_TRY("vkQueueSubmit",
-            vkQueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE));
+            vkQueueSubmit(queue, 1, &submit_info, fence));
     VK_TRY("vkQueueWaitIdle", vkQueueWaitIdle(queue));
 }
 
@@ -111,9 +108,35 @@ void CommandBuffer::submit(VkQueue queue, VkSemaphore wait, VkPipelineStageFlags
 }
 
 
+void CommandBuffers::reset()
+{
+    for (unsigned i = 0; i != m_count; ++i) {
+        m_command_buffers[i].reset();
+    }
+}
+
+
 void CommandBuffers::submit(unsigned int idx)
 {
-    buffer(idx).submit(m_renderer.vk_queue());
+    m_command_buffers[idx].submit(m_renderer.vk_queue());
+}
+
+
+void CommandBuffer::set_viewport(Vec2f size, bool flipped_y)
+{
+    VkViewport viewport = {
+            .x = 0.0f,
+            .y = 0.0f,
+            .width = size.x,
+            .height = size.y,
+            .minDepth = 0.0f,
+            .maxDepth = 1.0f,
+    };
+    if (flipped_y) {
+        viewport.y = viewport.height;
+        viewport.height = -viewport.height;
+    }
+    vkCmdSetViewport(m_vk_command_buffer, 0, 1, &viewport);
 }
 
 
@@ -200,11 +223,33 @@ void CommandBuffer::copy_buffer_to_image(
 }
 
 
-void CommandBuffers::release_resources(size_t i)
+void CommandBuffer::copy_image_to_buffer(
+        VkImage image, const Rect_u& region,
+        VkBuffer buffer, VkDeviceSize buffer_offset, uint32_t buffer_row_len)
 {
-    for (auto& deleter : m_resources[i])
+    VkBufferImageCopy copy_region = {
+            .bufferOffset = buffer_offset,
+            .bufferRowLength = buffer_row_len,
+            .bufferImageHeight = 0,
+            .imageSubresource = {
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                    .mipLevel = 0,
+                    .baseArrayLayer = 0,
+                    .layerCount = 1,
+            },
+            .imageOffset = {int32_t(region.x), int32_t(region.y), 0},
+            .imageExtent = {region.w, region.h, 1},
+    };
+    vkCmdCopyImageToBuffer(m_vk_command_buffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                           buffer, 1, &copy_region);
+}
+
+
+void CommandBuffer::release_resources()
+{
+    for (auto& deleter : m_resources)
         deleter();
-    m_resources[i].clear();
+    m_resources.clear();
 }
 
 
@@ -216,12 +261,12 @@ void CommandBuffers::remove_callbacks(void* owner)
 }
 
 
-void CommandBuffers::trigger_callbacks(Event event, unsigned i)
+void CommandBuffers::trigger_callbacks(Event event, unsigned i, uint32_t image_index)
 {
-    CommandBuffer cmd_buf = buffer(i);
+    CommandBuffer& cmd_buf = m_command_buffers[i];
     for (const CallbackInfo& info : m_callbacks) {
         if (info.event == event) {
-            info.cb(cmd_buf);
+            info.cb(cmd_buf, image_index);
         }
     }
 }

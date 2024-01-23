@@ -19,17 +19,24 @@
 namespace xci::graphics {
 
 class Renderer;
+class CommandBuffers;
 
 
 class CommandBuffer {
 public:
-    explicit CommandBuffer(VkCommandBuffer vk) : m_vk_command_buffer(vk) {}
-
     void begin();
     void end();
-    void submit(VkQueue queue);
+
+    void reset();
+
+    void submit(VkQueue queue, VkFence fence = VK_NULL_HANDLE);
     void submit(VkQueue queue, VkSemaphore wait, VkPipelineStageFlags wait_stage,
                 VkSemaphore signal, VkFence fence);
+
+    /// Set viewport (vkCmdSetViewport)
+    /// \param size         Viewport size (framebuffer size)
+    /// \param flipped_y    Flip viewport Y for OpenGL compatibility
+    void set_viewport(Vec2f size, bool flipped_y);
 
     void transition_image_layout(VkImage image,
             VkAccessFlags src_access, VkAccessFlags dst_access,
@@ -42,47 +49,50 @@ public:
     void copy_buffer_to_image(VkBuffer buffer,
             VkDeviceSize buffer_offset, uint32_t buffer_row_len,
             VkImage image, const Rect_u& region);
+    void copy_image_to_buffer(VkImage image, const Rect_u& region,
+            VkBuffer buffer, VkDeviceSize buffer_offset = 0, uint32_t buffer_row_len = 0);
+
+     // Cleanup routines for resources used by the command buffer
+     template <typename T> void add_resource(const T& resource) { add_cleanup([resource]{}); }
+     void add_cleanup(std::function<void()>&& cb) { m_resources.push_back(std::move(cb)); }
+     void release_resources();
 
     VkCommandBuffer vk() const { return m_vk_command_buffer; }
 
 private:
-    VkCommandBuffer m_vk_command_buffer;
+    friend class CommandBuffers;
+    VkCommandBuffer m_vk_command_buffer {};
+    std::vector<std::function<void()>> m_resources;
 };
 
 
 class CommandBuffers : private core::NonCopyable {
 public:
     explicit CommandBuffers(Renderer& renderer) : m_renderer(renderer) {}
-    ~CommandBuffers();
+    ~CommandBuffers() { destroy(); }
 
-    void create(VkCommandPool command_pool, uint32_t count);
+    void create(VkCommandPool command_pool, uint32_t count = 1);
     void destroy();
 
     void reset();
     void submit(unsigned idx = 0);
 
-    CommandBuffer buffer(unsigned i = 0) const { return CommandBuffer(m_command_buffers[i]); }
-    CommandBuffer operator[](size_t i) const { return CommandBuffer(m_command_buffers[i]); }
+    CommandBuffer& operator[](size_t i) { return m_command_buffers[i]; }
 
-    // Cleanup routines for resources used by current command buffer
-    template <typename T> void add_resource(size_t i, const T& resource) { add_cleanup(i, [resource]{}); }
-    void add_cleanup(size_t i, std::function<void()>&& cb) { m_resources[i].push_back(std::move(cb)); }
-    void release_resources(size_t i);
-
-    using CommandBufferCallback = std::function<void(CommandBuffer& cmd_buf)>;
+    using CommandBufferCallback = std::function<void(CommandBuffer& cmd_buf, uint32_t image_index)>;
     enum class Event { Init, Finish };
     void add_callback(Event event, void* owner, CommandBufferCallback cb) { m_callbacks.push_back({std::move(cb), owner, event}); }
     void remove_callbacks(void* owner);
-    void trigger_callbacks(Event event, unsigned i = 0);
+    void trigger_callbacks(Event event, unsigned i, uint32_t image_index);
 
-    VkCommandBuffer vk(unsigned i = 0) const { return m_command_buffers[i]; }
+    VkCommandBuffer vk(unsigned i = 0) const { return m_command_buffers[i].vk(); }
 
 private:
+    static constexpr size_t max_count = 2;
+
     Renderer& m_renderer;
     VkCommandPool m_command_pool = VK_NULL_HANDLE;
-    static constexpr size_t max_count = 2;
-    std::array<VkCommandBuffer, max_count> m_command_buffers {};
-    std::array<std::vector<std::function<void()>>, max_count> m_resources;
+    std::array<CommandBuffer, max_count> m_command_buffers;
 
     struct CallbackInfo {
         CommandBufferCallback cb;

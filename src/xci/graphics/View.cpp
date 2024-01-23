@@ -1,13 +1,11 @@
 // View.cpp created on 2018-03-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "View.h"
 #include "Window.h"
-
-#include <vulkan/vulkan.h>
 
 #include <cassert>
 
@@ -236,12 +234,8 @@ auto View::push_crop(const FramebufferRect& region) -> PopHelper<FramebufferRect
 }
 
 
-void View::apply_crop()
+void View::apply_crop(VkCommandBuffer cmd_buf)
 {
-    if (!m_window)
-        return;
-    const auto cmd_buf = m_window->vk_command_buffer();
-
     // set scissor region
     VkRect2D scissor = {
         .offset = {0, 0},

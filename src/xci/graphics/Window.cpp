@@ -162,6 +162,14 @@ void Window::set_fullscreen(bool fullscreen)
 }
 
 
+Vec2u Window::get_size() const
+{
+    Vec2i size;
+    SDL_GetWindowSize(m_window, &size.x, &size.y);
+    return Vec2u{size};
+}
+
+
 bool Window::set_clipboard_text(const std::string& text) const
 {
     if (SDL_SetClipboardText(text.c_str()) != 0) {
@@ -225,9 +233,8 @@ void Window::setup_view()
     auto fsize = m_renderer.vk_image_extent();
     m_view.set_framebuffer_size({float(fsize.width), float(fsize.height)});
 
-    int width, height;
-    SDL_GetWindowSize(m_window, &width, &height);
-    m_view.set_screen_size({float(width), float(height)});
+    const auto sc_size = get_size();
+    m_view.set_screen_size({float(sc_size.x), float(sc_size.y)});
     if (m_size_cb)
         m_size_cb(m_view);
 
@@ -496,9 +503,8 @@ void Window::resize_framebuffer()
     const auto& actual_size = m_renderer.vk_image_extent();  // normally the same
     m_view.set_framebuffer_size({float(actual_size.width), float(actual_size.height)});
 
-    int sc_width, sc_height;
-    SDL_GetWindowSize(m_window, &sc_width, &sc_height);
-    m_view.set_screen_size({float(sc_width), float(sc_height)});
+    const auto sc_size = get_size();
+    m_view.set_screen_size({float(sc_size.x), float(sc_size.y)});
 
     if (m_size_cb)
         m_size_cb(m_view);
@@ -531,11 +537,11 @@ void Window::draw()
                 vkResetFences(m_renderer.vk_device(),
                         1, &m_cmd_buf_fences[m_current_cmd_buf]));
 
-        m_command_buffers.release_resources(m_current_cmd_buf);
+        m_command_buffers[m_current_cmd_buf].release_resources();
 
-        auto cmd_buf = m_command_buffers[m_current_cmd_buf];
+        auto& cmd_buf = m_command_buffers[m_current_cmd_buf];
         cmd_buf.begin();
-        m_command_buffers.trigger_callbacks(CommandBuffers::Event::Init, m_current_cmd_buf);
+        m_command_buffers.trigger_callbacks(CommandBuffers::Event::Init, m_current_cmd_buf, image_index);
 
         auto clear_values = m_renderer.swapchain().attachments().vk_clear_values();
 
@@ -553,12 +559,15 @@ void Window::draw()
         vkCmdBeginRenderPass(cmd_buf.vk(), &render_pass_info,
                 VK_SUBPASS_CONTENTS_INLINE);
 
+        // Set viewport
+        cmd_buf.set_viewport(Vec2f(m_view.framebuffer_size()), false);
+
         if (m_draw_cb)
             m_draw_cb(m_view);
 
         vkCmdEndRenderPass(cmd_buf.vk());
 
-        m_command_buffers.trigger_callbacks(CommandBuffers::Event::Finish, m_current_cmd_buf);
+        m_command_buffers.trigger_callbacks(CommandBuffers::Event::Finish, m_current_cmd_buf, image_index);
         cmd_buf.end();
 
         cmd_buf.submit(m_renderer.vk_queue(),

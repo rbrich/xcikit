@@ -1,7 +1,7 @@
 // View.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_VIEW_H
@@ -11,6 +11,8 @@
 #include <xci/math/Mat4.h>
 #include <xci/math/Rect.h>
 #include <xci/compat/macros.h>
+
+#include <vulkan/vulkan.h>
 
 #include <fmt/ostream.h>
 
@@ -381,8 +383,8 @@ public:
     bool has_crop() const { return !m_crop.empty(); }
     const FramebufferRect& get_crop() const { return m_crop.back(); }
 
-    // Apply crop as a scissor region in current VkCommandBuffer
-    void apply_crop();
+    // Apply crop as a scissor region in VkCommandBuffer
+    void apply_crop(VkCommandBuffer cmd_buf);
 
     // ------------------------------------------------------------------------
     // Refresh

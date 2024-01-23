@@ -8,6 +8,7 @@
 
 #include <xci/widgets/FpsDisplay.h>
 #include <xci/graphics/Primitives.h>
+#include <xci/graphics/vulkan/Framebuffer.h>
 #include <xci/graphics/shape/Rectangle.h>
 #include <xci/math/transform.h>
 #include <xci/core/log.h>
@@ -91,6 +92,40 @@ int main(int, const char* argv[])
     prim.set_depth_test(DepthTest::Less);
     prim.set_shader(renderer.get_shader("phong", "phong"));
 
+    // Create offscreen framebuffer
+    Attachments offscreen_attachments;
+    offscreen_attachments.add_color_attachment({.format = VK_FORMAT_R8G8B8A8_UNORM,
+                                                .final_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                                .usage = VK_IMAGE_USAGE_SAMPLED_BIT});
+    offscreen_attachments.set_depth_bits(32);
+    offscreen_attachments.create_renderpass(renderer.vk_device());
+    Framebuffer offscreen(renderer);
+    const auto ws = window.get_size();
+    offscreen.create(offscreen_attachments, {uint32_t(ws.x), uint32_t(ws.y)}, 3);
+
+    window.command_buffers().add_callback(CommandBuffers::Event::Init, nullptr,
+                                          [&](CommandBuffer& cmd_buf, uint32_t image_index) {
+        auto clear_values = offscreen_attachments.vk_clear_values();
+
+        const VkRenderPassBeginInfo render_pass_info = {
+                .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+                .renderPass = offscreen_attachments.render_pass(),
+                .framebuffer = offscreen.vk_framebuffer(image_index),
+                .renderArea = {
+                        .offset = {0, 0},
+                        .extent = {uint32_t(ws.x), uint32_t(ws.y)},
+                },
+                .clearValueCount = (uint32_t) clear_values.size(),
+                .pClearValues = clear_values.data(),
+        };
+        vkCmdBeginRenderPass(cmd_buf.vk(), &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+        cmd_buf.set_viewport(Vec2f(ws), true);
+
+        prim.draw(cmd_buf, offscreen_attachments, window.view(), PrimitiveDrawFlags::None);
+
+        vkCmdEndRenderPass(cmd_buf.vk());
+    });
+
     Theme theme(renderer);
     if (!theme.load_default())
         return EXIT_FAILURE;
@@ -145,7 +180,10 @@ int main(int, const char* argv[])
     });
 
     window.set_draw_callback([&](View& view) {
-        prim.draw(view, PrimitiveDrawFlags::FlipViewportY);
+        auto& cmd = view.window()->command_buffer();
+        cmd.set_viewport(Vec2f(view.framebuffer_size()), true);  // flipped Y
+        prim.draw(view, PrimitiveDrawFlags::None);
+        cmd.set_viewport(Vec2f(view.framebuffer_size()), false);
         fps_display.draw(view);
     });
 
@@ -153,5 +191,9 @@ int main(int, const char* argv[])
     window.set_refresh_mode(RefreshMode::Periodic);
     renderer.set_present_mode(PresentMode::Immediate);
     window.display();
+
+    offscreen.destroy();
+    offscreen_attachments.destroy_renderpass(renderer.vk_device());
+
     return EXIT_SUCCESS;
 }

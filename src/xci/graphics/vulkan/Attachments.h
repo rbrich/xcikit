@@ -39,6 +39,7 @@ public:
     struct ColorAttachment {
         VkFormat format = VK_FORMAT_UNDEFINED;
         VkImageLayout final_layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        VkImageUsageFlags usage = 0;  // additional usage flags, besides VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
         VkClearColorValue clear_value {};
     };
     const std::vector<ColorAttachment>& color_attachments() const { return m_color_attachments; }
@@ -46,13 +47,13 @@ public:
     /// Add a color attachment, starting with location=0.
     /// None exists initially.
     /// \returns Attachment reference number (location)
-    uint32_t add_color_attachment(VkFormat format, VkImageLayout final_layout) {
-        m_color_attachments.emplace_back(ColorAttachment{format, final_layout});
+    uint32_t add_color_attachment(ColorAttachment attachment) {
+        m_color_attachments.emplace_back(attachment);
         return m_color_attachments.size() - 1;
     }
-    void set_color_attachment(uint32_t location, VkFormat format) {
+    ColorAttachment& color_attachment(uint32_t location) {
         assert(m_color_attachments.size() > location);
-        m_color_attachments[location].format = format;
+        return m_color_attachments[location];
     }
     void clear_color_attachments() { m_color_attachments.clear(); }
     size_t color_attachment_count() const { return m_color_attachments.size(); }

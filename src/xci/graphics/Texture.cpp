@@ -119,7 +119,7 @@ void Texture::update()
 
     CommandBuffers cmd_buffers(m_renderer);
     cmd_buffers.create(m_renderer.vk_transient_command_pool(), 1);
-    CommandBuffer cmd_buf = cmd_buffers.buffer();
+    CommandBuffer& cmd_buf = cmd_buffers[0];
     cmd_buf.begin();
 
     cmd_buf.transition_image_layout(m_image.vk(),

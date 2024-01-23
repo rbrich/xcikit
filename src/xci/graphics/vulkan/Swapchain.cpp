@@ -48,10 +48,10 @@ static const char* present_mode_to_str(PresentMode mode)
 void Swapchain::create()
 {
     if (m_attachments.color_attachment_count() == 0) {
-        m_attachments.add_color_attachment(vk_surface_format().format,
-                                           VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        m_attachments.add_color_attachment({.format = vk_surface_format().format,
+                                            .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT});
     } else {
-        m_attachments.set_color_attachment(0, vk_surface_format().format);
+        m_attachments.color_attachment(0).format = vk_surface_format().format;
     }
 
     const auto device = m_renderer.vk_device();
@@ -63,7 +63,7 @@ void Swapchain::create()
             .imageColorSpace = m_surface_format.colorSpace,
             .imageExtent = m_extent,
             .imageArrayLayers = 1,
-            .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+            .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
             .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
             .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,

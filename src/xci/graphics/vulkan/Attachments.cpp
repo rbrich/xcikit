@@ -26,7 +26,7 @@ void Attachments::create_renderpass(VkDevice device)
             .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
             .finalLayout = has_msaa() ? VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL :
-                                        VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                                        color.final_layout,
         });
     }
 
@@ -55,7 +55,7 @@ void Attachments::create_renderpass(VkDevice device)
                 .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
                 .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
                 .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-                .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                .finalLayout = color.final_layout,
             });
         }
     }

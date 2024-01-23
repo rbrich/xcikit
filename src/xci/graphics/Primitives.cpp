@@ -11,6 +11,7 @@
 #include "Texture.h"
 #include "Shader.h"
 #include "vulkan/VulkanError.h"
+#include "vulkan/Attachments.h"
 #include <xci/core/memory.h>
 
 #include <range/v3/view/enumerate.hpp>
@@ -432,7 +433,6 @@ void Primitives::clear()
 void Primitives::set_shader(Shader shader)
 {
     m_shader = shader;
-    destroy_pipeline();
 }
 
 
@@ -582,25 +582,11 @@ void Primitives::set_storage_read_cb(uint32_t binding, size_t size, StorageReadC
 }
 
 
-void Primitives::set_blend(BlendFunc func)
-{
-    m_blend = func;
-    destroy_pipeline();
-}
-
-
-void Primitives::set_depth_test(DepthTest depth_test)
-{
-    m_depth_test = depth_test;
-    destroy_pipeline();
-}
-
-
 void Primitives::update()
 {
     if (empty())
         return;
-    if (!m_pipeline) {
+    if (!m_pipeline_layout) {
         update_pipeline();
     }
     for (const auto& texture : m_textures) {
@@ -610,45 +596,39 @@ void Primitives::update()
 }
 
 
-void Primitives::draw(View& view, PrimitiveDrawFlags flags)
+void Primitives::draw(CommandBuffer& cmd_buf, Attachments& attachments,
+                      View& view, PrimitiveDrawFlags flags)
 {
     if (empty())
         return;
 
-    if (!m_pipeline) {
+    if (!m_pipeline_layout) {
         assert(!"Primitives: call update before draw!");
         return;
     }
 
-    auto* window = view.window();
-    auto cmd_buf = window->vk_command_buffer();
+    const auto vk_cmd = cmd_buf.vk();
 
-    vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->vk());
-
-    // set viewport
-    VkViewport viewport = {
-            .x = 0.0f,
-            .y = 0.0f,
-            .width = (float) m_renderer.vk_image_extent().width,
-            .height = (float) m_renderer.vk_image_extent().height,
-            .minDepth = 0.0f,
-            .maxDepth = 1.0f,
-    };
-    if ((flags & PrimitiveDrawFlags::FlipViewportY) != PrimitiveDrawFlags::None) {
-        viewport.y = viewport.height;
-        viewport.height = -viewport.height;
-    }
-    vkCmdSetViewport(cmd_buf, 0, 1, &viewport);
+    // bind pipeline
+    assert(m_shader);
+    PipelineCreateInfo pipeline_ci(m_shader.vk_vertex_module(), m_shader.vk_fragment_module(),
+                                   m_pipeline_layout->vk(), attachments.render_pass());
+    pipeline_ci.set_vertex_format(m_format);
+    pipeline_ci.set_color_blend(m_blend);
+    pipeline_ci.set_depth_test(m_depth_test);
+    pipeline_ci.set_sample_count(attachments.msaa_samples());
+    Pipeline& pipeline = m_renderer.get_pipeline(pipeline_ci);
+    vkCmdBindPipeline(vk_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.vk());
 
     // set scissor region
-    view.apply_crop();
+    view.apply_crop(vk_cmd);
 
-    m_buffers->bind(cmd_buf);
-    window->add_command_buffer_resource(m_buffers);
+    m_buffers->bind(vk_cmd);
+    cmd_buf.add_resource(m_buffers);
 
     // push constants
     if (!m_push_constants.empty())
-        vkCmdPushConstants(cmd_buf, m_pipeline_layout->vk(),
+        vkCmdPushConstants(vk_cmd, m_pipeline_layout->vk(),
                            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
                            0, uint32_t(m_push_constants.size()), m_push_constants.data());
 
@@ -658,7 +638,7 @@ void Primitives::draw(View& view, PrimitiveDrawFlags flags)
     if (m_dynamic_uniforms_updated) {
         // Free dynamic uniforms allocated for this frame at the end of render pass
         const auto mark = m_uniform_buffers->get_dynamic_uniform_mark();
-        window->add_command_buffer_cleanup(
+        cmd_buf.add_cleanup(
                 [buf = m_uniform_buffers, mark]{ buf->free_dynamic_uniform_mark(mark); });
         m_dynamic_uniforms_updated = false;
     }
@@ -673,12 +653,12 @@ void Primitives::draw(View& view, PrimitiveDrawFlags flags)
         m_descriptor_sets->create(m_pipeline_layout->vk_descriptor_set_layout());
         m_descriptor_sets->update(*m_uniform_buffers, m_uniforms, m_storage, m_textures);
     }
-    window->add_command_buffer_resource(m_uniform_buffers);
+    cmd_buf.add_resource(m_uniform_buffers);
 
     // storage buffers - read back
     for (const auto& storage : m_storage) {
         if (storage.read_cb) {
-            window->add_command_buffer_cleanup([this, &storage] {
+            cmd_buf.add_cleanup([this, &storage] {
                 if (storage.read_cb)
                     storage.read_cb(m_uniform_buffers->mapped_storage(storage.offset), storage.range);
             });
@@ -691,11 +671,19 @@ void Primitives::draw(View& view, PrimitiveDrawFlags flags)
         if (uniform && uniform.dynamic)
             dynamic_offsets.push_back(uniform.dynamic_offset);
     }
-    m_descriptor_sets->bind(cmd_buf, m_pipeline_layout->vk(), dynamic_offsets);
-    window->add_command_buffer_resource(m_descriptor_sets);
+    m_descriptor_sets->bind(vk_cmd, m_pipeline_layout->vk(), dynamic_offsets);
+    cmd_buf.add_resource(m_descriptor_sets);
 
     // draw
-    vkCmdDrawIndexed(cmd_buf, static_cast<uint32_t>(m_index_data.size()), 1, 0, 0, 0);
+    vkCmdDrawIndexed(vk_cmd, static_cast<uint32_t>(m_index_data.size()), 1, 0, 0, 0);
+}
+
+
+void Primitives::draw(View& view, PrimitiveDrawFlags flags)
+{
+    auto* window = view.window();
+    draw(window->command_buffer(), m_renderer.swapchain().attachments(),
+         view, flags);
 }
 
 
@@ -708,7 +696,6 @@ void Primitives::draw(View& view, VariCoords pos)
 
 void Primitives::update_pipeline()
 {
-    assert(m_shader);
     if (m_uniforms.empty() || !m_uniforms[0]) {
         set_uniform(0, Mat4f{});  // MVP
     }
@@ -734,13 +721,6 @@ void Primitives::update_pipeline()
         storage_size = storage.offset + storage.range;
     }
     m_pipeline_layout = &m_renderer.get_pipeline_layout(pipeline_layout_ci);
-    PipelineCreateInfo pipeline_ci(m_shader.vk_vertex_module(), m_shader.vk_fragment_module(),
-                                   m_pipeline_layout->vk(), m_renderer.vk_render_pass());
-    pipeline_ci.set_vertex_format(m_format);
-    pipeline_ci.set_color_blend(m_blend);
-    pipeline_ci.set_depth_test(m_depth_test);
-    pipeline_ci.set_sample_count(m_renderer.sample_count());
-    m_pipeline = &m_renderer.get_pipeline(pipeline_ci);
 
     m_buffers = std::make_shared<PrimitivesBuffers>(m_renderer);
     m_buffers->create(m_vertex_data, m_index_data);
@@ -759,12 +739,12 @@ void Primitives::update_pipeline()
 
 void Primitives::destroy_pipeline()
 {
-    if (m_pipeline == nullptr)
+    if (!m_pipeline_layout)
         return;
     m_buffers.reset();
     m_uniform_buffers.reset();
     m_descriptor_sets.reset();
-    m_pipeline = nullptr;
+    m_pipeline_layout = nullptr;
 }
 
 

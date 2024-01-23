@@ -188,6 +188,9 @@ public:
     bool is_fullscreen() const { return m_fullscreen; }
     void set_fullscreen_mode(FullscreenMode mode) { m_fullscreen_mode = mode; }
 
+    // Obtain current window size
+    Vec2u get_size() const;
+
     // Set clipboard text (in UTF-8)
     bool set_clipboard_text(const std::string& text) const;
     // Get clipboard text (in UTF-8)
@@ -246,6 +249,8 @@ public:
     /// \param origin       The position of (0,0) coordinates. Default is Center.
     void set_view_origin(ViewOrigin origin);
 
+    View& view() { return m_view; }
+
     void set_debug_flags(View::DebugFlags flags);
 
     /// Wait for asynchronous draw commands to finish.
@@ -256,12 +261,10 @@ public:
     SDL_Window* sdl_window() const { return m_window; }
 
     // Vulkan - current command buffer
-    CommandBuffer command_buffer() const { return m_command_buffers.buffer(m_current_cmd_buf); }
+    CommandBuffer& command_buffer() { return m_command_buffers[m_current_cmd_buf]; }
     VkCommandBuffer vk_command_buffer() const { return m_command_buffers.vk(m_current_cmd_buf); }
     uint32_t command_buffer_index() const { return m_current_cmd_buf; }
     CommandBuffers& command_buffers() { return m_command_buffers; }
-    template <typename T> void add_command_buffer_resource(const T& resource) { m_command_buffers.add_resource(m_current_cmd_buf, resource); }
-    void add_command_buffer_cleanup(std::function<void()>&& cb) { m_command_buffers.add_cleanup(m_current_cmd_buf, std::move(cb)); }
 
 private:
     void setup_view();

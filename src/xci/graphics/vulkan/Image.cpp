@@ -13,7 +13,7 @@ namespace xci::graphics {
 
 
 ImageCreateInfo::ImageCreateInfo(const Vec2u& size, VkFormat format,
-                                 VkImageUsageFlags usage)
+                                 VkImageUsageFlags usage, VkImageTiling tiling)
     : m_image_ci{
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .imageType = VK_IMAGE_TYPE_2D,
@@ -26,7 +26,7 @@ ImageCreateInfo::ImageCreateInfo(const Vec2u& size, VkFormat format,
             .mipLevels = 1,
             .arrayLayers = 1,
             .samples = VK_SAMPLE_COUNT_1_BIT,
-            .tiling = VK_IMAGE_TILING_OPTIMAL,
+            .tiling = tiling,
             .usage = usage,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
