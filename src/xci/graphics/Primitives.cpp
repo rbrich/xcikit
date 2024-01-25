@@ -294,8 +294,8 @@ void DescriptorSets::update(
     image_info.reserve(texture_bindings.size());
     for (const auto& texture_binding : texture_bindings) {
         image_info.push_back({
-                .sampler = texture_binding.sampler->vk(),
-                .imageView = texture_binding.texture->vk_image_view(),
+                .sampler = texture_binding.sampler,
+                .imageView = texture_binding.image_view,
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
         write_descriptor_set.push_back(VkWriteDescriptorSet{
@@ -436,23 +436,29 @@ void Primitives::set_shader(Shader shader)
 }
 
 
-void Primitives::set_texture(uint32_t binding, Texture& texture, Sampler& sampler)
+void Primitives::set_texture(uint32_t binding, VkImageView image_view, VkSampler sampler)
 {
     const auto it = std::find_if(m_textures.begin(), m_textures.end(),
                  [binding](const TextureBinding& t) { return t.binding == binding; });
     if (it == m_textures.end()) {
-        m_textures.push_back({binding, &texture, &sampler});
+        m_textures.push_back({binding, image_view, sampler});
     } else {
-        it->texture = &texture;
-        it->sampler = &sampler;
+        it->image_view = image_view;
+        it->sampler = sampler;
     }
     destroy_pipeline();
 }
 
 
+void Primitives::set_texture(uint32_t binding, Texture& texture, Sampler& sampler)
+{
+    set_texture(binding, texture.vk_image_view(), sampler.vk());
+}
+
+
 void Primitives::set_texture(uint32_t binding, Texture& texture)
 {
-    set_texture(binding, texture, m_renderer.get_sampler());
+    set_texture(binding, texture.vk_image_view(), m_renderer.get_sampler().vk());
 }
 
 
@@ -588,9 +594,6 @@ void Primitives::update()
         return;
     if (!m_pipeline_layout) {
         update_pipeline();
-    }
-    for (const auto& texture : m_textures) {
-        texture.texture->update();
     }
     copy_updated_uniforms();
 }

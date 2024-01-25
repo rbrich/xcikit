@@ -30,6 +30,7 @@ public:
     void destroy();
 
     VkImage color_image(uint32_t buffer, uint32_t image_index) const { return m_images[buffer * m_image_count + image_index]; }
+    VkImageView color_image_view(uint32_t buffer, uint32_t image_index) const { return m_image_views[buffer * m_image_count + image_index].vk(); }
 
     VkFramebuffer vk_framebuffer(uint32_t index) const { return m_framebuffers[index]; }
     VkFramebuffer operator[](uint32_t index) const { return m_framebuffers[index]; }

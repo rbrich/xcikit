@@ -101,7 +101,12 @@ int main(int, const char* argv[])
     offscreen_attachments.create_renderpass(renderer.vk_device());
     Framebuffer offscreen(renderer);
     const auto ws = window.get_size();
-    offscreen.create(offscreen_attachments, {uint32_t(ws.x), uint32_t(ws.y)}, 3);
+    offscreen.create(offscreen_attachments, {ws.x, ws.y}, 1);
+
+    Primitives sprite {renderer, VertexFormat::V2t2, PrimitiveType::TriFans};
+    sprite.set_shader(renderer.get_shader("sprite", "sprite"));
+    sprite.set_texture(2, offscreen.color_image_view(0, 0), renderer.get_sampler().vk());
+    sprite.set_blend(BlendFunc::AlphaBlend);
 
     window.command_buffers().add_callback(CommandBuffers::Event::Init, nullptr,
                                           [&](CommandBuffer& cmd_buf, uint32_t image_index) {
@@ -110,7 +115,7 @@ int main(int, const char* argv[])
         const VkRenderPassBeginInfo render_pass_info = {
                 .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
                 .renderPass = offscreen_attachments.render_pass(),
-                .framebuffer = offscreen.vk_framebuffer(image_index),
+                .framebuffer = offscreen.vk_framebuffer(0),
                 .renderArea = {
                         .offset = {0, 0},
                         .extent = {uint32_t(ws.x), uint32_t(ws.y)},
@@ -162,6 +167,17 @@ int main(int, const char* argv[])
         prim.set_uniform(2).color(mat_ambient).color(mat_diffuse).color(mat_specular).f(mat_shininess);
         prim.update();
 
+        sprite.clear();
+        sprite.begin_primitive();
+        const auto rx = size.x / 4;
+        const auto ry = size.y / 4;
+        sprite.add_vertex({rx, 0_fb}).uv(0.0, 0.0);
+        sprite.add_vertex({rx, ry}).uv(0.0, 1.0);
+        sprite.add_vertex({rx*2, ry}).uv(1.0, 1.0);
+        sprite.add_vertex({rx*2, 0_fb}).uv(1.0, 0.0);
+        sprite.end_primitive();
+        sprite.update();
+
         fps_display.resize(view);
     });
 
@@ -184,6 +200,8 @@ int main(int, const char* argv[])
         cmd.set_viewport(Vec2f(view.framebuffer_size()), true);  // flipped Y
         prim.draw(view, PrimitiveDrawFlags::None);
         cmd.set_viewport(Vec2f(view.framebuffer_size()), false);
+
+        sprite.draw(view);
         fps_display.draw(view);
     });
 

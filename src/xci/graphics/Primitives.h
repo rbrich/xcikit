@@ -11,7 +11,6 @@
 #include "Window.h"
 #include "Color.h"
 #include "Shader.h"
-#include "Texture.h"
 #include "vulkan/Sampler.h"
 #include "vulkan/DeviceMemory.h"
 #include "vulkan/Pipeline.h"
@@ -28,6 +27,7 @@
 namespace xci::graphics {
 
 class Shader;
+class Texture;
 class Renderer;
 class Primitives;
 class Attachments;
@@ -58,8 +58,8 @@ struct UniformBinding {
 
 struct TextureBinding {
     uint32_t binding = 0;
-    Texture* texture = nullptr;
-    Sampler* sampler = nullptr;
+    VkImageView image_view = nullptr;
+    VkSampler sampler = nullptr;
 };
 
 
@@ -309,6 +309,7 @@ public:
     /// If it wasn't, a new storage binding will be created.
     void set_storage_read_cb(uint32_t binding, size_t size, StorageReadCb cb);
 
+    void set_texture(uint32_t binding, VkImageView image_view, VkSampler sampler);
     void set_texture(uint32_t binding, Texture& texture, Sampler& sampler);
     void set_texture(uint32_t binding, Texture& texture);  // use default sampler
 
