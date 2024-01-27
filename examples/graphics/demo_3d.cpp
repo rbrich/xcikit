@@ -5,6 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "common.h"
+#include "3d/Object.h"
 
 #include <xci/widgets/FpsDisplay.h>
 #include <xci/graphics/Primitives.h>
@@ -20,58 +21,6 @@
 using namespace xci;
 using namespace xci::graphics::unit_literals;
 using namespace xci::widgets;
-
-
-struct FragPushConstants {
-    uint32_t this_object_id = 0;
-    uint32_t selected_object_id = 0;
-};
-
-
-static void create_unit_cube(Primitives& prim)
-{
-    prim.add_vertex({-0.5, 0.5, -0.5}).normal({0, 1, 0});
-    prim.add_vertex({-0.5, 0.5, 0.5}).normal({0, 1, 0});
-    prim.add_vertex({0.5, 0.5, 0.5}).normal({0, 1, 0});
-    prim.add_vertex({0.5, 0.5, -0.5}).normal({0, 1, 0});
-    prim.add_triangle_face({0, 1, 2});
-    prim.add_triangle_face({0, 2, 3});
-
-    prim.add_vertex({-0.5, 0.5, -0.5}).normal({-1, 0, 0});
-    prim.add_vertex({-0.5, -0.5, -0.5}).normal({-1, 0, 0});
-    prim.add_vertex({-0.5, -0.5, 0.5}).normal({-1, 0, 0});
-    prim.add_vertex({-0.5, 0.5, 0.5}).normal({-1, 0, 0});
-    prim.add_triangle_face({4, 5, 6});
-    prim.add_triangle_face({4, 6, 7});
-
-    prim.add_vertex({0.5, 0.5, 0.5}).normal({1, 0, 0});
-    prim.add_vertex({0.5, -0.5, 0.5}).normal({1, 0, 0});
-    prim.add_vertex({0.5, -0.5, -0.5}).normal({1, 0, 0});
-    prim.add_vertex({0.5, 0.5, -0.5}).normal({1, 0, 0});
-    prim.add_triangle_face({8, 9, 10});
-    prim.add_triangle_face({8, 10, 11});
-
-    prim.add_vertex({0.5, 0.5, -0.5}).normal({0, 0, -1});
-    prim.add_vertex({0.5, -0.5, -0.5}).normal({0, 0, -1});
-    prim.add_vertex({-0.5, -0.5, -0.5}).normal({0, 0, -1});
-    prim.add_vertex({-0.5, 0.5, -0.5}).normal({0, 0, -1});
-    prim.add_triangle_face({12, 13, 14});
-    prim.add_triangle_face({12, 14, 15});
-
-    prim.add_vertex({-0.5, 0.5, 0.5}).normal({0, 0, 1});
-    prim.add_vertex({-0.5, -0.5, 0.5}).normal({0, 0, 1});
-    prim.add_vertex({0.5, -0.5, 0.5}).normal({0, 0, 1});
-    prim.add_vertex({0.5, 0.5, 0.5}).normal({0, 0, 1});
-    prim.add_triangle_face({16, 17, 18});
-    prim.add_triangle_face({16, 18, 19});
-
-    prim.add_vertex({-0.5, -0.5, 0.5}).normal({0, -1, 0});
-    prim.add_vertex({-0.5, -0.5, -0.5}).normal({0, -1, 0});
-    prim.add_vertex({0.5, -0.5, -0.5}).normal({0, -1, 0});
-    prim.add_vertex({0.5, -0.5, 0.5}).normal({0, -1, 0});
-    prim.add_triangle_face({20, 21, 22});
-    prim.add_triangle_face({20, 22, 23});
-}
 
 
 int main(int, const char* argv[])
@@ -93,10 +42,9 @@ int main(int, const char* argv[])
     log::info("Multisampling: {}", renderer.sample_count());
 
     // Low-level object for drawing primitives (3D triangles)
-    Primitives prim {renderer, VertexFormat::V3n3, PrimitiveType::TriList};
-    create_unit_cube(prim);
-    prim.set_depth_test(DepthTest::Less);
-    prim.reserve_push_constants(sizeof(FragPushConstants));
+    Object cube {renderer};
+    cube.create_cube(1.0f);
+
 
     // Create offscreen framebuffer for mouse pick
     Attachments offscreen_attachments;
@@ -169,17 +117,16 @@ int main(int, const char* argv[])
         Rect_u mouse_region {mouse_pos.x.as<uint32_t>(), mouse_pos.y.as<uint32_t>(), 1u, 1u};
         cmd_buf.set_scissor(mouse_region);
 
-        prim.set_shader(renderer.get_shader("pick", "pick"));
-        prim.draw(cmd_buf, offscreen_attachments, window.view(), PrimitiveDrawFlags::None);
+        cube.prim().set_shader(renderer.get_shader("pick", "pick"));
+        cube.draw(cmd_buf, offscreen_attachments, window.view());
 
         vkCmdEndRenderPass(cmd_buf.vk());
 
         cmd_buf.copy_image_to_buffer(offscreen.color_image(0, 0), mouse_region,
                                      out_buffer, 0, 1);
         cmd_buf.add_cleanup([&] {
-            if (out_mapped && *out_mapped != picked_object_id) {
+            if (out_mapped != nullptr) {
                 picked_object_id = *out_mapped;
-                printf("Picked %u\n", picked_object_id);
             }
         });
     });
@@ -215,6 +162,7 @@ int main(int, const char* argv[])
         const Color mat_specular(0.2, 0.2, 0.2);
         const float mat_shininess = 50.f;
 
+        auto& prim = cube.prim();
         prim.set_dynamic_uniform(0).mat4(modelview_matrix).mat4(normal_matrix).mat4(projection);
         prim.set_uniform(1).vec4(light_pos)
                 .color(light_ambient).color(light_diffuse).color(light_specular)
@@ -244,13 +192,9 @@ int main(int, const char* argv[])
         modelview_matrix = view_matrix * Mat4f::scale({2,2,2}) * Mat4f::rot_z(cos(phi), sin(phi));
         normal_matrix = modelview_matrix.inverse_transpose();
 
+        auto& prim = cube.prim();
         prim.set_dynamic_uniform(0).mat4(modelview_matrix).mat4(normal_matrix).mat4(projection);
-        FragPushConstants push_constants {
-            .this_object_id = 42,
-            .selected_object_id = picked_object_id,
-        };
-        prim.set_push_constants_data(&push_constants, sizeof(push_constants));
-        prim.update();
+        cube.update(42, picked_object_id);
 
         fps_display.update(view, State{ elapsed });
     });
@@ -258,8 +202,8 @@ int main(int, const char* argv[])
     window.set_draw_callback([&](View& view) {
         auto& cmd = view.window()->command_buffer();
         cmd.set_viewport(Vec2f(view.framebuffer_size()), true);  // flipped Y
-        prim.set_shader(renderer.get_shader("phong", "phong"));
-        prim.draw(view, PrimitiveDrawFlags::None);
+        cube.prim().set_shader(renderer.get_shader("phong", "phong"));
+        cube.draw(view);
         cmd.set_viewport(Vec2f(view.framebuffer_size()), false);
 
         //sprite.draw(view);
