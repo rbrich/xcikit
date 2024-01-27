@@ -234,21 +234,18 @@ auto View::push_crop(const FramebufferRect& region) -> PopHelper<FramebufferRect
 }
 
 
-void View::apply_crop(VkCommandBuffer cmd_buf)
+void View::apply_crop(CommandBuffer& cmd_buf)
 {
     // set scissor region
-    VkRect2D scissor = {
-        .offset = {0, 0},
-        .extent = { INT32_MAX, INT32_MAX },
-    };
     if (has_crop()) {
         const auto crop = get_crop().moved(framebuffer_origin());
-        scissor.offset.x = crop.x.as<int32_t>();
-        scissor.offset.y = crop.y.as<int32_t>();
-        scissor.extent.width = crop.w.as<uint32_t>();
-        scissor.extent.height = crop.h.as<uint32_t>();
+        cmd_buf.set_scissor({crop.x.as<uint32_t>(),
+                             crop.y.as<uint32_t>(),
+                             crop.w.as<uint32_t>(),
+                             crop.h.as<uint32_t>()});
+    } else {
+        cmd_buf.set_scissor({0, 0, INT32_MAX, INT32_MAX});
     }
-    vkCmdSetScissor(cmd_buf, 0, 1, &scissor);
 }
 
 

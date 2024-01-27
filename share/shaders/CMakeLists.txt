@@ -34,6 +34,8 @@ set(SHADER_SOURCES
     line_c.frag
     phong.vert
     phong.frag
+    pick.vert
+    pick.frag
     polygon.vert
     polygon.frag
     polygon_c.vert

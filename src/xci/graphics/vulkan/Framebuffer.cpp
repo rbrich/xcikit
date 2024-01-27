@@ -26,6 +26,9 @@ VkDeviceSize Framebuffer::create_image(const ImageCreateInfo& image_ci, VkImage&
 void Framebuffer::create(const Attachments& attachments, VkExtent2D size, uint32_t image_count,
                          VkImage* swapchain_images)
 {
+    if (m_framebuffers[0])
+        destroy();
+
     struct BindImage {
         VkImage image;
         VkDeviceSize offset;

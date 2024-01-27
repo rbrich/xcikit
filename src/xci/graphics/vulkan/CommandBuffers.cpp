@@ -140,6 +140,16 @@ void CommandBuffer::set_viewport(Vec2f size, bool flipped_y)
 }
 
 
+void CommandBuffer::set_scissor(const Rect_u& region)
+{
+    VkRect2D scissor = {
+            .offset = { int32_t(region.x), int32_t(region.y) },
+            .extent = { region.w, region.h },
+    };
+    vkCmdSetScissor(m_vk_command_buffer, 0, 1, &scissor);
+}
+
+
 void CommandBuffer::transition_image_layout(VkImage image,
         VkAccessFlags src_access, VkAccessFlags dst_access,
         VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage,

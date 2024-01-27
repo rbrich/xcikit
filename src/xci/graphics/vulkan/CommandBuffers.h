@@ -38,6 +38,9 @@ public:
     /// \param flipped_y    Flip viewport Y for OpenGL compatibility
     void set_viewport(Vec2f size, bool flipped_y);
 
+    /// Set scissor region
+    void set_scissor(const Rect_u& region);
+
     void transition_image_layout(VkImage image,
             VkAccessFlags src_access, VkAccessFlags dst_access,
             VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage,

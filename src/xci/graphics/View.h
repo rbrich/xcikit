@@ -12,8 +12,6 @@
 #include <xci/math/Rect.h>
 #include <xci/compat/macros.h>
 
-#include <vulkan/vulkan.h>
-
 #include <fmt/ostream.h>
 
 #include <memory>
@@ -22,6 +20,8 @@
 #include <cassert>
 
 namespace xci::graphics {
+
+class CommandBuffer;
 
 
 enum class Unit {
@@ -384,7 +384,7 @@ public:
     const FramebufferRect& get_crop() const { return m_crop.back(); }
 
     // Apply crop as a scissor region in VkCommandBuffer
-    void apply_crop(VkCommandBuffer cmd_buf);
+    void apply_crop(CommandBuffer& cmd_buf);
 
     // ------------------------------------------------------------------------
     // Refresh

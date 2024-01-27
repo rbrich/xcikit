@@ -624,7 +624,7 @@ void Primitives::draw(CommandBuffer& cmd_buf, Attachments& attachments,
     vkCmdBindPipeline(vk_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.vk());
 
     // set scissor region
-    view.apply_crop(vk_cmd);
+    view.apply_crop(cmd_buf);
 
     m_buffers->bind(vk_cmd);
     cmd_buf.add_resource(m_buffers);
