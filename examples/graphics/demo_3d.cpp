@@ -32,18 +32,22 @@ public:
         m_attachments.destroy_renderpass(m_framebuffer.renderer().vk_device());
     }
 
-    void create(Renderer& renderer, const Attachments::ColorAttachment& color_attachment) {
+    void create(Renderer& renderer, const Attachments::ColorAttachment& color_attachment,
+                VkClearColorValue clear_color)
+    {
         m_attachments.add_color_attachment(color_attachment);
         m_attachments.set_depth_bits(32);
         m_attachments.create_renderpass(renderer.vk_device());
-        m_attachments.set_clear_color_value(0, { .uint32 = {0u} });
+        m_attachments.set_clear_color_value(0, clear_color);
     }
 
     void resize(FramebufferSize size) {
         m_framebuffer.create(m_attachments, {size.x.as<uint32_t>(), size.y.as<uint32_t>()}, 1);
     }
 
-    void begin_renderpass(CommandBuffer& cmd_buf, FramebufferSize size, Rect_u scissor) {
+    void begin_renderpass(CommandBuffer& cmd_buf, FramebufferSize size,
+                          Rect_u scissor = {0, 0, INT32_MAX, INT32_MAX})
+    {
         auto clear_values = m_attachments.vk_clear_values();
 
         const VkRenderPassBeginInfo render_pass_info = {
@@ -93,18 +97,26 @@ int main(int, const char* argv[])
     Object cube {renderer};
     cube.create_cube(1.0f);
 
-
-    // Create offscreen framebuffer for mouse pick
+    // Offscreen framebuffer for mouse pick
     Offscreen offscreen_pick(renderer);
     offscreen_pick.create(renderer,
                           {.format = VK_FORMAT_R32_UINT,
                            .final_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                           .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT});
+                           .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT},
+                          { .uint32 = {0u} });
 
-//    Primitives sprite {renderer, VertexFormat::V2t2, PrimitiveType::TriFans};
-//    sprite.set_shader(renderer.get_shader("sprite", "sprite"));
-//    sprite.set_texture(2, offscreen.color_image_view(0, 0), renderer.get_sampler().vk());
-//    sprite.set_blend(BlendFunc::AlphaBlend);
+    // Offscreen framebuffer for glow effect on mouse pick
+    // We draw the highlighted object into this buffer, then blur it and blit into main framebuffer.
+    Offscreen offscreen_glow(renderer);
+    offscreen_glow.create(renderer,
+                           {.format = VK_FORMAT_B8G8R8A8_UNORM,
+                            .final_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                            .usage = VK_IMAGE_USAGE_SAMPLED_BIT},
+                           { .float32 = {0.0f, 0.0f, 0.0f, 0.0f} });
+
+    Primitives glow {renderer, VertexFormat::V2t2, PrimitiveType::TriFans};
+    glow.set_shader(renderer.get_shader("sprite", "blur_radial"));
+    glow.set_blend(BlendFunc::AlphaBlend);
 
     FramebufferCoords mouse_pos = {0, 0};
 
@@ -146,6 +158,14 @@ int main(int, const char* argv[])
                 picked_object_id = *out_mapped;
             }
         });
+
+        // Glow effect offscreen renderpass
+        if (picked_object_id == 42) {
+            offscreen_glow.begin_renderpass(cmd_buf, size);
+            cube.prim().set_shader(renderer.get_shader("phong", "phong"));
+            cube.draw(cmd_buf, offscreen_glow.attachments(), window.view());
+            vkCmdEndRenderPass(cmd_buf.vk());
+        }
     });
 
     Theme theme(renderer);
@@ -163,8 +183,11 @@ int main(int, const char* argv[])
     auto normal_matrix = modelview_matrix.inverse_transpose();
 
     window.set_size_callback([&](View& view) {
+        mouse_pos = {0, 0};
+
         const auto size = view.framebuffer_size();
         offscreen_pick.resize(size);
+        offscreen_glow.resize(size);
 
         projection = perspective_projection(1.2f, float(size.x.value / size.y.value), 0.1f, 10.f);
 
@@ -187,16 +210,18 @@ int main(int, const char* argv[])
         prim.set_uniform(2).color(mat_ambient).color(mat_diffuse).color(mat_specular).f(mat_shininess);
         prim.update();
 
-//        sprite.clear();
-//        sprite.begin_primitive();
-//        const auto rx = size.x / 4;
-//        const auto ry = size.y / 4;
-//        sprite.add_vertex({rx, 0_fb}).uv(0.0, 0.0);
-//        sprite.add_vertex({rx, ry}).uv(0.0, 1.0);
-//        sprite.add_vertex({rx*2, ry}).uv(1.0, 1.0);
-//        sprite.add_vertex({rx*2, 0_fb}).uv(1.0, 0.0);
-//        sprite.end_primitive();
-//        sprite.update();
+        glow.clear();
+        glow.begin_primitive();
+        const auto rx = size.x / 2;
+        const auto ry = size.y / 2;
+        glow.add_vertex({-rx, -ry}).uv(0.0, 0.0);
+        glow.add_vertex({-rx, ry}).uv(0.0, 1.0);
+        glow.add_vertex({rx, ry}).uv(1.0, 1.0);
+        glow.add_vertex({rx, -ry}).uv(1.0, 0.0);
+        glow.end_primitive();
+        glow.set_texture(2, offscreen_glow.framebuffer().color_image_view(0, 0),
+                         renderer.get_sampler().vk());
+        glow.update();
 
         fps_display.resize(view);
     });
@@ -217,13 +242,15 @@ int main(int, const char* argv[])
     });
 
     window.set_draw_callback([&](View& view) {
+        if (picked_object_id == 42)
+            glow.draw(view);
+
         auto& cmd = view.window()->command_buffer();
         cmd.set_viewport(Vec2f(view.framebuffer_size()), true);  // flipped Y
         cube.prim().set_shader(renderer.get_shader("phong", "phong"));
         cube.draw(view);
         cmd.set_viewport(Vec2f(view.framebuffer_size()), false);
 
-        //sprite.draw(view);
         fps_display.draw(view);
     });
 

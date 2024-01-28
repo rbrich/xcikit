@@ -16,6 +16,7 @@ endif()
 # ------------ #
 
 set(SHADER_SOURCES
+    blur_radial.frag
     cursor.vert
     cursor.frag
     ellipse.vert

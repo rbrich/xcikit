@@ -50,6 +50,6 @@ void main() {
     out_color = Iamb + att * Idiff + att*att * Ispec;
 
     if (push_const.this_object_id == push_const.selected_object_id) {
-        out_color.r += 0.5;
+        out_color.rg += vec2(0.5, 0.3);  // yellow highlight
     }
 }

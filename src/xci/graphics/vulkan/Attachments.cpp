@@ -96,6 +96,7 @@ void Attachments::create_renderpass(VkDevice device)
             .pDepthStencilAttachment = has_depth_stencil() ? &attachment_ref[depth_stencil_ref] : nullptr,
     };
 
+    // FIXME: make this configurable
     const VkSubpassDependency dependencies[] = {
         { // color attachment
             .srcSubpass = VK_SUBPASS_EXTERNAL,
@@ -124,6 +125,15 @@ void Attachments::create_renderpass(VkDevice device)
             .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
             .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
         },
+        { // transfer color attachment (e.g. screenshot)
+            .srcSubpass = 0,
+            .dstSubpass = VK_SUBPASS_EXTERNAL,
+            .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT,
+            .srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+            .dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+        },
     };
 
     const VkRenderPassCreateInfo render_pass_ci = {
@@ -132,7 +142,7 @@ void Attachments::create_renderpass(VkDevice device)
             .pAttachments = attachment_desc.data(),
             .subpassCount = 1,
             .pSubpasses = &subpass,
-            .dependencyCount = 3,
+            .dependencyCount = 4,
             .pDependencies = dependencies,
     };
 
