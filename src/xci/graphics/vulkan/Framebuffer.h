@@ -4,8 +4,8 @@
 // Copyright 2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#ifndef XCI_GRAPHICS_FRAMEBUFFER_H
-#define XCI_GRAPHICS_FRAMEBUFFER_H
+#ifndef XCI_GRAPHICS_VULKAN_FRAMEBUFFER_H
+#define XCI_GRAPHICS_VULKAN_FRAMEBUFFER_H
 
 #include "DeviceMemory.h"
 #include "Image.h"
@@ -35,6 +35,8 @@ public:
     VkFramebuffer vk_framebuffer(uint32_t index) const { return m_framebuffers[index]; }
     VkFramebuffer operator[](uint32_t index) const { return m_framebuffers[index]; }
 
+    Renderer& renderer() { return m_renderer; }
+
 private:
     VkDeviceSize create_image(const ImageCreateInfo& image_ci, VkImage& image);
 
@@ -57,4 +59,4 @@ private:
 
 } // namespace xci::graphics
 
-#endif  // XCI_GRAPHICS_FRAMEBUFFER_H
+#endif  // XCI_GRAPHICS_VULKAN_FRAMEBUFFER_H

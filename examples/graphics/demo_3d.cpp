@@ -23,6 +23,53 @@ using namespace xci::graphics::unit_literals;
 using namespace xci::widgets;
 
 
+class Offscreen {
+public:
+    explicit Offscreen(Renderer& renderer) : m_framebuffer(renderer) {}
+    ~Offscreen() {
+        m_framebuffer.destroy();
+        m_attachments.destroy_renderpass(m_framebuffer.renderer().vk_device());
+    }
+
+    void create(Renderer& renderer, const Attachments::ColorAttachment& color_attachment) {
+        m_attachments.add_color_attachment(color_attachment);
+        m_attachments.set_depth_bits(32);
+        m_attachments.create_renderpass(renderer.vk_device());
+        m_attachments.set_clear_color_value(0, { .uint32 = {0u} });
+    }
+
+    void resize(FramebufferSize size) {
+        m_framebuffer.create(m_attachments, {size.x.as<uint32_t>(), size.y.as<uint32_t>()}, 1);
+    }
+
+    void begin_renderpass(CommandBuffer& cmd_buf, FramebufferSize size, Rect_u scissor) {
+        auto clear_values = m_attachments.vk_clear_values();
+
+        const VkRenderPassBeginInfo render_pass_info = {
+                .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+                .renderPass = m_attachments.render_pass(),
+                .framebuffer = m_framebuffer.vk_framebuffer(0),
+                .renderArea = {
+                        .offset = {0, 0},
+                        .extent = {size.x.as<uint32_t>(), size.y.as<uint32_t>()},
+                },
+                .clearValueCount = (uint32_t) clear_values.size(),
+                .pClearValues = clear_values.data(),
+        };
+        vkCmdBeginRenderPass(cmd_buf.vk(), &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+        cmd_buf.set_viewport(Vec2f(size), true);
+        cmd_buf.set_scissor(scissor);
+    }
+
+    Attachments& attachments() { return m_attachments; }
+    Framebuffer& framebuffer() { return m_framebuffer; }
+
+private:
+    Attachments m_attachments;
+    Framebuffer m_framebuffer;
+};
+
+
 int main(int, const char* argv[])
 {
     Vfs vfs;
@@ -47,14 +94,11 @@ int main(int, const char* argv[])
 
 
     // Create offscreen framebuffer for mouse pick
-    Attachments offscreen_attachments;
-    offscreen_attachments.add_color_attachment({.format = VK_FORMAT_R32_UINT,
-                                                .final_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                                                .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT});
-    offscreen_attachments.set_depth_bits(32);
-    offscreen_attachments.create_renderpass(renderer.vk_device());
-    offscreen_attachments.set_clear_color_value(0, { .uint32 = {0u} });
-    Framebuffer offscreen(renderer);
+    Offscreen offscreen_pick(renderer);
+    offscreen_pick.create(renderer,
+                          {.format = VK_FORMAT_R32_UINT,
+                           .final_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                           .usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT});
 
 //    Primitives sprite {renderer, VertexFormat::V2t2, PrimitiveType::TriFans};
 //    sprite.set_shader(renderer.get_shader("sprite", "sprite"));
@@ -62,7 +106,6 @@ int main(int, const char* argv[])
 //    sprite.set_blend(BlendFunc::AlphaBlend);
 
     FramebufferCoords mouse_pos = {0, 0};
-    FramebufferCoords prev_mouse_pos = {0, 0};
 
     // out buffer
     VkBuffer out_buffer {};
@@ -93,36 +136,18 @@ int main(int, const char* argv[])
     window.command_buffers().add_callback(CommandBuffers::Event::Init, nullptr,
                                           [&](CommandBuffer& cmd_buf, uint32_t image_index)
     {
-        // Mouse pick offscreen renderpass - only if mouse moved
-        if (mouse_pos == prev_mouse_pos)
-            return;
-        prev_mouse_pos = mouse_pos;
-
+        // Mouse pick offscreen renderpass
         const auto size = window.view().framebuffer_size();
-        auto clear_values = offscreen_attachments.vk_clear_values();
-
-        const VkRenderPassBeginInfo render_pass_info = {
-                .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-                .renderPass = offscreen_attachments.render_pass(),
-                .framebuffer = offscreen.vk_framebuffer(0),
-                .renderArea = {
-                        .offset = {0, 0},
-                        .extent = {size.x.as<uint32_t>(), size.y.as<uint32_t>()},
-                },
-                .clearValueCount = (uint32_t) clear_values.size(),
-                .pClearValues = clear_values.data(),
-        };
-        vkCmdBeginRenderPass(cmd_buf.vk(), &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
-        cmd_buf.set_viewport(Vec2f(size), true);
         Rect_u mouse_region {mouse_pos.x.as<uint32_t>(), mouse_pos.y.as<uint32_t>(), 1u, 1u};
-        cmd_buf.set_scissor(mouse_region);
+        offscreen_pick.begin_renderpass(cmd_buf, size, mouse_region);
 
         cube.prim().set_shader(renderer.get_shader("pick", "pick"));
-        cube.draw(cmd_buf, offscreen_attachments, window.view());
+        cube.draw(cmd_buf, offscreen_pick.attachments(), window.view());
 
         vkCmdEndRenderPass(cmd_buf.vk());
 
-        cmd_buf.copy_image_to_buffer(offscreen.color_image(0, 0), mouse_region,
+        cmd_buf.copy_image_to_buffer(offscreen_pick.framebuffer().color_image(0, 0),
+                                     mouse_region,
                                      out_buffer, 0, 1);
         cmd_buf.add_cleanup([&] {
             if (out_mapped != nullptr) {
@@ -147,7 +172,7 @@ int main(int, const char* argv[])
 
     window.set_size_callback([&](View& view) {
         const auto size = view.framebuffer_size();
-        offscreen.create(offscreen_attachments, {size.x.as<uint32_t>(), size.y.as<uint32_t>()}, 1);
+        offscreen_pick.resize(size);
 
         projection = perspective_projection(1.2f, float(size.x.value / size.y.value), 0.1f, 10.f);
 
@@ -218,9 +243,6 @@ int main(int, const char* argv[])
     window.set_refresh_mode(RefreshMode::Periodic);
     renderer.set_present_mode(PresentMode::Immediate);
     window.display();
-
-    offscreen.destroy();
-    offscreen_attachments.destroy_renderpass(renderer.vk_device());
 
     out_mapped = nullptr;
     out_memory.unmap();
