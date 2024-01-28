@@ -10,6 +10,7 @@
 #include <xci/widgets/FpsDisplay.h>
 #include <xci/graphics/Primitives.h>
 #include <xci/graphics/vulkan/Framebuffer.h>
+#include <xci/graphics/vulkan/Buffer.h>
 #include <xci/graphics/shape/Rectangle.h>
 #include <xci/math/transform.h>
 #include <xci/core/log.h>
@@ -108,28 +109,19 @@ int main(int, const char* argv[])
     FramebufferCoords mouse_pos = {0, 0};
 
     // out buffer
-    VkBuffer out_buffer {};
+    graphics::Buffer out_buffer;
     DeviceMemory out_memory(renderer);
     uint32_t* out_mapped = nullptr;
     uint32_t picked_object_id = 0;
     {
         const size_t byte_size = sizeof(int32_t) * 100;
-        VkBufferCreateInfo buffer_ci = {
-                .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-                .size = byte_size,
-                .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-                .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        };
-        VK_TRY("vkCreateBuffer(out buffer)",
-               vkCreateBuffer(renderer.vk_device(), &buffer_ci, nullptr, &out_buffer));
-        VkMemoryRequirements mem_req;
-        vkGetBufferMemoryRequirements(renderer.vk_device(), out_buffer, &mem_req);
-        auto offset = out_memory.reserve(mem_req);
+        const auto offset = out_buffer.create(renderer.vk_device(), out_memory,
+                                              byte_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
         assert(offset == 0);
         out_memory.allocate(
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        out_memory.bind_buffer(out_buffer, offset);
+        out_memory.bind_buffer(out_buffer.vk(), offset);
         out_mapped = (uint32_t*) out_memory.map(0, byte_size);
     }
 
@@ -148,7 +140,7 @@ int main(int, const char* argv[])
 
         cmd_buf.copy_image_to_buffer(offscreen_pick.framebuffer().color_image(0, 0),
                                      mouse_region,
-                                     out_buffer, 0, 1);
+                                     out_buffer.vk(), 0, 1);
         cmd_buf.add_cleanup([&] {
             if (out_mapped != nullptr) {
                 picked_object_id = *out_mapped;
@@ -247,7 +239,7 @@ int main(int, const char* argv[])
     out_mapped = nullptr;
     out_memory.unmap();
     out_memory.free();
-    vkDestroyBuffer(renderer.vk_device(), out_buffer, nullptr);
+    out_buffer.destroy(renderer.vk_device());
 
     return EXIT_SUCCESS;
 }

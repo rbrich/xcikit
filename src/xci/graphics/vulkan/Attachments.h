@@ -4,8 +4,8 @@
 // Copyright 2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#ifndef XCI_GRAPHICS_ATTACHMENTS_H
-#define XCI_GRAPHICS_ATTACHMENTS_H
+#ifndef XCI_GRAPHICS_VULKAN_ATTACHMENTS_H
+#define XCI_GRAPHICS_VULKAN_ATTACHMENTS_H
 
 #include <vulkan/vulkan.h>
 #include <vector>
@@ -47,7 +47,7 @@ public:
     /// Add a color attachment, starting with location=0.
     /// None exists initially.
     /// \returns Attachment reference number (location)
-    uint32_t add_color_attachment(ColorAttachment attachment) {
+    uint32_t add_color_attachment(const ColorAttachment& attachment) {
         m_color_attachments.emplace_back(attachment);
         return m_color_attachments.size() - 1;
     }
@@ -81,4 +81,4 @@ private:
 
 } // namespace xci::graphics
 
-#endif  // XCI_GRAPHICS_ATTACHMENTS_H
+#endif  // XCI_GRAPHICS_VULKAN_ATTACHMENTS_H

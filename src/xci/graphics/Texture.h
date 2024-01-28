@@ -11,6 +11,7 @@
 #include <xci/math/Vec2.h>
 #include <xci/math/Rect.h>
 #include "vulkan/DeviceMemory.h"
+#include "vulkan/Buffer.h"
 #include "vulkan/Image.h"
 
 #include <vulkan/vulkan.h>
@@ -78,7 +79,7 @@ private:
     Renderer& m_renderer;
     ColorFormat m_format = ColorFormat::LinearGrey;
     Vec2u m_size;
-    VkBuffer m_staging_buffer {};
+    Buffer m_staging_buffer;
     Image m_image;
     ImageView m_image_view;
     VkImageLayout m_image_layout { VK_IMAGE_LAYOUT_UNDEFINED };

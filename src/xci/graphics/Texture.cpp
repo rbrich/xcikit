@@ -38,22 +38,13 @@ bool Texture::create(const Vec2u& size, ColorFormat format, TextureFlags flags)
 
     // staging buffer
     {
-        VkBufferCreateInfo buffer_ci = {
-                .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-                .size = byte_size(),
-                .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        };
-        VK_TRY("vkCreateBuffer(staging texture)",
-                vkCreateBuffer(device(), &buffer_ci, nullptr, &m_staging_buffer));
-        VkMemoryRequirements mem_req;
-        vkGetBufferMemoryRequirements(device(), m_staging_buffer, &mem_req);
-        auto offset = m_staging_memory.reserve(mem_req);
+        auto offset = m_staging_buffer.create(device(), m_staging_memory,
+                            byte_size(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
         assert(offset == 0);
         m_staging_memory.allocate(
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-        m_staging_memory.bind_buffer(m_staging_buffer, offset);
+        m_staging_memory.bind_buffer(m_staging_buffer.vk(), offset);
         m_staging_mapped = m_staging_memory.map(0, byte_size());
     }
 
@@ -151,7 +142,7 @@ void Texture::update()
             region.x -= align;
             region.w += align;
         }
-        cmd_buf.copy_buffer_to_image(m_staging_buffer,
+        cmd_buf.copy_buffer_to_image(m_staging_buffer.vk(),
                 (region.y * m_size.x + region.x) * pixel_size,
                 m_size.x, m_image.vk(), region);
     }
@@ -256,7 +247,7 @@ void Texture::destroy()
         m_staging_memory.unmap();
         m_staging_mapped = nullptr;
     }
-    vkDestroyBuffer(device(), m_staging_buffer, nullptr);
+    m_staging_buffer.destroy(device());
     m_image_view.destroy(device());
 }
 

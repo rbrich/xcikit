@@ -28,8 +28,8 @@ using core::align_to;
 PrimitivesBuffers::~PrimitivesBuffers()
 {
     m_device_memory.free();
-    vkDestroyBuffer(device(), m_index_buffer, nullptr);
-    vkDestroyBuffer(device(), m_vertex_buffer, nullptr);
+    m_index_buffer.destroy(device());
+    m_vertex_buffer.destroy(device());
 }
 
 
@@ -37,45 +37,27 @@ void PrimitivesBuffers::create(const std::vector<float>& vertex_data,
                                const std::vector<uint16_t>& index_data)
 {
     // vertex buffer
-    const VkBufferCreateInfo vertex_buffer_ci = {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = sizeof(vertex_data[0]) * vertex_data.size(),
-            .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-    };
-    VK_TRY("vkCreateBuffer(vertex)",
-            vkCreateBuffer(device(), &vertex_buffer_ci,
-                    nullptr, &m_vertex_buffer));
-    VkMemoryRequirements vertex_mem_req;
-    vkGetBufferMemoryRequirements(device(), m_vertex_buffer, &vertex_mem_req);
-    auto vertex_offset = m_device_memory.reserve(vertex_mem_req);
+    VkDeviceSize vertex_size = sizeof(vertex_data[0]) * vertex_data.size();
+    auto vertex_offset = m_vertex_buffer.create(device(), m_device_memory,
+                            vertex_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
     // index buffer
-    const VkBufferCreateInfo index_buffer_ci = {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = sizeof(index_data[0]) * index_data.size(),
-            .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-    };
-    VK_TRY("vkCreateBuffer(index)",
-            vkCreateBuffer(device(), &index_buffer_ci,
-                    nullptr, &m_index_buffer));
-    VkMemoryRequirements index_mem_req;
-    vkGetBufferMemoryRequirements(device(), m_index_buffer, &index_mem_req);
-    auto index_offset = m_device_memory.reserve(index_mem_req);
+    VkDeviceSize index_size = sizeof(index_data[0]) * index_data.size();
+    auto index_offset = m_index_buffer.create(device(), m_device_memory,
+                            index_size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 
     // allocate memory and copy data
     m_device_memory.allocate(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
-    m_device_memory.bind_buffer(m_vertex_buffer, vertex_offset);
-    void* mapped = m_device_memory.map(vertex_offset, vertex_buffer_ci.size);
-    std::memcpy(mapped, vertex_data.data(), vertex_buffer_ci.size);
+    m_device_memory.bind_buffer(m_vertex_buffer.vk(), vertex_offset);
+    void* mapped = m_device_memory.map(vertex_offset, vertex_size);
+    std::memcpy(mapped, vertex_data.data(), vertex_size);
     m_device_memory.flush(vertex_offset);
     m_device_memory.unmap();
 
-    m_device_memory.bind_buffer(m_index_buffer, index_offset);
-    mapped = m_device_memory.map(index_offset, index_buffer_ci.size);
-    std::memcpy(mapped, index_data.data(), index_buffer_ci.size);
+    m_device_memory.bind_buffer(m_index_buffer.vk(), index_offset);
+    mapped = m_device_memory.map(index_offset, index_size);
+    std::memcpy(mapped, index_data.data(), index_size);
     m_device_memory.flush(index_offset);
     m_device_memory.unmap();
 }
@@ -84,8 +66,8 @@ void PrimitivesBuffers::create(const std::vector<float>& vertex_data,
 void PrimitivesBuffers::bind(VkCommandBuffer cmd_buf)
 {
     const VkDeviceSize offset = 0;
-    vkCmdBindVertexBuffers(cmd_buf, 0, 1, &m_vertex_buffer, &offset);
-    vkCmdBindIndexBuffer(cmd_buf, m_index_buffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindVertexBuffers(cmd_buf, 0, 1, m_vertex_buffer.vk_p(), &offset);
+    vkCmdBindIndexBuffer(cmd_buf, m_index_buffer.vk(), 0, VK_INDEX_TYPE_UINT16);
 }
 
 
@@ -107,8 +89,8 @@ UniformBuffers::~UniformBuffers()
     if (m_device_memory_mapped)
         m_device_memory.unmap();
     m_device_memory.free();
-    vkDestroyBuffer(device(), m_buffer, nullptr);
-    vkDestroyBuffer(device(), m_storage_buffer, nullptr);
+    m_buffer.destroy(device());
+    m_storage_buffer.destroy(device());
 }
 
 
@@ -117,43 +99,25 @@ void UniformBuffers::create(size_t static_size, size_t dynamic_size, size_t stor
     // uniform buffers
     m_dynamic_base = align_to(static_size, size_t(m_renderer.min_uniform_offset_alignment()));
     m_dynamic_size = dynamic_size;
-    const VkBufferCreateInfo uniform_buffer_ci = {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = m_dynamic_base + m_dynamic_size,
-            .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-    };
-    VK_TRY("vkCreateBuffer(uniform)",
-           vkCreateBuffer(device(), &uniform_buffer_ci,
-                          nullptr, &m_buffer));
-    VkMemoryRequirements mem_req;
-    vkGetBufferMemoryRequirements(device(), m_buffer, &mem_req);
-    const auto base = m_device_memory.reserve(mem_req);
+    const auto base = m_buffer.create(device(), m_device_memory,
+                                      m_dynamic_base + m_dynamic_size,
+                                      VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     assert(base == 0);  // This is currently expected (the memory is not pooled)
 
     // storage buffer
     if (storage_size != 0) {
         m_storage_size = align_to(storage_size, size_t(m_renderer.non_coherent_atom_size()));
-        const VkBufferCreateInfo storage_buffer_ci = {
-                .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-                .size = m_storage_size,
-                .usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        };
-        VK_TRY("vkCreateBuffer(storage)",
-               vkCreateBuffer(device(), &storage_buffer_ci, nullptr, &m_storage_buffer));
-        VkMemoryRequirements storage_mem_req;
-        vkGetBufferMemoryRequirements(device(), m_storage_buffer, &storage_mem_req);
-        m_storage_offset = m_device_memory.reserve(storage_mem_req);
+        m_storage_offset = m_storage_buffer.create(device(), m_device_memory,
+                                    m_storage_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
     }
 
     // allocate memory and copy data
     m_device_memory.allocate(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    m_device_memory.bind_buffer(m_buffer, base);
+    m_device_memory.bind_buffer(m_buffer.vk(), base);
     m_device_memory_mapped = m_device_memory.map(base);
 
     if (storage_size != 0) {
-        m_device_memory.bind_buffer(m_storage_buffer, m_storage_offset);
+        m_device_memory.bind_buffer(m_storage_buffer.vk(), m_storage_offset);
     }
 }
 

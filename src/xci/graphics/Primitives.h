@@ -13,6 +13,7 @@
 #include "Shader.h"
 #include "vulkan/Sampler.h"
 #include "vulkan/DeviceMemory.h"
+#include "vulkan/Buffer.h"
 #include "vulkan/Pipeline.h"
 #include "vulkan/DescriptorPool.h"
 #include <xci/math/Vec2.h>
@@ -88,8 +89,8 @@ private:
     VkDevice device() const;
 
     Renderer& m_renderer;
-    VkBuffer m_vertex_buffer {};
-    VkBuffer m_index_buffer {};
+    Buffer m_vertex_buffer;
+    Buffer m_index_buffer;
     DeviceMemory m_device_memory;
 };
 
@@ -124,19 +125,19 @@ public:
     /// Get address of mapped storage memory
     void* mapped_storage(size_t offset);
 
-    VkBuffer vk_uniform_buffer() const { return m_buffer; }
-    VkBuffer vk_storage_buffer() const { return m_storage_buffer; }
+    VkBuffer vk_uniform_buffer() const { return m_buffer.vk(); }
+    VkBuffer vk_storage_buffer() const { return m_storage_buffer.vk(); }
 
 private:
     VkDevice device() const;
 
     Renderer& m_renderer;
-    VkBuffer m_buffer {};
+    Buffer m_buffer;
     VkDeviceSize m_dynamic_base {};    // base offset for dynamic uniforms
     size_t m_dynamic_size {};          // size of dynamic uniforms allocation area (circular buffer)
     size_t m_dynamic_free_offset {};   // offset inside dynamic area pointing to next free block
     size_t m_dynamic_used_size {};     // size of used part of dynamic area
-    VkBuffer m_storage_buffer {};
+    Buffer m_storage_buffer;
     VkDeviceSize m_storage_offset {};
     size_t m_storage_size {};
     DeviceMemory m_device_memory;
