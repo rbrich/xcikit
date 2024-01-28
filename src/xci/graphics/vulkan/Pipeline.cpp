@@ -40,7 +40,7 @@ unsigned get_vertex_format_stride(VertexFormat format)
 void PipelineLayoutCreateInfo::add_uniform_binding(uint32_t binding, bool dynamic)
 {
     m_layout_bindings.push_back({binding,
-        (dynamic ? LayoutBinding::TypeDynamicUniform : 0)
+        (dynamic ? LayoutBinding::TypeDynamicUniform : LayoutBinding::TypeUniform)
                  | LayoutBinding::StageVertex | LayoutBinding::StageFragment});
 }
 
@@ -69,13 +69,16 @@ std::vector<VkDescriptorSetLayoutBinding> PipelineLayoutCreateInfo::vk_layout_bi
 {
     std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
     for (const auto& item : m_layout_bindings) {
+        VkShaderStageFlags stage_flags {};
+        if (item.flags & LayoutBinding::StageVertex)
+            stage_flags |= VK_SHADER_STAGE_VERTEX_BIT;
+        if (item.flags & LayoutBinding::StageFragment)
+            stage_flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
         layout_bindings.push_back({
                 .binding = item.binding,
                 .descriptorType = item.vk_descriptor_type(),
                 .descriptorCount = 1,
-                .stageFlags =
-                        ((item.flags & LayoutBinding::StageVertex)? VK_SHADER_STAGE_VERTEX_BIT : 0u) |
-                        ((item.flags & LayoutBinding::StageFragment)? VK_SHADER_STAGE_FRAGMENT_BIT : 0u),
+                .stageFlags = stage_flags,
         });
     }
     return layout_bindings;

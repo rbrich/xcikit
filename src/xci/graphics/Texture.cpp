@@ -49,9 +49,10 @@ bool Texture::create(const Vec2u& size, ColorFormat format, TextureFlags flags)
     }
 
     // image
-    ImageCreateInfo image_ci {size, vk_format(),
-                             (has_mipmaps() ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0u) |
-                             VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT};
+    VkImageUsageFlags image_usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    if (has_mipmaps())
+        image_usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    ImageCreateInfo image_ci {size, vk_format(), image_usage};
     m_image.create(image_ci.set_mip_levels(mip_levels()));
     m_image_view.create(device(), m_image.vk(), vk_format(), VK_IMAGE_ASPECT_COLOR_BIT, mip_levels());
 

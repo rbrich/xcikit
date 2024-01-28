@@ -19,7 +19,7 @@ class Attachments;
 
 class Framebuffer {
 public:
-    static constexpr uint32_t max_image_count = 3;
+    static constexpr uint32_t max_image_count = 8;
 
     explicit Framebuffer(Renderer& renderer)
             : m_renderer(renderer), m_image_memory(renderer) {}
