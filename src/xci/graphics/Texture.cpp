@@ -29,12 +29,11 @@ Texture::Texture(Renderer& renderer)
 {}
 
 
-bool Texture::create(const Vec2u& size, ColorFormat format, TextureFlags flags)
+bool Texture::create(const Vec2u& size, TextureParameters params)
 {
     destroy();
     m_size = size;
-    m_format = format;
-    m_flags = flags;
+    m_params = params;
 
     // staging buffer
     {
@@ -84,7 +83,7 @@ void Texture::write(const void* pixels)
 void Texture::write(const uint8_t* pixels, const Rect_u& region)
 {
     assert(m_staging_mapped != nullptr);
-    const auto pixel_size = format_pixel_size(m_format);
+    const auto pixel_size = format_pixel_size(m_params.format);
     const auto stride = region.w * pixel_size;
     for (size_t y = 0; y != region.h; ++y) {
         std::memcpy(
@@ -136,7 +135,7 @@ void Texture::update()
     }
 
     for (auto& region : m_pending_regions) {
-        const auto pixel_size = format_pixel_size(m_format);
+        const auto pixel_size = format_pixel_size(m_params.format);
         if (pixel_size % 4 != 0) {
             // offset must be a multiple of 4
             auto align = (region.y * m_size.x + region.x) % 4;
@@ -166,13 +165,13 @@ void Texture::update()
 
 VkDeviceSize Texture::byte_size() const
 {
-    return size_t(m_size.x * m_size.y) * format_pixel_size(m_format);
+    return size_t(m_size.x * m_size.y) * format_pixel_size(m_params.format);
 }
 
 
 VkFormat Texture::vk_format() const
 {
-    switch (m_format) {
+    switch (m_params.format) {
         case ColorFormat::LinearGrey: return VK_FORMAT_R8_UNORM;
         case ColorFormat::LinearBGRA: return VK_FORMAT_B8G8R8A8_UNORM;
         case ColorFormat::BGRA: return VK_FORMAT_B8G8R8A8_SRGB;

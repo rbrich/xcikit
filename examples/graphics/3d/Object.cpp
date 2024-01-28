@@ -86,13 +86,13 @@ void Object::update(uint32_t this_object_id, uint32_t selected_object_id)
 
 void Object::draw(View& view)
 {
-    m_prim.draw(view, PrimitiveDrawFlags::None);
+    m_prim.draw(view, PrimitiveDrawFlags{});
 }
 
 
 void Object::draw(CommandBuffer& cmd_buf, Attachments& attachments, View& view)
 {
-    m_prim.draw(cmd_buf, attachments, view, PrimitiveDrawFlags::None);
+    m_prim.draw(cmd_buf, attachments, view, PrimitiveDrawFlags{});
 }
 
 

@@ -600,7 +600,7 @@ void Primitives::draw(CommandBuffer& cmd_buf, Attachments& attachments,
                            0, uint32_t(m_push_constants.size()), m_push_constants.data());
 
     // uniforms
-    if ((flags & PrimitiveDrawFlags::Projection2D) != PrimitiveDrawFlags::None)
+    if (flags.projection_2d)
         set_uniform(0, view.projection_matrix());
     if (m_dynamic_uniforms_updated) {
         // Free dynamic uniforms allocated for this frame at the end of render pass

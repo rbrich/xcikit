@@ -34,12 +34,11 @@ enum class ColorFormat {
     LinearBGRA,    // 32bit color in linear colorspace (e.g. normal-mapping texture)
 };
 
-enum class TextureFlags : uint8_t {
-    None            = 0x00,
-    Mipmaps         = 0x01,  // generate mipmaps for the texture
+
+struct TextureParameters {
+    ColorFormat format = ColorFormat::BGRA;
+    bool mipmaps : 1 = false;  // generate mipmaps
 };
-inline TextureFlags operator|(TextureFlags a, TextureFlags b) { return TextureFlags(uint8_t(a) | uint8_t(b)); }
-inline TextureFlags operator&(TextureFlags a, TextureFlags b) { return TextureFlags(uint8_t(a) & uint8_t(b)); }
 
 
 uint32_t mip_levels_for_size(Vec2u size);
@@ -51,7 +50,7 @@ public:
     ~Texture() { destroy(); }
 
     // Create or resize the texture
-    bool create(const Vec2u& size, ColorFormat format, TextureFlags flags = TextureFlags::None);
+    bool create(const Vec2u& size, TextureParameters params);
 
     // Write data to staging memory (don't forget to `update` the texture)
     void write(const void* pixels);
@@ -63,8 +62,8 @@ public:
 
     Vec2u size() const { return m_size; }
     VkDeviceSize byte_size() const;
-    ColorFormat color_format() const { return m_format; }
-    bool has_mipmaps() const { return (m_flags & TextureFlags::Mipmaps) == TextureFlags::Mipmaps; }
+    ColorFormat color_format() const { return m_params.format; }
+    bool has_mipmaps() const { return m_params.mipmaps; }
     uint32_t mip_levels() const { return has_mipmaps() ? mip_levels_for_size(m_size) : 1; }
 
     // Vulkan handles
@@ -77,7 +76,7 @@ private:
     void destroy();
 
     Renderer& m_renderer;
-    ColorFormat m_format = ColorFormat::LinearGrey;
+    TextureParameters m_params {};
     Vec2u m_size;
     Buffer m_staging_buffer;
     Image m_image;
@@ -86,7 +85,6 @@ private:
     DeviceMemory m_staging_memory;  // FIXME: pool the memory
     void* m_staging_mapped = nullptr;
     std::vector<Rect_u> m_pending_regions;
-    TextureFlags m_flags = TextureFlags::None;
     bool m_pending_clear = false;
 };
 

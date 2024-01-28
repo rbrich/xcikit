@@ -40,12 +40,9 @@ enum class PrimitiveType : uint8_t {
 };
 
 
-enum class PrimitiveDrawFlags : uint8_t {
-    None          = 0x00,
-    Projection2D  = 0x01,  // set uniform binding 0 to View::projection_matrix
+struct PrimitiveDrawFlags {
+    bool projection_2d : 1 = false;  // set uniform binding 0 to View::projection_matrix
 };
-inline PrimitiveDrawFlags operator|(PrimitiveDrawFlags a, PrimitiveDrawFlags b) { return PrimitiveDrawFlags(uint8_t(a) | uint8_t(b)); }
-inline PrimitiveDrawFlags operator&(PrimitiveDrawFlags a, PrimitiveDrawFlags b) { return PrimitiveDrawFlags(uint8_t(a) & uint8_t(b)); }
 
 
 struct UniformBinding {
@@ -321,7 +318,7 @@ public:
 
     void draw(CommandBuffer& cmd_buf, Attachments& attachments,
               View& view, PrimitiveDrawFlags flags);
-    void draw(View& view, PrimitiveDrawFlags flags = PrimitiveDrawFlags::Projection2D);
+    void draw(View& view, PrimitiveDrawFlags flags = { .projection_2d = true });
     void draw(View& view, VariCoords pos);
 
 private:
