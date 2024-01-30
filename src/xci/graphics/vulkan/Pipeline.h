@@ -22,6 +22,7 @@ namespace xci::graphics {
 
 class Renderer;
 class Shader;
+class Attachments;
 
 
 enum class VertexFormat : uint8_t {
@@ -134,13 +135,13 @@ private:
 class PipelineCreateInfo {
 public:
     explicit PipelineCreateInfo(
+            const Attachments& attachments,
             VkShaderModule vertex_shader, VkShaderModule fragment_shader,
-            VkPipelineLayout layout, VkRenderPass render_pass);
+            VkPipelineLayout layout);
 
     void set_vertex_format(VertexFormat format);
-    void set_color_blend(BlendFunc blend_func);
+    void set_color_blend(BlendFunc blend_func, unsigned attachment = 0);
     void set_depth_test(DepthTest depth_test);
-    void set_sample_count(uint32_t count) { m_multisample_ci.rasterizationSamples = (VkSampleCountFlagBits) count; }
 
     const VkGraphicsPipelineCreateInfo& vk() const { return m_pipeline_ci; }
 
@@ -162,7 +163,7 @@ private:
     VkPipelineRasterizationStateCreateInfo m_rasterization_ci;
     VkPipelineMultisampleStateCreateInfo m_multisample_ci;
     VkPipelineDepthStencilStateCreateInfo m_depth_stencil_ci;
-    VkPipelineColorBlendAttachmentState m_color_blend {};
+    std::vector<VkPipelineColorBlendAttachmentState> m_color_blend;
     VkPipelineColorBlendStateCreateInfo m_color_blend_ci;
     std::array<VkDynamicState, 2> m_dynamic_states;
     VkPipelineDynamicStateCreateInfo m_dynamic_state_ci;

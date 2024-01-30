@@ -7,6 +7,7 @@
 #include "Pipeline.h"
 #include "VulkanError.h"
 #include <xci/graphics/Renderer.h>
+#include <xci/graphics/vulkan/Attachments.h>
 #include <xci/compat/macros.h>
 
 #include <cassert>
@@ -185,8 +186,9 @@ PipelineLayout::~PipelineLayout()
 
 
 PipelineCreateInfo::PipelineCreateInfo(
+        const Attachments& attachments,
         VkShaderModule vertex_shader, VkShaderModule fragment_shader,
-        VkPipelineLayout layout, VkRenderPass render_pass)
+        VkPipelineLayout layout)
 {
     m_shader_stages[0] = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -237,7 +239,7 @@ PipelineCreateInfo::PipelineCreateInfo(
 
     m_multisample_ci = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-            .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+            .rasterizationSamples = attachments.msaa_samples_flag(),
             .sampleShadingEnable = VK_FALSE,
     };
 
@@ -249,12 +251,13 @@ PipelineCreateInfo::PipelineCreateInfo(
             .depthBoundsTestEnable = VK_FALSE,
     };
 
+    m_color_blend.resize(attachments.color_attachments().size());
     m_color_blend_ci = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
             .logicOpEnable = VK_FALSE,
             .logicOp = VK_LOGIC_OP_COPY,
-            .attachmentCount = 1,
-            .pAttachments = &m_color_blend,
+            .attachmentCount = (uint32_t) m_color_blend.size(),
+            .pAttachments = m_color_blend.data(),
     };
 
     m_dynamic_states = {
@@ -282,7 +285,7 @@ PipelineCreateInfo::PipelineCreateInfo(
             .pColorBlendState = &m_color_blend_ci,
             .pDynamicState = &m_dynamic_state_ci,
             .layout = layout,
-            .renderPass = render_pass,
+            .renderPass = attachments.render_pass(),
             .subpass = 0,
     };
 }
@@ -392,7 +395,7 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
 }
 
 
-void PipelineCreateInfo::set_color_blend(BlendFunc blend_func)
+void PipelineCreateInfo::set_color_blend(BlendFunc blend_func, unsigned attachment)
 {
     m_blend_func = blend_func;
     constexpr VkColorComponentFlags color_mask =
@@ -403,13 +406,13 @@ void PipelineCreateInfo::set_color_blend(BlendFunc blend_func)
 
     switch (blend_func) {
         case BlendFunc::Off:
-            m_color_blend = {
+            m_color_blend[attachment] = {
                     .blendEnable = VK_FALSE,
                     .colorWriteMask = color_mask,
             };
             break;
         case BlendFunc::AlphaBlend:
-            m_color_blend = {
+            m_color_blend[attachment] = {
                     .blendEnable = VK_TRUE,
                     .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
                     .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
@@ -421,7 +424,7 @@ void PipelineCreateInfo::set_color_blend(BlendFunc blend_func)
             };
             break;
         case BlendFunc::InverseVideo:
-            m_color_blend = {
+            m_color_blend[attachment] = {
                     .blendEnable = VK_TRUE,
                     .srcColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR,
                     .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,

@@ -578,12 +578,12 @@ void Primitives::draw(CommandBuffer& cmd_buf, Attachments& attachments,
 
     // bind pipeline
     assert(m_shader);
-    PipelineCreateInfo pipeline_ci(m_shader.vk_vertex_module(), m_shader.vk_fragment_module(),
-                                   m_pipeline_layout->vk(), attachments.render_pass());
+    PipelineCreateInfo pipeline_ci(attachments,
+                                   m_shader.vk_vertex_module(), m_shader.vk_fragment_module(),
+                                   m_pipeline_layout->vk());
     pipeline_ci.set_vertex_format(m_format);
     pipeline_ci.set_color_blend(m_blend);
     pipeline_ci.set_depth_test(m_depth_test);
-    pipeline_ci.set_sample_count(attachments.msaa_samples());
     Pipeline& pipeline = m_renderer.get_pipeline(pipeline_ci);
     vkCmdBindPipeline(vk_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.vk());
 
