@@ -1,7 +1,7 @@
 // Spinner.h created on 2023-02-25 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_SPINNER_H
@@ -19,7 +19,7 @@ class Spinner: public Widget, public Clickable, public Padded {
 public:
     explicit Spinner(Theme& theme, float value);
 
-    void set_value(float value) { m_value = value; }
+    void set_value(float value) { m_value = value; update_text(); }
     float value() const { return m_value; }
 
     void set_step(float step, float big_step) { m_step = step; m_big_step = big_step; }

@@ -8,6 +8,9 @@
 #include "3d/Object.h"
 
 #include <xci/widgets/FpsDisplay.h>
+#include <xci/widgets/Label.h>
+#include <xci/widgets/Spinner.h>
+#include <xci/widgets/Checkbox.h>
 #include <xci/graphics/Primitives.h>
 #include <xci/graphics/vulkan/Framebuffer.h>
 #include <xci/graphics/vulkan/Buffer.h>
@@ -93,6 +96,12 @@ int main(int, const char* argv[])
 
     log::info("Multisampling: {}", renderer.sample_count());
 
+    Theme theme(renderer);
+    if (!theme.load_default())
+        return EXIT_FAILURE;
+
+    Composite root {theme};
+
     // Low-level object for drawing primitives (3D triangles)
     Object cube {renderer};
     cube.create_cube(1.0f);
@@ -115,18 +124,51 @@ int main(int, const char* argv[])
                            { .float32 = {0.0f, 0.0f, 0.0f, 0.0f} });
 
     Primitives glow {renderer, VertexFormat::V2t2, PrimitiveType::TriFans};
+    struct GlowPushConstants {
+        Vec2f center = {0.5f, 0.5f};
+        float radius = 0.15f;
+        float resolution = 100.0f;
+    };
+    GlowPushConstants glow_constants;
+    glow.reserve_push_constants(sizeof(GlowPushConstants));
     glow.set_shader(renderer.get_shader("sprite", "blur_radial"));
     glow.set_blend(BlendFunc::AlphaBlend);
 
+    Label l_glow_spinner(theme, "Glow size:");
+    l_glow_spinner.set_position({-13_vp, 45_vp});
+    l_glow_spinner.set_color(Color::Cyan());
+    root.add_child(l_glow_spinner);
+    Spinner glow_spinner(theme, 0.5f);
+    glow_spinner.set_position({0_vp, 45_vp});
+    glow_spinner.set_value(glow_constants.radius);
+    glow_spinner.set_bounds(0.0f, 0.5f);
+    glow_spinner.on_change([&glow_constants, &glow](Spinner& spinner) {
+        glow_constants.radius = spinner.value();
+        glow.set_push_constants_data(&glow_constants, sizeof(GlowPushConstants));
+    });
+    root.add_child(glow_spinner);
+
+    Label l_vsync(theme, "vsync");
+    l_vsync.set_position({-30_vp, 45_vp});
+    l_vsync.set_color(Color::Cyan());
+    root.add_child(l_vsync);
+    Checkbox vsync_checkbox(theme);
+    vsync_checkbox.set_checked(true);
+    vsync_checkbox.on_change([&renderer](const Checkbox& c) {
+        renderer.set_present_mode(c.checked() ? PresentMode::Fifo : PresentMode::Immediate);
+    });
+    vsync_checkbox.set_position({-33_vp, 46_vp});
+    root.add_child(vsync_checkbox);
+
     FramebufferCoords mouse_pos = {0, 0};
 
-    // out buffer
+    // Mouse pick object_id buffer
     graphics::Buffer out_buffer;
     DeviceMemory out_memory(renderer);
     uint32_t* out_mapped = nullptr;
     uint32_t picked_object_id = 0;
     {
-        const size_t byte_size = sizeof(int32_t) * 100;
+        const size_t byte_size = sizeof(int32_t);
         const auto offset = out_buffer.create(renderer.vk_device(), out_memory,
                                               byte_size, VK_BUFFER_USAGE_TRANSFER_DST_BIT);
         assert(offset == 0);
@@ -168,12 +210,9 @@ int main(int, const char* argv[])
         }
     });
 
-    Theme theme(renderer);
-    if (!theme.load_default())
-        return EXIT_FAILURE;
-
     FpsDisplay fps_display(theme);
     fps_display.set_position({-60_vp, 45_vp});
+    root.add_child(fps_display);
 
     float elapsed_acc = 0;
 
@@ -221,9 +260,9 @@ int main(int, const char* argv[])
         glow.end_primitive();
         glow.set_texture(2, offscreen_glow.framebuffer().color_image_view(0, 0),
                          renderer.get_sampler().vk());
+        glow_constants.resolution = 0.15f * std::max(size.x.value, size.y.value);
+        glow.set_push_constants_data(&glow_constants, sizeof(GlowPushConstants));
         glow.update();
-
-        fps_display.resize(view);
     });
 
     window.set_update_callback([&](View& view, std::chrono::nanoseconds elapsed) {
@@ -237,8 +276,6 @@ int main(int, const char* argv[])
         auto& prim = cube.prim();
         prim.set_dynamic_uniform(0).mat4(modelview_matrix).mat4(normal_matrix).mat4(projection);
         cube.update(42, picked_object_id);
-
-        fps_display.update(view, State{ elapsed });
     });
 
     window.set_draw_callback([&](View& view) {
@@ -250,17 +287,16 @@ int main(int, const char* argv[])
         cube.prim().set_shader(renderer.get_shader("phong", "phong"));
         cube.draw(view);
         cmd.set_viewport(Vec2f(view.framebuffer_size()), false);
-
-        fps_display.draw(view);
     });
 
     window.set_mouse_position_callback([&mouse_pos](View& view, const MousePosEvent& ev) {
         mouse_pos = ev.pos + view.framebuffer_origin();
     });
 
+    Bind bind(window, root);
     window.set_clear_color(Color(0.1, 0.0, 0.0));
     window.set_refresh_mode(RefreshMode::Periodic);
-    renderer.set_present_mode(PresentMode::Immediate);
+    renderer.set_present_mode(PresentMode::Fifo);
     window.display();
 
     out_mapped = nullptr;
