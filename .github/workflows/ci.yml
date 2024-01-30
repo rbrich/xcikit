@@ -131,7 +131,7 @@ jobs:
       with:
         show-progress: false
 
-    - uses: actions/setup-python@v4
+    - uses: actions/setup-python@v5
       with:
         python-version: '3.x'
         architecture: 'x64'
@@ -178,12 +178,12 @@ jobs:
         echo "CONAN_HOME=$(conan config home)" >> $GITHUB_OUTPUT
 
     - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2.10
+      uses: hendrikmuhs/ccache-action@v1.2.12
       with:
         key: ${{ matrix.os }}-${{ matrix.name }}
 
     - name: conan cache
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.tools.outputs.CONAN_HOME }}
         key: ${{ matrix.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}-${{github.sha}}
@@ -246,7 +246,7 @@ jobs:
 
     - name: artifacts - tarball
       if: ${{ matrix.name == 'Release build' }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: xcikit-artifacts
         path: |
@@ -254,7 +254,7 @@ jobs:
 
     - name: artifacts - test report
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-report
         path: |
