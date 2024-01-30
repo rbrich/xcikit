@@ -293,9 +293,12 @@ public:
     UniformDataBuilder set_uniform(uint32_t binding) { return UniformDataBuilder(*this, binding, false); }
 
     /// Create or update a dynamic uniform.
-    /// This type of uniform can be cheaply updated for each frame.
-    /// Updating non-dynamic uniforms is also supported, but it will lead to costly
-    /// re-creation of Vulkan objects and re-allocation of device memory.
+    /// This type of uniform can be updated multiple times for a single frame,
+    /// i.e. you can draw the same Primitives with different dynamic uniforms.
+    /// This won't work with non-dynamic uniforms, because the draw commands are queued,
+    /// while the uniform updates are immediate. With dynamic uniforms,
+    /// a dynamic offset is recorded within the command buffer.
+    /// Note that dynamic uniforms consume much more memory (but usually still much less than vertex buffers).
     UniformDataBuilder set_dynamic_uniform(uint32_t binding) { return UniformDataBuilder(*this, binding, true); }
 
     void clear_storage();

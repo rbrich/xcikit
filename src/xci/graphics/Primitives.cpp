@@ -600,25 +600,18 @@ void Primitives::draw(CommandBuffer& cmd_buf, Attachments& attachments,
                            0, uint32_t(m_push_constants.size()), m_push_constants.data());
 
     // uniforms
-    if (flags.projection_2d)
-        set_uniform(0, view.projection_matrix());
+    if (flags.projection_2d) {
+        // In theory, this should be dynamic, but the 2D graphics
+        // never reuse the Primitives object, so it doesn't matter.
+        set_uniform(0).mat4(view.projection_matrix());
+    }
+    copy_updated_uniforms();
     if (m_dynamic_uniforms_updated) {
         // Free dynamic uniforms allocated for this frame at the end of render pass
         const auto mark = m_uniform_buffers->get_dynamic_uniform_mark();
         cmd_buf.add_cleanup(
                 [buf = m_uniform_buffers, mark]{ buf->free_dynamic_uniform_mark(mark); });
         m_dynamic_uniforms_updated = false;
-    }
-    if (m_uniforms_updated) {
-        const auto dynamic_size = m_uniform_buffers->dynamic_size();
-        const auto storage_size = m_uniform_buffers->storage_size();
-        m_uniform_buffers = std::make_shared<UniformBuffers>(m_renderer);
-        m_uniform_buffers->create(m_uniform_data.size(), dynamic_size, storage_size);
-        copy_all_uniforms();
-
-        m_descriptor_sets = std::make_shared<DescriptorSets>(m_renderer, m_descriptor_pool.get());
-        m_descriptor_sets->create(m_pipeline_layout->vk_descriptor_set_layout());
-        m_descriptor_sets->update(*m_uniform_buffers, m_uniforms, m_storage, m_textures);
     }
     cmd_buf.add_resource(m_uniform_buffers);
 
@@ -664,7 +657,7 @@ void Primitives::draw(View& view, VariCoords pos)
 void Primitives::update_pipeline()
 {
     if (m_uniforms.empty() || !m_uniforms[0]) {
-        set_uniform(0, Mat4f{});  // MVP
+        set_uniform(0).mat4({});  // MVP
     }
 
     PipelineLayoutCreateInfo pipeline_layout_ci;
@@ -755,6 +748,7 @@ void Primitives::copy_updated_uniforms()
                 m_uniform_buffers->write_dynamic_uniforms(uniform.dynamic_offset, size, &m_uniform_data[uniform.offset]);
             }
         }
+        // Note: m_dynamic_uniforms_updated is reset in draw() after registering cleanup
     }
     if (m_storage_updated) {
         m_uniform_buffers->write_storage(0, m_storage_data.size(), m_storage_data.data());

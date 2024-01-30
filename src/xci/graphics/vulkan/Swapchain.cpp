@@ -122,7 +122,7 @@ void Swapchain::reset_framebuffer(VkExtent2D new_size)
 
     recreate();
 
-    TRACE("framebuffer resized to {}x{}", m_extent.width, m_extent.height);
+    TRACE("Framebuffer resized to {}x{}", m_extent.width, m_extent.height);
 }
 
 
