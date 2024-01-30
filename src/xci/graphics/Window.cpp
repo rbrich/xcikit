@@ -1,7 +1,7 @@
 // Window.cpp created on 2019-10-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Window.h"
@@ -162,6 +162,14 @@ void Window::set_fullscreen(bool fullscreen)
 }
 
 
+Vec2u Window::get_size() const
+{
+    Vec2i size;
+    SDL_GetWindowSize(m_window, &size.x, &size.y);
+    return Vec2u{size};
+}
+
+
 bool Window::set_clipboard_text(const std::string& text) const
 {
     if (SDL_SetClipboardText(text.c_str()) != 0) {
@@ -184,6 +192,13 @@ std::string Window::get_clipboard_text() const
 void Window::set_draw_callback(Window::DrawCallback draw_cb)
 {
     m_draw_cb = std::move(draw_cb);
+}
+
+
+void Window::set_clear_color(Color color)
+{
+    LinearColor c(color);
+    m_renderer.swapchain().attachments().set_clear_color_value(0, {c.r, c.g, c.b, c.a});
 }
 
 
@@ -218,9 +233,8 @@ void Window::setup_view()
     auto fsize = m_renderer.vk_image_extent();
     m_view.set_framebuffer_size({float(fsize.width), float(fsize.height)});
 
-    int width, height;
-    SDL_GetWindowSize(m_window, &width, &height);
-    m_view.set_screen_size({float(width), float(height)});
+    const auto sc_size = get_size();
+    m_view.set_screen_size({float(sc_size.x), float(sc_size.y)});
     if (m_size_cb)
         m_size_cb(m_view);
 
@@ -450,7 +464,7 @@ void Window::create_command_buffers()
             .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
     const VkSemaphoreCreateInfo semaphore_ci = {
-           .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
     for (size_t i = 0; i < cmd_buf_count; ++i) {
         VK_TRY("vkCreateFence",
@@ -489,9 +503,8 @@ void Window::resize_framebuffer()
     const auto& actual_size = m_renderer.vk_image_extent();  // normally the same
     m_view.set_framebuffer_size({float(actual_size.width), float(actual_size.height)});
 
-    int sc_width, sc_height;
-    SDL_GetWindowSize(m_window, &sc_width, &sc_height);
-    m_view.set_screen_size({float(sc_width), float(sc_height)});
+    const auto sc_size = get_size();
+    m_view.set_screen_size({float(sc_size.x), float(sc_size.y)});
 
     if (m_size_cb)
         m_size_cb(m_view);
@@ -516,8 +529,6 @@ void Window::draw()
         return;
     }
 
-    auto* cmd_buf = m_command_buffers[m_current_cmd_buf];
-
     {
         VK_TRY("vkWaitForFences",
                 vkWaitForFences(m_renderer.vk_device(),
@@ -526,14 +537,14 @@ void Window::draw()
                 vkResetFences(m_renderer.vk_device(),
                         1, &m_cmd_buf_fences[m_current_cmd_buf]));
 
-        m_command_buffers.release_resources(m_current_cmd_buf);
-        m_command_buffers.begin(m_current_cmd_buf);
+        m_command_buffers[m_current_cmd_buf].release_resources();
 
-        LinearColor cc(m_clear_color);
-        VkClearValue clear_values[2] = {
-                { .color = {cc.r, cc.g, cc.b, cc.a} },
-                { .depthStencil = {1.0f, 0} }
-        };
+        auto& cmd_buf = m_command_buffers[m_current_cmd_buf];
+        cmd_buf.begin();
+        m_command_buffers.trigger_callbacks(CommandBuffers::Event::Init, m_current_cmd_buf, image_index);
+
+        auto clear_values = m_renderer.swapchain().attachments().vk_clear_values();
+
         const VkRenderPassBeginInfo render_pass_info = {
                 .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
                 .renderPass = m_renderer.vk_render_pass(),
@@ -542,42 +553,35 @@ void Window::draw()
                         .offset = {0, 0},
                         .extent = m_renderer.vk_image_extent(),
                 },
-                .clearValueCount = 1 + uint32_t(m_renderer.depth_buffering()),
-                .pClearValues = clear_values,
+                .clearValueCount = (uint32_t) clear_values.size(),
+                .pClearValues = clear_values.data(),
         };
-        vkCmdBeginRenderPass(cmd_buf, &render_pass_info,
+        vkCmdBeginRenderPass(cmd_buf.vk(), &render_pass_info,
                 VK_SUBPASS_CONTENTS_INLINE);
+
+        // Set viewport
+        cmd_buf.set_viewport(Vec2f(m_view.framebuffer_size()), false);
 
         if (m_draw_cb)
             m_draw_cb(m_view);
 
-        vkCmdEndRenderPass(cmd_buf);
+        vkCmdEndRenderPass(cmd_buf.vk());
 
-        m_command_buffers.end(m_current_cmd_buf);
+        m_command_buffers.trigger_callbacks(CommandBuffers::Event::Finish, m_current_cmd_buf, image_index);
+        cmd_buf.end();
+
+        cmd_buf.submit(m_renderer.vk_queue(),
+                       m_image_semaphore[m_current_cmd_buf],
+                       VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                       m_render_semaphore[m_current_cmd_buf],
+                       m_cmd_buf_fences[m_current_cmd_buf]);
     }
-
-    VkSemaphore wait_semaphores[] = {m_image_semaphore[m_current_cmd_buf]};
-    VkSemaphore signal_semaphores[] = {m_render_semaphore[m_current_cmd_buf]};
-    VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    const VkSubmitInfo submit_info = {
-            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-            .waitSemaphoreCount = 1,
-            .pWaitSemaphores = wait_semaphores,
-            .pWaitDstStageMask = wait_stages,
-            .commandBufferCount = 1,
-            .pCommandBuffers = &cmd_buf,
-            .signalSemaphoreCount = 1,
-            .pSignalSemaphores = signal_semaphores,
-    };
-    VK_TRY("vkQueueSubmit",
-            vkQueueSubmit(m_renderer.vk_queue(), 1, &submit_info,
-                    m_cmd_buf_fences[m_current_cmd_buf]));
 
     VkSwapchainKHR swapchains[] = {m_renderer.vk_swapchain()};
     const VkPresentInfoKHR present_info = {
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             .waitSemaphoreCount = 1,
-            .pWaitSemaphores = signal_semaphores,
+            .pWaitSemaphores = &m_render_semaphore[m_current_cmd_buf],
             .swapchainCount = 1,
             .pSwapchains = swapchains,
             .pImageIndices = &image_index,

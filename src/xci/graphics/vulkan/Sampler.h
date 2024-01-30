@@ -1,7 +1,7 @@
 // Sampler.h created on 2023-12-30 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_VULKAN_SAMPLER_H
@@ -23,7 +23,7 @@ enum class SamplerAddressMode {
 
 class SamplerCreateInfo {
 public:
-    SamplerCreateInfo(SamplerAddressMode address_mode, float anisotropy);
+    SamplerCreateInfo(SamplerAddressMode address_mode, float anisotropy, unsigned max_lod);
 
     const VkSamplerCreateInfo& vk() const { return m_sampler_ci; }
 

@@ -176,20 +176,22 @@ bool Renderer::create_instance(SDL_Window* window)
     instance_create_info.pNext = &debugCreateInfo;
 #endif
 
-#ifdef VK_KHR_portability_enumeration
-    // Required for MoltenVK
-    extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-#endif
-
     uint32_t ext_count = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, nullptr);
     std::vector<VkExtensionProperties> ext_props(ext_count);
     vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, ext_props.data());
     log::info("Vulkan: {} extensions available:", ext_count);
     for (const auto& props : ext_props) {
-        const bool enable = any_of(extensions, [&](const char* name) {
+        bool enable = any_of(extensions, [&props](const char* name) {
             return strcmp(name, props.extensionName) == 0;
         });
+#ifdef VK_KHR_portability_enumeration
+        if (strcmp(props.extensionName, VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME) == 0) {
+            // Required for MoltenVK
+            extensions.push_back(props.extensionName);
+            enable = true;
+        }
+#endif
         log::info("[{}] {} (spec {})",
                  enable ? 'x' : ' ',
                  props.extensionName, props.specVersion);
@@ -259,9 +261,9 @@ ShaderModule* Renderer::load_shader_module(const std::string& vfs_path)
 }
 
 
-Sampler& Renderer::get_sampler(SamplerAddressMode address_mode, float anisotropy)
+Sampler& Renderer::get_sampler(SamplerAddressMode address_mode, float anisotropy, unsigned max_lod)
 {
-    SamplerCreateInfo ci(address_mode, std::min(anisotropy, m_max_sampler_anisotropy));
+    SamplerCreateInfo ci(address_mode, std::min(anisotropy, m_max_sampler_anisotropy), max_lod);
     auto [it, added] = m_sampler.try_emplace(ci);
     if (added)
         it->second.create(vk_device(), ci);
@@ -350,7 +352,7 @@ bool Renderer::create_surface(SDL_Window* window)
     }
 
     m_swapchain.create();
-    create_renderpass();
+    m_swapchain.attachments().create_renderpass(m_device);
     m_swapchain.create_framebuffers();
     return true;
 }
@@ -366,7 +368,7 @@ void Renderer::destroy_surface()
     clear_pipeline_cache();
     clear_descriptor_pool_cache();
     m_swapchain.destroy_framebuffers();
-    destroy_renderpass();
+    m_swapchain.attachments().destroy_renderpass(m_device);
     m_swapchain.destroy();
     destroy_device();
 
@@ -398,7 +400,9 @@ void Renderer::create_device()
     uint32_t graphics_queue_family = 0;
 
     // features of chose device
-    VkBool32 has_sampler_anisotropy = VK_FALSE;
+    bool has_independent_blend = VK_FALSE;
+    bool has_sampler_anisotropy = VK_FALSE;
+    bool has_fragment_stores_and_atomics = VK_FALSE;
 
     log::info("Vulkan: {} devices available:", device_count);
     for (const auto& device : devices | take(device_count)) {
@@ -465,7 +469,9 @@ void Renderer::create_device()
         // save chosen device handle
         if (choose) {
             m_physical_device = device;
-            has_sampler_anisotropy = device_features.samplerAnisotropy;
+            has_independent_blend = (bool) device_features.independentBlend;
+            has_sampler_anisotropy = (bool) device_features.samplerAnisotropy;
+            has_fragment_stores_and_atomics = (bool) device_features.fragmentStoresAndAtomics;
             load_device_properties(device_props);
         }
 
@@ -495,7 +501,10 @@ void Renderer::create_device()
         };
 
         const VkPhysicalDeviceFeatures device_features = {
-                .samplerAnisotropy = has_sampler_anisotropy,  // enable if available
+                // enable if available
+                .independentBlend = has_independent_blend,
+                .samplerAnisotropy = has_sampler_anisotropy,
+                .fragmentStoresAndAtomics = has_fragment_stores_and_atomics,
         };
 
         const VkDeviceCreateInfo device_create_info = {
@@ -546,103 +555,6 @@ void Renderer::destroy_device()
     vkDestroyCommandPool(m_device, m_command_pool, nullptr);
     vkDestroyCommandPool(m_device, m_transient_command_pool, nullptr);
     vkDestroyDevice(m_device, nullptr);
-}
-
-
-void Renderer::create_renderpass()
-{
-    const VkAttachmentDescription attachment[] = {
-        // color attachment
-        {
-            .format = m_swapchain.vk_surface_format().format,
-            .samples = m_swapchain.sample_count(),
-            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-            .storeOp = m_swapchain.is_multisample() ? VK_ATTACHMENT_STORE_OP_DONT_CARE :
-                                                      VK_ATTACHMENT_STORE_OP_STORE,
-            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .finalLayout = m_swapchain.is_multisample() ?
-                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL :
-                            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-        },
-        // depth attachment
-        {
-            .format = VK_FORMAT_D32_SFLOAT,
-            .samples = m_swapchain.sample_count(),
-            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-            .storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        },
-        // resolve attachment for MSAA
-        {
-            .format = m_swapchain.vk_surface_format().format,
-            .samples = VK_SAMPLE_COUNT_1_BIT,
-            .loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-            .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-       }
-    };
-
-    const VkAttachmentReference color_attachment_ref = {
-            .attachment = 0,  // layout(location = 0)
-            .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    };
-    const VkAttachmentReference depth_attachment_ref = {
-            .attachment = 1,
-            .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-    };
-    const VkAttachmentReference resolve_attachment_ref = {
-            .attachment = 2,
-            .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    };
-
-    const VkSubpassDescription subpass = {
-            .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-            .colorAttachmentCount = 1,
-            .pColorAttachments = &color_attachment_ref,
-            .pResolveAttachments = m_swapchain.is_multisample() ? &resolve_attachment_ref : nullptr,
-            .pDepthStencilAttachment = depth_buffering() ? &depth_attachment_ref : nullptr,
-    };
-
-    const VkSubpassDependency dependency = {
-            .srcSubpass = VK_SUBPASS_EXTERNAL,
-            .dstSubpass = 0,
-            .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-                            (depth_buffering() ? VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT : 0u),
-            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-                            (depth_buffering() ? VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT : 0u),
-            .srcAccessMask = 0,
-            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-                             (depth_buffering() ? VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT : 0u),
-    };
-
-    const VkRenderPassCreateInfo render_pass_ci = {
-            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-            .attachmentCount = 1 + uint32_t(depth_buffering()) + uint32_t(m_swapchain.is_multisample()),
-            .pAttachments = attachment,
-            .subpassCount = 1,
-            .pSubpasses = &subpass,
-            .dependencyCount = 1,
-            .pDependencies = &dependency,
-    };
-
-    VK_TRY("vkCreateRenderPass",
-            vkCreateRenderPass(m_device, &render_pass_ci,
-                    nullptr, &m_render_pass));
-}
-
-
-void Renderer::destroy_renderpass()
-{
-    if (m_device != VK_NULL_HANDLE)
-        vkDestroyRenderPass(m_device, m_render_pass, nullptr);
 }
 
 

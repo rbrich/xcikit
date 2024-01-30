@@ -11,6 +11,7 @@
 #include "Texture.h"
 #include "Shader.h"
 #include "vulkan/VulkanError.h"
+#include "vulkan/Attachments.h"
 #include <xci/core/memory.h>
 
 #include <range/v3/view/enumerate.hpp>
@@ -27,55 +28,36 @@ using core::align_to;
 PrimitivesBuffers::~PrimitivesBuffers()
 {
     m_device_memory.free();
-    vkDestroyBuffer(device(), m_index_buffer, nullptr);
-    vkDestroyBuffer(device(), m_vertex_buffer, nullptr);
+    m_index_buffer.destroy(device());
+    m_vertex_buffer.destroy(device());
 }
 
 
-void PrimitivesBuffers::create(
-        const std::vector<float>& vertex_data,
-        const std::vector<uint16_t>& index_data)
+void PrimitivesBuffers::create(const std::vector<float>& vertex_data,
+                               const std::vector<uint16_t>& index_data)
 {
     // vertex buffer
-    const VkBufferCreateInfo vertex_buffer_ci = {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = sizeof(vertex_data[0]) * vertex_data.size(),
-            .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-    };
-    VK_TRY("vkCreateBuffer(vertex)",
-            vkCreateBuffer(device(), &vertex_buffer_ci,
-                    nullptr, &m_vertex_buffer));
-    VkMemoryRequirements vertex_mem_req;
-    vkGetBufferMemoryRequirements(device(), m_vertex_buffer, &vertex_mem_req);
-    auto vertex_offset = m_device_memory.reserve(vertex_mem_req);
+    VkDeviceSize vertex_size = sizeof(vertex_data[0]) * vertex_data.size();
+    auto vertex_offset = m_vertex_buffer.create(device(), m_device_memory,
+                            vertex_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 
     // index buffer
-    const VkBufferCreateInfo index_buffer_ci = {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = sizeof(index_data[0]) * index_data.size(),
-            .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-    };
-    VK_TRY("vkCreateBuffer(index)",
-            vkCreateBuffer(device(), &index_buffer_ci,
-                    nullptr, &m_index_buffer));
-    VkMemoryRequirements index_mem_req;
-    vkGetBufferMemoryRequirements(device(), m_index_buffer, &index_mem_req);
-    auto index_offset = m_device_memory.reserve(index_mem_req);
+    VkDeviceSize index_size = sizeof(index_data[0]) * index_data.size();
+    auto index_offset = m_index_buffer.create(device(), m_device_memory,
+                            index_size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 
     // allocate memory and copy data
     m_device_memory.allocate(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
-    m_device_memory.bind_buffer(m_vertex_buffer, vertex_offset);
-    void* mapped = m_device_memory.map(vertex_offset, vertex_buffer_ci.size);
-    std::memcpy(mapped, vertex_data.data(), vertex_buffer_ci.size);
+    m_device_memory.bind_buffer(m_vertex_buffer.vk(), vertex_offset);
+    void* mapped = m_device_memory.map(vertex_offset, vertex_size);
+    std::memcpy(mapped, vertex_data.data(), vertex_size);
     m_device_memory.flush(vertex_offset);
     m_device_memory.unmap();
 
-    m_device_memory.bind_buffer(m_index_buffer, index_offset);
-    mapped = m_device_memory.map(index_offset, index_buffer_ci.size);
-    std::memcpy(mapped, index_data.data(), index_buffer_ci.size);
+    m_device_memory.bind_buffer(m_index_buffer.vk(), index_offset);
+    mapped = m_device_memory.map(index_offset, index_size);
+    std::memcpy(mapped, index_data.data(), index_size);
     m_device_memory.flush(index_offset);
     m_device_memory.unmap();
 }
@@ -84,8 +66,8 @@ void PrimitivesBuffers::create(
 void PrimitivesBuffers::bind(VkCommandBuffer cmd_buf)
 {
     const VkDeviceSize offset = 0;
-    vkCmdBindVertexBuffers(cmd_buf, 0, 1, &m_vertex_buffer, &offset);
-    vkCmdBindIndexBuffer(cmd_buf, m_index_buffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindVertexBuffers(cmd_buf, 0, 1, m_vertex_buffer.vk_p(), &offset);
+    vkCmdBindIndexBuffer(cmd_buf, m_index_buffer.vk(), 0, VK_INDEX_TYPE_UINT16);
 }
 
 
@@ -99,8 +81,7 @@ VkDevice PrimitivesBuffers::device() const
 
 
 UniformBuffers::UniformBuffers(Renderer& renderer)
-    : m_renderer(renderer), m_device_memory(renderer),
-      m_min_alignment(m_renderer.min_uniform_offset_alignment()) {}
+    : m_renderer(renderer), m_device_memory(renderer) {}
 
 
 UniformBuffers::~UniformBuffers()
@@ -108,39 +89,42 @@ UniformBuffers::~UniformBuffers()
     if (m_device_memory_mapped)
         m_device_memory.unmap();
     m_device_memory.free();
-    vkDestroyBuffer(device(), m_buffer, nullptr);
+    m_buffer.destroy(device());
+    m_storage_buffer.destroy(device());
 }
 
 
-void UniformBuffers::create(size_t static_size, size_t dynamic_size)
+void UniformBuffers::create(size_t static_size, size_t dynamic_size, size_t storage_size)
 {
     // uniform buffers
-    m_dynamic_base = align_to(static_size, size_t(m_min_alignment));
+    m_dynamic_base = align_to(static_size, size_t(m_renderer.min_uniform_offset_alignment()));
     m_dynamic_size = dynamic_size;
-    const VkBufferCreateInfo uniform_buffer_ci = {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = m_dynamic_base + m_dynamic_size,
-            .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-    };
-    VK_TRY("vkCreateBuffer(uniform)",
-           vkCreateBuffer(device(), &uniform_buffer_ci,
-                          nullptr, &m_buffer));
-    VkMemoryRequirements mem_req;
-    vkGetBufferMemoryRequirements(device(), m_buffer, &mem_req);
-    const auto base = m_device_memory.reserve(mem_req);
+    const auto base = m_buffer.create(device(), m_device_memory,
+                                      m_dynamic_base + m_dynamic_size,
+                                      VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
     assert(base == 0);  // This is currently expected (the memory is not pooled)
+
+    // storage buffer
+    if (storage_size != 0) {
+        m_storage_size = align_to(storage_size, size_t(m_renderer.non_coherent_atom_size()));
+        m_storage_offset = m_storage_buffer.create(device(), m_device_memory,
+                                    m_storage_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+    }
 
     // allocate memory and copy data
     m_device_memory.allocate(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-    m_device_memory.bind_buffer(m_buffer, base);
-    m_device_memory_mapped = m_device_memory.map(base, m_dynamic_base + m_dynamic_size);
+    m_device_memory.bind_buffer(m_buffer.vk(), base);
+    m_device_memory_mapped = m_device_memory.map(base);
+
+    if (storage_size != 0) {
+        m_device_memory.bind_buffer(m_storage_buffer.vk(), m_storage_offset);
+    }
 }
 
 
 size_t UniformBuffers::allocate_dynamic_uniform(size_t size)
 {
-    const auto aligned_size = align_to(size, size_t(m_min_alignment));
+    const auto aligned_size = align_to(size, size_t(m_renderer.min_uniform_offset_alignment()));
     if (m_dynamic_free_offset + aligned_size > m_dynamic_size) {
         m_dynamic_used_size += m_dynamic_size - m_dynamic_free_offset;  // mark the rest of area as used
         m_dynamic_free_offset = 0;
@@ -168,16 +152,33 @@ void UniformBuffers::free_dynamic_uniform_mark(size_t mark)
 }
 
 
-void UniformBuffers::copy_uniforms(size_t offset, size_t size, const void* data)
+void UniformBuffers::write_uniforms(size_t offset, size_t size, const void* data)
 {
     std::memcpy((char*)(m_device_memory_mapped) + offset, data, size);
     m_pending_flush.push_back({offset, size});
 }
 
 
+void UniformBuffers::write_storage(size_t offset, size_t size, const void* data)
+{
+    const auto base = m_storage_offset + offset;
+    std::memcpy((char*)(m_device_memory_mapped) + base, data, size);
+    m_pending_flush.push_back({base, size});
+}
+
+
 void UniformBuffers::flush()
 {
-    m_device_memory.flush(m_pending_flush);
+    if (!m_pending_flush.empty()) {
+        m_device_memory.flush(m_pending_flush);
+        m_pending_flush.clear();
+    }
+}
+
+
+void* UniformBuffers::mapped_storage(size_t offset)
+{
+    return (char*)(m_device_memory_mapped) + m_storage_offset + offset;
 }
 
 
@@ -190,27 +191,28 @@ VkDevice UniformBuffers::device() const
 // -----------------------------------------------------------------------------
 
 
-UniformDescriptorSets::~UniformDescriptorSets()
+DescriptorSets::~DescriptorSets()
 {
-    if (m_descriptor_sets != VK_NULL_HANDLE)
-        m_descriptor_pool.free(1, &m_descriptor_sets);
+    if (m_vk_descriptor_set != VK_NULL_HANDLE)
+        m_descriptor_pool.free(1, &m_vk_descriptor_set);
 }
 
 
-void UniformDescriptorSets::create(VkDescriptorSetLayout layout)
+void DescriptorSets::create(VkDescriptorSetLayout layout)
 {
-    m_descriptor_pool.allocate(1, &layout, &m_descriptor_sets);
+    m_descriptor_pool.allocate(1, &layout, &m_vk_descriptor_set);
 }
 
 
-void UniformDescriptorSets::update(
+void DescriptorSets::update(
         const UniformBuffers& uniform_buffers,
         const std::vector<UniformBinding>& uniform_bindings,
+        const std::vector<StorageBinding>& storage_bindings,
         const std::vector<TextureBinding>& texture_bindings)
 {
     std::vector<VkDescriptorBufferInfo> buffer_info;
     std::vector<VkWriteDescriptorSet> write_descriptor_set;
-    buffer_info.reserve(uniform_bindings.size());
+    buffer_info.reserve(uniform_bindings.size() + storage_bindings.size());
     write_descriptor_set.reserve(uniform_bindings.size());
 
     // uniforms
@@ -224,7 +226,7 @@ void UniformDescriptorSets::update(
         });
         write_descriptor_set.push_back(VkWriteDescriptorSet{
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet = m_descriptor_sets,
+                .dstSet = m_vk_descriptor_set,
                 .dstBinding = uint32_t(binding),
                 .descriptorCount = 1,
                 .descriptorType = uniform.dynamic
@@ -234,18 +236,35 @@ void UniformDescriptorSets::update(
         });
     }
 
+    // storage
+    for (const auto& storage_binding : storage_bindings) {
+        buffer_info.push_back({
+                .buffer = uniform_buffers.vk_storage_buffer(),
+                .offset = storage_binding.offset,
+                .range = storage_binding.range,
+        });
+        write_descriptor_set.push_back(VkWriteDescriptorSet{
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = m_vk_descriptor_set,
+                .dstBinding = uint32_t(storage_binding.binding),
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                .pBufferInfo = &buffer_info.back(),
+        });
+    }
+
     // textures
     std::vector<VkDescriptorImageInfo> image_info;
     image_info.reserve(texture_bindings.size());
     for (const auto& texture_binding : texture_bindings) {
         image_info.push_back({
-                .sampler = texture_binding.sampler->vk(),
-                .imageView = texture_binding.texture->vk_image_view(),
+                .sampler = texture_binding.sampler,
+                .imageView = texture_binding.image_view,
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         });
         write_descriptor_set.push_back(VkWriteDescriptorSet{
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet = m_descriptor_sets,
+                .dstSet = m_vk_descriptor_set,
                 .dstBinding = texture_binding.binding,
                 .descriptorCount = 1,
                 .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -258,12 +277,12 @@ void UniformDescriptorSets::update(
 }
 
 
-void UniformDescriptorSets::bind(VkCommandBuffer cmd_buf, VkPipelineLayout pipeline_layout,
+void DescriptorSets::bind(VkCommandBuffer cmd_buf, VkPipelineLayout pipeline_layout,
                                  std::span<const uint32_t> dynamic_offsets)
 {
     vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
             pipeline_layout, 0, 1,
-            &m_descriptor_sets,
+            &m_vk_descriptor_set,
             dynamic_offsets.size(), dynamic_offsets.data());
 }
 
@@ -378,27 +397,57 @@ void Primitives::clear()
 void Primitives::set_shader(Shader shader)
 {
     m_shader = shader;
+}
+
+
+void Primitives::set_texture(uint32_t binding, VkImageView image_view, VkSampler sampler)
+{
+    const auto it = std::find_if(m_textures.begin(), m_textures.end(),
+                 [binding](const TextureBinding& t) { return t.binding == binding; });
+    if (it == m_textures.end()) {
+        m_textures.push_back({binding, image_view, sampler});
+    } else {
+        it->image_view = image_view;
+        it->sampler = sampler;
+    }
     destroy_pipeline();
 }
 
 
 void Primitives::set_texture(uint32_t binding, Texture& texture, Sampler& sampler)
 {
-    const auto it = std::find_if(m_textures.begin(), m_textures.end(),
-                 [binding](const TextureBinding& t) { return t.binding == binding; });
-    if (it == m_textures.end()) {
-        m_textures.push_back({binding, &texture, &sampler});
-    } else {
-        it->texture = &texture;
-        it->sampler = &sampler;
-    }
-    destroy_pipeline();
+    set_texture(binding, texture.vk_image_view(), sampler.vk());
 }
 
 
 void Primitives::set_texture(uint32_t binding, Texture& texture)
 {
-    set_texture(binding, texture, m_renderer.get_sampler());
+    set_texture(binding, texture.vk_image_view(), m_renderer.get_sampler().vk());
+}
+
+
+void Primitives::clear_push_constants()
+{
+    m_push_constants.clear();
+    destroy_pipeline();
+}
+
+
+void Primitives::reserve_push_constants(size_t size)
+{
+    m_push_constants.resize(size);
+    destroy_pipeline();
+}
+
+
+void Primitives::set_push_constants_data(const void* data, size_t size)
+{
+    if (m_push_constants.size() != size) {
+        // new push constants, updating pipeline layout
+        destroy_pipeline();
+        m_push_constants.resize(size);
+    }
+    std::memcpy(m_push_constants.data(), data, size);
 }
 
 
@@ -422,9 +471,9 @@ void Primitives::set_uniform_data(uint32_t binding, const void* data, size_t siz
         if (std::memcmp(&m_uniform_data[uniform.offset], data, size) != 0) {
             std::memcpy(&m_uniform_data[uniform.offset], data, size);
             if (uniform.dynamic) {
-                m_dynamic_uniforms_changed = true;
+                m_dynamic_uniforms_updated = true;
             } else {
-                m_uniforms_changed = true;
+                m_uniforms_updated = true;
             }
         }
         return;
@@ -452,17 +501,54 @@ void Primitives::set_uniform(uint32_t binding, const Mat3f& mat)
 }
 
 
-void Primitives::set_blend(BlendFunc func)
+void Primitives::clear_storage()
 {
-    m_blend = func;
+    m_storage.clear();
+    m_storage_data.clear();
     destroy_pipeline();
 }
 
 
-void Primitives::set_depth_test(DepthTest depth_test)
+void Primitives::reserve_storage(uint32_t binding, size_t size)
 {
-    m_depth_test = depth_test;
+    const auto offset = m_storage.empty() ? 0 : m_storage.back().offset + m_storage.back().range;
+    m_storage.emplace_back(StorageBinding{.binding = binding, .offset = offset, .range = size});
+    m_storage_data.resize(offset + size);
     destroy_pipeline();
+}
+
+
+void Primitives::set_storage_data(uint32_t binding, const void* data, size_t size)
+{
+    const auto it = std::find_if(m_storage.begin(), m_storage.end(),
+                                 [binding](const StorageBinding& b) { return b.binding == binding; });
+    if (it == m_storage.end()) {
+        // add new
+        reserve_storage(binding, size);
+        std::memcpy(&m_storage_data[m_storage.back().offset], data, size);
+    } else {
+        // update existing
+        assert(it->range == size);
+        if (std::memcmp(&m_storage_data[it->offset], data, size) != 0) {
+            std::memcpy(&m_storage_data[it->offset], data, size);
+            m_storage_updated = true;
+        }
+    }
+}
+
+
+void Primitives::set_storage_read_cb(uint32_t binding, size_t size, StorageReadCb cb)
+{
+    const auto it = std::find_if(m_storage.begin(), m_storage.end(),
+                                 [binding](const StorageBinding& b) { return b.binding == binding; });
+    if (it == m_storage.end()) {
+        reserve_storage(binding, size);
+        m_storage.back().read_cb = std::move(cb);
+        destroy_pipeline();
+    } else {
+        assert(it->range == size);
+        it->read_cb = std::move(cb);
+    }
 }
 
 
@@ -470,80 +556,74 @@ void Primitives::update()
 {
     if (empty())
         return;
-    if (!m_pipeline) {
+    if (!m_pipeline_layout) {
         update_pipeline();
     }
-    for (const auto& texture : m_textures) {
-        texture.texture->update();
-    }
-    for (auto& uniform : m_uniforms) {
-        if (uniform && uniform.dynamic && m_dynamic_uniforms_changed) {
-            const auto size = uniform.range;
-            uniform.dynamic_offset = m_uniform_buffers->allocate_dynamic_uniform(size);
-            m_uniform_buffers->copy_dynamic_uniforms(uniform.dynamic_offset, size, &m_uniform_data[uniform.offset]);
-        }
-    }
+    copy_updated_uniforms();
 }
 
 
-void Primitives::draw(View& view, PrimitiveDrawFlags flags)
+void Primitives::draw(CommandBuffer& cmd_buf, Attachments& attachments,
+                      View& view, PrimitiveDrawFlags flags)
 {
     if (empty())
         return;
 
-    if (!m_pipeline) {
+    if (!m_pipeline_layout) {
         assert(!"Primitives: call update before draw!");
         return;
     }
 
-    auto* window = view.window();
-    auto cmd_buf = window->vk_command_buffer();
+    const auto vk_cmd = cmd_buf.vk();
 
-    vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->vk());
-
-    // set viewport
-    VkViewport viewport = {
-            .x = 0.0f,
-            .y = 0.0f,
-            .width = (float) m_renderer.vk_image_extent().width,
-            .height = (float) m_renderer.vk_image_extent().height,
-            .minDepth = 0.0f,
-            .maxDepth = 1.0f,
-    };
-    if ((flags & PrimitiveDrawFlags::FlipViewportY) != PrimitiveDrawFlags::None) {
-        viewport.y = viewport.height;
-        viewport.height = -viewport.height;
-    }
-    vkCmdSetViewport(cmd_buf, 0, 1, &viewport);
+    // bind pipeline
+    assert(m_shader);
+    PipelineCreateInfo pipeline_ci(attachments,
+                                   m_shader.vk_vertex_module(), m_shader.vk_fragment_module(),
+                                   m_pipeline_layout->vk());
+    pipeline_ci.set_vertex_format(m_format);
+    pipeline_ci.set_color_blend(m_blend);
+    pipeline_ci.set_depth_test(m_depth_test);
+    Pipeline& pipeline = m_renderer.get_pipeline(pipeline_ci);
+    vkCmdBindPipeline(vk_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.vk());
 
     // set scissor region
-    view.apply_crop();
+    view.apply_crop(cmd_buf);
 
-    m_buffers->bind(cmd_buf);
-    window->add_command_buffer_resource(m_buffers);
+    m_buffers->bind(vk_cmd);
+    cmd_buf.add_resource(m_buffers);
+
+    // push constants
+    if (!m_push_constants.empty())
+        vkCmdPushConstants(vk_cmd, m_pipeline_layout->vk(),
+                           VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                           0, uint32_t(m_push_constants.size()), m_push_constants.data());
 
     // uniforms
-    if ((flags & PrimitiveDrawFlags::Projection2D) != PrimitiveDrawFlags::None)
-        set_uniform(0, view.projection_matrix());
-    if (m_dynamic_uniforms_changed) {
+    if (flags.projection_2d) {
+        // In theory, this should be dynamic, but the 2D graphics
+        // never reuse the Primitives object, so it doesn't matter.
+        set_uniform(0).mat4(view.projection_matrix());
+    }
+    copy_updated_uniforms();
+    if (m_dynamic_uniforms_updated) {
         // Free dynamic uniforms allocated for this frame at the end of render pass
         const auto mark = m_uniform_buffers->get_dynamic_uniform_mark();
-        window->add_command_buffer_resource_deleter(
+        cmd_buf.add_cleanup(
                 [buf = m_uniform_buffers, mark]{ buf->free_dynamic_uniform_mark(mark); });
-        m_dynamic_uniforms_changed = false;
+        m_dynamic_uniforms_updated = false;
     }
-    if (m_uniforms_changed) {
-        const auto dynamic_size = m_uniform_buffers->dynamic_size();
-        m_uniform_buffers = std::make_shared<UniformBuffers>(m_renderer);
-        m_uniform_buffers->create(m_uniform_data.size(), dynamic_size);
-        copy_uniforms();
-        m_uniforms_changed = false;
+    cmd_buf.add_resource(m_uniform_buffers);
 
-        m_descriptor_sets = std::make_shared<UniformDescriptorSets>(m_renderer, m_descriptor_pool.get());
-        m_descriptor_sets->create(m_pipeline_layout->vk_descriptor_set_layout());
-        m_descriptor_sets->update(*m_uniform_buffers, m_uniforms, m_textures);
+    // storage buffers - read back
+    for (const auto& storage : m_storage) {
+        if (storage.read_cb) {
+            cmd_buf.add_cleanup([this, &storage] {
+                if (storage.read_cb)
+                    storage.read_cb(m_uniform_buffers->mapped_storage(storage.offset), storage.range);
+            });
+        }
     }
-    window->add_command_buffer_resource(m_uniform_buffers);
 
     // bind descriptor sets
     std::vector<uint32_t> dynamic_offsets;
@@ -551,10 +631,19 @@ void Primitives::draw(View& view, PrimitiveDrawFlags flags)
         if (uniform && uniform.dynamic)
             dynamic_offsets.push_back(uniform.dynamic_offset);
     }
-    m_descriptor_sets->bind(cmd_buf, m_pipeline_layout->vk(), dynamic_offsets);
-    window->add_command_buffer_resource(m_descriptor_sets);
+    m_descriptor_sets->bind(vk_cmd, m_pipeline_layout->vk(), dynamic_offsets);
+    cmd_buf.add_resource(m_descriptor_sets);
 
-    vkCmdDrawIndexed(cmd_buf, static_cast<uint32_t>(m_index_data.size()), 1, 0, 0, 0);
+    // draw
+    vkCmdDrawIndexed(vk_cmd, static_cast<uint32_t>(m_index_data.size()), 1, 0, 0, 0);
+}
+
+
+void Primitives::draw(View& view, PrimitiveDrawFlags flags)
+{
+    auto* window = view.window();
+    draw(window->command_buffer(), m_renderer.swapchain().attachments(),
+         view, flags);
 }
 
 
@@ -567,12 +656,14 @@ void Primitives::draw(View& view, VariCoords pos)
 
 void Primitives::update_pipeline()
 {
-    assert(m_shader);
     if (m_uniforms.empty() || !m_uniforms[0]) {
-        set_uniform(0, Mat4f{});  // MVP
+        set_uniform(0).mat4({});  // MVP
     }
 
     PipelineLayoutCreateInfo pipeline_layout_ci;
+    if (!m_push_constants.empty()) {
+        pipeline_layout_ci.add_push_constant_range(0, uint32_t(m_push_constants.size()));
+    }
     uint32_t dynamic_size = 0;
     for (const auto& [binding, uniform] : m_uniforms | enumerate) {
         if (uniform)
@@ -584,39 +675,36 @@ void Primitives::update_pipeline()
     for (const auto& texture : m_textures) {
         pipeline_layout_ci.add_texture_binding(texture.binding);
     }
+    size_t storage_size = 0;
+    for (const auto& storage : m_storage) {
+        pipeline_layout_ci.add_storage_binding(storage.binding);
+        storage_size = storage.offset + storage.range;
+    }
     m_pipeline_layout = &m_renderer.get_pipeline_layout(pipeline_layout_ci);
-    PipelineCreateInfo pipeline_ci(m_shader.vk_vertex_module(), m_shader.vk_fragment_module(),
-                                   m_pipeline_layout->vk(), m_renderer.vk_render_pass());
-    pipeline_ci.set_vertex_format(m_format);
-    pipeline_ci.set_color_blend(m_blend);
-    pipeline_ci.set_depth_test(m_depth_test);
-    pipeline_ci.set_sample_count(m_renderer.sample_count());
-    m_pipeline = &m_renderer.get_pipeline(pipeline_ci);
 
     m_buffers = std::make_shared<PrimitivesBuffers>(m_renderer);
     m_buffers->create(m_vertex_data, m_index_data);
 
     m_uniform_buffers = std::make_shared<UniformBuffers>(m_renderer);
-    m_uniform_buffers->create(m_uniform_data.size(), dynamic_size);
-    copy_uniforms();
-    m_uniforms_changed = false;
-    m_dynamic_uniforms_changed = false;
+    m_uniform_buffers->create(m_uniform_data.size(), dynamic_size, storage_size);
+    copy_all_uniforms();
 
     m_descriptor_pool = m_renderer.get_descriptor_pool(Window::cmd_buf_count, pipeline_layout_ci.descriptor_pool_sizes());
 
-    m_descriptor_sets = std::make_shared<UniformDescriptorSets>(m_renderer, m_descriptor_pool.get());
+    m_descriptor_sets = std::make_shared<DescriptorSets>(m_renderer, m_descriptor_pool.get());
     m_descriptor_sets->create(m_pipeline_layout->vk_descriptor_set_layout());
-    m_descriptor_sets->update(*m_uniform_buffers, m_uniforms, m_textures);
+    m_descriptor_sets->update(*m_uniform_buffers, m_uniforms, m_storage, m_textures);
 }
 
 
 void Primitives::destroy_pipeline()
 {
-    if (m_pipeline == nullptr)
+    if (!m_pipeline_layout)
         return;
     m_buffers.reset();
+    m_uniform_buffers.reset();
     m_descriptor_sets.reset();
-    m_pipeline = nullptr;
+    m_pipeline_layout = nullptr;
 }
 
 
@@ -627,13 +715,44 @@ VkDeviceSize Primitives::align_uniform(VkDeviceSize offset)
 }
 
 
-void Primitives::copy_uniforms()
+void Primitives::copy_all_uniforms()
 {
-    m_uniform_buffers->copy_uniforms(0, m_uniform_data.size(), m_uniform_data.data());
+    m_uniform_buffers->write_uniforms(0, m_uniform_data.size(), m_uniform_data.data());
+    m_uniforms_updated = false;
     for (auto& uniform : m_uniforms) {
         if (uniform && uniform.dynamic)
-            m_uniform_buffers->copy_dynamic_uniforms(uniform.dynamic_offset,
-                                                     uniform.range, m_uniform_data.data() + uniform.offset);
+            m_uniform_buffers->write_dynamic_uniforms(uniform.dynamic_offset,
+                                                      uniform.range, m_uniform_data.data() + uniform.offset);
+    }
+    m_dynamic_uniforms_updated = false;
+    if (!m_storage_data.empty())
+        m_uniform_buffers->write_storage(0, m_storage_data.size(), m_storage_data.data());
+    m_storage_updated = false;
+    m_uniform_buffers->flush();
+}
+
+
+void Primitives::copy_updated_uniforms()
+{
+    if (!m_uniform_buffers)
+        return;
+    if (m_uniforms_updated) {
+        m_uniform_buffers->write_uniforms(0, m_uniform_data.size(), m_uniform_data.data());
+        m_uniforms_updated = false;
+    }
+    if (m_dynamic_uniforms_updated) {
+        for (auto& uniform : m_uniforms) {
+            if (uniform && uniform.dynamic) {
+                const auto size = uniform.range;
+                uniform.dynamic_offset = m_uniform_buffers->allocate_dynamic_uniform(size);
+                m_uniform_buffers->write_dynamic_uniforms(uniform.dynamic_offset, size, &m_uniform_data[uniform.offset]);
+            }
+        }
+        // Note: m_dynamic_uniforms_updated is reset in draw() after registering cleanup
+    }
+    if (m_storage_updated) {
+        m_uniform_buffers->write_storage(0, m_storage_data.size(), m_storage_data.data());
+        m_storage_updated = false;
     }
     m_uniform_buffers->flush();
 }

@@ -1,13 +1,11 @@
 // View.cpp created on 2018-03-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "View.h"
 #include "Window.h"
-
-#include <vulkan/vulkan.h>
 
 #include <cassert>
 
@@ -236,25 +234,18 @@ auto View::push_crop(const FramebufferRect& region) -> PopHelper<FramebufferRect
 }
 
 
-void View::apply_crop()
+void View::apply_crop(CommandBuffer& cmd_buf)
 {
-    if (!m_window)
-        return;
-    const auto cmd_buf = m_window->vk_command_buffer();
-
     // set scissor region
-    VkRect2D scissor = {
-        .offset = {0, 0},
-        .extent = { INT32_MAX, INT32_MAX },
-    };
     if (has_crop()) {
         const auto crop = get_crop().moved(framebuffer_origin());
-        scissor.offset.x = crop.x.as<int32_t>();
-        scissor.offset.y = crop.y.as<int32_t>();
-        scissor.extent.width = crop.w.as<uint32_t>();
-        scissor.extent.height = crop.h.as<uint32_t>();
+        cmd_buf.set_scissor({crop.x.as<uint32_t>(),
+                             crop.y.as<uint32_t>(),
+                             crop.w.as<uint32_t>(),
+                             crop.h.as<uint32_t>()});
+    } else {
+        cmd_buf.set_scissor({0, 0, INT32_MAX, INT32_MAX});
     }
-    vkCmdSetScissor(cmd_buf, 0, 1, &scissor);
 }
 
 

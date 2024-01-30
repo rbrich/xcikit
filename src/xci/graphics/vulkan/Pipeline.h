@@ -10,6 +10,7 @@
 #include "DescriptorPool.h"
 
 #include <xci/core/mixin.h>
+#include <xci/compat/macros.h>
 
 #include <vulkan/vulkan.h>
 
@@ -21,6 +22,7 @@ namespace xci::graphics {
 
 class Renderer;
 class Shader;
+class Attachments;
 
 
 enum class VertexFormat : uint8_t {
@@ -66,8 +68,11 @@ class PipelineLayoutCreateInfo {
 public:
     void add_uniform_binding(uint32_t binding, bool dynamic = false);
     void add_texture_binding(uint32_t binding);
+    void add_storage_binding(uint32_t binding);
+    void add_push_constant_range(uint32_t offset, uint32_t size);
 
     std::vector<VkDescriptorSetLayoutBinding> vk_layout_bindings() const;
+    std::vector<VkPushConstantRange> vk_push_constant_ranges() const;
     DescriptorPoolSizes descriptor_pool_sizes() const;
 
     size_t hash() const;
@@ -78,23 +83,37 @@ private:
     struct LayoutBinding {
         uint32_t binding = 0;
         enum Flags : uint32_t {
+            TypeUniform         = 0x00,  // default type
             TypeDynamicUniform  = 0x01,
             TypeImageSampler    = 0x02,
+            TypeStorageBuffer   = 0x03,
             TypeMask            = 0x03,
+
             StageVertex         = 0x04,
             StageFragment       = 0x08,
+            StageMask           = 0x0C,
         };
         uint32_t flags = 0;
         VkDescriptorType vk_descriptor_type() const {
-            return (flags & TypeImageSampler)
-                    ? VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-                    : (flags & TypeDynamicUniform)
-                           ? VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
-                           : VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            switch (flags & TypeMask) {
+                case TypeUniform: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                case TypeDynamicUniform: return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+                case TypeImageSampler: return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                case TypeStorageBuffer: return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            }
+            XCI_UNREACHABLE;
         }
         bool operator==(const LayoutBinding& rhs) const = default;
     };
     std::vector<LayoutBinding> m_layout_bindings;
+
+    struct PushConstantRange {
+        uint32_t offset;
+        uint32_t size;
+        PushConstantRange(uint32_t offset, uint32_t size) : offset(offset), size(size) {}
+        bool operator==(const PushConstantRange& rhs) const = default;
+    };
+    std::vector<PushConstantRange> m_push_constant_ranges;
 };
 
 
@@ -116,13 +135,13 @@ private:
 class PipelineCreateInfo {
 public:
     explicit PipelineCreateInfo(
+            const Attachments& attachments,
             VkShaderModule vertex_shader, VkShaderModule fragment_shader,
-            VkPipelineLayout layout, VkRenderPass render_pass);
+            VkPipelineLayout layout);
 
     void set_vertex_format(VertexFormat format);
-    void set_color_blend(BlendFunc blend_func);
+    void set_color_blend(BlendFunc blend_func, unsigned attachment = 0);
     void set_depth_test(DepthTest depth_test);
-    void set_sample_count(uint32_t count) { m_multisample_ci.rasterizationSamples = (VkSampleCountFlagBits) count; }
 
     const VkGraphicsPipelineCreateInfo& vk() const { return m_pipeline_ci; }
 
@@ -144,7 +163,7 @@ private:
     VkPipelineRasterizationStateCreateInfo m_rasterization_ci;
     VkPipelineMultisampleStateCreateInfo m_multisample_ci;
     VkPipelineDepthStencilStateCreateInfo m_depth_stencil_ci;
-    VkPipelineColorBlendAttachmentState m_color_blend {};
+    std::vector<VkPipelineColorBlendAttachmentState> m_color_blend;
     VkPipelineColorBlendStateCreateInfo m_color_blend_ci;
     std::array<VkDynamicState, 2> m_dynamic_states;
     VkPipelineDynamicStateCreateInfo m_dynamic_state_ci;

@@ -188,6 +188,9 @@ public:
     bool is_fullscreen() const { return m_fullscreen; }
     void set_fullscreen_mode(FullscreenMode mode) { m_fullscreen_mode = mode; }
 
+    // Obtain current window size
+    Vec2u get_size() const;
+
     // Set clipboard text (in UTF-8)
     bool set_clipboard_text(const std::string& text) const;
     // Get clipboard text (in UTF-8)
@@ -223,7 +226,7 @@ public:
     ScrollCallback scroll_callback() { return m_scroll_cb; }
 
     /// Color used to clear the framebuffer after swapping. Default: black
-    void set_clear_color(Color color) { m_clear_color = color; }
+    void set_clear_color(Color color);
 
     // Refresh mode:
     // - OnDemand is energy-saving mode, good for normal GUI applications (forms etc.)
@@ -246,6 +249,8 @@ public:
     /// \param origin       The position of (0,0) coordinates. Default is Center.
     void set_view_origin(ViewOrigin origin);
 
+    View& view() { return m_view; }
+
     void set_debug_flags(View::DebugFlags flags);
 
     /// Wait for asynchronous draw commands to finish.
@@ -256,10 +261,10 @@ public:
     SDL_Window* sdl_window() const { return m_window; }
 
     // Vulkan - current command buffer
-    VkCommandBuffer vk_command_buffer() const { return m_command_buffers[m_current_cmd_buf]; }
+    CommandBuffer& command_buffer() { return m_command_buffers[m_current_cmd_buf]; }
+    VkCommandBuffer vk_command_buffer() const { return m_command_buffers.vk(m_current_cmd_buf); }
     uint32_t command_buffer_index() const { return m_current_cmd_buf; }
-    void add_command_buffer_resource(const ResourcePtr& resource) { m_command_buffers.add_resource(m_current_cmd_buf, resource); }
-    void add_command_buffer_resource_deleter(std::function<void()>&& deleter) { m_command_buffers.add_resource_deleter(m_current_cmd_buf, std::move(deleter)); }
+    CommandBuffers& command_buffers() { return m_command_buffers; }
 
 private:
     void setup_view();
@@ -276,7 +281,6 @@ private:
     SDL_Window* m_window = nullptr;
     View m_view {this};
     RefreshMode m_refresh_mode = RefreshMode::OnDemand;
-    Color m_clear_color;
     std::chrono::microseconds m_timeout {0};
     FullscreenMode m_fullscreen_mode = FullscreenMode::Default;
     bool m_quit = false;

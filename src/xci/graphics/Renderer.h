@@ -93,8 +93,10 @@ public:
     /// \param address_mode     Addressing mode for both U, V coords
     /// \param anisotropy       Max anisotropy level. Use 0.f to disable.
     ///                         Capped at max_sampler_anisotropy(), which is usually 16.
+    /// \param max_lod          Max mipmap level. Can be bigger than mip levels available in the texture.
+    ///                         Set to 0 to disable mipmaps.
     Sampler& get_sampler(SamplerAddressMode address_mode = SamplerAddressMode::ClampToEdge,
-                         float anisotropy = 0.f);
+                         float anisotropy = 0.f, unsigned max_lod = 16);
 
     void clear_sampler_cache();
 
@@ -129,6 +131,7 @@ public:
     bool create_surface(SDL_Window* window);
     void destroy_surface();
     void reset_framebuffer(VkExtent2D new_size = {UINT32_MAX, UINT32_MAX}) { m_swapchain.reset_framebuffer(new_size); }
+    Swapchain& swapchain() { return m_swapchain; }
 
     // Vulkan handles
     VkInstance vk_instance() const { return m_instance; }
@@ -140,15 +143,13 @@ public:
     VkCommandPool vk_command_pool() const { return m_command_pool; }
     VkCommandPool vk_transient_command_pool() const { return m_transient_command_pool; }
     VkExtent2D vk_image_extent() const { return m_swapchain.vk_image_extent(); }
-    VkRenderPass vk_render_pass() const { return m_render_pass; }
+    VkRenderPass vk_render_pass() const { return m_swapchain.attachments().render_pass(); }
     VkFramebuffer vk_framebuffer(uint32_t index) const { return m_swapchain.vk_framebuffer(index); }
 
 private:
     bool create_instance(SDL_Window* window);
     void create_device();
     void destroy_device();
-    void create_renderpass();
-    void destroy_renderpass();
 
     std::optional<uint32_t> query_queue_families(VkPhysicalDevice device);
 
@@ -169,7 +170,6 @@ private:
     VkDevice m_device {};
     VkQueue m_queue {};
     Swapchain m_swapchain {*this};
-    VkRenderPass m_render_pass {};
     VkCommandPool m_command_pool {};
     VkCommandPool m_transient_command_pool {};
 

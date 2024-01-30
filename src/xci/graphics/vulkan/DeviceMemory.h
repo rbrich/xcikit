@@ -37,7 +37,7 @@ public:
     void bind_image(VkImage image, VkDeviceSize offset);
 
     [[nodiscard]]
-    void* map(VkDeviceSize offset, VkDeviceSize size);
+    void* map(VkDeviceSize offset, VkDeviceSize size = VK_WHOLE_SIZE);
     void unmap();
 
     struct MappedMemoryRange {
@@ -46,6 +46,8 @@ public:
     };
     void flush(std::span<MappedMemoryRange> ranges);
     void flush(VkDeviceSize offset, VkDeviceSize size = VK_WHOLE_SIZE);
+
+    void invalidate(VkDeviceSize offset, VkDeviceSize size = VK_WHOLE_SIZE);
 
     VkDeviceMemory vk() const { return m_memory_pool; }
 

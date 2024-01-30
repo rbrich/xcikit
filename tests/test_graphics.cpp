@@ -1,13 +1,14 @@
 // test_graphics.cpp created on 2018-08-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <xci/graphics/Color.h>
 #include <xci/graphics/View.h>
+#include <xci/graphics/Texture.h>
 #include <xci/core/log.h>
 
 using namespace xci::core;
@@ -87,4 +88,22 @@ TEST_CASE( "Variant units", "[VariUnits]" )
     CHECK( VariUnits(-524287.99_px).raw_storage() == -0x40000000 );
     CHECK( VariUnits(16383.9995_vp).raw_storage() == 0x7fffffc0 );
     CHECK( VariUnits(-16383.9999_vp).raw_storage() == int32_t(-0x80000000) );
+}
+
+
+TEST_CASE( "Texture mipmap levels", "[Texture]" )
+{
+    CHECK( mip_levels_for_size({0, 0}) == 0 );
+    CHECK( mip_levels_for_size({1, 1}) == 1 );
+    CHECK( mip_levels_for_size({2, 2}) == 2 );
+    CHECK( mip_levels_for_size({3, 3}) == 2 );
+    CHECK( mip_levels_for_size({4, 4}) == 3 );
+    CHECK( mip_levels_for_size({7, 7}) == 3 );
+    CHECK( mip_levels_for_size({8, 8}) == 4 );
+    CHECK( mip_levels_for_size({255, 255}) == 8 );
+    CHECK( mip_levels_for_size({256, 256}) == 9 );
+    CHECK( mip_levels_for_size({1000, 1000}) == 10 );
+    CHECK( mip_levels_for_size({1024, 1024}) == 11 );
+    CHECK( mip_levels_for_size({1024, 255}) == 11 );
+    CHECK( mip_levels_for_size({1, 1024}) == 11 );
 }

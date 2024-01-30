@@ -10,6 +10,7 @@
 #include <xci/widgets/Widget.h>
 #include <xci/text/Text.h>
 #include <xci/graphics/Primitives.h>
+#include <xci/graphics/Texture.h>
 #include <xci/core/FpsCounter.h>
 #include <chrono>
 

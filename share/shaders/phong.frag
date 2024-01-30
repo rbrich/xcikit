@@ -20,6 +20,11 @@ layout(binding = 2) uniform Material {
     float shininess;
 } u_mat;
 
+layout(push_constant) uniform PushConstants {
+    uint this_object_id;
+    uint selected_object_id;
+} push_const;
+
 void main() {
     vec3 N = v_normal;
     vec3 L = normalize(vec3(u_light.position) - v_position);
@@ -43,4 +48,8 @@ void main() {
     float att = 1.0 / (1.0 + u_light.quad_attenuation * light_dist * light_dist);
 
     out_color = Iamb + att * Idiff + att*att * Ispec;
+
+    if (push_const.this_object_id == push_const.selected_object_id) {
+        out_color.rg += vec2(0.5, 0.3);  // yellow highlight
+    }
 }

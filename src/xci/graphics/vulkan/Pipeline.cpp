@@ -7,6 +7,7 @@
 #include "Pipeline.h"
 #include "VulkanError.h"
 #include <xci/graphics/Renderer.h>
+#include <xci/graphics/vulkan/Attachments.h>
 #include <xci/compat/macros.h>
 
 #include <cassert>
@@ -40,7 +41,7 @@ unsigned get_vertex_format_stride(VertexFormat format)
 void PipelineLayoutCreateInfo::add_uniform_binding(uint32_t binding, bool dynamic)
 {
     m_layout_bindings.push_back({binding,
-        (dynamic ? LayoutBinding::TypeDynamicUniform : 0)
+        (dynamic ? LayoutBinding::TypeDynamicUniform : LayoutBinding::TypeUniform)
                  | LayoutBinding::StageVertex | LayoutBinding::StageFragment});
 }
 
@@ -52,22 +53,50 @@ void PipelineLayoutCreateInfo::add_texture_binding(uint32_t binding)
 }
 
 
+void PipelineLayoutCreateInfo::add_storage_binding(uint32_t binding)
+{
+    m_layout_bindings.push_back({binding,
+        LayoutBinding::TypeStorageBuffer | LayoutBinding::StageFragment});
+}
+
+
+void PipelineLayoutCreateInfo::add_push_constant_range(uint32_t offset, uint32_t size)
+{
+    m_push_constant_ranges.emplace_back(offset, size);
+}
+
+
 std::vector<VkDescriptorSetLayoutBinding> PipelineLayoutCreateInfo::vk_layout_bindings() const
 {
     std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
-
     for (const auto& item : m_layout_bindings) {
+        VkShaderStageFlags stage_flags {};
+        if (item.flags & LayoutBinding::StageVertex)
+            stage_flags |= VK_SHADER_STAGE_VERTEX_BIT;
+        if (item.flags & LayoutBinding::StageFragment)
+            stage_flags |= VK_SHADER_STAGE_FRAGMENT_BIT;
         layout_bindings.push_back({
                 .binding = item.binding,
                 .descriptorType = item.vk_descriptor_type(),
                 .descriptorCount = 1,
-                .stageFlags =
-                        ((item.flags & LayoutBinding::StageVertex)? VK_SHADER_STAGE_VERTEX_BIT : 0u) |
-                        ((item.flags & LayoutBinding::StageFragment)? VK_SHADER_STAGE_FRAGMENT_BIT : 0u),
+                .stageFlags = stage_flags,
         });
     }
-
     return layout_bindings;
+}
+
+
+std::vector<VkPushConstantRange> PipelineLayoutCreateInfo::vk_push_constant_ranges() const
+{
+    std::vector<VkPushConstantRange> ranges;
+    for (const auto& item : m_push_constant_ranges) {
+        ranges.push_back({
+                .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+                .offset = item.offset,
+                .size = item.size,
+        });
+    }
+    return ranges;
 }
 
 
@@ -77,7 +106,7 @@ DescriptorPoolSizes PipelineLayoutCreateInfo::descriptor_pool_sizes() const
 
     // uniforms
     const auto uniform_count = std::count_if(m_layout_bindings.begin(), m_layout_bindings.end(),
-             [](const auto& v) { return (v.flags & LayoutBinding::TypeMask) == 0; });
+             [](const auto& v) { return (v.flags & LayoutBinding::TypeMask) == LayoutBinding::TypeUniform; });
     if (uniform_count)
         sizes.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, uniform_count);
 
@@ -94,6 +123,12 @@ DescriptorPoolSizes PipelineLayoutCreateInfo::descriptor_pool_sizes() const
     if (texture_count)
         sizes.add(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, texture_count);
 
+    // storage buffer
+    const auto storage_count = std::count_if(m_layout_bindings.begin(), m_layout_bindings.end(),
+             [](const auto& v) { return (v.flags & LayoutBinding::TypeMask) == LayoutBinding::TypeStorageBuffer; });
+    if (storage_count)
+        sizes.add(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, storage_count);
+
     return sizes;
 }
 
@@ -103,6 +138,9 @@ size_t PipelineLayoutCreateInfo::hash() const
     size_t h = 0;
     for (const auto& item : m_layout_bindings) {
         h = std::rotl(h, 7) ^ ((item.binding << 4) | item.flags);
+    }
+    for (const auto& item : m_push_constant_ranges) {
+        h = std::rotl(h, 7) ^ ((item.offset << 4) | item.size);
     }
     return h;
 }
@@ -123,11 +161,14 @@ PipelineLayout::PipelineLayout(Renderer& renderer, const PipelineLayoutCreateInf
                     m_renderer.vk_device(), &layout_ci,
                     nullptr, &m_descriptor_set_layout));
 
+    auto push_constant_ranges = ci.vk_push_constant_ranges();
+
     VkPipelineLayoutCreateInfo pipeline_layout_ci = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
             .setLayoutCount = 1,
             .pSetLayouts = &m_descriptor_set_layout,
-            .pushConstantRangeCount = 0,
+            .pushConstantRangeCount = (uint32_t) push_constant_ranges.size(),
+            .pPushConstantRanges = push_constant_ranges.data(),
     };
 
     VK_TRY("vkCreatePipelineLayout",
@@ -145,8 +186,9 @@ PipelineLayout::~PipelineLayout()
 
 
 PipelineCreateInfo::PipelineCreateInfo(
+        const Attachments& attachments,
         VkShaderModule vertex_shader, VkShaderModule fragment_shader,
-        VkPipelineLayout layout, VkRenderPass render_pass)
+        VkPipelineLayout layout)
 {
     m_shader_stages[0] = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -197,7 +239,7 @@ PipelineCreateInfo::PipelineCreateInfo(
 
     m_multisample_ci = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-            .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+            .rasterizationSamples = attachments.msaa_samples_flag(),
             .sampleShadingEnable = VK_FALSE,
     };
 
@@ -209,12 +251,13 @@ PipelineCreateInfo::PipelineCreateInfo(
             .depthBoundsTestEnable = VK_FALSE,
     };
 
+    m_color_blend.resize(attachments.color_attachments().size());
     m_color_blend_ci = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
             .logicOpEnable = VK_FALSE,
             .logicOp = VK_LOGIC_OP_COPY,
-            .attachmentCount = 1,
-            .pAttachments = &m_color_blend,
+            .attachmentCount = (uint32_t) m_color_blend.size(),
+            .pAttachments = m_color_blend.data(),
     };
 
     m_dynamic_states = {
@@ -242,7 +285,7 @@ PipelineCreateInfo::PipelineCreateInfo(
             .pColorBlendState = &m_color_blend_ci,
             .pDynamicState = &m_dynamic_state_ci,
             .layout = layout,
-            .renderPass = render_pass,
+            .renderPass = attachments.render_pass(),
             .subpass = 0,
     };
 }
@@ -352,7 +395,7 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
 }
 
 
-void PipelineCreateInfo::set_color_blend(BlendFunc blend_func)
+void PipelineCreateInfo::set_color_blend(BlendFunc blend_func, unsigned attachment)
 {
     m_blend_func = blend_func;
     constexpr VkColorComponentFlags color_mask =
@@ -363,13 +406,13 @@ void PipelineCreateInfo::set_color_blend(BlendFunc blend_func)
 
     switch (blend_func) {
         case BlendFunc::Off:
-            m_color_blend = {
+            m_color_blend[attachment] = {
                     .blendEnable = VK_FALSE,
                     .colorWriteMask = color_mask,
             };
             break;
         case BlendFunc::AlphaBlend:
-            m_color_blend = {
+            m_color_blend[attachment] = {
                     .blendEnable = VK_TRUE,
                     .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
                     .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
@@ -381,7 +424,7 @@ void PipelineCreateInfo::set_color_blend(BlendFunc blend_func)
             };
             break;
         case BlendFunc::InverseVideo:
-            m_color_blend = {
+            m_color_blend[attachment] = {
                     .blendEnable = VK_TRUE,
                     .srcColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR,
                     .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
