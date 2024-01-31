@@ -11,7 +11,10 @@ include(CMakeFindDependencyMacro)
 find_dependency(Threads)
 find_dependency(fmt)
 find_dependency(pegtl)
-find_dependency(range-v3)
+
+if (@XCI_GRAPHICS@ OR if (@XCI_SCRIPT@))
+    find_dependency(range-v3)
+endif()
 
 if (@XCI_GRAPHICS@)
     find_dependency(SDL2)
