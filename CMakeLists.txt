@@ -122,6 +122,11 @@ find_package(fmt REQUIRED)
 # magic enum
 if (XCI_DATA OR BUILD_EXAMPLES)
     find_package(magic_enum REQUIRED)
+    # Workaround for Conan package, which has wrong include path
+    # (would require <magic_enum/magic_enum.hpp>, which is incompatible with upstream).
+    if (EXISTS ${magic_enum_INCLUDE_DIR}/magic_enum)
+        target_include_directories(magic_enum::magic_enum SYSTEM BEFORE INTERFACE ${magic_enum_INCLUDE_DIR}/magic_enum)
+    endif()
 endif()
 
 # Catch
