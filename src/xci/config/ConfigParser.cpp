@@ -1,7 +1,7 @@
 // ConfigParser.cpp created on 2023-11-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "ConfigParser.h"
@@ -10,7 +10,6 @@
 #include <xci/core/parser/unescape_rules.h>
 
 #include <tao/pegtl.hpp>
-#include <fmt/ostream.h>
 
 namespace xci::config {
 

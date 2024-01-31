@@ -15,8 +15,6 @@
 #include <tao/pegtl/contrib/analyze.hpp>
 #endif
 
-#include <fmt/core.h>
-
 #include <limits>
 #include <charconv>
 #include <variant>

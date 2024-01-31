@@ -1,20 +1,19 @@
 // unistd.h created on 2020-01-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020, 2023 Radek Brich
+// Copyright 2020–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 ///=========================================================================///
 ///                                                                         ///
 /// Minimal Unix compatibility header for WIN32                             ///
 ///                                                                         ///
+/// Make sure to define _CRT_DECLARE_NONSTDC_NAMES=0 (otherwise you'll      ///
+/// encounter name conflicts with C++).                                     ///
+///                                                                         ///
 /// Program compiled with this header should also disable some warnings:    ///
 ///                                                                         ///
-/// -D_CRT_NONSTDC_NO_WARNINGS (because we can't redeclare all the names,   ///
-///                             especially with stuff like `struct stats`   ///
-///                             it's almost impossible)                     ///
-///                                                                         ///
-/// -D_CRT_SECURE_NO_WARNINGS  (don't give me warning when I use `open`,    ///
+/// _CRT_SECURE_NO_WARNINGS    (don't give me warning when I use `open`,    ///
 ///                             I know what I'm doing and I don't really    ///
 ///                             care how secure my program is on this       ///
 ///                             platform, sorry...)                         ///
@@ -62,6 +61,9 @@ using ssize_t = std::make_signed<size_t>::type;
 #define PATH_MAX _MAX_PATH
 #endif
 
+#ifndef environ
+#define environ _environ
+#endif
 
 inline unsigned int sleep(unsigned int seconds) {
     Sleep(seconds * 1000);
@@ -81,7 +83,7 @@ inline ssize_t write(int fd, const void *buf, size_t count) {
 }
 
 inline int pipe(int pipefd[2]) {
-    return _pipe(pipefd, 4096, O_BINARY);
+    return _pipe(pipefd, 4096, _O_BINARY);
 }
 
 inline const char *dirname(char *path) {
@@ -117,7 +119,7 @@ inline int mkstemp(char *tmpl) {
     if (_mktemp_s(tmpl, strlen(tmpl) + 1) != 0) {
         return -1;
     }
-    return open(tmpl, O_RDWR | O_CREAT | O_EXCL);
+    return _open(tmpl, _O_RDWR | _O_CREAT | _O_EXCL);
 }
 
 inline int strcasecmp(const char *s1, const char *s2) {
@@ -133,6 +135,8 @@ inline FILE *popen(const char *command, const char *mode) {
 }
 
 inline int pclose(FILE *stream) { return _pclose(stream); }
+inline int fileno(FILE* stream) { return _fileno(stream); }
+inline int close(int fd) { return _close(fd); }
 
 #endif  // _WIN32
 
