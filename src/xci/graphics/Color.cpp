@@ -150,7 +150,8 @@ Color::Color(std::string_view spec)
 XCI_NODEBUG
 float Color::to_linear_f(uint8_t v)
 {
-    return v > 10 ? std::pow((v / 255.f + 0.055f) / 1.055f, 2.4f) : v / (255 * 12.92f);
+    return v > 10 ? std::pow((float(v) / 255.f + 0.055f) / 1.055f, 2.4f)
+                  : float(v) / (255 * 12.92f);
 }
 
 

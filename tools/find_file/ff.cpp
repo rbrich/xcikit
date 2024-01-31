@@ -1,7 +1,7 @@
 // ff.cpp created on 2020-03-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2023 Radek Brich
+// Copyright 2020–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// Find File (ff) command line tool
@@ -208,8 +208,7 @@ static bool parse_size_filter(const char* arg, size_t& size_from, size_t& size_t
     const char* end = arg + strlen(arg);
     auto res = std::from_chars(arg, end, size_from);
     arg = res.ptr;
-    int shift;
-    if (size_from != 0 && (shift = size_unit_to_shift(*arg)) != -1) {
+    if (int shift; size_from != 0 && (shift = size_unit_to_shift(*arg)) != -1) {
         size_from <<= shift;
         ++arg;
     }
@@ -222,7 +221,7 @@ static bool parse_size_filter(const char* arg, size_t& size_from, size_t& size_t
     arg += 2;
     res = std::from_chars(arg, end, size_to);
     arg = res.ptr;
-    if (size_to != 0 && (shift = size_unit_to_shift(*arg)) != -1) {
+    if (int shift; size_to != 0 && (shift = size_unit_to_shift(*arg)) != -1) {
         size_to <<= shift;
         ++arg;
     }

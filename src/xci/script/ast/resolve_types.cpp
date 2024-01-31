@@ -1,7 +1,7 @@
 // resolve_types.cpp created on 2019-06-13 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_types.h"
@@ -264,7 +264,7 @@ public:
                 }
 
                 // Partial instantiation with generic args -> just resolve the type, not the concrete instance
-                if (conflict && found->match.is_generic()) {
+                if (found && conflict && found->match.is_generic()) {
                     m_value_type = found->gen_type;
                     resolve_generic_type(m_value_type, found->type_args);
                     break;
@@ -506,7 +506,7 @@ public:
         }
         auto& scope = module().get_scope(v.scope_index);
 
-        Function& fn = scope.function();
+        const Function& fn = scope.function();
 
         m_value_type = TypeInfo{fn.signature_ptr()};
         v.call_arg = !m_call_sig.empty();

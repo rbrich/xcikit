@@ -1,7 +1,7 @@
 // Compiler.cpp created on 2019-05-30 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Compiler.h"
@@ -582,7 +582,7 @@ private:
                     const auto& subscope = module().get_scope(nl.fn_scope_idx);
                     // const auto& subscope = parent_scope.get_subscope(psym.index());
                     Index fn_idx = subscope.function_index();
-                    Function& fn = module().get_function(fn_idx);
+                    const Function& fn = module().get_function(fn_idx);
                     if (subscope.has_nonlocals()) {
                         make_closure(subscope);
                         // MAKE_CLOSURE <function_idx>
@@ -618,7 +618,7 @@ using FnCallback = void (*)(Function&);
 static void foreach_asm_fn_in_module(Module& module, FnCallback cb)
 {
     for (unsigned i = module.num_scopes(); i != 0; --i) {
-        Scope& scope = module.get_scope(i - 1);
+        const Scope& scope = module.get_scope(i - 1);
         if (!scope.has_function())
             continue;
         Function& fn = scope.function();
