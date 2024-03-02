@@ -19,7 +19,7 @@ SamplerCreateInfo::SamplerCreateInfo(SamplerAddressMode address_mode, float anis
             .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
             .addressModeU = VkSamplerAddressMode(address_mode),
             .addressModeV = VkSamplerAddressMode(address_mode),
-            .anisotropyEnable = anisotropy == 0.0 ? VK_FALSE : VK_TRUE,
+            .anisotropyEnable = VkBool32(anisotropy > 0.0),
             .maxAnisotropy = anisotropy,
             .compareEnable = VK_FALSE,
             .compareOp = VK_COMPARE_OP_ALWAYS,
