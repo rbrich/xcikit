@@ -107,7 +107,7 @@ jobs:
           os_target: "13.0"
           build_args: ""
         - os: macos-14
-          name: "Xcode 15.2 ARM64 / Release"
+          name: "Xcode 15.2 arm64 / Release"
           cc: apple-clang
           cc_ver: 15
           libcxx: libc++
@@ -159,7 +159,12 @@ jobs:
             echo "CC='$CC'" >> $GITHUB_ENV
             echo "CXX='$CXX'" >> $GITHUB_ENV
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew install ninja sdl2 doxygen google-benchmark hyperscan freetype harfbuzz libzip
+            brew install ninja sdl2 doxygen google-benchmark freetype harfbuzz libzip
+            if [[ "$(uname -m)" == "x86_64" ]]; then
+                brew install hyperscan
+            else
+                brew install vectorscan
+            fi
             # WORKAROUND: broken cmake config in brew harfbuzz package
             ln -s /usr/local/lib/libharfbuzz.0.dylib /usr/local/lib/libharfbuzz.0..dylib
             if [[ "${{ matrix.clang }}" == llvm* ]] ; then
