@@ -159,7 +159,7 @@ jobs:
             echo "CC='$CC'" >> $GITHUB_ENV
             echo "CXX='$CXX'" >> $GITHUB_ENV
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew install ninja sdl2 doxygen google-benchmark freetype harfbuzz libzip
+            brew install ninja sdl2 doxygen google-benchmark libzip
             if [[ "$(uname -m)" == "x86_64" ]]; then
                 brew install hyperscan
                 # WORKAROUND: broken cmake config in brew harfbuzz package
