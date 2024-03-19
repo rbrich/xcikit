@@ -211,7 +211,7 @@ jobs:
         cat <<EOF > "$(conan config home)/profiles/default"
         [settings]
         os={{ {"Darwin": "Macos"}.get(platform.system(), platform.system()) }}
-        arch=x86_64
+        arch={{ {"arm64": "armv8"}.get(platform.machine(), platform.machine()) }}
         build_type=Release
         compiler=${{ matrix.cc }}
         compiler.version=${{ matrix.cc_ver }}
