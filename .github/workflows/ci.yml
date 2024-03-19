@@ -162,11 +162,11 @@ jobs:
             brew install ninja sdl2 doxygen google-benchmark freetype harfbuzz libzip
             if [[ "$(uname -m)" == "x86_64" ]]; then
                 brew install hyperscan
+                # WORKAROUND: broken cmake config in brew harfbuzz package
+                ln -s /usr/local/lib/libharfbuzz.0.dylib /usr/local/lib/libharfbuzz.0..dylib
             else
                 brew install vectorscan
             fi
-            # WORKAROUND: broken cmake config in brew harfbuzz package
-            ln -s /usr/local/lib/libharfbuzz.0.dylib /usr/local/lib/libharfbuzz.0..dylib
             if [[ "${{ matrix.clang }}" == llvm* ]] ; then
                 export CC="$(brew --prefix ${{ matrix.clang }})/bin/clang"
                 export CXX="$(brew --prefix ${{ matrix.clang }})/bin/clang++"
