@@ -17,7 +17,7 @@
 #              (multiple options are evaluated as logical OR)
 # * `public` - set True if the library headers are used in public interface
 #
-# Run `precache_upstream_deps.py` to download and export `upstream` deps as specified.
+# Run `build_deps.py` to download and export `upstream` deps as specified.
 # This is alternative to ConanCenter, but may be needed when a fix didn't yet make it
 # into ConanCenter. The `upstream` must contain a `CMakeLists.txt` with installation commands.
 

@@ -64,7 +64,7 @@ def filtered_requirements(options: set):
             yield name, info
 
 
-def detect_deps(reqs, precached_deps):
+def detect_deps(reqs, built_deps):
     cmake_name_to_sysopt = {info['cmake'].split('/')[0]
                             : f"system_{name}" if 'conan' in info else f"with_{name}"
                             for name, info in reqs}
@@ -97,7 +97,7 @@ def detect_deps(reqs, precached_deps):
         ninja = ""
         if run("command -v ninja", shell=True, stdout=DEVNULL, stderr=DEVNULL).returncode == 0:
             ninja = "-G Ninja"
-        cmd = f"cmake . {ninja} -DDEPS='{items}' -DCMAKE_PREFIX_PATH='{';'.join(precached_deps)}'"
+        cmd = f"cmake . {ninja} -DDEPS='{items}' -DCMAKE_PREFIX_PATH='{';'.join(built_deps)}'"
         debug(cmd)
         p = run(cmd, shell=True,
                 capture_output=True, encoding='UTF-8', cwd=tmp_dir)
@@ -117,14 +117,14 @@ def main():
     options = parse_args()
     options = add_required_components(options)
     reqs = tuple(filtered_requirements(options))
-    precached_deps_dir = Path.home().joinpath('.xcikit/deps')
-    if precached_deps_dir.is_dir():
-        precached_deps = [str(d) for d in precached_deps_dir.glob("[!.]*") if d.is_symlink()]
+    built_deps_dir = script_dir / '.deps'
+    if built_deps_dir.is_dir():
+        built_deps = [str(d) for d in built_deps_dir.glob("[!.]*") if d.is_symlink()]
     else:
-        precached_deps = []
-    deps = tuple(detect_deps(reqs, precached_deps))
+        built_deps = []
+    deps = tuple(detect_deps(reqs, built_deps))
     cmake_args = [f'-DXCI_{o.upper()}=ON' for o in deps if o.startswith('with_')] + \
-                 [f"-DCMAKE_PREFIX_PATH={';'.join(precached_deps)}"]
+                 [f"-DCMAKE_PREFIX_PATH={';'.join(built_deps)}"]
     print(' '.join(cmake_args))
     print(' '.join(f'-o xcikit/*:{o}=True' for o in deps))
 
