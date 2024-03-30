@@ -53,7 +53,7 @@ print_usage()
     echo "      --build-deps            Call ./build_deps.py, useful for CI (cannot be combined with --no-system-deps)"
     echo "      --build-dir             Build directory (default: ./build/<build-config>)"
     echo "      --install-dir           Installation directory (default: ./artifacts/<build-config>)"
-    echo "      --toolchain FILE        CMAKE_TOOLCHAIN_FILE - select build toolchain"
+    echo "      --toolchain FILE        CMake toolchain - passed to Conan profile and to ./build_deps.py"
 }
 
 setup_ninja()
@@ -191,6 +191,7 @@ while [[ $# -gt 0 ]] ; do
             shift 2 ;;
         -pr | --profile )
             CONAN_PROFILE="$2"
+            BUILD_DEPS_ARGS+=("--profile" "$2")
             shift 2 ;;
         --toolchain )
             CONAN_ARGS+=(-c "tools.cmake.cmaketoolchain:user_toolchain=[\"$2\"]")

@@ -12,8 +12,13 @@ script_dir = Path(__file__).parent
 def parse_args():
     import argparse
     ap = argparse.ArgumentParser(description="Build deps into .deps")
+    ap.add_argument("--profile", type=str,
+                    help="Name of build profile. Should be different for each CMake toolchain "
+                         "or build environment.")
     ap.add_argument("--toolchain", type=str,
                     help="CMake toolchain to use when building packages.")
+    ap.add_argument("--force", action='store_true',
+                    help="Force rebuild of all deps.")
     return ap.parse_args()
 
 
@@ -40,7 +45,8 @@ def upstream_requirements():
 
 def main():
     args = parse_args()
-    platform = f"{sys.platform}-{args.toolchain if args.toolchain is not None else 'default'}"
+    platform = f"{sys.platform}-{args.profile if args.profile is not None else 'default'}"
+    force_rebuild = args.force
 
     deps_dir = script_dir / '.deps'
     deps_platform_dir = deps_dir / f".{platform}"
@@ -58,7 +64,7 @@ def main():
         source_dir = deps_source_dir / name / git_ref
         build_dir = deps_build_dir / name / git_ref
 
-        if install_dir.exists():
+        if install_dir.exists() and not force_rebuild:
             if package_dir.exists():
                 if not package_dir.is_symlink():
                     raise Exception(f"Package dir exists but is not a symlink: {package_dir}")
