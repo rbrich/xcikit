@@ -324,7 +324,7 @@ fi
 mkdir -p "${BUILD_DIR}"
 
 if phase deps; then
-    header "Build Dependencies"
+    header "Dependencies"
     if [[ "${BUILD_DEPS}" -eq 1 ]]; then
         "${PYTHON}" "${ROOT_DIR}/build_deps.py" "${BUILD_DEPS_ARGS[@]}"
     fi
