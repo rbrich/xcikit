@@ -114,8 +114,3 @@ requirements:
     conan: "benchmark/1.8.3"
     prereq:
       - benchmarks
-  incbin:
-    cmake: "incbin/"
-    conan: "incbin/cci.20211107"
-    prereq:
-      - examples

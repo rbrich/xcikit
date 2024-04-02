@@ -230,7 +230,6 @@ Libraries:
   https://github.com/KhronosGroup/glslang[glslangValidator] (xci-graphics)
 - https://github.com/catchorg/Catch2[Catch2] (tests)
 - https://github.com/google/benchmark[Google Benchmark] (benchmarks)
-- https://github.com/graphitemaster/incbin[incbin] (examples)
 
 Obtaining dependencies:
 
