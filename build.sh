@@ -12,9 +12,11 @@ SYSTEM_DEPS=1
 BUILD_DEPS=0
 BUILD_DEPS_ARGS=()
 JOBS_ARGS=()
+CONAN_DEPS=1
 CMAKE_ARGS=(-D"CMAKE_POSITION_INDEPENDENT_CODE=ON")
 CONAN_ARGS=()
 CONAN_PROFILE=${CONAN_DEFAULT_PROFILE:-default}
+CMAKE_TOOLCHAIN=
 DETECT_ARGS=()
 CSI=$'\x1b['
 
@@ -48,12 +50,13 @@ print_usage()
     echo "      --tidy                  Run clang-tidy on each compiled file"
     echo "      --iwyu                  Run include-what-you-use on each compiled file"
     echo "      --update                Passed to conan - update dependencies"
-    echo "      --profile, -pr PROFILE  Passed to conan - use the profile"
+    echo "      --profile, -pr PROFILE  Build profile, passed to conan (also used as label for the toolchain, outside Conan)"
+    echo "      --no-conan-deps         Do not run Conan to install missing deps"
     echo "      --no-system-deps        Do not detect and use system-installed deps"
     echo "      --build-deps            Call ./build_deps.py, useful for CI (cannot be combined with --no-system-deps)"
     echo "      --build-dir             Build directory (default: ./build/<build-config>)"
     echo "      --install-dir           Installation directory (default: ./artifacts/<build-config>)"
-    echo "      --toolchain FILE        CMake toolchain - passed to Conan profile and to ./build_deps.py"
+    echo "      --toolchain FILE        CMake toolchain, also passed to Conan"
 }
 
 setup_ninja()
@@ -180,6 +183,9 @@ while [[ $# -gt 0 ]] ; do
         --no-system-deps )
             SYSTEM_DEPS=0
             shift 1 ;;
+        --no-conan-deps )
+            CONAN_DEPS=0
+            shift 1 ;;
         --build-deps )
             BUILD_DEPS=1
             shift 1 ;;
@@ -195,6 +201,7 @@ while [[ $# -gt 0 ]] ; do
             shift 2 ;;
         --toolchain )
             CONAN_ARGS+=(-c "tools.cmake.cmaketoolchain:user_toolchain=[\"$2\"]")
+            CMAKE_TOOLCHAIN="$2"
             BUILD_DEPS_ARGS+=("--toolchain" "$2")
             shift 2 ;;
         -h | --help )
@@ -340,12 +347,14 @@ if phase deps; then
             CONAN_ARGS+=($(tail -n1 'system_deps.txt'))
         fi
 
-        export BUILD_DIR
-        run conan install "${ROOT_DIR}" \
-            --build missing \
-            -s "build_type=${BUILD_TYPE}" \
-            -c tools.cmake.cmake_layout:build_folder_vars="['settings.os', 'settings.os.version', 'settings.build_type']" \
-            "${CONAN_ARGS[@]}"
+        if [[ "${CONAN_DEPS}" -eq 1 ]]; then
+            export BUILD_DIR
+            run conan install "${ROOT_DIR}" \
+                --build missing \
+                -s "build_type=${BUILD_TYPE}" \
+                -c tools.cmake.cmake_layout:build_folder_vars="['settings.os', 'settings.os.version', 'settings.build_type']" \
+                "${CONAN_ARGS[@]}"
+        fi
     )
     echo
 fi
@@ -358,9 +367,10 @@ if phase config; then
         run cd "${BUILD_DIR}"
         # shellcheck disable=SC2207
         [[ "${SYSTEM_DEPS}" -eq 1 ]] && CMAKE_ARGS+=($(tail -n2 'system_deps.txt' | head -n1))
+        [[ "${CONAN_DEPS}" -eq 1 ]] && CMAKE_TOOLCHAIN="${BUILD_DIR}/generators/conan_toolchain.cmake"
         run ${WRAPPER} cmake "${ROOT_DIR}" \
             "${CMAKE_ARGS[@]}" \
-            -DCMAKE_TOOLCHAIN_FILE="${BUILD_DIR}/generators/conan_toolchain.cmake" \
+            -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TOOLCHAIN}" \
             -D"CMAKE_BUILD_TYPE=${BUILD_TYPE}" \
             -D"CMAKE_INSTALL_PREFIX=${INSTALL_DIR}" \
             -D'CMAKE_EXPORT_COMPILE_COMMANDS=ON'
