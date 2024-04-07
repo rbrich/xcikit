@@ -20,7 +20,7 @@ function(add_demo TARGET)
     target_include_directories(${TARGET} PRIVATE ${EXAMPLES_DIR})
 
     if (ARG_LINK)
-        target_link_libraries(${TARGET} ${ARG_LINK})
+        target_link_libraries(${TARGET} PRIVATE ${ARG_LINK})
     endif()
 
     if (ARG_DEPS)

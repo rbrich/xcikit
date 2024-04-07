@@ -230,15 +230,18 @@ Libraries:
   https://github.com/KhronosGroup/glslang[glslangValidator] (xci-graphics)
 - https://github.com/catchorg/Catch2[Catch2] (tests)
 - https://github.com/google/benchmark[Google Benchmark] (benchmarks)
-- https://github.com/graphitemaster/incbin[incbin] (examples)
 
 Obtaining dependencies:
 
 * Install them into *_system_* or otherwise make them visible to CMake's `find_*` functions.
   - This works for almost all deps, except *fmt*, *pfr*, *magic_enum*.
   - Deps that must be installed this way: *libzip*, *hyperscan*.
+* Build deps from Git locally for this project
+  - Run `./build_deps.sh`, it will clone each repo and build it via CMake to `./.deps`
+  - The build script picks up these deps as if they were installed in the system
 * Install them via *_Conan_*. See <<ide-conan,How to build from IDE>> or build with `build.sh`
   which runs conan automatically.
+  - Conan can be skipped via `--no-conan-deps` (if you have all deps preinstalled in system or in `./.deps`)
 
 [#system-package-manager]
 Installing the dependencies with *_system package managers_*:

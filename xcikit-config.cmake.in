@@ -12,7 +12,7 @@ find_dependency(Threads)
 find_dependency(fmt)
 find_dependency(pegtl)
 
-if (@XCI_GRAPHICS@ OR if (@XCI_SCRIPT@))
+if (@XCI_GRAPHICS@ OR @XCI_SCRIPT@)
     find_dependency(range-v3)
 endif()
 

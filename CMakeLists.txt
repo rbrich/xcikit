@@ -139,10 +139,6 @@ if (BUILD_BENCHMARKS)
     find_package(benchmark REQUIRED)
 endif()
 
-if (BUILD_EXAMPLES AND NOT WIN32 AND NOT EMSCRIPTEN)
-    find_package(incbin QUIET)
-endif()
-
 # Doxygen
 find_package(Doxygen)
 

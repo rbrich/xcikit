@@ -1,4 +1,18 @@
-find_package(spirv-cross REQUIRED)
+# ------------ #
+# Dependencies #
+# ------------ #
+
+# Try Conan
+find_package(spirv-cross QUIET)
+if (NOT spirv-cross_FOUND)
+    # Upstream
+    find_package(spirv_cross_core REQUIRED)
+    find_package(spirv_cross_glsl REQUIRED)
+endif()
+
+# ------------ #
+# Binaries     #
+# ------------ #
 
 # shed (Shader Editor)
 add_executable(shed shed.cpp
@@ -10,7 +24,7 @@ add_executable(shed shed.cpp
 target_link_libraries(shed
     xci-graphics
     xci-widgets
-    spirv-cross::spirv-cross
+    spirv-cross-glsl
     range-v3::range-v3
 )
 
