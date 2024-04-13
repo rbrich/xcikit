@@ -1,37 +1,9 @@
 #!/usr/bin/env python3
 """
-# Data Archive tool
+Data Archive tool
 
-## Archive File Format
-
-Non-compressed archive with index at the end.
-All fields are in big-endian (network order).
-All offsets are relative to start of file (simple seek will always work).
-File contents are simply concatenated (no padding is inserted).
-Inspired by MAR (https://wiki.mozilla.org/Software_Update:MAR)
-
-    ARCHIVE:
-    - HEADER
-    - FILE [NUMBER_OF_ENTRIES]
-    - INDEX
-
-    HEADER:
-    - ID = "dar\n" (4 bytes)
-    - INDEX_OFFSET (4 bytes)
-
-    FILE:
-    - CONTENT (CONTENT_SIZE bytes)
-
-    INDEX:
-    - NUMBER_OF_ENTRIES (4 bytes)
-    - INDEX_ENTRY [NUMBER_OF_ENTRIES]
-
-    INDEX_ENTRY:
-    - CONTENT_OFFSET (4 bytes)
-    - CONTENT_SIZE (4 bytes)
-    - NAME_SIZE (2 bytes)
-    - NAME (NAME_SIZE bytes)
-
+Creates DAR archives.
+See: docs/data/archive_format.adoc
 """
 
 import sys
@@ -42,7 +14,7 @@ import argparse
 
 class Archive:
 
-    ID = b'dar\n'
+    ID = b'dar1'
 
     def __init__(self, archive_file, quiet=False):
         self._f = open(archive_file, 'wb')

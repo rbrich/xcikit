@@ -1,7 +1,7 @@
 // DarArchive.cpp created on 2023-11-07 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "DarArchive.h"
@@ -15,7 +15,7 @@ namespace xci::vfs {
 using namespace core::log;
 
 
-static constexpr std::array<char, 4> c_dar_magic = {{'d', 'a', 'r', '\n'}};
+static constexpr std::array<char, 4> c_dar_magic = {{'d', 'a', 'r', '1'}};
 
 
 bool DarArchiveLoader::can_load_stream(std::istream& stream)

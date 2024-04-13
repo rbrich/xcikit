@@ -1,0 +1,32 @@
+= DAR - Data Archive File Format
+
+Non-compressed archive with index at the end.
+All integer fields are in big-endian.
+All offsets are relative to start of the file (simple seek will always work).
+Offsets are uint32, thus the total size limit is 4 GB.
+File contents are simply concatenated (no padding is inserted).
+Inspired by MAR (https://wiki.mozilla.org/Software_Update:MAR)
+
+----
+    ARCHIVE:
+    - HEADER
+    - FILE [NUMBER_OF_ENTRIES]
+    - INDEX
+
+    HEADER:
+    - ID = "dar1" (4 bytes)
+    - INDEX_OFFSET (4 bytes - uint32)
+
+    FILE:
+    - CONTENT (CONTENT_SIZE bytes)
+
+    INDEX:
+    - NUMBER_OF_ENTRIES (4 bytes - uint32)
+    - INDEX_ENTRY [NUMBER_OF_ENTRIES]
+
+    INDEX_ENTRY:
+    - CONTENT_OFFSET (4 bytes - uint32)
+    - CONTENT_SIZE (4 bytes - uint32)
+    - NAME_SIZE (2 bytes - uint16)
+    - NAME (NAME_SIZE bytes)
+----
