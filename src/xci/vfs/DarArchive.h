@@ -1,13 +1,14 @@
 // DarArchive.h created on 2023-11-07 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_VFS_DAR_ARCHIVE_H
 #define XCI_VFS_DAR_ARCHIVE_H
 
 #include "Vfs.h"
+#include <string_view>
 
 namespace xci::vfs {
 
@@ -42,7 +43,11 @@ private:
     struct IndexEntry {
         uint32_t offset;
         uint32_t size;
+        uint32_t metadata_size;
+        char _encoding[2];
         std::string name;
+
+        std::string_view encoding() const { return {_encoding, 2}; }
     };
 
     bool read_index(size_t size);

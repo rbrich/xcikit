@@ -12,8 +12,6 @@
 
 namespace xci::vfs {
 
-using namespace core::log;
-
 
 static constexpr std::array<char, 4> c_dar_magic = {{'d', 'a', 'r', '1'}};
 
@@ -95,6 +93,12 @@ VfsFile DarArchive::read_entry(const IndexEntry& entry) const
     // return a view into mmapped archive
     log::debug("Vfs: DarArchive: open file: {}", entry.name);
 
+    if (entry.encoding() != "--") {
+        log::error("Vfs: DarArchive: Unsupported file encoding: {} ({})",
+                entry.name, entry.encoding());
+        return {};
+    }
+
     // Pass self to Buffer deleter, so the archive object lives
     // at least as long as the buffer.
     auto* content = new std::byte[entry.size];
@@ -118,7 +122,7 @@ bool DarArchive::read_index(size_t size)
     std::array<char, c_dar_magic.size()> magic;
     m_stream->read(magic.data(), std::streamsize(magic.size()));
     if (!m_stream || magic != c_dar_magic) {
-        log::error("Vfs: DarArchive: Corrupted archive: {} ({}).",
+        log::error("Vfs: DarArchive: Corrupted archive: {} ({})",
                 m_path, "ID");
         return false;
     }
@@ -129,19 +133,30 @@ bool DarArchive::read_index(size_t size)
     index_offset = be32toh(index_offset);
     if (!m_stream || index_offset + 4 > size) {
         // the offset must be inside archive, plus 4B for num_entries
-        log::error("Vfs: DarArchive: Corrupted archive: {} ({}).",
+        log::error("Vfs: DarArchive: Corrupted archive: {} ({})",
                   m_path, "INDEX_OFFSET");
         return false;
     }
 
-    // INDEX: NUMBER_OF_ENTRIES
     m_stream->seekg(index_offset);
+
+    // INDEX: INDEX_SIZE
+    uint32_t index_size;
+    m_stream->read((char*)&index_size, sizeof(index_size));
+    index_size = be32toh(index_size);
+    if (!m_stream || index_offset + index_size > size) {
+        log::error("Vfs: DarArchive: Corrupted archive: {} ({})",
+                m_path, "INDEX_SIZE");
+        return false;
+    }
+
+    // INDEX: NUMBER_OF_ENTRIES
     uint32_t num_entries;
     m_stream->read((char*)&num_entries, sizeof(num_entries));
     num_entries = be32toh(num_entries);
     if (!m_stream) {
-        log::error("Vfs: DarArchive: Corrupted archive: {} ({}).",
-                m_path, "INDEX_ENTRY");
+        log::error("Vfs: DarArchive: Corrupted archive: {} ({})",
+                m_path, "NUMBER_OF_ENTRIES");
         return false;
     }
 
@@ -151,11 +166,14 @@ bool DarArchive::read_index(size_t size)
         struct {
             uint32_t offset;
             uint32_t size;
+            uint32_t metadata_size;
+            char encoding[2];
             uint16_t name_size;
         } entry_header;
-        m_stream->read((char*)&entry_header, 10);  // sizeof would be 12 due to padding
+        static_assert(sizeof(entry_header) == 16);
+        m_stream->read((char*)&entry_header, sizeof(entry_header));
         if (!m_stream) {
-            log::error("Vfs: DarArchive: Corrupted archive: {} ({}).",
+            log::error("Vfs: DarArchive: Corrupted archive: {} ({})",
                       m_path, "INDEX_ENTRY");
             return false;
         }
@@ -164,20 +182,23 @@ bool DarArchive::read_index(size_t size)
         entry.offset = be32toh(entry_header.offset);
         // INDEX_ENTRY: CONTENT_SIZE
         entry.size = be32toh(entry_header.size);
-        if (entry.offset + entry.size > index_offset) {
-            // there must be space for the name in archive
-            log::error("Vfs: DarArchive: Corrupted archive: {} ({}).",
-                      m_path, "CONTENT_OFFSET + CONTENT_SIZE");
+        // INDEX_ENTRY: METADATA_SIZE
+        entry.metadata_size = be32toh(entry_header.metadata_size);
+        if (entry.offset + entry.size + entry.metadata_size > index_offset) {
+            log::error("Vfs: DarArchive: Corrupted archive: {} ({})",
+                      m_path, "CONTENT_OFFSET + CONTENT_SIZE + METADATA_SIZE");
             return false;
         }
 
+        // INDEX_ENTRY: ENCODING
+        std::memcpy(entry._encoding, entry_header.encoding, sizeof(entry._encoding));
         // INDEX_ENTRY: NAME_SIZE
         auto name_size = be16toh(entry_header.name_size);
         // INDEX_ENTRY: NAME
         entry.name.resize(name_size);
         m_stream->read(entry.name.data(), name_size);
         if (!m_stream) {
-            log::error("Vfs: DarArchive: Corrupted archive: {} ({}).",
+            log::error("Vfs: DarArchive: Corrupted archive: {} ({})",
                       m_path, "NAME");
             return false;
         }

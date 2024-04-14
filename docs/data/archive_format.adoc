@@ -1,6 +1,6 @@
 = DAR - Data Archive File Format
 
-Non-compressed archive with index at the end.
+Non-compressed archive with optional per-entry encoding and with file index at the end.
 All integer fields are in big-endian.
 All offsets are relative to start of the file (simple seek will always work).
 Offsets are uint32, thus the total size limit is 4 GB.
@@ -9,24 +9,44 @@ Inspired by MAR (https://wiki.mozilla.org/Software_Update:MAR)
 
 ----
     ARCHIVE:
-    - HEADER
-    - FILE [NUMBER_OF_ENTRIES]
-    - INDEX
+    - HEADER - see below
+    - FILE [NUMBER_OF_ENTRIES] - see below
+    - INDEX - see below
 
     HEADER:
     - ID = "dar1" (4 bytes)
-    - INDEX_OFFSET (4 bytes - uint32)
+    - INDEX_OFFSET (4 bytes - uint32be) - offset to INDEX from start of file
 
     FILE:
-    - CONTENT (CONTENT_SIZE bytes)
+    - CONTENT (CONTENT_SIZE bytes) - file data according to ENCODING
+    - METADATA (METADATA_SIZE bytes) - file metadata - see File Metadata
 
     INDEX:
-    - NUMBER_OF_ENTRIES (4 bytes - uint32)
-    - INDEX_ENTRY [NUMBER_OF_ENTRIES]
+    - INDEX_SIZE (4 bytes - uint32be) - size of INDEX (including this field)
+    - NUMBER_OF_ENTRIES (4 bytes - uint32be) - number of entries in index
+    - INDEX_ENTRY [NUMBER_OF_ENTRIES] - see below
 
     INDEX_ENTRY:
-    - CONTENT_OFFSET (4 bytes - uint32)
-    - CONTENT_SIZE (4 bytes - uint32)
-    - NAME_SIZE (2 bytes - uint16)
-    - NAME (NAME_SIZE bytes)
+    - CONTENT_OFFSET (4 bytes - uint32be) - offset to CONTENT from start of file
+    - CONTENT_SIZE (4 bytes - uint32be) - size of CONTENT
+    - METADATA_SIZE (4 bytes - uint32be) - size of METADATA
+    - ENCODING (2 bytes - encoding ID) - see Encodings
+    - NAME_SIZE (2 bytes - uint16be) - size of NAME
+    - NAME (NAME_SIZE bytes) - file name
 ----
+
+### Encodings
+
+This is an extension point. The only required encoding is "raw plain data".
+
+* "--" - raw plain data
+* "zl" - deflate stream with zlib header (RFC-1950, RFC-1951),
+         followed by ISIZE (4 bytes uint32be, uncompressed file size module 2^32)
+
+### File Metadata
+
+This is an extension point. The format of the metadata is currently undefined.
+METADATA_SIZE should always be 0. Unpacker may ignore the metadata.
+
+The metadata block will contain the file permissions, xattrs etc.
+It may also contain checksum(s).
