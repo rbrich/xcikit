@@ -23,8 +23,9 @@ public:
 
 
 /// Lookup files in DAR archive, which is mapped to VFS path
-/// DAR is custom uncompressed archive format, see `tools/pack_assets.py`
-/// Unlike ZipArchive, this has no external dependency and very simple implementation.
+/// DAR is custom uncompressed archive format, see `docs/data/archive_format.adoc` and `tools/data_archive`.
+/// Unlike ZipArchive, this has minimal dependencies (only zlib for optional compression)
+/// and very simple implementation.
 class DarArchive: public VfsDirectory {
 public:
     explicit DarArchive(std::string&& path, std::unique_ptr<std::istream>&& stream);

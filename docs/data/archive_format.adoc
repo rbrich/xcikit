@@ -1,11 +1,25 @@
 = DAR - Data Archive File Format
 
-Non-compressed archive with optional per-entry encoding and with file index at the end.
-All integer fields are in big-endian.
+DAR means "Data ARchive"
+
+It's an archive format with optional per-file compression and with trailing file index.
+File contents are simply concatenated (no padding is inserted).
+
+All integer fields are big-endian.
 All offsets are relative to start of the file (simple seek will always work).
 Offsets are uint32, thus the total size limit is 4 GB.
-File contents are simply concatenated (no padding is inserted).
+
 Inspired by MAR (https://wiki.mozilla.org/Software_Update:MAR)
+
+Features:
+
+* The index at the end allows adding more files to the archive without shuffling
+  content of other files. Only the index needs to be saved and written again at
+  the end.
+* When used without compression, the format allows mmapping the whole archive,
+  searching for files in the index and reading them directly by the offset.
+  No allocation required.
+* The implementation is simple, no library needed (besides zlib for the optional compression).
 
 ----
     ARCHIVE:
@@ -41,7 +55,7 @@ This is an extension point. The only required encoding is "raw plain data".
 
 * "--" - raw plain data
 * "zl" - deflate stream with zlib header (RFC-1950, RFC-1951),
-         followed by ISIZE (4 bytes uint32be, uncompressed file size module 2^32)
+         followed by PLAIN_SIZE (4 bytes uint32be, uncompressed file size module 2^32)
 
 ### File Metadata
 
