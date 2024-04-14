@@ -103,6 +103,10 @@ else()
     add_library(Threads::Threads INTERFACE IMPORTED)
 endif()
 
+if (NOT EMSCRIPTEN AND (XCI_DATA OR XCI_VFS))
+    find_package(ZLIB REQUIRED)
+endif()
+
 # PEGTL
 find_package(pegtl REQUIRED)
 

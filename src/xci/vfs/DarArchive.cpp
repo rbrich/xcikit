@@ -8,7 +8,10 @@
 #include <xci/core/log.h>
 #include <xci/compat/endian.h>
 
+#include <zlib.h>
+
 #include <algorithm>
+#include <cassert>
 
 namespace xci::vfs {
 
@@ -90,27 +93,96 @@ VfsFile DarArchive::read_entry(unsigned index) const
 
 VfsFile DarArchive::read_entry(const IndexEntry& entry) const
 {
-    // return a view into mmapped archive
     log::debug("Vfs: DarArchive: open file: {}", entry.name);
 
-    if (entry.encoding() != "--") {
-        log::error("Vfs: DarArchive: Unsupported file encoding: {} ({})",
-                entry.name, entry.encoding());
-        return {};
+    if (entry.encoding() == "--") {
+        return read_entry_plain(entry);
     }
 
-    // Pass self to Buffer deleter, so the archive object lives
-    // at least as long as the buffer.
-    auto* content = new std::byte[entry.size];
-    BufferPtr buffer_ptr(new Buffer{content, entry.size},
-                         [this_ptr = shared_from_this()](Buffer* b){ delete[] b->data(); delete b; });
+    if (entry.encoding() == "zl") {
+        return read_entry_zlib(entry);
+    }
 
+    log::error("Vfs: DarArchive: Unsupported file encoding \"{}\": {}",
+        entry.encoding(), entry.name);
+    return {};
+}
+
+
+VfsFile DarArchive::read_entry_plain(const IndexEntry& entry) const
+{
     m_stream->seekg(entry.offset);
+    BufferPtr buffer_ptr(new Buffer{new std::byte[entry.size], entry.size},
+                         [](Buffer* b){ delete[] b->data(); delete b; });
+
     m_stream->read((char*) buffer_ptr->data(), std::streamsize(buffer_ptr->size()));
     if (!m_stream) {
-        log::error("Vfs: DarArchive: Not found in archive: {}", entry.name);
+        log::error("Vfs: DarArchive: Error reading entry: {}", entry.name);
         return {};
     }
+
+    return VfsFile("", std::move(buffer_ptr));
+}
+
+
+VfsFile DarArchive::read_entry_zlib(const IndexEntry& entry) const
+{
+    if (entry.size < 4) {
+        log::error("Vfs: DarArchive: Corrupted zlib entry (missing uncompressed size): {}",
+            entry.name);
+        return {};
+    }
+
+    // Obtain uncompressed size - stored in last 4 bytes of input data
+    uint32_t plain_size;
+    auto input_size = size_t(entry.size) - sizeof(plain_size);
+    m_stream->seekg(std::streamoff(entry.offset + input_size));
+    m_stream->read((char*) &plain_size, sizeof(plain_size));
+    plain_size = be32toh(plain_size);
+
+    // Allocate buffer for VfsFile
+    m_stream->seekg(entry.offset);
+    BufferPtr buffer_ptr(new Buffer{new std::byte[plain_size], plain_size},
+                         [](Buffer* b){ delete[] b->data(); delete b; });
+
+    // Read and decompress
+    z_stream zstream {};
+    int zerr = inflateInit2(&zstream, 15);
+    if (zerr != Z_OK) {
+        log::error("Vfs: DarArchive: inflateInit2: %d", zerr);
+        return {};
+    }
+
+    char input_buffer[4096];
+    zstream.avail_out = plain_size;
+    zstream.next_out = (Bytef *) buffer_ptr->data();
+    while (input_size > 0) {
+        auto read_size = std::min(input_size, sizeof(input_buffer));
+        m_stream->read(input_buffer, std::streamsize(read_size));
+        if (!m_stream) {
+            log::error("Vfs: DarArchive: Error reading entry: {}", entry.name);
+            inflateEnd(&zstream);
+            return {};
+        }
+
+        zstream.avail_in = (uInt) read_size;
+        zstream.next_in = (Bytef *) input_buffer;
+
+        zerr = inflate(&zstream, Z_NO_FLUSH);
+        if (zerr == Z_STREAM_END) {
+            assert(input_size == read_size);
+            break;
+        }
+        if (zerr != Z_OK) {
+            log::error("Vfs: DarArchive: inflate: %d", zerr);
+            inflateEnd(&zstream);
+            return {};
+        }
+
+        input_size -= read_size;
+    };
+
+    inflateEnd(&zstream);
 
     return VfsFile("", std::move(buffer_ptr));
 }

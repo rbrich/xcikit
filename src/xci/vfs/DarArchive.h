@@ -52,6 +52,8 @@ private:
 
     bool read_index(size_t size);
     VfsFile read_entry(const IndexEntry& entry) const;
+    VfsFile read_entry_plain(const IndexEntry& entry) const;
+    VfsFile read_entry_zlib(const IndexEntry& entry) const;
     void close_archive();
 
     std::string m_path;

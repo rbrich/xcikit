@@ -10,6 +10,7 @@ import sys
 import os
 import struct
 import argparse
+import zlib
 from contextlib import contextmanager
 
 
@@ -19,7 +20,7 @@ class Archive:
 
     def __init__(self, archive_file, quiet=False):
         self._f = open(archive_file, 'wb')
-        self._index = []  # tuples: (path, offset, size, metadata_size)
+        self._index = []  # tuples: (path, offset, size, metadata_size, encoding)
         self._index_offset = 0
         self._index_size = 8
         self._write_header()
@@ -34,18 +35,20 @@ class Archive:
         self._write_header()
         self._info("Written %d files." % len(self._index))
 
-    def add_file(self, src_path, archive_path):
+    def add_file(self, src_path, archive_path, encoder):
         offset = self._f.tell()
         size = 0
         metadata_size = 0
         with open(src_path, 'rb') as f:
-            data = f.read()
-            while len(data):
-                self._f.write(data)
-                size += len(data)
-                data = f.read()
+            while True:
+                data = f.read(2**26)  # 64 MB
+                encoded = encoder(data)  # last call is with empty data
+                self._f.write(encoded)
+                size += len(encoded)
+                if len(data) == 0:
+                    break
         path = archive_path.encode('utf8')
-        self._index.append((path, offset, size, metadata_size))
+        self._index.append((path, offset, size, metadata_size, encoder.tag))
         self._index_size += 16 + len(path)
         self._info("+ %6d  %s" % (size, archive_path))
 
@@ -63,14 +66,14 @@ class Archive:
         for entry in self._index:
             self._write_index_entry(*entry)  # INDEX_ENTRY
 
-    def _write_index_entry(self, path, offset, size, metadata_size):
+    def _write_index_entry(self, path, offset, size, metadata_size, encoding):
         offset = struct.pack('!L', offset)
         assert self._f.write(offset) == 4, "write CONTENT_OFFSET"
         size = struct.pack('!L', size)
         assert self._f.write(size) == 4, "write CONTENT_SIZE"
         metadata_size = struct.pack('!L', metadata_size)
         assert self._f.write(metadata_size) == 4, "write METADATA_SIZE"
-        assert self._f.write(b"--") == 2, "write ENCODING" # = plain data
+        assert self._f.write(encoding) == 2, "write ENCODING"
         path_size = struct.pack('!H', len(path))
         assert self._f.write(path_size) == 2, "write NAME_SIZE"
         self._f.write(path)  # NAME
@@ -88,6 +91,32 @@ def open_archive(*args, **kwargs):
         archive.close()
 
 
+class PlainDataEncoder:
+    tag = b'--'
+
+    def __init__(self):
+        pass
+
+    def __call__(self, data):
+        return data
+
+
+class ZlibEncoder:
+    tag = b'zl'
+
+    def __init__(self):
+        self._compressobj = zlib.compressobj()
+        self._data_size = 0
+
+    def __call__(self, data):
+        if len(data):
+            self._data_size += len(data)
+            return self._compressobj.compress(data)
+        data = self._compressobj.flush()
+        data += struct.pack('!L', self._data_size)
+        return data
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('archive_file', type=str,
@@ -96,6 +125,8 @@ def main():
                     help="Name of archive to be created")
     ap.add_argument("--list-file", type=str,
                     help="Name of file containing list of files to be archived")
+    ap.add_argument("-c", "--compress", action="store_true",
+                    help="Compress files (deflate)")
     ap.add_argument("-q", "--quiet", action="store_true",
                     help="Do not show progress")
     args = ap.parse_args()
@@ -107,10 +138,16 @@ def main():
         with open(args.list_file, 'r', encoding='utf8') as f:
             files += [ln.strip() for ln in f.readlines()]
 
+    if args.compress:
+        encoder = ZlibEncoder()
+    else:
+        encoder = PlainDataEncoder()
+
     with open_archive(args.archive_file, args.quiet) as archive:
         for path in files:
             src_path = os.path.join(src_dir, path)
-            archive.add_file(src_path, path)
+            encoder.__init__()
+            archive.add_file(src_path, path, encoder)
 
 
 if __name__ == '__main__':
