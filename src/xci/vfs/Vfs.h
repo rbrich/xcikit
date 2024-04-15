@@ -1,7 +1,7 @@
 // Vfs.h created on 2018-09-01 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_VFS_H
@@ -196,7 +196,7 @@ public:
     ///
     /// The path can point to an archive instead of a directory.
     /// Supported archive formats:
-    /// - DAR - see `tools/pack_assets.py`
+    /// - DAR - see `docs/data/archive_format.adoc`
     /// - WAD - DOOM 1 format
     /// - ZIP - zip format via libzip
     ///

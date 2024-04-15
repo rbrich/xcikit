@@ -146,6 +146,11 @@ dati examples/script/some.firm -s /tmp/firm.schema
 fire examples/script/some.firm
 ----
 
+=== xci::vfs
+
+Virtual file system. Unified reading of files in filesystem directories and in archive files.
+Contains support for custom archive format - DAR.
+
 === xci::data
 
 Serialization and deserialization of structured data.

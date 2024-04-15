@@ -103,6 +103,10 @@ else()
     add_library(Threads::Threads INTERFACE IMPORTED)
 endif()
 
+if (NOT EMSCRIPTEN AND (XCI_DATA OR XCI_VFS))
+    find_package(ZLIB REQUIRED)
+endif()
+
 # PEGTL
 find_package(pegtl REQUIRED)
 
@@ -253,7 +257,7 @@ if (BUILD_TOOLS)
         add_subdirectory(tools/term_ctl)
     endif()
     if (BUILD_DAR_TOOL)
-        add_subdirectory(tools/extract_archive)
+        add_subdirectory(tools/data_archive)
     endif()
     if (BUILD_FF_TOOL AND XCI_WITH_HYPERSCAN)
         add_subdirectory(tools/find_file)

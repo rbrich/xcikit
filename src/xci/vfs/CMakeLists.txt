@@ -20,6 +20,13 @@ endif()
 find_package(libzip REQUIRED)
 target_link_libraries(xci-vfs PRIVATE libzip::zip)
 
+if (EMSCRIPTEN)
+    target_compile_options(xci-vfs PUBLIC -sUSE_ZLIB=1)
+    target_link_options(xci-vfs PUBLIC -sUSE_ZLIB=1)
+else()
+    target_link_libraries(xci-vfs PRIVATE ZLIB::ZLIB)
+endif()
+
 
 # ------- #
 # Install #
