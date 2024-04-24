@@ -1,7 +1,7 @@
 // string.cpp created on 2018-03-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "string.h"
@@ -258,10 +258,22 @@ std::string to_utf8(std::wstring_view wstr) { return _to_utf8(wstr); }
 
 std::string to_utf8(char32_t codepoint)
 {
-    XCI_IGNORE_DEPRECATED(
-    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
-    )
-    return convert_utf32.to_bytes(codepoint);
+    if (codepoint < 0x0000007F) {
+        return {char(codepoint)};
+    }
+    if (codepoint < 0x000007FF) {
+        return {char(0xC0 | (codepoint >> 6)), char(0x80 | (codepoint & 0x3F))};
+    }
+    if (codepoint < 0x0000FFFF) {
+        return {char(0xE0 | (codepoint >> 12)), char(0x80 | ((codepoint >> 6) & 0x3F)),
+                char(0x80 | (codepoint & 0x3F))};
+    }
+    if (codepoint < 0x001FFFFF) {
+        return {char(0xF0 | (codepoint >> 18)), char(0x80 | ((codepoint >> 12) & 0x3F)),
+                char(0x80 | ((codepoint >> 6) & 0x3F)), char(0x80 | (codepoint & 0x3F))};
+    }
+    log::error("to_utf8(codepoint): Invalid unicode codepoint: {:0x}", uint32_t(codepoint));
+    return "�";
 }
 
 
@@ -328,22 +340,23 @@ char32_t utf8_codepoint(const char* utf8)
     char c0 = utf8[0];
     if ((c0 & 0x80) == 0) {
         // 0xxxxxxx -> 1 byte
-        return char32_t(c0 & 0x7f);
+        return char32_t(c0 & 0x7F);
     }
-    if ((c0 & 0xe0) == 0xc0) {
+    if ((c0 & 0xE0) == 0xC0) {
         // 110xxxxx -> 2 bytes
-        return char32_t(((c0 & 0x1f) << 6) | (utf8[1] & 0x3f));
+        return char32_t(((c0 & 0x1F) << 6) | (utf8[1] & 0x3F));
     }
-    if ((c0 & 0xf0) == 0xe0) {
+    if ((c0 & 0xF0) == 0xE0) {
         // 1110xxxx -> 3 bytes
-        return char32_t(((c0 & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f));
+        return char32_t(((c0 & 0x0F) << 12) | ((utf8[1] & 0x3F) << 6) | (utf8[2] & 0x3F));
     }
     if ((c0 & 0xf8) == 0xf0) {
         // 11110xxx -> 4 bytes
-        return char32_t(((c0 & 0x07) << 18) | ((utf8[1] & 0x3f) << 12) | ((utf8[2] & 0x3f) << 6) | (utf8[3] & 0x3f));
+        return char32_t(((c0 & 0x07) << 18) | ((utf8[1] & 0x3F) << 12) |
+                        ((utf8[2] & 0x3F) << 6) | (utf8[3] & 0x3F));
     }
     log::error("utf8_codepoint: Invalid UTF8 string, encountered code {:02x}", int(c0));
-    return 0;
+    return 0x0000FFFD;
 }
 
 
@@ -354,25 +367,26 @@ std::pair<int, char32_t> utf8_codepoint_and_length(std::string_view utf8)
     char c0 = utf8[0];
     if ((c0 & 0x80) == 0) {
         // 0xxxxxxx -> 1 byte
-        return {1, char32_t(c0 & 0x7f)};
+        return {1, char32_t(c0 & 0x7F)};
     }
     if (utf8.size() == 1)
         return {0, 0};
     if ((c0 & 0xe0) == 0xc0) {
         // 110xxxxx -> 2 bytes
-        return {2, char32_t(((c0 & 0x1f) << 6) | (utf8[1] & 0x3f))};
+        return {2, char32_t(((c0 & 0x1F) << 6) | (utf8[1] & 0x3F))};
     }
     if (utf8.size() == 2)
         return {0, 0};
     if ((c0 & 0xf0) == 0xe0) {
         // 1110xxxx -> 3 bytes
-        return {3, char32_t(((c0 & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f))};
+        return {3, char32_t(((c0 & 0x0F) << 12) | ((utf8[1] & 0x3F) << 6) | (utf8[2] & 0x3F))};
     }
     if (utf8.size() == 3)
         return {0, 0};
     if ((c0 & 0xf8) == 0xf0) {
         // 11110xxx -> 4 bytes
-        return {4, char32_t(((c0 & 0x07) << 18) | ((utf8[1] & 0x3f) << 12) | ((utf8[2] & 0x3f) << 6) | (utf8[3] & 0x3f))};
+        return {4, char32_t(((c0 & 0x07) << 18) | ((utf8[1] & 0x3F) << 12) |
+                            ((utf8[2] & 0x3F) << 6) | (utf8[3] & 0x3F))};
     }
     return {0, -1};
 }

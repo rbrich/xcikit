@@ -1,7 +1,7 @@
 // string.h created on 2018-03-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_STRING_H
@@ -147,7 +147,8 @@ std::string to_utf8(std::u32string_view wstr);
 std::string to_utf8(std::wstring_view wstr);
 #endif
 
-// Convert single UTF32 char to UTF8 string. Can't fail.
+// Convert single UTF32 char to UTF8 string.
+// Logs error and returns a replacement character when the codepoint is out of Unicode range.
 std::string to_utf8(char32_t codepoint);
 
 int utf8_char_length(char first);

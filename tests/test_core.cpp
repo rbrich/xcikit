@@ -1,4 +1,8 @@
-// test_core.cpp created on 2018-03-30, part of XCI toolkit
+// test_core.cpp created on 2018-03-30 as part of xcikit project
+// https://github.com/rbrich/xcikit
+//
+// Copyright 2018–2024 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -59,7 +63,10 @@ TEST_CASE( "to_utf32", "[string]" )
 
 TEST_CASE( "to_utf8", "[string]" )
 {
-    CHECK(to_utf8(0x1F99E) == "🦞");
+    CHECK(to_utf8(0x00026) == "&");  // 0x00000000 - 0x0000007F
+    CHECK(to_utf8(0x000C6) == "Æ");  // 0x00000080 - 0x000007FF
+    CHECK(to_utf8(0x00B6F) == "୯");  // 0x00000800 - 0x0000FFFF
+    CHECK(to_utf8(0x1F99E) == "🦞");  // 0x00010000 - 0x001FFFFF
 }
 
 
