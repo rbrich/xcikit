@@ -135,8 +135,9 @@ std::string to_lower(std::string_view str);
 // Case-insensitive string comparison
 bool ci_equal(std::string_view s1, std::string_view s2);
 
-// Convert UTF8 string to UTF32, i.e. extract Unicode code points.
-// In case of invalid source string, logs error and returns empty string.
+/// Convert UTF-8 string to UTF-32, i.e. extract Unicode code points.
+/// Invalid UTF-8 in source string is signaled by U+FFFD in the result.
+/// Truncated UTF-8 is signaled by appending U+FFFD at the end of the result.
 std::u32string to_utf32(std::string_view utf8);
 
 // Convert UTF16/32 string to UTF8

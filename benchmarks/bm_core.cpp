@@ -33,6 +33,18 @@ static void bm_codepoint_to_utf8(benchmark::State& state) {
 BENCHMARK(bm_codepoint_to_utf8)->Range(8, 8<<10);
 
 
+static void bm_utf8_to_utf32(benchmark::State& state) {
+    std::string input = "Červeňoučký 🦞";
+    for (auto _ : state) {
+        for (int i = 0; i < state.range(0); ++i) {
+            auto res = to_utf32(input);
+            benchmark::DoNotOptimize(res);
+        }
+    }
+}
+BENCHMARK(bm_utf8_to_utf32)->Range(8, 8<<10);
+
+
 static void bm_string_pool_dup(benchmark::State& state)
 {
     for (auto _ : state) {

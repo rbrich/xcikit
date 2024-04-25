@@ -223,15 +223,27 @@ bool ci_equal(std::string_view s1, std::string_view s2)
 
 std::u32string to_utf32(string_view utf8)
 {
-    XCI_IGNORE_DEPRECATED(
-    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
-    )
-    try {
-        return convert_utf32.from_bytes(utf8.data(), utf8.data() + utf8.size());
-    } catch (const std::range_error& e) {
-        log::error("to_utf32: Invalid UTF8 string: {} ({})", utf8, e.what());
-        return {};
+    std::u32string res;
+    res.reserve(utf8.size());
+    unsigned pos = 0;
+    while (pos < utf8.size()) {
+        auto [len, c32] = utf8_codepoint_and_length(utf8.substr(pos));
+        if (len != 0) {
+            res.push_back(c32);
+            pos += len;
+        } else {
+            if (c32 == 0) {
+                // Truncated input
+                res.push_back(0x0000FFFD);
+                break;
+            }
+            // Invalid UTF-8 sequence - skip 1 byte and try again
+            res.push_back(0x0000FFFD);
+            ++pos;
+        }
     }
+    res.shrink_to_fit();
+    return res;
 }
 
 
@@ -362,31 +374,41 @@ char32_t utf8_codepoint(const char* utf8)
 
 std::pair<int, char32_t> utf8_codepoint_and_length(std::string_view utf8)
 {
-    if (utf8.empty())
+    const uint32_t size = utf8.size();
+    if (size == 0)
         return {0, 0};
-    char c0 = utf8[0];
+    const char c0 = utf8[0];
     if ((c0 & 0x80) == 0) {
         // 0xxxxxxx -> 1 byte
         return {1, char32_t(c0 & 0x7F)};
     }
-    if (utf8.size() == 1)
+    if (size == 1)
         return {0, 0};
+    const char c1 = utf8[1];
+    if ((c1 & 0xC0) != 0x80)
+        return {0, -1};
     if ((c0 & 0xe0) == 0xc0) {
         // 110xxxxx -> 2 bytes
-        return {2, char32_t(((c0 & 0x1F) << 6) | (utf8[1] & 0x3F))};
+        return {2, char32_t(((c0 & 0x1F) << 6) | (c1 & 0x3F))};
     }
-    if (utf8.size() == 2)
+    if (size == 2)
         return {0, 0};
+    const char c2 = utf8[2];
+    if ((c2 & 0xC0) != 0x80)
+        return {0, -1};
     if ((c0 & 0xf0) == 0xe0) {
         // 1110xxxx -> 3 bytes
-        return {3, char32_t(((c0 & 0x0F) << 12) | ((utf8[1] & 0x3F) << 6) | (utf8[2] & 0x3F))};
+        return {3, char32_t(((c0 & 0x0F) << 12) | ((c1 & 0x3F) << 6) | (c2 & 0x3F))};
     }
-    if (utf8.size() == 3)
+    if (size == 3)
         return {0, 0};
+    const char c3 = utf8[3];
+    if ((c3 & 0xC0) != 0x80)
+        return {0, -1};
     if ((c0 & 0xf8) == 0xf0) {
         // 11110xxx -> 4 bytes
-        return {4, char32_t(((c0 & 0x07) << 18) | ((utf8[1] & 0x3F) << 12) |
-                            ((utf8[2] & 0x3F) << 6) | (utf8[3] & 0x3F))};
+        return {4, char32_t(((c0 & 0x07) << 18) | ((c1 & 0x3F) << 12) |
+                            ((c2 & 0x3F) << 6) | (c3 & 0x3F))};
     }
     return {0, -1};
 }
