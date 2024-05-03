@@ -67,6 +67,7 @@ TEST_CASE( "to_utf8", "[string]" )
     CHECK(to_utf8(0x000C6) == "Æ");  // 0x00000080 - 0x000007FF
     CHECK(to_utf8(0x00B6F) == "୯");  // 0x00000800 - 0x0000FFFF
     CHECK(to_utf8(0x1F99E) == "🦞");  // 0x00010000 - 0x001FFFFF
+    CHECK(to_utf8(U"ÆĳǌifѪ🦞") == "ÆĳǌifѪ🦞");
 }
 
 

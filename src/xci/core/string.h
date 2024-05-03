@@ -141,11 +141,12 @@ bool ci_equal(std::string_view s1, std::string_view s2);
 std::u32string to_utf32(std::string_view utf8);
 
 // Convert UTF16/32 string to UTF8
-std::string to_utf8(std::u16string_view wstr);
+std::string to_utf8(std::u16string_view u32str);
 std::string to_utf8(std::u32string_view wstr);
 
 #ifdef _WIN32
-std::string to_utf8(std::wstring_view wstr);
+inline std::string to_utf8(std::wstring_view wstr)
+    { return to_utf8({(const char16_t*)wstr.data(), wstr.size()}); }
 #endif
 
 // Convert single UTF32 char to UTF8 string.

@@ -247,26 +247,30 @@ std::u32string to_utf32(string_view utf8)
 }
 
 
-template <class Elem>
-std::string _to_utf8(std::basic_string_view<Elem> wstr)
+std::string to_utf8(std::u16string_view wstr)
 {
     XCI_IGNORE_DEPRECATED(
-    std::wstring_convert<std::codecvt_utf8<Elem>, Elem> convert;
+            std::wstring_convert<std::codecvt_utf8<char16_t>, char16_t> convert;
     )
     try {
         return convert.to_bytes(wstr.data(), wstr.data() + wstr.size());
     } catch (const std::range_error& e) {
-        log::error("to_utf8: Invalid UTF16/32 string ({})", e.what());
+        log::error("to_utf8: Invalid UTF-16 string ({})", e.what());
         return {};
     }
 }
 
-std::string to_utf8(std::u16string_view wstr) { return _to_utf8(wstr); }
-std::string to_utf8(std::u32string_view wstr) { return _to_utf8(wstr); }
 
-#ifdef _WIN32
-std::string to_utf8(std::wstring_view wstr) { return _to_utf8(wstr); }
-#endif
+std::string to_utf8(std::u32string_view u32str)
+{
+    std::string res;
+    res.reserve(u32str.size());
+    for (char32_t c : u32str) {
+        res += to_utf8(c);
+    }
+    return res;
+}
+
 
 std::string to_utf8(char32_t codepoint)
 {
