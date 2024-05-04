@@ -14,9 +14,12 @@
 #include <fmt/core.h>
 #include <widechar_width/widechar_width.h>
 
+#ifdef _WIN32
+#include <xci/compat/windows.h>  // stringapiset.h / WideCharToMultiByte
+#endif
+
 #include <cctype>
 #include <locale>
-#include <codecvt>
 #include <cassert>
 
 namespace xci::core {
@@ -247,20 +250,6 @@ std::u32string to_utf32(string_view utf8)
 }
 
 
-std::string to_utf8(std::u16string_view wstr)
-{
-    XCI_IGNORE_DEPRECATED(
-            std::wstring_convert<std::codecvt_utf8<char16_t>, char16_t> convert;
-    )
-    try {
-        return convert.to_bytes(wstr.data(), wstr.data() + wstr.size());
-    } catch (const std::range_error& e) {
-        log::error("to_utf8: Invalid UTF-16 string ({})", e.what());
-        return {};
-    }
-}
-
-
 std::string to_utf8(std::u32string_view u32str)
 {
     std::string res;
@@ -270,6 +259,24 @@ std::string to_utf8(std::u32string_view u32str)
     }
     return res;
 }
+
+
+#ifdef _WIN32
+std::string to_utf8(std::wstring_view wstr)
+{
+    std::string out;
+    out.resize(wstr.size() * 4);
+    int r = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), wstr.size(),
+        out.data(), out.size(), nullptr, nullptr);
+    if (r == 0) {
+        log::error("to_utf8: UTF-16 conversion failed: {m:l}");
+        return {};
+    }
+    out.resize(r);
+    out.shrink_to_fit();
+    return out;
+}
+#endif
 
 
 std::string to_utf8(char32_t codepoint)

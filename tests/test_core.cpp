@@ -68,6 +68,9 @@ TEST_CASE( "to_utf8", "[string]" )
     CHECK(to_utf8(0x00B6F) == "୯");  // 0x00000800 - 0x0000FFFF
     CHECK(to_utf8(0x1F99E) == "🦞");  // 0x00010000 - 0x001FFFFF
     CHECK(to_utf8(U"ÆĳǌifѪ🦞") == "ÆĳǌifѪ🦞");
+#ifdef _WIN32
+    CHECK(to_utf8(L"ÆĳǌifѪ🦞") == "ÆĳǌifѪ🦞");
+#endif
 }
 
 

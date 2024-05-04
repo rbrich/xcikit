@@ -140,13 +140,12 @@ bool ci_equal(std::string_view s1, std::string_view s2);
 /// Truncated UTF-8 is signaled by appending U+FFFD at the end of the result.
 std::u32string to_utf32(std::string_view utf8);
 
-// Convert UTF16/32 string to UTF8
-std::string to_utf8(std::u16string_view u32str);
-std::string to_utf8(std::u32string_view wstr);
+/// Convert UTF-32 string to UTF-8
+/// Invalid characters in source string are replaced by U+FFFD in the result.
+std::string to_utf8(std::u32string_view u32str);
 
 #ifdef _WIN32
-inline std::string to_utf8(std::wstring_view wstr)
-    { return to_utf8({(const char16_t*)wstr.data(), wstr.size()}); }
+std::string to_utf8(std::wstring_view wstr);
 #endif
 
 // Convert single UTF32 char to UTF8 string.
