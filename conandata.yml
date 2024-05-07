@@ -104,7 +104,7 @@ requirements:
       - data
   catch2:
     cmake: "Catch2/3"
-    conan: "catch2/3.5.4"
+    conan: "catch2/3.6.0"
     upstream: "github.com catchorg/Catch2 v3.5.2"
     cmake_defs: CATCH_INSTALL_DOCS=OFF CMAKE_CXX_STANDARD=20
     prereq:
