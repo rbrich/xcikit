@@ -21,8 +21,7 @@ npm install
 
 Then run the build:
 ```bash
-export CONAN_DEFAULT_PROFILE=emscripten
-npm run build
+CONAN_DEFAULT_PROFILE=emscripten npm run build
 ```
 
 This will build the Fire script tool with Emscripten and then run Webpack on `main.js`.
