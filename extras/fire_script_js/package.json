@@ -11,7 +11,7 @@
   "scripts": {
     "clean": "rm -rf build",
     "distclean": "rm -rf dist",
-    "build-fire": "../../build.sh script tools -DBUILD_DATI_TOOL=OFF -DBUILD_FF_TOOL=OFF -DBUILD_TC_TOOL=OFF --emscripten --minsize -DXCI_INSTALL_DEVEL=OFF --build-dir $PWD/build --install-dir $PWD/dist && mv dist/bin dist/v$(cat $PWD/../../VERSION)",
+    "build-fire": "../../build.sh script tools -DBUILD_DATI_TOOL=OFF -DBUILD_FF_TOOL=OFF -DBUILD_TC_TOOL=OFF -DBUILD_DAR_TOOL=OFF -DXCI_SCENE=OFF --emscripten --minsize -DXCI_INSTALL_DEVEL=OFF --build-dir $PWD/build --install-dir $PWD/dist && mv dist/bin dist/v$(cat $PWD/../../VERSION)",
     "copy-to-dist": "cp node_modules/xterm/css/xterm.css dist/v$(cat ../../VERSION) && cp index.html dist/v$(cat ../../VERSION)",
     "gzip-dist": "gzip -k9 dist/v$(cat ../../VERSION)/*",
     "webpack-devel": "webpack ./main.js -o dist/v$(cat ../../VERSION) --output-filename=bundle.js --mode=development",

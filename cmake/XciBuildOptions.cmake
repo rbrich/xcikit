@@ -52,10 +52,16 @@ if (USE_LD)
 endif()
 
 if (ENABLE_LTO)
-    # check for LTO (fail when unavailable) and enable it globally
-    include(CheckIPOSupported)
-    check_ipo_supported()
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    if (EMSCRIPTEN)
+        # Emscripten supports LTO. The check may fail though, so skip it.
+        add_compile_options(-flto)
+        add_link_options(-flto)
+    else()
+        # check for LTO (fail when unavailable) and enable it globally
+        include(CheckIPOSupported)
+        check_ipo_supported()
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    endif()
     # additional whole program optimizations only for programs
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fwhole-program-vtables")
