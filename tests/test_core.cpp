@@ -58,6 +58,12 @@ TEST_CASE( "utf8_length", "[string]" )
 TEST_CASE( "to_utf32", "[string]" )
 {
     CHECK(to_utf32("Červeňoučký 🦞") == U"Červeňoučký 🦞");
+
+    // Invalid UTF-8 to UTF-32 and back (PEP 383)
+    char whole_8bit[256];
+    for (int c = 0; c != 256; ++c)
+        whole_8bit[c] = char(c);
+    CHECK(to_utf8(to_utf32(whole_8bit)) == whole_8bit);
 }
 
 
@@ -68,6 +74,9 @@ TEST_CASE( "to_utf8", "[string]" )
     CHECK(to_utf8(0x00B6F) == "୯");  // 0x00000800 - 0x0000FFFF
     CHECK(to_utf8(0x1F99E) == "🦞");  // 0x00010000 - 0x001FFFFF
     CHECK(to_utf8(U"ÆĳǌifѪ🦞") == "ÆĳǌifѪ🦞");
+    CHECK(to_utf8(0x0000DC80) == "\x80");  // PEP 383
+    CHECK(to_utf8(0x0000DCFF) == "\xFF");  // PEP 383
+    CHECK(to_utf8(0xFFFFFFFF) == "�");
 #ifdef _WIN32
     CHECK(to_utf8(L"ÆĳǌifѪ🦞") == "ÆĳǌifѪ🦞");
 #endif

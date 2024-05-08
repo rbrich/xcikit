@@ -235,13 +235,8 @@ std::u32string to_utf32(string_view utf8)
             res.push_back(c32);
             pos += len;
         } else {
-            if (c32 == 0) {
-                // Truncated input
-                res.push_back(0x0000FFFD);
-                break;
-            }
-            // Invalid UTF-8 sequence - skip 1 byte and try again
-            res.push_back(0x0000FFFD);
+            // Invalid UTF-8 sequence - surrogate encode, skip 1 byte and try again
+            res.push_back(0x0000DC00 + utf8.front());
             ++pos;
         }
     }
@@ -286,6 +281,10 @@ std::string to_utf8(char32_t codepoint)
     }
     if (codepoint < 0x000007FF) {
         return {char(0xC0 | (codepoint >> 6)), char(0x80 | (codepoint & 0x3F))};
+    }
+    if (codepoint >= 0x0000DC80 && codepoint <= 0x0000DCFF) {
+        // Surrogate codes U+DC80..U+DCFF (PEP 383)
+        return {char(codepoint - 0x0000DC00)};
     }
     if (codepoint < 0x0000FFFF) {
         return {char(0xE0 | (codepoint >> 12)), char(0x80 | ((codepoint >> 6) & 0x3F)),

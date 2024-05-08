@@ -136,20 +136,23 @@ std::string to_lower(std::string_view str);
 bool ci_equal(std::string_view s1, std::string_view s2);
 
 /// Convert UTF-8 string to UTF-32, i.e. extract Unicode code points.
-/// Invalid UTF-8 in source string is signaled by U+FFFD in the result.
-/// Truncated UTF-8 is signaled by appending U+FFFD at the end of the result.
+/// Invalid bytes in source string are encoded as surrogate codes U+DC80..U+DCFF
+/// (see PEP 383).
 std::u32string to_utf32(std::string_view utf8);
 
 /// Convert UTF-32 string to UTF-8
 /// Invalid characters in source string are replaced by U+FFFD in the result.
+/// Surrogate codes U+DC80..U+DCFF (PEP 383) are decoded back to invalid UTF-8 bytes.
 std::string to_utf8(std::u32string_view u32str);
 
 #ifdef _WIN32
 std::string to_utf8(std::wstring_view wstr);
 #endif
 
-// Convert single UTF32 char to UTF8 string.
-// Logs error and returns a replacement character when the codepoint is out of Unicode range.
+/// Convert single UTF-32 char to UTF-8 string.
+/// Logs error and returns a replacement character U+FFFD
+/// when the codepoint is out of Unicode range.
+/// Decodes surrogate codes U+DC80..U+DCFF (PEP 383) back to bytes 128..255.
 std::string to_utf8(char32_t codepoint);
 
 int utf8_char_length(char first);
