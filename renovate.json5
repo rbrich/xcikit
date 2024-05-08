@@ -42,7 +42,7 @@
         },
         {  // Renovate keeps offering downgrade for this package
             "matchManagers": ["regex"],
-            "matchPackageNames": ["spirv-cross"],
+            "matchDepNames": ["spirv-cross"],
             "enabled": false
         }
     ],
