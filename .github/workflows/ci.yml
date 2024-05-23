@@ -74,7 +74,7 @@ jobs:
           cxx: g++
           libcxx: libstdc++11
           build_args: "--minsize --unity"
-        - os: macos-11
+        - os: macos-12
           name: "Clang 15 / Release"
           cc: clang
           cc_ver: 15
@@ -82,7 +82,7 @@ jobs:
           clang: llvm@15
           os_target: "11.0"
           build_args: ""
-        - os: macos-11
+        - os: macos-12
           name: "Xcode 13.2 / Release"
           cc: apple-clang
           cc_ver: 13
