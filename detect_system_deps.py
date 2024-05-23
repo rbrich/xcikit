@@ -114,7 +114,9 @@ def detect_deps(reqs, built_deps):
         debug(p.stderr)
         if p.returncode != 0:
             print(f'Failed: {p.returncode}', file=sys.stderr)
-            return
+            print(p.stdout)
+            print(p.stderr)
+            sys.exit(1)
         found = set()
         for line in p.stderr.splitlines():
             if line.startswith('FOUND '):
