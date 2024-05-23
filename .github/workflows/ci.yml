@@ -61,6 +61,22 @@ jobs:
           apt: libc++-15-dev libc++abi-15-dev libc++-14-dev- libc++1-14- libc++abi-14-dev- libc++abi1-14- libunwind-14- libunwind-14-dev-
           build_args: ""
         - os: ubuntu-24.04
+          name: "Clang 17 / Release"
+          cc: clang
+          cc_ver: 17
+          cxx: clang++
+          libcxx: libc++
+          apt: libc++-17-dev libc++abi-17-dev libc++-18-dev- libc++1-18- libc++abi-18-dev- libc++abi1-18- libunwind-18- libunwind-18-dev-
+          build_args: ""
+        - os: ubuntu-24.04
+          name: "Clang 18 / Release"
+          cc: clang
+          cc_ver: 18
+          cxx: clang++
+          libcxx: libc++
+          apt: libc++-18-dev libc++abi-18-dev
+          build_args: ""
+        - os: ubuntu-24.04
           name: "GCC 14 / Debug ASAN"
           cc: gcc
           cc_ver: 14
@@ -152,7 +168,7 @@ jobs:
         if [[ "$RUNNER_OS" == "Linux" ]]; then
             sudo apt-get update
             sudo apt-get install --no-install-recommends -y ninja-build \
-                libsdl2-dev libfreetype6-dev libharfbuzz-dev libhyperscan-dev libbenchmark-dev \
+                libsdl2-dev libfreetype6-dev libharfbuzz-dev libhyperscan-dev \
                 ${{ matrix.apt }}
             export CC=${{ matrix.cc }}-${{ matrix.cc_ver }}
             export CXX=${{ matrix.cxx }}-${{ matrix.cc_ver }}
