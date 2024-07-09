@@ -1,7 +1,7 @@
 // ModuleManager.cpp created on 2022-01-03 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022–2023 Radek Brich
+// Copyright 2022–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "ModuleManager.h"
@@ -9,7 +9,7 @@
 #include "Interpreter.h"
 #include "Builtin.h"
 #include "Error.h"
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 namespace xci::script {
 

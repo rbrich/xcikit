@@ -11,7 +11,7 @@
 #include <xci/core/log.h>
 #include <xci/compat/macros.h>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <widechar_width/widechar_width.h>
 
 #ifdef _WIN32

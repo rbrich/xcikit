@@ -1,7 +1,7 @@
 // MousePosInfo.h created on 2019-12-15 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_DEMO_MOUSEPOSINFO_H
@@ -9,7 +9,7 @@
 
 #include <xci/widgets/Widget.h>
 #include <xci/text/Text.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <fmt/ostream.h>
 
 namespace xci::demo {

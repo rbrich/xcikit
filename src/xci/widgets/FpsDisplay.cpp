@@ -6,7 +6,7 @@
 
 #include "FpsDisplay.h"
 #include <xci/graphics/Renderer.h>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <chrono>
 
 namespace xci::widgets {

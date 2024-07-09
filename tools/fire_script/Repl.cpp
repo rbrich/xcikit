@@ -1,7 +1,7 @@
 // Repl.cpp.c created on 2021-03-16 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2023 Radek Brich
+// Copyright 2021–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Repl.h"
@@ -13,7 +13,6 @@
 #include <xci/script/dump.h>
 #include <xci/core/ResourceUsage.h>
 
-#include <fmt/core.h>
 #include <range/v3/view/reverse.hpp>
 
 #include <iostream>

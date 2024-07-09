@@ -25,7 +25,7 @@ requirements:
   fmt:
     cmake: "fmt/10.0.0"
     conan: "fmt/11.0.1"
-    upstream: "github.com fmtlib/fmt 10.2.1"
+    upstream: "github.com fmtlib/fmt 11.0.1"
     cmake_defs: FMT_TEST=OFF FMT_DOC=OFF FMT_SYSTEM_HEADERS=ON
     public: True
   range_v3:
