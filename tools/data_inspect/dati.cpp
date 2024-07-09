@@ -1,7 +1,7 @@
 // data_inspect.cpp created on 2020-08-15 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2023 Radek Brich
+// Copyright 2020–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// Data Inspector (dati) command line tool
@@ -54,33 +54,33 @@ static void print_data(TermCtl& term, uint8_t type, const std::byte* data, size_
 {
     const auto expected_size = BinaryBase::size_by_type(type);
     if (expected_size != size_t(-1) && size != expected_size) {
-        term.print("{fg:red}bad size {}{t:normal}", size);
+        term.print("<fg:red>bad size {}<t:normal>", size);
         return;
     }
 
     switch (type) {
-        case BinaryBase::Null:      term.print("{fg:yellow}null{t:normal}"); return;
-        case BinaryBase::BoolFalse: term.print("{fg:yellow}false{t:normal}"); return;
-        case BinaryBase::BoolTrue:  term.print("{fg:yellow}true{t:normal}"); return;
-        case BinaryBase::Fixed8:    term.print("{fg:magenta}{}{t:normal}", unsigned(*data)); return;
-        case BinaryBase::Fixed16:   term.print("{fg:magenta}{}{t:normal}", bit_copy<uint16_t>(data)); return;
-        case BinaryBase::Fixed32:   term.print("{fg:magenta}{}{t:normal}", bit_copy<uint32_t>(data)); return;
-        case BinaryBase::Fixed64:   term.print("{fg:magenta}{}{t:normal}", bit_copy<uint64_t>(data)); return;
-        case BinaryBase::Fixed128:  term.print("{fg:magenta}{}{t:normal}", uint128_to_string(bit_copy<uint128>(data))); return;
-        case BinaryBase::Float32:   term.print("{fg:magenta}{}{t:normal}", bit_copy<float>(data)); return;
-        case BinaryBase::Float64:   term.print("{fg:magenta}{}{t:normal}", bit_copy<double>(data)); return;
-        case BinaryBase::VarInt:    term.print("{fg:yellow}varint{t:normal}"); return;
-        case BinaryBase::Array:     term.print("{fg:yellow}array{t:normal}"); return;
+        case BinaryBase::Null:      term.print("<fg:yellow>null<t:normal>"); return;
+        case BinaryBase::BoolFalse: term.print("<fg:yellow>false<t:normal>"); return;
+        case BinaryBase::BoolTrue:  term.print("<fg:yellow>true<t:normal>"); return;
+        case BinaryBase::Fixed8:    term.print("<fg:magenta>{}<t:normal>", unsigned(*data)); return;
+        case BinaryBase::Fixed16:   term.print("<fg:magenta>{}<t:normal>", bit_copy<uint16_t>(data)); return;
+        case BinaryBase::Fixed32:   term.print("<fg:magenta>{}<t:normal>", bit_copy<uint32_t>(data)); return;
+        case BinaryBase::Fixed64:   term.print("<fg:magenta>{}<t:normal>", bit_copy<uint64_t>(data)); return;
+        case BinaryBase::Fixed128:  term.print("<fg:magenta>{}<t:normal>", uint128_to_string(bit_copy<uint128>(data))); return;
+        case BinaryBase::Float32:   term.print("<fg:magenta>{}<t:normal>", bit_copy<float>(data)); return;
+        case BinaryBase::Float64:   term.print("<fg:magenta>{}<t:normal>", bit_copy<double>(data)); return;
+        case BinaryBase::VarInt:    term.print("<fg:yellow>varint<t:normal>"); return;
+        case BinaryBase::Array:     term.print("<fg:yellow>array<t:normal>"); return;
         case BinaryBase::String:
-            term.print("{fg:green}\"{}\"{t:normal}",
+            term.print("<fg:green>\"{}\"<t:normal>",
                     escape(std::string_view((const char*) data, size)));
             return;
-        case BinaryBase::Binary:    term.print("{fg:yellow}(size {}){t:normal}", size); return;
+        case BinaryBase::Binary:    term.print("<fg:yellow>(size {})<t:normal>", size); return;
         case BinaryBase::Master:
-            term.print("{fg:yellow}(size {}){t:normal} {t:bold}{{{t:normal}", size); return;
-        case BinaryBase::Control:   term.print("{fg:yellow}control{t:normal}"); return;
+            term.print("<fg:yellow>(size {})<t:normal> <t:bold>{{<t:normal>", size); return;
+        case BinaryBase::Control:   term.print("<fg:yellow>control<t:normal>"); return;
     }
-    term.print("{fg:red}unknown{t:normal}");
+    term.print("<fg:red>unknown<t:normal>");
 }
 
 
@@ -110,7 +110,7 @@ int main(int argc, const char* argv[])
     } (argv);
 
     if (files.empty()) {
-        term.print("{t:bold}{fg:yellow}No input files.{t:normal}\n");
+        term.print("<t:bold><fg:yellow>No input files.<t:normal>\n");
     }
 
     Schema schema;
@@ -121,7 +121,7 @@ int main(int argc, const char* argv[])
             reader(schema);
             reader.finish_and_check();
         } catch (const ArchiveError& e) {
-            term.print("{t:bold}{fg:red}Error reading schema: {}{t:normal}\n", e.what());
+            term.print("<t:bold><fg:red>Error reading schema: {}<t:normal>\n", e.what());
         }
     } else if (files.size() == 1 && std::string(files.back()).ends_with(".schema")) {
         // get Schema of .schema file
@@ -129,7 +129,7 @@ int main(int argc, const char* argv[])
     }
 
     for (const auto& filename : files) {
-        term.print("{fg:yellow}{t:bold}{}{t:normal}\n", filename);
+        term.print("<fg:yellow><t:bold>{}<t:normal>\n", filename);
         std::ifstream f(filename, std::ios::binary);
         try {
             BinaryReader reader(f);
@@ -182,12 +182,12 @@ int main(int argc, const char* argv[])
                                     if (opt_int)
                                         last_int_values[schema_member->name] = *opt_int;
                                 }
-                                term.print("{}{t:bold}{fg:cyan}{} ({}: {}){t:normal}: {} = ",
+                                term.print("{}<t:bold><fg:cyan>{} ({}: {})<t:normal>: {} = ",
                                            std::string(indent, ' '),
                                            int(it.key), schema_member->name, schema_member->type,
                                            type_to_cstr(it.type));
                             } else {
-                                term.print("{}{t:bold}{fg:cyan}{}{t:normal}: {} = ",
+                                term.print("{}<t:bold><fg:cyan>{}<t:normal>: {} = ",
                                            std::string(indent, ' '),
                                            int(it.key), type_to_cstr(it.type));
                             }
@@ -198,9 +198,9 @@ int main(int argc, const char* argv[])
                                 uint32_t stored_crc = 0;
                                 std::memcpy(&stored_crc, it.data.get(), it.size);
                                 if (reader.crc() == stored_crc)
-                                    term.print(" {t:bold}{fg:green}(CRC32: OK){t:normal}");
+                                    term.print(" <t:bold><fg:green>(CRC32: OK)<t:normal>");
                                 else
-                                    term.print(" {t:bold}{fg:red}(CRC32: expected {}){t:normal}",
+                                    term.print(" <t:bold><fg:red>(CRC32: expected {})<t:normal>",
                                             reader.crc());
                             }
                         }
@@ -214,13 +214,13 @@ int main(int argc, const char* argv[])
                     case What::LeaveGroup:
                         struct_stack.pop_back();
                         last_int_values.clear();
-                        term.print("{t:bold}{}}}{t:normal}\n", std::string(indent - 4, ' '));
+                        term.print("<t:bold>{}}}<t:normal>\n", std::string(indent - 4, ' '));
                         break;
                     case What::EnterMetadata:
-                        term.print("{t:bold}{}Metadata:{t:normal}\n", std::string(indent, ' '));
+                        term.print("<t:bold>{}Metadata:<t:normal>\n", std::string(indent, ' '));
                         break;
                     case What::LeaveMetadata:
-                        term.print("{t:bold}{}Data:{t:normal}\n", std::string(indent, ' '));
+                        term.print("<t:bold>{}Data:<t:normal>\n", std::string(indent, ' '));
                         break;
                     case What::EndOfFile:
                         eof = true;
@@ -228,7 +228,7 @@ int main(int argc, const char* argv[])
                 }
             }
         } catch (const ArchiveError& e) {
-            term.print("{t:bold}{fg:red}{}{t:normal}\n", e.what());
+            term.print("<t:bold><fg:red>{}<t:normal>\n", e.what());
         }
     }
 

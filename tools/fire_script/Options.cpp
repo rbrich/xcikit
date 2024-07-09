@@ -58,11 +58,11 @@ static Flags pass_name_to_flag(std::string_view name)
     }) | to< std::vector<PassItem> >();
     auto& t = TermCtl::stderr_instance();
     if (filtered.empty()) {
-        t.print("{t:bold}Note:{t:normal} {} did not match any pass name\n", name);
+        t.print("<t:bold>Note:<t:normal> {} did not match any pass name\n", name);
         return Flags(~0);
     }
     if (filtered.size() > 1) {
-        t.print("{t:bold}Note:{t:normal} {} matched multiple pass names: {}\n",
+        t.print("<t:bold>Note:<t:normal> {} matched multiple pass names: {}\n",
                    name, fmt::join(filtered | keys, " "));
         return Flags(~0);
     }

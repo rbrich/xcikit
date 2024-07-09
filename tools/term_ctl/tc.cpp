@@ -1,7 +1,7 @@
 // tc.cpp created on 2022-10-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022 Radek Brich
+// Copyright 2022–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// Term Ctl (tc) command line tool
@@ -33,7 +33,7 @@ int main(int argc, const char* argv[])
     TermCtl term(STDOUT_FILENO, isatty_always ? TermCtl::IsTty::Always : TermCtl::IsTty::Auto);
 
     if (show_version) {
-        term.print("{t:bold}tc{t:normal} {}\n", c_version);
+        term.print("<t:bold>tc<t:normal> {}\n", c_version);
         return 0;
     }
 

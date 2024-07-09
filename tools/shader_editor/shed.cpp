@@ -1,7 +1,7 @@
 // shed.cpp created on 2023-02-21 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// Shader Editor (shed) tool
@@ -81,7 +81,7 @@ int main(int argc, const char* argv[])
     Logger::init(log_debug ? Logger::Level::Trace : Logger::Level::Warning);
 
     if (show_version) {
-        term.print("{t:bold}shed{t:normal} {fg:*white}{}{t:normal}\n", c_version);
+        term.print("<t:bold>shed<t:normal> <fg:*white>{}<t:normal>\n", c_version);
         return 0;
     }
 

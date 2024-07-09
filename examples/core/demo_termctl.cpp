@@ -1,7 +1,7 @@
 // demo_termctl.cpp created on 2018-07-11 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2020 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/core/TermCtl.h>
@@ -27,17 +27,17 @@ int main()
 
     cout << t.move_up().move_right(6).bold().green() << "GREEN" <<t.normal() << endl;
 
-    t.print("{t:bold}{fg:yellow}formatted{t:normal}\n");
-    t.print("{t:bold}bold{t:normal_intensity} "
-            "{t:dim}dim{t:normal_intensity} "
-            "{t:italic}italic{t:no_italic} "
-            "{t:underline}underlined{t:no_underline} "
-            "{t:overline}overlined{t:no_overline} "
-            "{t:cross_out}crossed out{t:no_cross_out} "
-            "{t:frame}framed{t:no_frame} "
-            "{t:blink}blinking{t:no_blink} "
-            "{t:reverse}reversed{t:no_reverse} "
-            "{t:hidden}hidden{t:no_hidden} "
+    t.print("<t:bold><fg:yellow>formatted<t:normal>\n");
+    t.print("<t:bold>bold<t:normal_intensity> "
+            "<t:dim>dim<t:normal_intensity> "
+            "<t:italic>italic<t:no_italic> "
+            "<t:underline>underlined<t:no_underline> "
+            "<t:overline>overlined<t:no_overline> "
+            "<t:cross_out>crossed out<t:no_cross_out> "
+            "<t:frame>framed<t:no_frame> "
+            "<t:blink>blinking<t:no_blink> "
+            "<t:reverse>reversed<t:no_reverse> "
+            "<t:hidden>hidden<t:no_hidden> "
             "\n");
 
     t.tab_set_all({30, 20}).write();

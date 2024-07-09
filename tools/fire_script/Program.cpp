@@ -1,7 +1,7 @@
 // Program.cpp.cc created on 2021-03-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2023 Radek Brich
+// Copyright 2021–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Program.h"
@@ -18,9 +18,9 @@ namespace xci::script::tool {
 using namespace xci::core;
 
 static constexpr const char* intro =
-        "{t:bold}{fg:magenta}🔥 fire script{t:normal} {fg:magenta}v{}{t:normal}\n"
-        "Type {t:bold}{fg:yellow}.h{t:normal} for help, {t:bold}{fg:yellow}.q{t:normal} to quit.\n";
-static constexpr const char* prompt = "{fg:green}_{}>{t:normal} ";
+        "<t:bold><fg:magenta>🔥 fire script<t:normal> <fg:magenta>v{}<t:normal>\n"
+        "Type <t:bold><fg:yellow>.h<t:normal> for help, <t:bold><fg:yellow>.q<t:normal> to quit.\n";
+static constexpr const char* prompt = "<fg:green>_{}><t:normal> ";
 
 
 Program::Program(bool log_debug)
@@ -171,10 +171,10 @@ void Program::evaluate_input(std::string_view input)
             repl_command().eval(input.substr(1));
         } catch (const ScriptError& e) {
             auto& tout = ctx.term_out;
-            tout.print("{fg:red}{}: {t:bold}{}{t:normal}\n", e.code(), e.what());
+            tout.print("<fg:red>{}: <t:bold>{}<t:normal>\n", e.code(), e.what());
             if (!e.detail().empty())
-                tout.print("{fg:magenta}{}{t:normal}\n", e.detail());
-            tout.print("{fg:yellow}Help: .h | .help{t:normal}\n");
+                tout.print("<fg:magenta>{}<t:normal>\n", e.detail());
+            tout.print("<fg:yellow>Help: .h | .help<t:normal>\n");
         }
         return;
     }

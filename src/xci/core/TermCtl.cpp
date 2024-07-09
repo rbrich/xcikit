@@ -1,7 +1,7 @@
 // TermCtl.cpp created on 2018-07-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2020, 2021 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 // References:
@@ -608,21 +608,67 @@ TermCtl& TermCtl::clear_line_to_end() { return TERM_APPEND(clr_eol); }
 TermCtl& TermCtl::soft_reset() { return XCI_TERM_APPEND(seq::send_soft_reset); }
 
 
-std::string TermCtl::FgPlaceholder::seq(Color color) const
+std::string TermCtl::_format(std::string_view fmt)
 {
-    return term_ctl->fg(color).seq();
-}
+    std::string r;
+    r.reserve(fmt.size());
+    auto it = fmt.begin();
+    while (it != fmt.end()) {
+        if (*it == '<') {
+            ++it;
 
+            auto beg = it;
+            while (std::islower(*it))
+                ++it;
+            std::string_view key (beg, it);
+            if (*it != ':') {
+                r.push_back('<');
+                r += key;
+                continue;
+            }
+            ++it;
 
-std::string TermCtl::BgPlaceholder::seq(Color color) const
-{
-    return term_ctl->bg(color).seq();
-}
+            beg = it;
+            while (std::islower(*it) || *it == '_' || *it == '*')
+                ++it;
+            std::string_view value (beg, it);
+            if (*it != '>') {
+                r.push_back('<');
+                r += key;
+                r.push_back(':');
+                r += value;
+                continue;
+            }
+            ++it;
 
-
-std::string TermCtl::ModePlaceholder::seq(Mode mode) const
-{
-    return term_ctl->mode(mode).seq();
+            if (key == "t") {
+                const auto m = _parse_mode(value);
+                if (m > Mode::_Last)
+                    goto rollback;
+                r += mode(m).seq();
+                continue;
+            } else if (key == "fg" || key == "bg") {
+                const auto c = _parse_color(value);
+                if (c > Color::_Last)
+                    goto rollback;
+                if (key == "fg")
+                    r += fg(c).seq();
+                else
+                    r += bg(c).seq();
+                continue;
+            }
+        rollback:
+            r.push_back('<');
+            r += key;
+            r.push_back(':');
+            r += value;
+            r.push_back('>');
+            continue;
+        }
+        r.push_back(*it);
+        ++it;
+    }
+    return r;
 }
 
 

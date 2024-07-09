@@ -1,7 +1,7 @@
 // Highlighter.cpp.cc created on 2021-03-03 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2023 Radek Brich
+// Copyright 2021–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Highlighter.h"
@@ -459,13 +459,13 @@ auto Highlighter::highlight(std::string_view input, unsigned cursor) -> HlResult
     try {
         auto root = tao::pegtl::parse_tree::parse< Main, Node, HighlightSelector, tao::pegtl::nothing, Control >( in );
         if (root->children.size() != 1)
-            return {std::string{input} + m_term.format("\n{fg:*red}{t:bold}highlighter parse error:{t:normal} {fg:*red}no match{t:normal}"), false};
+            return {std::string{input} + m_term.format("\n<fg:*red><t:bold>highlighter parse error:<t:normal> <fg:*red>no match<t:normal>"), false};
         auto last_color = highlight_node(*root->children[0], HighlightColor{}, cursor);
         switch_color(last_color, HighlightColor{});
         return {m_output, m_open_bracket};
     } catch (tao::pegtl::parse_error& e) {
         // The grammar is build in a way that parse error should never happen
-        return {std::string{input} + m_term.format("\n{fg:*red}{t:bold}highlighter parse error:{t:normal} {fg:*red}{}{t:normal}", e.what()), false};
+        return {std::string{input} + m_term.format("\n<fg:*red><t:bold>highlighter parse error:<t:normal> <fg:*red>{}<t:normal>", e.what()), false};
     }
 }
 
