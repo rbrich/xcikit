@@ -254,7 +254,11 @@ jobs:
         cat "$(conan config home)/profiles/default"
 
     - name: deps
-      run: ./build.sh deps $BUILD_ARGS
+      run: |
+        if [[ "$RUNNER_OS" == "macOS" ]]; then
+            ./build_deps.py fmt
+        fi
+        ./build.sh deps $BUILD_ARGS
 
     - name: configure
       run: ./build.sh config $BUILD_ARGS
