@@ -138,7 +138,7 @@ jobs:
         - os: windows-2022
           name: "VS 17 / Release"
           cc: msvc
-          cc_ver: 193
+          cc_ver: 194
           build_args: "-DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
 
     name: ${{ matrix.os }} / ${{ matrix.name }}
