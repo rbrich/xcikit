@@ -12,6 +12,11 @@ project(xcikit
     VERSION "${XCI_VERSION}"
     HOMEPAGE_URL "https://github.com/rbrich/xcikit")
 
+# Disable C++ modules.
+# If not disabled, it breaks build and also CheckCXXSourceCompiles unless
+# the compiler scanning tool is installed (which is optional).
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
 include(GNUInstallDirs)
 
 # Optional libraries (only xci-core is required)

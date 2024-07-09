@@ -45,8 +45,8 @@ requirements:
     public: True
   magic_enum:
     cmake: "magic_enum/0.9.5"
-    conan: "magic_enum/0.9.5"
-    upstream: "github.com Neargye/magic_enum v0.9.5"
+    conan: "magic_enum/0.9.6"
+    upstream: "github.com Neargye/magic_enum v0.9.6"
     cmake_defs: MAGIC_ENUM_OPT_BUILD_EXAMPLES=OFF MAGIC_ENUM_OPT_BUILD_TESTS=OFF
     public: True
     prereq:
@@ -62,7 +62,7 @@ requirements:
     conan: "libzip/1.10.1"
   sdl:
     cmake: "SDL2/2.0.14"
-    conan: "sdl/2.30.3"
+    conan: "sdl/2.30.5"
     prereq:
       - graphics
   vulkan:
@@ -111,6 +111,6 @@ requirements:
       - tests
   benchmark:
     cmake: "benchmark/1.5.0"
-    conan: "benchmark/1.8.3"
+    conan: "benchmark/1.8.4"
     prereq:
       - benchmarks
