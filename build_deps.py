@@ -19,6 +19,7 @@ def parse_args():
                     help="CMake toolchain to use when building packages.")
     ap.add_argument("--force", action='store_true',
                     help="Force rebuild of all deps.")
+    ap.add_argument("name", nargs='*', help="Names of deps to install (default is all deps)")
     return ap.parse_args()
 
 
@@ -47,6 +48,7 @@ def main():
     args = parse_args()
     platform = f"{sys.platform}-{args.profile if args.profile is not None else 'default'}"
     force_rebuild = args.force
+    filter_deps = set(args.name)
 
     deps_dir = script_dir / '.deps'
     deps_platform_dir = deps_dir / f".{platform}"
@@ -54,6 +56,8 @@ def main():
     deps_build_dir = deps_dir / '.build'
 
     for name, upstream, cmake_defs in upstream_requirements():
+        if filter_deps and name not in filter_deps:
+            continue
         repo, project, git_ref = upstream.split(' ')
         url = f"https://{repo}/{project}.git"
         print(f"* {sgr('1;36')}{name}{sgr('0')} ({url})")

@@ -18,7 +18,7 @@
 #include <range/v3/view/enumerate.hpp>
 #include <range/v3/view/take.hpp>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <memory>
 #include <bitset>

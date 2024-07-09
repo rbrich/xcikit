@@ -16,7 +16,8 @@
 #include <xci/core/mixin.h>
 #include <xci/compat/macros.h>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <fmt/chrono.h>
 #include <fmt/ostream.h>
 #include <hs/hs.h>

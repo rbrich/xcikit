@@ -1,7 +1,7 @@
 // demo_dialog.cpp created on 2023-12-03 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -11,7 +11,7 @@
 #include <xci/vfs/Vfs.h>
 #include <xci/config.h>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <cstdlib>
 
 using namespace xci::widgets;

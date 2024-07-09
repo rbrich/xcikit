@@ -1,14 +1,14 @@
 // ArgParser.cpp created on 2019-06-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "ArgParser.h"
 #include "TermCtl.h"
 #include "string.h"
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <iostream>
 #include <utility>
@@ -16,6 +16,7 @@
 #include <cassert>
 #include <algorithm>
 #include <filesystem>
+#include <iterator>
 
 namespace xci::core::argparser {
 

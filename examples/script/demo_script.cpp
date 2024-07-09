@@ -1,7 +1,7 @@
 // demo_script.cpp created on 2020-01-11 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2023 Radek Brich
+// Copyright 2020–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/script/Interpreter.h>
@@ -10,7 +10,7 @@
 #include <xci/core/log.h>
 #include <xci/config.h>
 
-#include <fmt/core.h>
+#include <fmt/base.h>
 
 #include <string_view>
 #include <cassert>
