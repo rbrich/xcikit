@@ -46,7 +46,7 @@ requirements:
   magic_enum:
     cmake: "magic_enum/0.9.5"
     conan: "magic_enum/0.9.6"
-    upstream: "github.com Neargye/magic_enum v0.9.5"
+    upstream: "github.com Neargye/magic_enum v0.9.6"
     cmake_defs: MAGIC_ENUM_OPT_BUILD_EXAMPLES=OFF MAGIC_ENUM_OPT_BUILD_TESTS=OFF
     public: True
     prereq:
