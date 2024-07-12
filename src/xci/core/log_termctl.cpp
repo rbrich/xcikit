@@ -19,18 +19,18 @@ namespace xci::core {
 // 5..9 => multi-line continuation for each log level
 static constexpr size_t c_cont = 5;
 static constexpr const char* c_log_format[] = {
-        "{0:%F %T} <fg:cyan>{1:6x}<t:normal>  <t:bold>TRACE<t:normal>  <fg:blue>{2}<t:normal>\n",
-        "{0:%F %T} <fg:cyan>{1:6x}<t:normal>  <t:bold>DEBUG<t:normal>  <fg:white>{2}<t:normal>\n",
-        "{0:%F %T} <fg:cyan>{1:6x}<t:normal>  <t:bold>INFO <t:normal>  <t:bold><fg:white>{2}<t:normal>\n",
-        "{0:%F %T} <fg:cyan>{1:6x}<t:normal>  <t:bold>WARN <t:normal>  <t:bold><fg:yellow>{2}<t:normal>\n",
-        "{0:%F %T} <fg:cyan>{1:6x}<t:normal>  <t:bold>ERROR<t:normal>  <t:bold><fg:red>{2}<t:normal>\n",
-        "                            <t:bold>...<t:normal>    <fg:blue>{2}<t:normal>\n",
-        "                            <t:bold>...<t:normal>    <fg:white>{2}<t:normal>\n",
-        "                            <t:bold>...<t:normal>    <t:bold><fg:white>{2}<t:normal>\n",
-        "                            <t:bold>...<t:normal>    <t:bold><fg:yellow>{2}<t:normal>\n",
-        "                            <t:bold>...<t:normal>    <t:bold><fg:red>{2}<t:normal>\n",
+        "{0:%F %T} <fg:cyan>{1:6x}<normal>  <bold>TRACE<normal>  <fg:blue>{2}<normal>\n",
+        "{0:%F %T} <fg:cyan>{1:6x}<normal>  <bold>DEBUG<normal>  <fg:white>{2}<normal>\n",
+        "{0:%F %T} <fg:cyan>{1:6x}<normal>  <bold>INFO <normal>  <bold><fg:white>{2}<normal>\n",
+        "{0:%F %T} <fg:cyan>{1:6x}<normal>  <bold>WARN <normal>  <bold><fg:yellow>{2}<normal>\n",
+        "{0:%F %T} <fg:cyan>{1:6x}<normal>  <bold>ERROR<normal>  <bold><fg:red>{2}<normal>\n",
+        "                            <bold>...<normal>    <fg:blue>{2}<normal>\n",
+        "                            <bold>...<normal>    <fg:white>{2}<normal>\n",
+        "                            <bold>...<normal>    <bold><fg:white>{2}<normal>\n",
+        "                            <bold>...<normal>    <bold><fg:yellow>{2}<normal>\n",
+        "                            <bold>...<normal>    <bold><fg:red>{2}<normal>\n",
 };
-static constexpr const char* c_log_intro = "<t:underline>   Date      Time    TID    Level  Message   <t:normal>\n";
+static constexpr const char* c_log_intro = "<underline>   Date      Time    TID    Level  Message   <normal>\n";
 
 
 Logger::Logger(Level level) : m_level(level)

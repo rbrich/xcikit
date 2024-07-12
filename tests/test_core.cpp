@@ -297,7 +297,7 @@ TEST_CASE( "stripped_width", "[TermCtl]" )
     CHECK(TermCtl::stripped_width("test") == 4);
     CHECK(TermCtl::stripped_width("❓") == 2);
     TermCtl t(1, TermCtl::IsTty::Always);
-    CHECK(TermCtl::stripped_width(t.format("<fg:green>test<t:normal>")) == 4);
+    CHECK(TermCtl::stripped_width(t.format("<fg:green>test<normal>")) == 4);
     CHECK(TermCtl::stripped_width("\x1b[32mtest\x1b(B\x1b[m") == 4);
     CHECK(TermCtl::stripped_width("\n") == 1);  // newline is 1 column (special handling in EditLine)
 }

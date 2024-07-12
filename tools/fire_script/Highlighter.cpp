@@ -459,13 +459,13 @@ auto Highlighter::highlight(std::string_view input, unsigned cursor) -> HlResult
     try {
         auto root = tao::pegtl::parse_tree::parse< Main, Node, HighlightSelector, tao::pegtl::nothing, Control >( in );
         if (root->children.size() != 1)
-            return {std::string{input} + m_term.format("\n<fg:*red><t:bold>highlighter parse error:<t:normal> <fg:*red>no match<t:normal>"), false};
+            return {std::string{input} + m_term.format("\n<fg:*red><bold>highlighter parse error:<normal> <fg:*red>no match<normal>"), false};
         auto last_color = highlight_node(*root->children[0], HighlightColor{}, cursor);
         switch_color(last_color, HighlightColor{});
         return {m_output, m_open_bracket};
     } catch (tao::pegtl::parse_error& e) {
         // The grammar is build in a way that parse error should never happen
-        return {std::string{input} + m_term.format("\n<fg:*red><t:bold>highlighter parse error:<t:normal> <fg:*red>{}<t:normal>", e.what()), false};
+        return {std::string{input} + m_term.format("\n<fg:*red><bold>highlighter parse error:<normal> <fg:*red>{}<normal>", e.what()), false};
     }
 }
 

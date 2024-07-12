@@ -81,7 +81,7 @@ int main(int argc, const char* argv[])
     Logger::init(log_debug ? Logger::Level::Trace : Logger::Level::Warning);
 
     if (show_version) {
-        term.print("<t:bold>shed<t:normal> <fg:*white>{}<t:normal>\n", c_version);
+        term.print("<bold>shed<normal> <fg:*white>{}<normal>\n", c_version);
         return 0;
     }
 

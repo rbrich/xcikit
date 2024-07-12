@@ -202,10 +202,11 @@ public:
     /// Format string, adding colors via special placeholders:
     /// <fg:COLOR> where COLOR is default | red | *red ... ("*" = bright)
     /// <bg:COLOR> where COLOR is the same as for fg
-    /// <t:MODE> where MODE is bold | underline | normal ...
+    /// <MODE> where MODE is bold | underline | normal ... (shortcuts b | u | n ...)
     template<typename... T>
     std::string format(fmt::format_string<T...> fmt, T&&... args) {
-        return fmt::vformat(_format({fmt.get().begin(), fmt.get().end()}),
+        const auto sv = fmt.get();
+        return fmt::vformat(_format(std::string_view(sv.data(), sv.size())),
                             fmt::make_format_args(args...));
     }
 
@@ -378,7 +379,7 @@ private:
     static constexpr Mode _parse_mode(std::string_view name) {
         Mode r = Mode::Normal;
         for (const char* n : c_mode_names) {
-            if (name == n)
+            if (name == n || (name.size() == 1 && name[0] == n[0]))
                 return r;
             r = static_cast<Mode>(uint8_t(r) + 1);
         }

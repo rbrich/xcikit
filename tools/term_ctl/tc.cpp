@@ -33,7 +33,7 @@ int main(int argc, const char* argv[])
     TermCtl term(STDOUT_FILENO, isatty_always ? TermCtl::IsTty::Always : TermCtl::IsTty::Auto);
 
     if (show_version) {
-        term.print("<t:bold>tc<t:normal> {}\n", c_version);
+        term.print("<bold>tc<normal> {}\n", c_version);
         return 0;
     }
 

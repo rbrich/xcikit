@@ -76,7 +76,7 @@ const Module* ReplCommand::module_by_idx(Index mod_idx) {
         return m_module.get();
 
     if (mod_idx >= m_ctx.input_modules.size()) {
-        t.print("<t:bold><fg:red>Error: module index out of range: {}<t:normal>\n",
+        t.print("<bold><fg:red>Error: module index out of range: {}<normal>\n",
                 mod_idx);
         return nullptr;
     }
@@ -100,7 +100,7 @@ const Module* ReplCommand::module_by_name(std::string_view mod_name) {
     }
 
     TermCtl& t = m_ctx.term_out;
-    t.print("<t:bold><fg:red>Error: module not found: {}<t:normal>\n",
+    t.print("<bold><fg:red>Error: module not found: {}<normal>\n",
             mod_name);
     return nullptr;
 }
@@ -138,7 +138,7 @@ void ReplCommand::dump_function(const Module& mod, Index fun_idx) {
     TermCtl& t = m_ctx.term_out;
 
     if (fun_idx >= mod.num_functions()) {
-        t.print("<t:bold><fg:red>Error: function index out of range: {}<t:normal>\n",
+        t.print("<bold><fg:red>Error: function index out of range: {}<normal>\n",
                 fun_idx);
         return;
     }
@@ -153,14 +153,14 @@ void ReplCommand::dump_function(const Module& mod, Index fun_idx) {
 void ReplCommand::cmd_dump_function() {
     TermCtl& t = m_ctx.term_out;
     if (m_ctx.input_modules.empty()) {
-        t.print("<t:bold><fg:red>Error: no input modules available<t:normal>\n");
+        t.print("<bold><fg:red>Error: no input modules available<normal>\n");
         return;
     }
     size_t mod_idx = m_ctx.input_modules.size() - 1;
     const auto& mod = *m_ctx.input_modules[mod_idx];
 
     if (mod.num_functions() == 0) {
-        t.print("<t:bold><fg:red>Error: no functions available<t:normal>\n");
+        t.print("<bold><fg:red>Error: no functions available<normal>\n");
         return;
     }
 
@@ -171,7 +171,7 @@ void ReplCommand::cmd_dump_function() {
 void ReplCommand::cmd_dump_function(std::string_view fun_name) {
     TermCtl& t = m_ctx.term_out;
     if (m_ctx.input_modules.empty()) {
-        t.print("<t:bold><fg:red>Error: no input modules available<t:normal>\n");
+        t.print("<bold><fg:red>Error: no input modules available<normal>\n");
         return;
     }
     size_t mod_idx = m_ctx.input_modules.size() - 1;
@@ -184,7 +184,7 @@ void ReplCommand::cmd_dump_function(std::string_view fun_name) {
             return;
         }
     }
-    t.print("<t:bold><fg:red>Error: function not found: {}<t:normal>\n",
+    t.print("<bold><fg:red>Error: function not found: {}<normal>\n",
             fun_name);
 }
 
@@ -205,7 +205,7 @@ void ReplCommand::cmd_dump_function(std::string_view fun_name, std::string_view 
             return;
         }
     }
-    t.print("<t:bold><fg:red>Error: function not found: {}<t:normal>\n",
+    t.print("<bold><fg:red>Error: function not found: {}<normal>\n",
             fun_name);
 }
 
@@ -214,7 +214,7 @@ void ReplCommand::cmd_dump_function(Index fun_idx)
 {
     TermCtl& t = m_ctx.term_out;
     if (m_ctx.input_modules.empty()) {
-        t.print("<t:bold><fg:red>Error: no modules available<t:normal>\n");
+        t.print("<bold><fg:red>Error: no modules available<normal>\n");
         return;
     }
     size_t mod_idx = m_ctx.input_modules.size() - 1;
@@ -274,7 +274,7 @@ void ReplCommand::cmd_describe(std::string_view name) {
                 return;
         }
     }
-    t.print("<t:bold><fg:red>Error: symbol not found: {}<t:normal>\n",
+    t.print("<bold><fg:red>Error: symbol not found: {}<normal>\n",
             name);
 }
 

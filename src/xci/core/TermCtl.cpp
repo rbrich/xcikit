@@ -618,9 +618,17 @@ std::string TermCtl::_format(std::string_view fmt)
             ++it;
 
             auto beg = it;
-            while (std::islower(*it))
+            while (std::islower(*it) || *it == '_')
                 ++it;
             std::string_view key (beg, it);
+            if (*it == '>') {
+                const auto m = _parse_mode(key);
+                if (m <= Mode::_Last) {
+                    r += mode(m).seq();
+                    ++it;
+                    continue;
+                }
+            }
             if (*it != ':') {
                 r.push_back('<');
                 r += key;
@@ -641,29 +649,22 @@ std::string TermCtl::_format(std::string_view fmt)
             }
             ++it;
 
-            if (key == "t") {
-                const auto m = _parse_mode(value);
-                if (m > Mode::_Last)
-                    goto rollback;
-                r += mode(m).seq();
-                continue;
-            } else if (key == "fg" || key == "bg") {
+            if (key == "fg" || key == "bg") {
                 const auto c = _parse_color(value);
-                if (c > Color::_Last)
-                    goto rollback;
+                if (c > Color::_Last) {
+                    r.push_back('<');
+                    r += key;
+                    r.push_back(':');
+                    r += value;
+                    r.push_back('>');
+                    continue;
+                }
                 if (key == "fg")
                     r += fg(c).seq();
                 else
                     r += bg(c).seq();
                 continue;
             }
-        rollback:
-            r.push_back('<');
-            r += key;
-            r.push_back(':');
-            r += value;
-            r.push_back('>');
-            continue;
         }
         r.push_back(*it);
         ++it;
