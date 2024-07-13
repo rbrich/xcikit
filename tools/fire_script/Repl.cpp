@@ -150,7 +150,7 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
         machine.call(main_fn, [&](TypedValue&& invoked) {
             if (!invoked.is_void()) {
                 t.sanitize_newline();
-                t.print("<bold><fg:yellow>{}<normal>\n", invoked);
+                t.print("<bold><yellow>{}<normal>\n", invoked);
             }
             invoked.decref();
         });
@@ -163,7 +163,7 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
             // REPL mode
             const auto& module_name = module.name();
             if (!result.is_void()) {
-                t.print("<bold><fg:magenta>{}:{} = <fg:default>{}<normal>\n",
+                t.print("<bold><magenta>{}:{} = <default>{}<normal>\n",
                         module_name, result.type_info(), result);
             }
         } else {
@@ -191,9 +191,9 @@ void Repl::print_error(const ScriptError& e)
 
     if (!e.file().empty())
         t.print("{}: ", e.file());
-    t.print("<fg:red><bold>{}: <fg:*white><normal_intensity>{}<normal>", e.code(), e.what());
+    t.print("<red><bold>{}: <*white><normal_intensity>{}<normal>", e.code(), e.what());
     if (!e.detail().empty())
-        t.print("\n<fg:magenta>{}<normal>", e.detail());
+        t.print("\n<magenta>{}<normal>", e.detail());
     t.write_nl();
 }
 

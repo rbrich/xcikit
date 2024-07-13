@@ -18,9 +18,9 @@ namespace xci::script::tool {
 using namespace xci::core;
 
 static constexpr const char* intro =
-        "<bold><fg:magenta>🔥 fire script<normal> <fg:magenta>v{}<normal>\n"
-        "Type <bold><fg:yellow>.h<normal> for help, <bold><fg:yellow>.q<normal> to quit.\n";
-static constexpr const char* prompt = "<fg:green>_{}><normal> ";
+        "<bold><magenta>🔥 fire script<normal> <magenta>v{}<normal>\n"
+        "Type <bold><yellow>.h<normal> for help, <bold><yellow>.q<normal> to quit.\n";
+static constexpr const char* prompt = "<green>_{}><normal> ";
 
 
 Program::Program(bool log_debug)
@@ -171,10 +171,10 @@ void Program::evaluate_input(std::string_view input)
             repl_command().eval(input.substr(1));
         } catch (const ScriptError& e) {
             auto& tout = ctx.term_out;
-            tout.print("<fg:red>{}: <bold>{}<normal>\n", e.code(), e.what());
+            tout.print("<red>{}: <bold>{}<normal>\n", e.code(), e.what());
             if (!e.detail().empty())
-                tout.print("<fg:magenta>{}<normal>\n", e.detail());
-            tout.print("<fg:yellow>Help: .h | .help<normal>\n");
+                tout.print("<magenta>{}<normal>\n", e.detail());
+            tout.print("<yellow>Help: .h | .help<normal>\n");
         }
         return;
     }

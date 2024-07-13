@@ -617,8 +617,14 @@ std::string TermCtl::_format(std::string_view fmt)
         if (*it == '<') {
             ++it;
 
+            bool is_bg = false;
+            if (*it == '@') {
+                is_bg = true;
+                ++it;
+            }
+
             auto beg = it;
-            while (std::islower(*it) || *it == '_')
+            while (std::islower(*it) || *it == '_' || *it == '*')
                 ++it;
             std::string_view key (std::to_address(beg), it - beg);
             if (*it == '>') {
@@ -628,43 +634,21 @@ std::string TermCtl::_format(std::string_view fmt)
                     ++it;
                     continue;
                 }
-            }
-            if (*it != ':') {
-                r.push_back('<');
-                r += key;
-                continue;
-            }
-            ++it;
-
-            beg = it;
-            while (std::islower(*it) || *it == '_' || *it == '*')
-                ++it;
-            std::string_view value (std::to_address(beg), it-beg);
-            if (*it != '>') {
-                r.push_back('<');
-                r += key;
-                r.push_back(':');
-                r += value;
-                continue;
-            }
-            ++it;
-
-            if (key == "fg" || key == "bg") {
-                const auto c = _parse_color(value);
-                if (c > Color::_Last) {
-                    r.push_back('<');
-                    r += key;
-                    r.push_back(':');
-                    r += value;
-                    r.push_back('>');
+                const auto c = _parse_color(key);
+                if (c <= Color::_Last) {
+                    if (is_bg)
+                        r += bg(c).seq();
+                    else
+                        r += fg(c).seq();
+                    ++it;
                     continue;
                 }
-                if (key == "fg")
-                    r += fg(c).seq();
-                else
-                    r += bg(c).seq();
-                continue;
             }
+            // rollback
+            r.push_back('<');
+            if (is_bg)
+                r.push_back('@');
+            r += key;
         }
         r.push_back(*it);
         ++it;

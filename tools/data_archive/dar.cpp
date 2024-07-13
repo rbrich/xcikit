@@ -28,7 +28,7 @@ static void extract_entry(const std::string& name, const VfsFile& file, const fs
 {
     const auto entry_path = output_path / name;
     TermCtl& term = TermCtl::stdout_instance();
-    term.print("Extracting file\t<fg:yellow>{}<normal> to {}\n", name, entry_path);
+    term.print("Extracting file\t<yellow>{}<normal> to {}\n", name, entry_path);
     auto content = file.content();
     if (content) {
         fs::create_directories(entry_path.parent_path());
@@ -152,20 +152,20 @@ int main(int argc, const char* argv[])
     } (argv);
 
     if (files.empty()) {
-        term.print("<bold><fg:yellow>No input files.<normal>\n");
+        term.print("<bold><yellow>No input files.<normal>\n");
     }
 
     Vfs vfs;
     for (const auto filename : files) {
-        term.print("<bold>Extracting archive\t<fg:yellow>{}<normal>\n", filename);
+        term.print("<bold>Extracting archive\t<yellow>{}<normal>\n", filename);
         if (!vfs.mount(filename)) {
-            term.print("<bold><fg:red>Could not mount {}<normal>\n", filename);
+            term.print("<bold><red>Could not mount {}<normal>\n", filename);
             continue;
         }
 
         if (list_entries) {
             for (const auto& entry : *vfs.mounts().back().vfs_dir) {
-                term.print("<fg:yellow>{}<normal>\n", entry.name());
+                term.print("<yellow>{}<normal>\n", entry.name());
             }
             continue;
         }

@@ -200,8 +200,8 @@ public:
     friend std::ostream& operator<<(std::ostream& os, TermCtl& t) { return os << t.seq(); }
 
     /// Format string, adding colors via special placeholders:
-    /// <fg:COLOR> where COLOR is default | red | *red ... ("*" = bright)
-    /// <bg:COLOR> where COLOR is the same as for fg
+    /// <COLOR> where COLOR is default | red | *red ... ("*" = bright)
+    /// <@BG_COLOR> where BG_COLOR is the same as for COLOR
     /// <MODE> where MODE is bold | underline | normal ... (shortcuts b | u | n ...)
     template<typename... T>
     std::string format(fmt::format_string<T...> fmt, T&&... args) {

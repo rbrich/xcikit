@@ -54,33 +54,33 @@ static void print_data(TermCtl& term, uint8_t type, const std::byte* data, size_
 {
     const auto expected_size = BinaryBase::size_by_type(type);
     if (expected_size != size_t(-1) && size != expected_size) {
-        term.print("<fg:red>bad size {}<normal>", size);
+        term.print("<red>bad size {}<normal>", size);
         return;
     }
 
     switch (type) {
-        case BinaryBase::Null:      term.print("<fg:yellow>null<normal>"); return;
-        case BinaryBase::BoolFalse: term.print("<fg:yellow>false<normal>"); return;
-        case BinaryBase::BoolTrue:  term.print("<fg:yellow>true<normal>"); return;
-        case BinaryBase::Fixed8:    term.print("<fg:magenta>{}<normal>", unsigned(*data)); return;
-        case BinaryBase::Fixed16:   term.print("<fg:magenta>{}<normal>", bit_copy<uint16_t>(data)); return;
-        case BinaryBase::Fixed32:   term.print("<fg:magenta>{}<normal>", bit_copy<uint32_t>(data)); return;
-        case BinaryBase::Fixed64:   term.print("<fg:magenta>{}<normal>", bit_copy<uint64_t>(data)); return;
-        case BinaryBase::Fixed128:  term.print("<fg:magenta>{}<normal>", uint128_to_string(bit_copy<uint128>(data))); return;
-        case BinaryBase::Float32:   term.print("<fg:magenta>{}<normal>", bit_copy<float>(data)); return;
-        case BinaryBase::Float64:   term.print("<fg:magenta>{}<normal>", bit_copy<double>(data)); return;
-        case BinaryBase::VarInt:    term.print("<fg:yellow>varint<normal>"); return;
-        case BinaryBase::Array:     term.print("<fg:yellow>array<normal>"); return;
+        case BinaryBase::Null:      term.print("<yellow>null<normal>"); return;
+        case BinaryBase::BoolFalse: term.print("<yellow>false<normal>"); return;
+        case BinaryBase::BoolTrue:  term.print("<yellow>true<normal>"); return;
+        case BinaryBase::Fixed8:    term.print("<magenta>{}<normal>", unsigned(*data)); return;
+        case BinaryBase::Fixed16:   term.print("<magenta>{}<normal>", bit_copy<uint16_t>(data)); return;
+        case BinaryBase::Fixed32:   term.print("<magenta>{}<normal>", bit_copy<uint32_t>(data)); return;
+        case BinaryBase::Fixed64:   term.print("<magenta>{}<normal>", bit_copy<uint64_t>(data)); return;
+        case BinaryBase::Fixed128:  term.print("<magenta>{}<normal>", uint128_to_string(bit_copy<uint128>(data))); return;
+        case BinaryBase::Float32:   term.print("<magenta>{}<normal>", bit_copy<float>(data)); return;
+        case BinaryBase::Float64:   term.print("<magenta>{}<normal>", bit_copy<double>(data)); return;
+        case BinaryBase::VarInt:    term.print("<yellow>varint<normal>"); return;
+        case BinaryBase::Array:     term.print("<yellow>array<normal>"); return;
         case BinaryBase::String:
-            term.print("<fg:green>\"{}\"<normal>",
+            term.print("<green>\"{}\"<normal>",
                     escape(std::string_view((const char*) data, size)));
             return;
-        case BinaryBase::Binary:    term.print("<fg:yellow>(size {})<normal>", size); return;
+        case BinaryBase::Binary:    term.print("<yellow>(size {})<normal>", size); return;
         case BinaryBase::Master:
-            term.print("<fg:yellow>(size {})<normal> <bold>{{<normal>", size); return;
-        case BinaryBase::Control:   term.print("<fg:yellow>control<normal>"); return;
+            term.print("<yellow>(size {})<normal> <bold>{{<normal>", size); return;
+        case BinaryBase::Control:   term.print("<yellow>control<normal>"); return;
     }
-    term.print("<fg:red>unknown<normal>");
+    term.print("<red>unknown<normal>");
 }
 
 
@@ -110,7 +110,7 @@ int main(int argc, const char* argv[])
     } (argv);
 
     if (files.empty()) {
-        term.print("<bold><fg:yellow>No input files.<normal>\n");
+        term.print("<bold><yellow>No input files.<normal>\n");
     }
 
     Schema schema;
@@ -121,7 +121,7 @@ int main(int argc, const char* argv[])
             reader(schema);
             reader.finish_and_check();
         } catch (const ArchiveError& e) {
-            term.print("<bold><fg:red>Error reading schema: {}<normal>\n", e.what());
+            term.print("<bold><red>Error reading schema: {}<normal>\n", e.what());
         }
     } else if (files.size() == 1 && std::string(files.back()).ends_with(".schema")) {
         // get Schema of .schema file
@@ -129,7 +129,7 @@ int main(int argc, const char* argv[])
     }
 
     for (const auto& filename : files) {
-        term.print("<fg:yellow><bold>{}<normal>\n", filename);
+        term.print("<yellow><bold>{}<normal>\n", filename);
         std::ifstream f(filename, std::ios::binary);
         try {
             BinaryReader reader(f);
@@ -182,12 +182,12 @@ int main(int argc, const char* argv[])
                                     if (opt_int)
                                         last_int_values[schema_member->name] = *opt_int;
                                 }
-                                term.print("{}<bold><fg:cyan>{} ({}: {})<normal>: {} = ",
+                                term.print("{}<bold><cyan>{} ({}: {})<normal>: {} = ",
                                            std::string(indent, ' '),
                                            int(it.key), schema_member->name, schema_member->type,
                                            type_to_cstr(it.type));
                             } else {
-                                term.print("{}<bold><fg:cyan>{}<normal>: {} = ",
+                                term.print("{}<bold><cyan>{}<normal>: {} = ",
                                            std::string(indent, ' '),
                                            int(it.key), type_to_cstr(it.type));
                             }
@@ -198,9 +198,9 @@ int main(int argc, const char* argv[])
                                 uint32_t stored_crc = 0;
                                 std::memcpy(&stored_crc, it.data.get(), it.size);
                                 if (reader.crc() == stored_crc)
-                                    term.print(" <bold><fg:green>(CRC32: OK)<normal>");
+                                    term.print(" <bold><green>(CRC32: OK)<normal>");
                                 else
-                                    term.print(" <bold><fg:red>(CRC32: expected {})<normal>",
+                                    term.print(" <bold><red>(CRC32: expected {})<normal>",
                                             reader.crc());
                             }
                         }
@@ -228,7 +228,7 @@ int main(int argc, const char* argv[])
                 }
             }
         } catch (const ArchiveError& e) {
-            term.print("<bold><fg:red>{}<normal>\n", e.what());
+            term.print("<bold><red>{}<normal>\n", e.what());
         }
     }
 

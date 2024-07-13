@@ -19,16 +19,16 @@ namespace xci::core {
 // 5..9 => multi-line continuation for each log level
 static constexpr size_t c_cont = 5;
 static constexpr const char* c_log_format[] = {
-        "{0:%F %T} <fg:cyan>{1:6x}<normal>  <bold>TRACE<normal>  <fg:blue>{2}<normal>\n",
-        "{0:%F %T} <fg:cyan>{1:6x}<normal>  <bold>DEBUG<normal>  <fg:white>{2}<normal>\n",
-        "{0:%F %T} <fg:cyan>{1:6x}<normal>  <bold>INFO <normal>  <bold><fg:white>{2}<normal>\n",
-        "{0:%F %T} <fg:cyan>{1:6x}<normal>  <bold>WARN <normal>  <bold><fg:yellow>{2}<normal>\n",
-        "{0:%F %T} <fg:cyan>{1:6x}<normal>  <bold>ERROR<normal>  <bold><fg:red>{2}<normal>\n",
-        "                            <bold>...<normal>    <fg:blue>{2}<normal>\n",
-        "                            <bold>...<normal>    <fg:white>{2}<normal>\n",
-        "                            <bold>...<normal>    <bold><fg:white>{2}<normal>\n",
-        "                            <bold>...<normal>    <bold><fg:yellow>{2}<normal>\n",
-        "                            <bold>...<normal>    <bold><fg:red>{2}<normal>\n",
+        "{0:%F %T} <cyan>{1:6x}<normal>  <bold>TRACE<normal>  <blue>{2}<normal>\n",
+        "{0:%F %T} <cyan>{1:6x}<normal>  <bold>DEBUG<normal>  <white>{2}<normal>\n",
+        "{0:%F %T} <cyan>{1:6x}<normal>  <bold>INFO <normal>  <bold><white>{2}<normal>\n",
+        "{0:%F %T} <cyan>{1:6x}<normal>  <bold>WARN <normal>  <bold><yellow>{2}<normal>\n",
+        "{0:%F %T} <cyan>{1:6x}<normal>  <bold>ERROR<normal>  <bold><red>{2}<normal>\n",
+        "                            <bold>...<normal>    <blue>{2}<normal>\n",
+        "                            <bold>...<normal>    <white>{2}<normal>\n",
+        "                            <bold>...<normal>    <bold><white>{2}<normal>\n",
+        "                            <bold>...<normal>    <bold><yellow>{2}<normal>\n",
+        "                            <bold>...<normal>    <bold><red>{2}<normal>\n",
 };
 static constexpr const char* c_log_intro = "<underline>   Date      Time    TID    Level  Message   <normal>\n";
 

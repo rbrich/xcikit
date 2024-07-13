@@ -27,7 +27,7 @@ int main()
 
     cout << t.move_up().move_right(6).bold().green() << "GREEN" <<t.normal() << endl;
 
-    t.print("<b><fg:yellow>formatted<n>\n");
+    t.print("<b><yellow>formatted <*white><@yellow> bg <n>\n");
     t.print("<bold>bold<normal_intensity> "
             "<dim>dim<normal_intensity> "
             "<italic>italic<no_italic> "
