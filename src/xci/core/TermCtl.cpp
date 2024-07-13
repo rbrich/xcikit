@@ -620,7 +620,7 @@ std::string TermCtl::_format(std::string_view fmt)
             auto beg = it;
             while (std::islower(*it) || *it == '_')
                 ++it;
-            std::string_view key (beg, it);
+            std::string_view key (std::to_address(beg), it - beg);
             if (*it == '>') {
                 const auto m = _parse_mode(key);
                 if (m <= Mode::_Last) {
@@ -639,7 +639,7 @@ std::string TermCtl::_format(std::string_view fmt)
             beg = it;
             while (std::islower(*it) || *it == '_' || *it == '*')
                 ++it;
-            std::string_view value (beg, it);
+            std::string_view value (std::to_address(beg), it-beg);
             if (*it != '>') {
                 r.push_back('<');
                 r += key;
