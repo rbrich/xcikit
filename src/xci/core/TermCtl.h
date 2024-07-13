@@ -194,7 +194,7 @@ public:
     TermCtl& soft_reset();
 
     // Cached seq
-    std::string seq() { return std::move(m_seq); }
+    std::string seq() { auto s = std::move(m_seq); m_seq.clear(); return s; }
     void write() { write_raw(seq()); }
     void write_nl() { m_seq.append(1, '\n'); write(seq()); }
     friend std::ostream& operator<<(std::ostream& os, TermCtl& t) { return os << t.seq(); }
