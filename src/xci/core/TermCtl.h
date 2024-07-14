@@ -219,21 +219,30 @@ public:
     void write_nl() { m_seq.append(1, '\n'); write(seq()); }
     friend std::ostream& operator<<(std::ostream& os, TermCtl& t) { return os << t.seq(); }
 
-    /// Format string, adding colors via special placeholders:
+    /// Translate special markup language to color/mode control sequences:
     /// <COLOR> where COLOR is default | red | *red ... ("*" = bright)
     /// <@BG_COLOR> where BG_COLOR is the same as for COLOR
     /// <MODE> where MODE is bold | underline | normal ... (shortcuts b | u | n ...)
+    std::string render(std::string_view markup);
+
+    /// Format a string, adding colors via special placeholders - see `render` above.
+    /// Note that these placeholders are applied ahead of the <fmt> placeholders,
+    /// so e.g. `{}` cannot expand to `<bold>` which would be recognized. If this is
+    /// intended, call `fmt::format` separately and pass the result to `TermCtl::render`.
     template<typename... T>
     std::string format(fmt::format_string<T...> fmt, T&&... args) {
         const auto sv = fmt.get();
-        return fmt::vformat(_format(std::string_view(sv.data(), sv.size())),
+        return fmt::vformat(render(std::string_view(sv.data(), sv.size())),
                             fmt::make_format_args(args...));
     }
 
-    /// Print string with special color/mode placeholders, see `format` above.
+    /// Print string with special color/mode placeholders, see `render` above.
     template<typename... T>
     void print(fmt::format_string<T...> fmt, T&&... args) {
         write(format(fmt::runtime(fmt), args...));
+    }
+    void print(std::string_view markup) {
+        write(render(markup));
     }
 
     void write(std::string_view buf);
@@ -394,7 +403,6 @@ private:
     TermCtl& _tab_set_all(std::span<const unsigned> n_cols);
     TermCtl& _append_seq(const char* seq) { if (seq) m_seq += seq; return *this; }  // needed for TermInfo, which returns NULL for unknown seqs
     TermCtl& _append_seq(std::string_view seq) { m_seq += seq; return *this; }
-    std::string _format(std::string_view fmt);
 
     std::string m_seq;  // cached capability sequences
     WriteCallback m_write_cb;

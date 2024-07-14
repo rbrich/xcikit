@@ -611,7 +611,7 @@ TermCtl& TermCtl::clear_line_to_end() { return TERM_APPEND(clr_eol); }
 TermCtl& TermCtl::soft_reset() { return XCI_TERM_APPEND(seq::send_soft_reset); }
 
 
-namespace format_parser {
+namespace render_parser {
 
 struct Char : pegtl::any {};
 struct Escape : pegtl::seq< pegtl::one<'\\'>, Char > {};
@@ -658,13 +658,13 @@ struct Action< Tag > {
     }
 };
 
-} // namespace format_parser
+} // namespace render_parser
 
-std::string TermCtl::_format(std::string_view fmt)
+std::string TermCtl::render(std::string_view markup)
 {
-    pegtl::memory_input in( std::to_address(fmt.begin()), std::to_address(fmt.end()) );
+    pegtl::memory_input in( std::to_address(markup.begin()), std::to_address(markup.end()) );
     std::string r;
-    pegtl::parse< format_parser::Grammar, format_parser::Action >( in, *this, r );
+    pegtl::parse< render_parser::Grammar, render_parser::Action >( in, *this, r );
     return r;
 }
 
