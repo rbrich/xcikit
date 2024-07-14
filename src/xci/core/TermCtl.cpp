@@ -24,6 +24,9 @@
 #include <xci/core/file.h>
 #include <xci/config.h>
 
+#include <tao/pegtl.hpp>
+namespace pegtl = tao::pegtl;
+
 #ifdef _WIN32
     static_assert(sizeof(unsigned long) == sizeof(DWORD));
 #else
@@ -608,51 +611,60 @@ TermCtl& TermCtl::clear_line_to_end() { return TERM_APPEND(clr_eol); }
 TermCtl& TermCtl::soft_reset() { return XCI_TERM_APPEND(seq::send_soft_reset); }
 
 
+namespace format_parser {
+
+struct Char : pegtl::any {};
+struct Escape : pegtl::seq< pegtl::one<'\\'>, Char > {};
+struct Tag : pegtl::seq< pegtl::one<'<'>, pegtl::opt<pegtl::one<'@'>>, pegtl::opt<pegtl::one<'*'>>, pegtl::plus<pegtl::ranges<'a', 'z', '_'>>, pegtl::one<'>'>> {};
+struct Grammar : pegtl::must< pegtl::star<pegtl::sor<Escape, Tag, Char>>, pegtl::eof > {};
+
+template< typename Rule >
+struct Action {};
+
+template<>
+struct Action< Char > {
+    template< typename ParseInput >
+    static void apply( const ParseInput& in, TermCtl& t, std::string& r ) {
+        r.push_back(in.peek_char());
+    }
+};
+
+template<>
+struct Action< Tag > {
+    template< typename ParseInput >
+    static bool apply( const ParseInput& in, TermCtl& t, std::string& r ) {
+        auto key = in.string_view().substr(1, in.size() - 2);  // strip < >
+
+        const auto m = TermCtl::parse_mode(key);
+        if (m <= TermCtl::Mode::_Last) {
+            r += t.mode(m).seq();
+            return true;
+        }
+
+        bool is_bg = key.front() == '@';
+        if (is_bg)
+            key.remove_prefix(1);
+
+        const auto c = TermCtl::parse_color(key);
+        if (c <= TermCtl::Color::_Last) {
+            if (is_bg)
+                r += t.bg(c).seq();
+            else
+                r += t.fg(c).seq();
+            return true;
+        }
+
+        return false;
+    }
+};
+
+} // namespace format_parser
+
 std::string TermCtl::_format(std::string_view fmt)
 {
+    pegtl::memory_input in( std::to_address(fmt.begin()), std::to_address(fmt.end()) );
     std::string r;
-    r.reserve(fmt.size());
-    auto it = fmt.begin();
-    while (it != fmt.end()) {
-        if (*it == '<') {
-            ++it;
-
-            bool is_bg = false;
-            if (*it == '@') {
-                is_bg = true;
-                ++it;
-            }
-
-            auto beg = it;
-            while (std::islower(*it) || *it == '_' || *it == '*')
-                ++it;
-            std::string_view key (std::to_address(beg), it - beg);
-            if (*it == '>') {
-                const auto m = _parse_mode(key);
-                if (m <= Mode::_Last) {
-                    r += mode(m).seq();
-                    ++it;
-                    continue;
-                }
-                const auto c = _parse_color(key);
-                if (c <= Color::_Last) {
-                    if (is_bg)
-                        r += bg(c).seq();
-                    else
-                        r += fg(c).seq();
-                    ++it;
-                    continue;
-                }
-            }
-            // rollback
-            r.push_back('<');
-            if (is_bg)
-                r.push_back('@');
-            r += key;
-        }
-        r.push_back(*it);
-        ++it;
-    }
+    pegtl::parse< format_parser::Grammar, format_parser::Action >( in, *this, r );
     return r;
 }
 

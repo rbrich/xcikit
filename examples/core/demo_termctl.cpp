@@ -39,6 +39,7 @@ int main()
             "<reverse>reversed<no_reverse> "
             "<hidden>hidden<no_hidden> "
             "\n");
+    t.print("Escaped \\<bold>. Unknown <tag>.\n");
 
     t.tab_set_all({30, 20}).write();
     t.print("tab stops:\t1\t2\n");

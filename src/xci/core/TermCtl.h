@@ -80,6 +80,16 @@ public:
     };
     static_assert(std::size(c_color_names) == size_t(Color::_Last) + 1);
 
+    static constexpr Color parse_color(std::string_view name) {
+        Color r = Color::Black;
+        for (const char* n : c_color_names) {
+            if (name == n)
+                return r;
+            r = static_cast<Color>(uint8_t(r) + 1);
+        }
+        return r;
+    }
+
     enum class Mode: uint8_t {
         Normal,  // reset all attributes
         Bold, Dim, Italic, Underline, Overline, CrossOut, Frame,
@@ -96,6 +106,16 @@ public:
         "no_blink", "no_reverse", "no_hidden"
     };
     static_assert(std::size(c_mode_names) == size_t(Mode::_Last) + 1);
+
+    static constexpr Mode parse_mode(std::string_view name) {
+        Mode r = Mode::Normal;
+        for (const char* n : c_mode_names) {
+            if (name == n || (name.size() == 1 && name[0] == n[0]))
+                return r;
+            r = static_cast<Mode>(uint8_t(r) + 1);
+        }
+        return r;
+    }
 
     // foreground
     TermCtl& fg(Color color);
@@ -375,26 +395,6 @@ private:
     TermCtl& _append_seq(const char* seq) { if (seq) m_seq += seq; return *this; }  // needed for TermInfo, which returns NULL for unknown seqs
     TermCtl& _append_seq(std::string_view seq) { m_seq += seq; return *this; }
     std::string _format(std::string_view fmt);
-
-    static constexpr Mode _parse_mode(std::string_view name) {
-        Mode r = Mode::Normal;
-        for (const char* n : c_mode_names) {
-            if (name == n || (name.size() == 1 && name[0] == n[0]))
-                return r;
-            r = static_cast<Mode>(uint8_t(r) + 1);
-        }
-        return r;
-    }
-
-    static constexpr Color _parse_color(std::string_view name) {
-        Color r = Color::Black;
-        for (const char* n : c_color_names) {
-            if (name == n)
-                return r;
-            r = static_cast<Color>(uint8_t(r) + 1);
-        }
-        return r;
-    }
 
     std::string m_seq;  // cached capability sequences
     WriteCallback m_write_cb;
