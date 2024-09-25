@@ -130,6 +130,14 @@ jobs:
           clang: Xcode_15.2
           os_target: "14.0"
           build_args: ""
+        - os: macos-15
+          name: "Xcode 16 arm64 / Release"
+          cc: apple-clang
+          cc_ver: 16
+          libcxx: libc++
+          clang: Xcode_16
+          os_target: "15.0"
+          build_args: ""
         - os: windows-2019
           name: "VS 16 / Release"
           cc: msvc
