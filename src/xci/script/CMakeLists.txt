@@ -52,13 +52,12 @@ target_link_libraries(xci-script
         xci-data
     PRIVATE
         range-v3::range-v3
+        $<COMPILE_ONLY:taocpp::pegtl>
     )
 
 target_include_directories(xci-script
     PUBLIC
         ${XCI_INCLUDE_DIRS}
-    PRIVATE
-        $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
     )
 
 if (BUILD_SHARED_LIBS)

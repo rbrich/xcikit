@@ -35,13 +35,6 @@ target_precompile_headers(xci-text REUSE_FROM xci-core)
 target_include_directories(xci-text
     PUBLIC
         ${XCI_INCLUDE_DIRS}
-    PRIVATE
-        $<TARGET_PROPERTY:third_party::rbp,INTERFACE_INCLUDE_DIRECTORIES>
-        # NOTE: We cannot link `taocpp::pegtl` directly, because it would become
-        #       dependency in exported target and the whole xcikit would have to
-        #       externally depend on PEGTL while it is used only in implementation.
-        #       See: https://gitlab.kitware.com/cmake/cmake/issues/18049
-        $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
     )
 
 target_link_libraries(xci-text
@@ -52,6 +45,8 @@ target_link_libraries(xci-text
     PRIVATE
         Freetype::Freetype
         harfbuzz::harfbuzz
+        $<COMPILE_ONLY:third_party::rbp>
+        $<COMPILE_ONLY:taocpp::pegtl>
     )
 
 if (BUILD_SHARED_LIBS)
