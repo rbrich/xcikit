@@ -5,10 +5,6 @@
 version: 2.1
 
 executors:
-  debian11:
-    docker:
-      - image: rbrich/xcikit-debian:11
-    resource_class: large
   debian12:
     docker:
       - image: rbrich/xcikit-debian:12
@@ -95,10 +91,6 @@ workflows:
   version: 2
   workflow:
     jobs:
-      - build:
-          name: Debian 11 - GCC 10
-          image: debian11
-          label: debian11-gcc10
       - build:
           name: Debian 12 - GCC 12
           image: debian12

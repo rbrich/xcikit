@@ -78,13 +78,12 @@ target_link_libraries(xci-core
         Threads::Threads
     PRIVATE
         ${CMAKE_DL_LIBS}
+        $<COMPILE_ONLY:taocpp::pegtl>
+        $<COMPILE_ONLY:third_party::widechar_width>
     )
 target_include_directories(xci-core
     PUBLIC
         ${XCI_INCLUDE_DIRS}
-    PRIVATE
-        $<TARGET_PROPERTY:third_party::widechar_width,INTERFACE_INCLUDE_DIRECTORIES>
-        $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
     )
 
 # Link with tinfo if available

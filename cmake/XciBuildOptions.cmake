@@ -8,6 +8,7 @@ option(BUILD_WITH_ASAN "Build with AddressSanitizer." OFF)
 option(BUILD_WITH_LSAN "Build with standalone LeakSanitizer." OFF)
 option(BUILD_WITH_UBSAN "Build with UndefinedBehaviorSanitizer." OFF)
 option(BUILD_WITH_TSAN "Build with ThreadSanitizer." OFF)
+option(BUILD_HARDENING "Build with std lib hardening." OFF)
 
 # warnings (+ compile time checking tools)
 option(ENABLE_WARNINGS "Enable compiler warnings: -Wall -Wextra ..." ON)
@@ -162,6 +163,20 @@ endif ()
 if (BUILD_WITH_TSAN)
     add_compile_options(-fsanitize=thread)
     add_link_options(-fsanitize=thread)
+endif ()
+
+if (BUILD_HARDENING)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        # https://gcc.gnu.org/onlinedocs/libstdc++/manual/debug_mode_using.html
+        add_compile_definitions(-D_GLIBCXX_DEBUG)
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        # https://libcxx.llvm.org/Hardening.html
+        if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+            add_compile_definitions(-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG)
+        else ()
+            add_compile_definitions(-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_EXTENSIVE)
+        endif ()
+    endif ()
 endif ()
 
 # Strip dead-code

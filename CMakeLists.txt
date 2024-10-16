@@ -1,7 +1,6 @@
-# 3.18.4 in Debian 11
-# 3.22.1 in Ubuntu 22.04 / Emscripten Docker image
-# 3.25.1 in Debian 12
-cmake_minimum_required(VERSION 3.18...3.30)
+# 3.28.3 in Ubuntu 24.04 (noble)
+# 3.30.3 in Debian 12 (bookworm-backports)
+cmake_minimum_required(VERSION 3.27...3.30)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(XciBuildType)
