@@ -1,11 +1,11 @@
 # CI builder with Emscripten (DockerHub public image), local build check:
-#   docker build --platform linux/amd64 --pull --build-arg UID=$(id -u) -t rbrich/xcikit-emscripten . -f docker/emscripten.dockerfile
-#   docker run --platform linux/amd64 --rm -v $PWD:/src -w /src -it rbrich/xcikit-emscripten
+#   docker build --platform linux/arm64/v8 --pull --build-arg UID=$(id -u) -t rbrich/xcikit-emscripten-arm64 . -f docker/emscripten-arm64.dockerfile
+#   docker run --platform linux/arm64/v8 --rm -v $PWD:/src -w /src -it rbrich/xcikit-emscripten-arm64
 # CMake arguments (for Clion IDE):
 #   -DFORCE_COLORS=1 -DXCI_WIDGETS=0 -DXCI_TEXT=0 -DXCI_GRAPHICS=0
 #   -DCONAN_OPTIONS="-c;tools.cmake.cmaketoolchain:user_toolchain=['/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake']"
 
-FROM emscripten/emsdk:3.1.64 AS builder
+FROM emscripten/emsdk:3.1.64-arm64 AS builder
 
 RUN echo "dev tools"; apt-get update && apt-get install --no-install-recommends -y \
     gdb ninja-build python3-setuptools gpg && rm -rf /var/lib/apt/lists/*
