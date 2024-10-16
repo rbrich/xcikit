@@ -1,8 +1,8 @@
 # Debian 13 with Clang-Tidy 16
 #
 # CI builder (DockerHub public image), local build check:
-#   docker build --platform linux/amd64 --pull --build-arg UID=$(id -u) -t rbrich/xcikit-tidy . -f docker/clang_tidy.dockerfile
-#   docker run --platform linux/amd64 --rm -v $PWD:/src -w /src -it rbrich/xcikit-tidy
+#   docker build --platform linux/arm64/v8 --pull --build-arg UID=$(id -u) -t rbrich/xcikit-tidy-arm64 . -f docker/clang_tidy-arm64.dockerfile
+#   docker run --platform linux/arm64/v8 --rm -v $PWD:/src -w /src -it rbrich/xcikit-tidy-arm64
 # CMake arguments (for Clion IDE):
 #   -DFORCE_COLORS=1
 #   -DCONAN_OPTIONS="-o;xcikit/*:system_sdl=True;-o;xcikit/*:system_vulkan=True;-o;xcikit/*:system_freetype=True;-o;xcikit/*:system_harfbuzz=True;-o;xcikit/*:system_benchmark=True;-o;xcikit/*:system_zlib=True;-o;xcikit/*:system_range_v3=True;-o;xcikit/*:with_hyperscan=True"
@@ -31,7 +31,7 @@ USER builder
 
 COPY --chown=builder docker/conan /home/builder/conan
 RUN conan config install /home/builder/conan
-ENV CONAN_DEFAULT_PROFILE=linux_clang16
+ENV CONAN_DEFAULT_PROFILE=linux_clang16_arm64
 
 # Preinstall Conan deps
 ENV XCIKIT=/home/builder/xcikit
