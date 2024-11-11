@@ -242,7 +242,7 @@ PACKAGE_OUTPUT_DIR="${ROOT_DIR}/artifacts"
 PACKAGE_FILENAME="xcikit-${VERSION}-${PLATFORM}-${ARCH}"
 [[ ${BUILD_TYPE} != "Release" ]] && PACKAGE_FILENAME="${PACKAGE_FILENAME}-${BUILD_TYPE}"
 
-CONAN_ARGS+=("-pr=${CONAN_PROFILE}" "-pr:b=${CONAN_PROFILE}")
+CONAN_ARGS+=("-pr:a=${CONAN_PROFILE}")
 
 COMPONENTS=(vfs data script graphics text widgets)
 if [[ -z "$component_default" ]]; then
