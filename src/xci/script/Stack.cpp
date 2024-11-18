@@ -9,14 +9,14 @@
 #include "Function.h"
 #include "Module.h"
 
-#include <range/v3/view/reverse.hpp>
+#include <ranges>
 
 #include <iostream>
 #include <iomanip>
 
 namespace xci::script {
 
-using ranges::cpp20::views::reverse;
+using std::ranges::views::reverse;
 using std::cout;
 using std::endl;
 

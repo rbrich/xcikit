@@ -1,7 +1,7 @@
 // AST.cpp created on 2019-05-15 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "AST.h"
@@ -9,17 +9,13 @@
 #include <xci/compat/macros.h>
 #include <xci/core/string.h>
 
-#include <range/v3/view/reverse.hpp>
-
+#include <ranges>
 #include <string>
-#include <stdexcept>
-#include <sstream>
-#include <cstdlib>
 #include <cassert>
 
 namespace xci::script::ast {
 
-using ranges::cpp20::views::reverse;
+using std::ranges::views::reverse;
 
 
 void Visitor::visit(Block& blk)

@@ -16,8 +16,8 @@
 #include <xci/compat/macros.h>
 
 #include <range/v3/view/enumerate.hpp>
-#include <range/v3/view/reverse.hpp>
 
+#include <ranges>
 #include <sstream>
 #include <optional>
 
@@ -25,7 +25,7 @@ namespace xci::script {
 
 using std::stringstream;
 using ranges::views::enumerate;
-using ranges::cpp20::views::reverse;
+using std::ranges::views::reverse;
 
 
 class ResolveTypesVisitor final: public ast::VisitorExclTypes {
