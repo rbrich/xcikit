@@ -90,52 +90,44 @@ jobs:
           cxx: g++
           libcxx: libstdc++11
           build_args: "--minsize --unity"
-        - os: macos-12
-          name: "Clang 15 / Release"
+        - os: macos-15
+          name: "Clang 18 arm64 / Release"
           cc: clang
-          cc_ver: 15
+          cc_ver: 18
           libcxx: libc++
-          clang: llvm@15
-          os_target: "11.0"
+          clang: llvm@18
+          os_target: "15.0"
           build_args: ""
-        - os: macos-12
-          name: "Xcode 13.2 / Release"
-          cc: apple-clang
-          cc_ver: 13
-          libcxx: libc++
-          clang: Xcode_13.2.1
-          os_target: "11.0"
-          build_args: ""
-        - os: macos-12
-          name: "Xcode 14.2 / Release"
+        - os: macos-13
+          name: "Xcode 14.3 / Release"
           cc: apple-clang
           cc_ver: 14
           libcxx: libc++
-          clang: Xcode_14.2
-          os_target: "12.0"
+          clang: Xcode_14.3
+          os_target: "13.0"
           build_args: ""
         - os: macos-13
-          name: "Xcode 15.0 / Release"
+          name: "Xcode 15.2 / Release"
           cc: apple-clang
           cc_ver: 15
           libcxx: libc++
-          clang: Xcode_15.0
+          clang: Xcode_15.2.0
           os_target: "13.0"
           build_args: ""
         - os: macos-14
-          name: "Xcode 15.2 arm64 / Release"
+          name: "Xcode 15.4 arm64 / Release"
           cc: apple-clang
           cc_ver: 15
           libcxx: libc++
-          clang: Xcode_15.2
+          clang: Xcode_15.4.0
           os_target: "14.0"
           build_args: ""
         - os: macos-15
-          name: "Xcode 16 arm64 / Release"
+          name: "Xcode 16.1 arm64 / Release"
           cc: apple-clang
           cc_ver: 16
           libcxx: libc++
-          clang: Xcode_16
+          clang: Xcode_16.1.0
           os_target: "15.0"
           build_args: ""
         - os: windows-2019
