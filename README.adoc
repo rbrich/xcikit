@@ -94,8 +94,8 @@ Technologies:
 Supported compilers:
 
 * GCC >= 10
-* Clang >= 13
-* Xcode >= 13
+* Clang >= 15
+* Xcode >= 14
 * Visual Studio >= 16
 
 Any Unix-like OS with C++20 compliant compiler should work.

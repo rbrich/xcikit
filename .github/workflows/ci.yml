@@ -37,22 +37,6 @@ jobs:
           libcxx: libstdc++11
           build_args: ""
         - os: ubuntu-22.04
-          name: "Clang 13 / Release"
-          cc: clang
-          cc_ver: 13
-          cxx: clang++
-          libcxx: libc++
-          apt: libc++-13-dev libc++abi-13-dev libc++-14-dev- libc++1-14- libc++abi-14-dev- libc++abi1-14- libunwind-14- libunwind-14-dev-
-          build_args: ""
-#        - os: ubuntu-22.04
-#          name: "Clang 14 / Release"
-#          cc: clang
-#          cc_ver: 14
-#          cxx: clang++
-#          libcxx: libc++
-#          apt: libc++-14-dev libc++abi-14-dev
-#          build_args: ""
-        - os: ubuntu-22.04
           name: "Clang 15 / Release"
           cc: clang
           cc_ver: 15
