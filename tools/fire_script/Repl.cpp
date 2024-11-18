@@ -13,14 +13,13 @@
 #include <xci/script/dump.h>
 #include <xci/core/ResourceUsage.h>
 
-#include <range/v3/view/reverse.hpp>
-
+#include <ranges>
 #include <iostream>
 
 namespace xci::script::tool {
 
 using xci::core::ResourceUsage;
-using ranges::cpp20::views::reverse;
+using std::ranges::views::reverse;
 using std::endl;
 
 

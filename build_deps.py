@@ -3,6 +3,7 @@
 import yaml
 from pathlib import Path
 from shlex import quote
+from shutil import rmtree
 import sys
 import subprocess
 
@@ -87,6 +88,8 @@ def main():
             run(["git", "-c", "advice.detachedHead=false",
                  "clone", url, "--depth=1", "--branch", git_ref, source_dir])
 
+        if force_rebuild:
+            rmtree(build_dir)
         build_dir.mkdir(parents=True, exist_ok=True)
         cmake_args = ["-D" + d for d in cmake_defs.split()]
         if args.toolchain is not None:

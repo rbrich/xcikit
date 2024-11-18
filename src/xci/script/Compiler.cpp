@@ -21,14 +21,13 @@
 #include "Stack.h"
 #include <xci/compat/macros.h>
 
-#include <range/v3/view/reverse.hpp>
-
+#include <ranges>
 #include <sstream>
 #include <cassert>
 
 namespace xci::script {
 
-using ranges::cpp20::views::reverse;
+using std::ranges::views::reverse;
 
 
 class CompilerVisitor: public ast::VisitorExclTypes {

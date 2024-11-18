@@ -76,7 +76,7 @@ requirements:
       - "spirv_cross_core/"
       - "spirv_cross_glsl/"
     conan: "spirv-cross/1.3.268.0"
-    upstream: "github.com KhronosGroup/SPIRV-Cross vulkan-sdk-1.3.283"
+    upstream: "github.com KhronosGroup/SPIRV-Cross vulkan-sdk-1.3.296"
     cmake_defs: SPIRV_CROSS_STATIC=ON SPIRV_CROSS_SHARED=OFF SPIRV_CROSS_CLI=OFF
     prereq:
       - shed_tool

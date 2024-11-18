@@ -6,19 +6,19 @@
 
 #include "ReplCommand.h"
 #include "Context.h"
-#include <range/v3/view/reverse.hpp>
-#include <range/v3/view/drop.hpp>
 #include <xci/script/Builtin.h>
 #include <xci/script/dump.h>
 #include <xci/core/string.h>
 #include <xci/core/TermCtl.h>
+
+#include <ranges>
 #include <iostream>
 #include <utility>
 
 namespace xci::script::tool {
 
-using ranges::cpp20::views::reverse;
-using ranges::cpp20::views::drop;
+using std::ranges::views::reverse;
+using std::ranges::views::drop;
 using namespace xci::core;
 
 
