@@ -83,6 +83,10 @@ set(XCI_CXX_STANDARD 20)
 if (HAVE_LIBSTDCXX)
     set(CMAKE_CXX_EXTENSIONS ON)  # for __int128
 endif()
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16)
+    # Enable C++20 ranges in Clang 15
+    add_compile_options(-fexperimental-library)
+endif()
 
 set(XCIKIT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
