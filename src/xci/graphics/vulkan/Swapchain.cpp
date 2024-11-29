@@ -80,13 +80,8 @@ void Swapchain::create()
     destroy();
     m_swapchain = new_swapchain;
 
-    TRACE("Vulkan: swapchain image count: {}", m_image_count);
-    vkGetSwapchainImagesKHR(device, m_swapchain, &m_image_count, nullptr);
-
-    if (m_image_count > Framebuffer::max_image_count)
-        VK_THROW("vulkan: too many swapchain images");
-
-    vkGetSwapchainImagesKHR(device, m_swapchain, &m_image_count, m_images);
+    vk_get_vector(m_images, vkGetSwapchainImagesKHR, device, m_swapchain);
+    TRACE("Vulkan: swapchain image count: {}", m_images.size());
 }
 
 
@@ -102,7 +97,7 @@ void Swapchain::destroy()
 
 void Swapchain::create_framebuffers()
 {
-    m_framebuffer.create(m_attachments, m_extent, m_image_count, m_images);
+    m_framebuffer.create(m_attachments, m_extent, m_images.size(), m_images.data());
 }
 
 
