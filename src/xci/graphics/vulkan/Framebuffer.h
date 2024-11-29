@@ -19,29 +19,29 @@ class Attachments;
 
 class Framebuffer {
 public:
-    static constexpr uint32_t max_image_count = 8;
-
     explicit Framebuffer(Renderer& renderer)
             : m_renderer(renderer), m_image_memory(renderer) {}
     ~Framebuffer() { destroy(); }
 
+    /// \param image_count - Number of color buffers
     void create(const Attachments& attachments, VkExtent2D size, uint32_t image_count,
                 VkImage* swapchain_images = nullptr);
     void destroy();
 
-    VkImage color_image(uint32_t buffer, uint32_t image_index) const { return m_images[buffer * m_image_count + image_index]; }
-    VkImageView color_image_view(uint32_t buffer, uint32_t image_index) const { return m_image_views[buffer * m_image_count + image_index].vk(); }
+    uint32_t color_image_count() const { return m_framebuffers.size(); }
+    VkImage color_image(uint32_t buffer, uint32_t image_index) const { return m_images[buffer * m_framebuffers.size() + image_index]; }
+    VkImageView color_image_view(uint32_t buffer, uint32_t image_index) const { return m_image_views[buffer * m_framebuffers.size() + image_index].vk(); }
 
     VkFramebuffer vk_framebuffer(uint32_t index) const { return m_framebuffers[index]; }
     VkFramebuffer operator[](uint32_t index) const { return m_framebuffers[index]; }
 
-    Renderer& renderer() { return m_renderer; }
+    Renderer& renderer() const { return m_renderer; }
 
 private:
     VkDeviceSize create_image(const ImageCreateInfo& image_ci, VkImage& image);
 
     Renderer& m_renderer;
-    VkFramebuffer m_framebuffers[max_image_count] {};
+    std::vector<VkFramebuffer> m_framebuffers;
     DeviceMemory m_image_memory;
 
     // Images in following order and counts:
@@ -52,7 +52,6 @@ private:
     std::vector<VkImage> m_images;
     std::vector<ImageView> m_image_views;
 
-    uint32_t m_image_count = 0;  // <= max_image_count
     uint32_t m_borrowed_count = 0; // number of borrowed swapchain images (at beginning of m_images)
 };
 

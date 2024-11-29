@@ -118,13 +118,7 @@ bool Renderer::create_instance(SDL_Window* window)
     };
 
     std::vector<const char *> extensions;
-    {
-        unsigned int sdlExtensionCount = 0;
-        SDL_Vulkan_GetInstanceExtensions(window, &sdlExtensionCount, nullptr);
-        extensions.resize(sdlExtensionCount);
-        SDL_Vulkan_GetInstanceExtensions(window, &sdlExtensionCount, extensions.data());
-        extensions.resize(sdlExtensionCount);
-    }
+    vk_get_vector(extensions, SDL_Vulkan_GetInstanceExtensions, window);
 
 #ifdef XCI_DEBUG_VULKAN
     // enable validation layers

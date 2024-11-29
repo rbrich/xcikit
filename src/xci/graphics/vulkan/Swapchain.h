@@ -12,6 +12,7 @@
 #include "Attachments.h"
 
 #include <vulkan/vulkan.h>
+#include <vector>
 
 namespace xci::graphics {
 
@@ -72,13 +73,13 @@ private:
 
     Attachments m_attachments;
 
-    VkImage m_images[Framebuffer::max_image_count] {};
+    std::vector<VkImage> m_images;
     Framebuffer m_framebuffer;
 
     // create info
     VkSurfaceFormatKHR m_surface_format {};
     VkExtent2D m_extent {};
-    uint32_t m_image_count = 0;  // <= max_image_count
+    uint32_t m_image_count = 0;  // recommended image count according to surface capabilities
     PresentMode m_present_mode = PresentMode::Fifo;
 };
 

@@ -26,7 +26,7 @@ VkDeviceSize Framebuffer::create_image(const ImageCreateInfo& image_ci, VkImage&
 void Framebuffer::create(const Attachments& attachments, VkExtent2D size, uint32_t image_count,
                          VkImage* swapchain_images)
 {
-    if (m_framebuffers[0])
+    if (!m_framebuffers.empty())
         destroy();
 
     struct BindImage {
@@ -45,21 +45,20 @@ void Framebuffer::create(const Attachments& attachments, VkExtent2D size, uint32
         deferred_bind.push_back({image, offset});
     };
 
-    m_image_count = image_count;
     const auto device = m_renderer.vk_device();
 
     // Prepare color buffers
     for (const auto& color : attachments.color_attachments()) {
         if (swapchain_images) {
-            m_borrowed_count = m_image_count;
-            for (unsigned i = 0; i < m_image_count; i++) {
+            m_borrowed_count = image_count;
+            for (unsigned i = 0; i < image_count; i++) {
                 auto* image = m_images.emplace_back(swapchain_images[i]);
                 deferred_views.push_back({image, color.format, VK_IMAGE_ASPECT_COLOR_BIT});
             }
             swapchain_images = nullptr;
             continue;
         }
-        for (unsigned i = 0; i < m_image_count; i++) {
+        for (unsigned i = 0; i < image_count; i++) {
             ImageCreateInfo image_ci{{size.width, size.height}, color.format,
                                      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
                                      color.usage};
@@ -108,12 +107,13 @@ void Framebuffer::create(const Attachments& attachments, VkExtent2D size, uint32
     }
 
     // Create framebuffers
-    for (size_t i = 0; i < m_image_count; i++) {
+    m_framebuffers.resize(image_count);
+    for (size_t i = 0; i < image_count; i++) {
         std::vector<VkImageView> attachment_views;
         uint32_t base = 0;
         for (uint32_t a = 0; a != attachments.color_attachment_count(); ++a) {
             attachment_views.push_back(m_image_views[base + i].vk());
-            base += m_image_count;
+            base += image_count;
         }
         if (attachments.has_depth_stencil()) {
             attachment_views.push_back(m_image_views[base].vk());
@@ -149,11 +149,10 @@ void Framebuffer::destroy()
     VkDevice device = m_renderer.vk_device();
     if (device == VK_NULL_HANDLE)
         return;
-    for (uint32_t i = 0; i != m_image_count; ++i) {
-        vkDestroyFramebuffer(device, m_framebuffers[i], nullptr);
-        m_framebuffers[i] = VK_NULL_HANDLE;
+    for (const auto fb : m_framebuffers) {
+        vkDestroyFramebuffer(device, fb, nullptr);
     }
-    m_image_count = 0;
+    m_framebuffers.clear();
     for (auto& image_view : m_image_views) {
         image_view.destroy(device);
     }
