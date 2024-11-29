@@ -12,6 +12,10 @@ find_dependency(Threads)
 find_dependency(fmt)
 find_dependency(pegtl)
 
+if (NOT EMSCRIPTEN AND (@XCI_DATA@ OR @XCI_VFS@))
+    find_dependency(ZLIB)
+endif()
+
 if (@XCI_GRAPHICS@ OR @XCI_SCRIPT@)
     find_dependency(range-v3)
 endif()
