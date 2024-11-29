@@ -513,6 +513,13 @@ void Window::resize_framebuffer()
 
 void Window::draw()
 {
+    VK_TRY("vkWaitForFences",
+            vkWaitForFences(m_renderer.vk_device(),
+                    1, &m_cmd_buf_fences[m_current_cmd_buf], VK_TRUE, UINT64_MAX));
+    VK_TRY("vkResetFences",
+            vkResetFences(m_renderer.vk_device(),
+                    1, &m_cmd_buf_fences[m_current_cmd_buf]));
+
     uint32_t image_index;
     auto rc = vkAcquireNextImageKHR(m_renderer.vk_device(),
             m_renderer.vk_swapchain(), UINT64_MAX,
@@ -530,13 +537,6 @@ void Window::draw()
     }
 
     {
-        VK_TRY("vkWaitForFences",
-                vkWaitForFences(m_renderer.vk_device(),
-                        1, &m_cmd_buf_fences[m_current_cmd_buf], VK_TRUE, UINT64_MAX));
-        VK_TRY("vkResetFences",
-                vkResetFences(m_renderer.vk_device(),
-                        1, &m_cmd_buf_fences[m_current_cmd_buf]));
-
         m_command_buffers[m_current_cmd_buf].release_resources();
 
         auto& cmd_buf = m_command_buffers[m_current_cmd_buf];
