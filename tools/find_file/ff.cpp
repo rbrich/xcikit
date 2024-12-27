@@ -922,7 +922,8 @@ int main(int argc, const char* argv[])
     bool show_bin_table = false;
     bool grep_mode = false;
     bool quiet_grep = false;
-    bool binary_grep = false;
+    bool grep_binary = false;
+    bool grep_skip_binary = false;
     bool quiet = false;
     int hs_flags = 0;
     int max_depth = -1;
@@ -964,8 +965,9 @@ int main(int argc, const char* argv[])
             Option("-x, --xmagic", "Filter binary executable files by magic bytes in header (ELF, Mach-O, etc.)", filter_xmagic),
             Option("-g, --grep PATTERN", "Filter files by content, i.e. \"grep\"", grep_pattern),
             Option("-G, --grep-mode", "Switch to grep mode (positional arg PATTERN is searched in content instead of file names)", grep_mode),
-            Option("-b, --binary", "Grep: Show matches in binary files.", binary_grep),
-            Option("-B, --binary-table", "Print table of color-coded binary characters, as used in -b (binary grep)", show_bin_table),
+            Option("-B, --skip-binary", "Grep: Do not show matches in binary files.", grep_skip_binary),
+            Option("-b, --binary", "Grep: Show detailed matches in binary files.", grep_binary),
+            Option("--binary-table", "Print table of color-coded binary characters, as used in -b (binary grep)", show_bin_table),
             Option("-Q, --quiet-grep", "Grep: Filter files, don't show matched lines. Stops on first match, making filtering faster.", quiet_grep),
             Option("-q, --quiet", "Do not print file names. Exit status: 0 = match, 1 = no match", quiet),
             Option("-c, --color", "Force color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Always); }),
@@ -1147,7 +1149,7 @@ int main(int argc, const char* argv[])
     FileTree ft(jobs-1,
                 [show_hidden, show_dirs, single_device, long_form, highlight_match, re_exclusion_only,
                  type_mask, size_from, size_to, max_depth, search_in_special_dirs,
-                 quiet, quiet_grep, binary_grep, filter_xmagic,
+                 quiet, quiet_grep, grep_binary, grep_skip_binary, filter_xmagic,
                  &re_db, &grep_db, &re_scratch, &theme, &dev_ids, &counters]
                 (int tn, const FileTree::PathNode& path, FileTree::Type t)
     {
@@ -1297,10 +1299,13 @@ int main(int argc, const char* argv[])
                 if (t == FileTree::File && grep_db) {
                     GrepContext ctx { .theme = theme };
                     auto [read_ok, hs_res] = grep_db.scan_file(path, re_scratch[tn],
-                            [quiet_grep, binary_grep, &content, &ctx]
+                            [quiet_grep, grep_binary, grep_skip_binary, &content, &ctx]
                             (const ScanFileBuffers& bufs, PatternId id, uint32_t from, uint32_t to)
                             {
-                                if (ctx.binary && !binary_grep) {
+                                if (ctx.binary && grep_skip_binary)
+                                    return 1;  // -> HS_SCAN_TERMINATED
+
+                                if (ctx.binary && !grep_binary) {
                                     // stop if a match was found in binary file
                                     if (id == IdMatch) {
                                         content = fmt::format("Binary file matched at {:08x}\n", from);
