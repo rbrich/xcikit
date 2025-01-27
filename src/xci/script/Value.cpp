@@ -1,7 +1,7 @@
 // Value.cpp created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Value.h"
@@ -141,7 +141,7 @@ size_t Value::read(const byte* buffer)
         if constexpr (std::is_same_v<T, std::monostate>)
             return 0;  // Unknown
         else if constexpr (std::is_same_v<T, bool>) {
-            v = bool(*buffer);
+            v = bool(uint8_t(*buffer));
             return 1;
         } else if constexpr (std::is_same_v<T, byte>) {
             v = *buffer;
@@ -406,7 +406,7 @@ static void list_deleter(byte* data)
 }
 
 
-ListV::ListV(size_t length, const TypeInfo& elem_type, const std::byte* elem_data)
+ListV::ListV(size_t length, const TypeInfo& elem_type, const void* elem_data)
 {
     // prepare deleter data
     std::vector<size_t> offsets;

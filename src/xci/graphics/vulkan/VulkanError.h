@@ -1,7 +1,7 @@
 // vulkan_error.h created on 2019-12-05 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <vulkan/vulkan_core.h>  // VkResult
@@ -105,6 +105,18 @@ inline void vk_log_error(std::string_view msg, enum VkResult vk_res)
 #define VK_TRY_RET(msg, expr) \
     do { if (const VkResult res = (expr); res != VK_SUCCESS) { vk_log_error(msg, res); return false; } } while(0)
 #endif
+
+
+/// Utility function to get vector data from Vulkan API
+template <typename VecT, typename F, typename... Args>
+auto vk_get_vector(VecT& res, F&& f, Args&&... args) {
+    uint32_t count;
+    f(args..., &count, nullptr);
+    res.resize(count);
+    const auto r = f(args..., &count, res.data());
+    res.resize(count);
+    return r;
+}
 
 
 } // namespace xci::graphics

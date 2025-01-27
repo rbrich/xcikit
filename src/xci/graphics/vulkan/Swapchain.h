@@ -1,13 +1,18 @@
 // Swapchain.h created on 2023-10-31 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_VULKAN_SWAPCHAIN_H
 #define XCI_GRAPHICS_VULKAN_SWAPCHAIN_H
 
+#include "Image.h"
+#include "Framebuffer.h"
+#include "Attachments.h"
+
 #include <vulkan/vulkan.h>
+#include <vector>
 
 namespace xci::graphics {
 
@@ -24,7 +29,8 @@ enum class PresentMode : uint8_t {
 
 class Swapchain {
 public:
-    explicit Swapchain(Renderer& renderer) : m_renderer(renderer) {}
+    explicit Swapchain(Renderer& renderer)
+            : m_renderer(renderer), m_framebuffer(renderer) {}
     ~Swapchain() { destroy(); }
 
     void create();
@@ -37,13 +43,27 @@ public:
     void set_present_mode(PresentMode mode);
     PresentMode present_mode() const { return m_present_mode; }
 
+    /// Create depth buffer for the swapchain
+    void set_depth_buffering(bool enable) { m_attachments.set_depth_bits(enable ? 32 : 0); }
+    bool depth_buffering() const { return m_attachments.depth_bits() > 0; }
+
+    /// Multisampling (MSAA)
+    void set_sample_count(uint32_t count);
+    VkSampleCountFlagBits sample_count() const { return (VkSampleCountFlagBits) m_attachments.msaa_samples(); }
+    bool is_multisample() const { return m_attachments.has_msaa(); }
+
     void query_surface_capabilities(VkPhysicalDevice device, VkExtent2D new_size);
     bool query(VkPhysicalDevice device);
+
+    const Attachments& attachments() const { return m_attachments; }
+    Attachments& attachments() { return m_attachments; }
+
+    const Framebuffer& framebuffer() const { return m_framebuffer; }
 
     VkSwapchainKHR vk() const { return m_swapchain; }
     VkSurfaceFormatKHR vk_surface_format() const { return m_surface_format; }
     VkExtent2D vk_image_extent() const { return m_extent; }
-    VkFramebuffer vk_framebuffer(uint32_t index) const { return m_framebuffers[index]; }
+    VkFramebuffer vk_framebuffer(uint32_t index) const { return m_framebuffer[index]; }
 
 private:
     void recreate();
@@ -51,16 +71,16 @@ private:
     Renderer& m_renderer;
     VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;
 
-    static constexpr uint32_t max_image_count = 8;
-    VkImage m_images[max_image_count] {};
-    VkImageView m_image_views[max_image_count] {};
-    VkFramebuffer m_framebuffers[max_image_count] {};
+    Attachments m_attachments;
+
+    std::vector<VkImage> m_images;
+    Framebuffer m_framebuffer;
 
     // create info
     VkSurfaceFormatKHR m_surface_format {};
     VkExtent2D m_extent {};
+    uint32_t m_image_count = 0;  // recommended image count according to surface capabilities
     PresentMode m_present_mode = PresentMode::Fifo;
-    uint32_t m_image_count = 0;  // <= max_image_count
 };
 
 

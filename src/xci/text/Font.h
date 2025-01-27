@@ -8,21 +8,26 @@
 #define XCI_TEXT_FONT_H
 
 #include <xci/text/FontFace.h>
-#include <xci/graphics/Renderer.h>
-#include <xci/graphics/Texture.h>
 #include <xci/core/mixin.h>
-#include <xci/geometry/Vec2.h>
+#include <xci/math/Vec2.h>
+#include <xci/math/Rect.h>
 #include <xci/vfs/Vfs.h>
 
 #include <vector>
 #include <map>
 #include <cassert>
 
+namespace xci::graphics {
+class Renderer;
+class Texture;
+class Sampler;
+}
+
 namespace xci::text {
 
-using core::Rect_u;
 using graphics::Renderer;
 using graphics::Texture;
+using graphics::Sampler;
 using xci::vfs::Vfs;
 
 
@@ -32,7 +37,7 @@ class FontTexture;
 // Encapsulates the faces, styles and glyph caches for a font
 class Font: private core::NonCopyable {
 public:
-    explicit Font(Renderer& renderer, uint32_t texture_size = 512u);
+    explicit Font(Renderer& renderer, uint32_t texture_size = 1024u);
     ~Font();
 
     // Add a face. Call multiple times to add different strokes
@@ -83,16 +88,16 @@ public:
 
     class Glyph {
     public:
-        core::Vec2u size() const { return m_tex_coords.size(); }
-        const core::Vec2i& bearing() const { return m_bearing; }
-        core::Vec2f advance() const { return m_advance; }
+        Vec2u size() const { return m_tex_coords.size(); }
+        const Vec2i& bearing() const { return m_bearing; }
+        Vec2f advance() const { return m_advance; }
 
         const Rect_u& tex_coords() const { return m_tex_coords; }
 
     private:
         Rect_u m_tex_coords;
-        core::Vec2i m_bearing;  // FT bitmap_left, bitmap_top
-        core::Vec2f m_advance;
+        Vec2i m_bearing;  // FT bitmap_left, bitmap_top
+        Vec2f m_advance;
 
         friend class Font;
     };
@@ -113,7 +118,9 @@ public:
     float max_advance() { return face().max_advance(); }
     float ascender() const { return face().ascender(); }
     float descender() const { return face().descender(); }
+
     Texture& texture();
+    Sampler& sampler() { return m_sampler; }
 
     // Throw away any rendered glyphs
     void clear_cache();
@@ -124,6 +131,7 @@ private:
 
 private:
     Renderer& m_renderer;
+    Sampler& m_sampler;
     size_t m_current_face = 0;
     std::vector<std::unique_ptr<FontFace>> m_faces;  // faces for different strokes (eg. normal, bold, italic)
     std::unique_ptr<FontTexture> m_texture;  // glyph tables for different styles (size, outline)

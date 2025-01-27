@@ -59,7 +59,7 @@ if (ASSETS AND Python3_Interpreter_FOUND)
         OUTPUT "${output_dar}"
         DEPENDS ${ASSETS} shaders fonts
         COMMAND Python3::Interpreter
-            "${PROJECT_SOURCE_DIR}/tools/pack_assets.py" -q
+            "${PROJECT_SOURCE_DIR}/tools/data_archive/dar_pack.py" -q -c
             "${output_dar}"
             ${ASSETS}
             $<TARGET_PROPERTY:shaders,ASSETS>

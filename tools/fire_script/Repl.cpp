@@ -1,7 +1,7 @@
 // Repl.cpp.c created on 2021-03-16 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2023 Radek Brich
+// Copyright 2021–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Repl.h"
@@ -13,15 +13,13 @@
 #include <xci/script/dump.h>
 #include <xci/core/ResourceUsage.h>
 
-#include <fmt/core.h>
-#include <range/v3/view/reverse.hpp>
-
+#include <ranges>
 #include <iostream>
 
 namespace xci::script::tool {
 
 using xci::core::ResourceUsage;
-using ranges::cpp20::views::reverse;
+using std::ranges::views::reverse;
 using std::endl;
 
 
@@ -151,7 +149,7 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
         machine.call(main_fn, [&](TypedValue&& invoked) {
             if (!invoked.is_void()) {
                 t.sanitize_newline();
-                t.print("{t:bold}{fg:yellow}{}{t:normal}\n", invoked);
+                t.print("<bold><yellow>{}<normal>\n", invoked);
             }
             invoked.decref();
         });
@@ -164,14 +162,14 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
             // REPL mode
             const auto& module_name = module.name();
             if (!result.is_void()) {
-                t.print("{t:bold}{fg:magenta}{}:{} = {fg:default}{}{t:normal}\n",
+                t.print("<bold><magenta>{}:{} = <default>{}<normal>\n",
                         module_name, result.type_info(), result);
             }
         } else {
             // single input mode
             assert(mode == EvalMode::SingleInput);
             if (!result.is_void()) {
-                t.print("{t:bold}{}{t:normal}\n", result);
+                t.print("<bold>{}<normal>\n", result);
             }
         }
         result.decref();
@@ -192,9 +190,9 @@ void Repl::print_error(const ScriptError& e)
 
     if (!e.file().empty())
         t.print("{}: ", e.file());
-    t.print("{fg:red}{t:bold}{}: {fg:*white}{t:normal_intensity}{}{t:normal}", e.code(), e.what());
+    t.print("<red><bold>{}: <*white><normal_intensity>{}<normal>", e.code(), e.what());
     if (!e.detail().empty())
-        t.print("\n{fg:magenta}{}{t:normal}", e.detail());
+        t.print("\n<magenta>{}<normal>", e.detail());
     t.write_nl();
 }
 

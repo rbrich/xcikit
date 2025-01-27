@@ -14,7 +14,7 @@
 #include <xci/graphics/View.h>
 #include <xci/graphics/Color.h>
 #include <xci/graphics/shape/Rectangle.h>
-#include <xci/geometry/Vec2.h>
+#include <xci/math/Vec2.h>
 #include <xci/core/container/ChunkedStack.h>
 
 #include <string>
@@ -117,17 +117,21 @@ public:
     // ------------------------------------------------------------------------
     // Spans allow naming a part of the text and change its attributes later
 
-    /// Begin the span
-    /// Logs error when trying to begin a span of the same name twice
+    /// Begin a span
+    /// The name should be unique - this is not checked.
     void begin_span(const std::string& name);
 
-    /// End the span
-    /// Logs error when trying to end a span which doesn't exist or was already ended
-    void end_span(const std::string& name);
+    /// End a span
+    /// Ends last open span of the name (in case the name wasn't unique)
+    /// \returns false if no span of the name was found
+    bool end_span(const std::string& name);
 
     /// Get a span previously created by begin_span, end_span
-    /// \returns NULL if the span does not exist
+    /// \returns first span of the name, NULL if the span does not exist
     Span* get_span(const std::string& name);
+
+    /// Get view of all span names, in order of creation
+    const std::vector<std::string>& span_names() const { return m_span_names; }
 
     // ------------------------------------------------------------------------
     // Typeset and draw
@@ -153,6 +157,7 @@ public:
 private:
     Page m_page;
     std::vector<std::unique_ptr<Element>> m_elements;
+    std::vector<std::string> m_span_names;
 
     Style m_default_style;
     VariUnits m_default_width = 0_px;

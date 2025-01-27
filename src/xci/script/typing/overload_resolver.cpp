@@ -1,16 +1,16 @@
 // overload_resolver.cpp created on 2022-12-31 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022–2023 Radek Brich
+// Copyright 2022–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "overload_resolver.h"
 #include "generic_resolver.h"
-#include <range/v3/view/reverse.hpp>
+#include <ranges>
 
 namespace xci::script {
 
-using ranges::cpp20::views::reverse;
+using std::ranges::views::reverse;
 
 
 std::pair<const Candidate*, bool> find_best_candidate(const std::vector<Candidate>& candidates)

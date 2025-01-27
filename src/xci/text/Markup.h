@@ -29,7 +29,7 @@ public:
     explicit Markup(Layout &layout, const std::string &s)
         : m_layout(layout) { parse(s); }
 
-    bool parse(const std::string &s);
+    bool parse(std::string_view s);
 
     Layout& get_layout() { return m_layout; }
 

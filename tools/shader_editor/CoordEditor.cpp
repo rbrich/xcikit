@@ -5,7 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "CoordEditor.h"
-#include <xci/geometry/Mat3.h>
+#include <xci/math/Mat3.h>
 
 #include <range/v3/view/enumerate.hpp>
 #include <range/v3/view/transform.hpp>

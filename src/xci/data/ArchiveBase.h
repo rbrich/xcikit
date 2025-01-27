@@ -1,7 +1,7 @@
 // ArchiveBase.h created on 2020-06-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_DATA_ARCHIVE_BASE_H
@@ -10,7 +10,7 @@
 #include <xci/core/error.h>
 #include <xci/core/macros/foreach.h>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #ifndef XCI_ARCHIVE_NO_MAGIC
 #include <boost/pfr/core.hpp>
 #endif

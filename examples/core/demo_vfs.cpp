@@ -43,6 +43,7 @@ int main()
             vfs.mount(XCI_SHARE_DAR);
             // Directory overlapping the archive, will be tried after the archive
             vfs.mount(XCI_SHARE_DIR);
+            info("demo: open result: {}", vfs.read_file("non/existent.file").is_open());
             auto f = vfs.read_file("fonts/Hack/Hack-Regular.ttf");
             content = f.content();
             // Vfs deleted here, together with DarArchiveLoader and VfsFile

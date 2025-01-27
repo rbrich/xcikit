@@ -1,7 +1,7 @@
 // ff.cpp created on 2020-03-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2023 Radek Brich
+// Copyright 2020–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// Find File (ff) command line tool
@@ -16,7 +16,8 @@
 #include <xci/core/mixin.h>
 #include <xci/compat/macros.h>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <fmt/chrono.h>
 #include <fmt/ostream.h>
 #include <hs/hs.h>
@@ -208,8 +209,7 @@ static bool parse_size_filter(const char* arg, size_t& size_from, size_t& size_t
     const char* end = arg + strlen(arg);
     auto res = std::from_chars(arg, end, size_from);
     arg = res.ptr;
-    int shift;
-    if (size_from != 0 && (shift = size_unit_to_shift(*arg)) != -1) {
+    if (int shift; size_from != 0 && (shift = size_unit_to_shift(*arg)) != -1) {
         size_from <<= shift;
         ++arg;
     }
@@ -222,7 +222,7 @@ static bool parse_size_filter(const char* arg, size_t& size_from, size_t& size_t
     arg += 2;
     res = std::from_chars(arg, end, size_to);
     arg = res.ptr;
-    if (size_to != 0 && (shift = size_unit_to_shift(*arg)) != -1) {
+    if (int shift; size_to != 0 && (shift = size_unit_to_shift(*arg)) != -1) {
         size_to <<= shift;
         ++arg;
     }
@@ -910,32 +910,35 @@ private:
 
 int main(int argc, const char* argv[])
 {
-    bool fixed = false;
-    bool ignore_case = false;
-    bool show_hidden = false;
-    bool show_dirs = false;
-    bool search_in_special_dirs = false;
-    bool single_device = false;
-    bool long_form = false;
-    bool show_version = false;
-    bool show_stats = false;
-    bool show_bin_table = false;
-    bool grep_mode = false;
-    bool quiet_grep = false;
-    bool binary_grep = false;
-    bool quiet = false;
-    int hs_flags = 0;
-    int max_depth = -1;
-    int jobs = 2 * cpu_count();
-    size_t size_from = 0;
-    size_t size_to = 0;
-    bool filter_xmagic = false;
-    mode_t type_mask = 0;
-    const char* pattern = nullptr;
-    const char* grep_pattern = nullptr;
-    std::vector<fs::path> paths;
-    std::vector<const char*> extensions;
-    std::vector<const char*> exclusions;
+    struct {
+        std::vector<fs::path> paths;
+        std::vector<const char*> extensions;
+        std::vector<const char*> exclusions;
+        const char* pattern = nullptr;
+        const char* grep_pattern = nullptr;
+        size_t size_from = 0;
+        size_t size_to = 0;
+        int hs_flags = 0;
+        int max_depth = -1;
+        int jobs = 2 * cpu_count();
+        mode_t type_mask = 0;
+        bool fixed = false;
+        bool ignore_case = false;
+        bool show_hidden = false;
+        bool show_dirs = false;
+        bool search_in_special_dirs = false;
+        bool single_device = false;
+        bool long_form = false;
+        bool show_version = false;
+        bool show_stats = false;
+        bool show_bin_table = false;
+        bool grep_mode = false;
+        bool quiet_grep = false;
+        bool grep_binary = false;
+        bool grep_skip_binary = false;
+        bool quiet = false;
+        bool filter_xmagic = false;
+    } args;
 
     TermCtl& term = TermCtl::stdout_instance();
 
@@ -943,73 +946,75 @@ int main(int argc, const char* argv[])
     bool highlight_match = term.is_tty();
 
     ArgParser {
-            Option("-F, --fixed", "Match literal string instead of (default) regex", fixed),
-            Option("-i, --ignore-case", "Enable case insensitive matching", ignore_case),
-            Option("-u, --unicode", "Enable unicode patterns (UTF-8)", [&hs_flags]{ hs_flags |= HS_FLAG_UTF8 | HS_FLAG_UCP; }),
-            Option("-e, --ext EXT ...", "Match only files with extension EXT (shortcut for pattern '\\.EXT$')", extensions),
-            Option("-E, --exclude PATTERN ...", "Exclude files matching PATTERN", exclusions),
-            Option("-H, --search-hidden", "Don't skip hidden files", show_hidden),
-            Option("-D, --search-dirnames", "Don't skip directory entries", show_dirs),
-            Option("-S, --search-in-special-dirs", "Allow descending into special directories: " + default_ignore_list(", "), search_in_special_dirs),
-            Option("-X, --single-device", "Don't descend into directories with different device number", single_device),
-            Option("-a, --all", "Don't skip any files (alias for -HDS)", [&]{ show_hidden = true; show_dirs = true; search_in_special_dirs = true; }),
-            Option("-d, --max-depth N", "Descend at most N directory levels below input directories", max_depth),
-            Option("-l, --long", "Print file attributes", long_form),
-            Option("-L, --list-long", "Don't descend and print attributes, similar to `ls -l` (alias for -lDd1)", [&]{ long_form = true; show_dirs = true; max_depth = 1; }),
-            Option("-s, --stats", "Print statistics (number of searched objects)", show_stats),
+            Option("-F, --fixed", "Match literal string instead of (default) regex", args.fixed),
+            Option("-i, --ignore-case", "Enable case insensitive matching", args.ignore_case),
+            Option("-u, --unicode", "Enable unicode patterns (UTF-8)", [&args]{ args.hs_flags |= HS_FLAG_UTF8 | HS_FLAG_UCP; }),
+            Option("-e, --ext EXT ...", "Match only files with extension EXT (shortcut for pattern '\\.EXT$')", args.extensions),
+            Option("-E, --exclude PATTERN ...", "Exclude files matching PATTERN", args.exclusions),
+            Option("-H, --search-hidden", "Don't skip hidden files", args.show_hidden),
+            Option("-D, --search-dirnames", "Don't skip directory entries", args.show_dirs),
+            Option("-S, --search-in-special-dirs", "Allow descending into special directories: " + default_ignore_list(", "), args.search_in_special_dirs),
+            Option("-X, --single-device", "Don't descend into directories with different device number", args.single_device),
+            Option("-a, --all", "Don't skip any files (alias for -HDS)", [&args]{ args.show_hidden = true; args.show_dirs = true; args.search_in_special_dirs = true; }),
+            Option("-d, --max-depth N", "Descend at most N directory levels below input directories", args.max_depth),
+            Option("-l, --long", "Print file attributes", args.long_form),
+            Option("-L, --list-long", "Don't descend and print attributes, similar to `ls -l` (alias for -lDd1)", [&]{ args.long_form = true; args.show_dirs = true; args.max_depth = 1; }),
+            Option("-s, --stats", "Print statistics (number of searched objects)", args.show_stats),
             Option("-t, --types TYPES", "Filter file types: f=regular, d=dir, l=link, s=sock, p=fifo, c=char, b=block, x=exec, e.g. -tdl for dir+link (implies -D)",
-                    [&type_mask, &show_dirs](const char* arg){ show_dirs = true; return parse_types(arg, type_mask); }),
+                    [&args](const char* arg){ args.show_dirs = true; return parse_types(arg, args.type_mask); }),
             Option("--size BETWEEN", "Filter files by size: [MIN]..[MAX], each site is optional, e.g. 1M..2M, 42K (eq. 42K..), ..1G",
-                    [&size_from, &size_to](const char* arg){ return parse_size_filter(arg, size_from, size_to); }),
-            Option("-x, --xmagic", "Filter binary executable files by magic bytes in header (ELF, Mach-O, etc.)", filter_xmagic),
-            Option("-g, --grep PATTERN", "Filter files by content, i.e. \"grep\"", grep_pattern),
-            Option("-G, --grep-mode", "Switch to grep mode (positional arg PATTERN is searched in content instead of file names)", grep_mode),
-            Option("-b, --binary", "Grep: Show matches in binary files.", binary_grep),
-            Option("-B, --binary-table", "Print table of color-coded binary characters, as used in -b (binary grep)", show_bin_table),
-            Option("-Q, --quiet-grep", "Grep: Filter files, don't show matched lines. Stops on first match, making filtering faster.", quiet_grep),
-            Option("-q, --quiet", "Do not print file names. Exit status: 0 = match, 1 = no match", quiet),
+                    [&args](const char* arg){ return parse_size_filter(arg, args.size_from, args.size_to); }),
+            Option("-x, --xmagic", "Filter binary executable files by magic bytes in header (ELF, Mach-O, etc.)", args.filter_xmagic),
+            Option("-g, --grep PATTERN", "Filter files by content, i.e. \"grep\"", args.grep_pattern),
+            Option("-G, --grep-mode", "Switch to grep mode (positional arg PATTERN is searched in content instead of file names)", args.grep_mode),
+            Option("-B, --skip-binary", "Grep: Do not show matches in binary files.", args.grep_skip_binary),
+            Option("-b, --binary", "Grep: Show detailed matches in binary files.", args.grep_binary),
+            Option("--binary-table", "Print table of color-coded binary characters, as used in -b (binary grep)", args.show_bin_table),
+            Option("-Q, --quiet-grep", "Grep: Filter files, don't show matched lines. Stops on first match, making filtering faster.", args.quiet_grep),
+            Option("-q, --quiet", "Do not print file names. Exit status: 0 = match, 1 = no match", args.quiet),
             Option("-c, --color", "Force color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Always); }),
             Option("-C, --no-color", "Disable color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Never); }),
             Option("-M, --no-highlight", "Don't highlight matches (default: enabled for color output)", [&highlight_match]{ highlight_match = false; }),
-            Option("-j, --jobs JOBS", fmt::format("Number of worker threads (default: 2*ncpu = {})", jobs), jobs).env("JOBS"),
-            Option("-V, --version", "Show version", show_version),
+            Option("-j, --jobs JOBS", fmt::format("Number of worker threads (default: 2*ncpu = {})", args.jobs), args.jobs).env("JOBS"),
+            Option("-V, --version", "Show version", args.show_version),
             Option("-h, --help", "Show help", show_help),
-            Option("[PATTERN]", "Pattern (Perl-style regex) to search in file names, or in file content (with -G)", pattern),
-            Option("-- PATH ...", "Paths to search", paths),
+            Option("[PATTERN]", "Pattern (Perl-style regex) to search in file names, or in file content (with -G)", args.pattern),
+            Option("-- PATH ...", "Paths to search", args.paths),
     } (argv);
 
-    if (show_version) {
-        term.print("{t:bold}ff{t:normal} {}\n", c_version);
-        term.print("using {t:bold}Hyperscan{t:normal} {}\n", hs_version());
+    if (args.show_version) {
+        term.print("<bold>ff<normal> {}\n", c_version);
+        term.print("using <bold>Hyperscan<normal> {}\n", hs_version());
         return 0;
     }
 
-    if (grep_mode) {
-        grep_pattern = pattern;
-        pattern = nullptr;
+    if (args.grep_mode) {
+        args.grep_pattern = args.pattern;
+        args.pattern = nullptr;
     }
 
-    if (quiet) {
-        quiet_grep = true;  // --quiet-grep implied by --quiet
+    if (args.quiet) {
+        args.quiet_grep = true;  // --quiet-grep implied by --quiet
         highlight_match = false;
     }
 
     // empty pattern -> show all files
-    if (pattern && *pattern == '\0')
-        pattern = nullptr;
+    if (args.pattern && args.pattern[0] == '\0') {
+        args.pattern = nullptr;
+    }
 
     HyperscanDatabase re_db;
 
     bool re_exclusion_only = true;
-    for (const char* exclusion : exclusions) {
-        const int flags = hs_flags | HS_FLAG_DOTALL | HS_FLAG_SINGLEMATCH;
+    for (const char* exclusion : args.exclusions) {
+        const int flags = args.hs_flags | HS_FLAG_DOTALL | HS_FLAG_SINGLEMATCH;
         {
             auto re_info = analyze_pattern(exclusion, flags);
             if (!re_info)
                 return 1;
             if (re_info->min_width == 0) {
                 // Pattern matches empty buffer
-                fmt::print(stderr,"ff: exclude pattern matches empty buffer: {}\n", grep_pattern);
+                fmt::print(stderr,"ff: exclude pattern matches empty buffer: {}\n", args.grep_pattern);
                 return 1;
             }
         }
@@ -1017,19 +1022,19 @@ int main(int argc, const char* argv[])
         re_db.add(exclusion, flags, IdExclusion);
     }
 
-    if (pattern) {
-        int flags = hs_flags | HS_FLAG_DOTALL;
-        if (ignore_case)
+    if (args.pattern) {
+        int flags = args.hs_flags | HS_FLAG_DOTALL;
+        if (args.ignore_case)
             flags |= HS_FLAG_CASELESS;
-        if (fixed) {
+        if (args.fixed) {
             if (highlight_match)
                 flags |= HS_FLAG_SOM_LEFTMOST;
             else
                 flags |= HS_FLAG_SINGLEMATCH;
-            re_db.add_literal(pattern, flags);
+            re_db.add_literal(args.pattern, flags);
         } else {
             {
-                auto re_info = analyze_pattern(pattern, flags);
+                auto re_info = analyze_pattern(args.pattern, flags);
                 if (!re_info)
                     return 1;
                 if (re_info->min_width == 0) {
@@ -1044,20 +1049,20 @@ int main(int argc, const char* argv[])
                 flags |= HS_FLAG_SOM_LEFTMOST;
             else
                 flags |= HS_FLAG_SINGLEMATCH;
-            re_db.add(pattern, flags);
+            re_db.add(args.pattern, flags);
         }
         re_exclusion_only = false;
     }
 
-    if (!extensions.empty()) {
-        int flags = hs_flags | HS_FLAG_DOTALL;
-        if (ignore_case)
+    if (!args.extensions.empty()) {
+        int flags = args.hs_flags | HS_FLAG_DOTALL;
+        if (args.ignore_case)
             flags |= HS_FLAG_CASELESS;
         if (highlight_match)
             flags |= HS_FLAG_SOM_LEFTMOST;
         else
             flags |= HS_FLAG_SINGLEMATCH;
-        for (const char* ext : extensions) {
+        for (const char* ext : args.extensions) {
             re_db.add_file_extension(ext, flags);
         }
         re_exclusion_only = false;
@@ -1067,9 +1072,9 @@ int main(int argc, const char* argv[])
         return 1;
 
     HyperscanDatabase grep_db;
-    if (grep_pattern) {
-        int flags = hs_flags;
-        if (ignore_case)
+    if (args.grep_pattern) {
+        int flags = args.hs_flags;
+        if (args.ignore_case)
             flags |= HS_FLAG_CASELESS;
         if (highlight_match)
             flags |= HS_FLAG_SOM_LEFTMOST;
@@ -1092,22 +1097,22 @@ int main(int argc, const char* argv[])
         //       (surrogate character in magenta color).
         grep_db.add(R"([\x00-\x08\x0E-\x1F\x7F])", flags, IdBinary);
 
-        if (fixed) {
-            grep_db.add_literal(grep_pattern, flags);
+        if (args.fixed) {
+            grep_db.add_literal(args.grep_pattern, flags);
         } else {
             {
-                auto re_info = analyze_pattern(grep_pattern, flags);
+                auto re_info = analyze_pattern(args.grep_pattern, flags);
                 if (!re_info)
                     return 1;
                 if (re_info->min_width == 0) {
                     // Pattern matches empty buffer
-                    fmt::print(stderr,"ff: grep pattern matches empty buffer: {}\n", grep_pattern);
+                    fmt::print(stderr,"ff: grep pattern matches empty buffer: {}\n", args.grep_pattern);
                     return 1;
                 }
             }
 
             // add pattern
-            grep_db.add(grep_pattern, flags);
+            grep_db.add(args.grep_pattern, flags);
         }
     }
 
@@ -1115,13 +1120,13 @@ int main(int argc, const char* argv[])
         return 1;
 
     // allocate scratch "prototype", to be cloned for each thread
-    std::vector<HyperscanScratch> re_scratch(jobs);
+    std::vector<HyperscanScratch> re_scratch(args.jobs);
     if (re_db || grep_db) {
         // prototype for main thread
         if (!re_db.allocate_scratch(re_scratch[0]) || !grep_db.allocate_scratch(re_scratch[0]))
             return 1;
         // clone for other threads
-        for (int i = 1; i != jobs; ++i) {
+        for (int i = 1; i != args.jobs; ++i) {
             if (!re_scratch[i].clone(re_scratch[0]))
                 return 1;
         }
@@ -1144,10 +1149,8 @@ int main(int argc, const char* argv[])
     FlatSet<dev_t> dev_ids;
     Counters counters;
 
-    FileTree ft(jobs-1,
-                [show_hidden, show_dirs, single_device, long_form, highlight_match, re_exclusion_only,
-                 type_mask, size_from, size_to, max_depth, search_in_special_dirs,
-                 quiet, quiet_grep, binary_grep, filter_xmagic,
+    FileTree ft(args.jobs - 1,
+                [&args = std::as_const(args), highlight_match, re_exclusion_only,
                  &re_db, &grep_db, &re_scratch, &theme, &dev_ids, &counters]
                 (int tn, const FileTree::PathNode& path, FileTree::Type t)
     {
@@ -1161,24 +1164,24 @@ int main(int argc, const char* argv[])
                 }
 
                 // skip hidden files (".", ".." not considered hidden - if passed as PATH arg)
-                if (!show_hidden && path.is_hidden() && !path.is_dots_entry())
+                if (!args.show_hidden && path.is_hidden() && !path.is_dots_entry())
                     return false;
 
                 bool descend = true;
                 if (t == FileTree::Directory) {
-                    if (max_depth >= 0 && path.depth() >= max_depth) {
+                    if (args.max_depth >= 0 && path.depth() >= args.max_depth) {
                         descend = false;
                     }
                     // Check ignore list
-                    if (!search_in_special_dirs && is_default_ignored(path.file_path())) {
+                    if (!args.search_in_special_dirs && is_default_ignored(path.file_path())) {
                         descend = false;
                     }
-                    if (!show_dirs || !path.has_name()) {
+                    if (!args.show_dirs || !path.has_name()) {
                         // path.name is empty when this is root report from walk_cwd()
                         counters.seen_dirs.fetch_sub(1, std::memory_order_relaxed);  // small correction - don't count implicitly searched CWD
                         return descend;
                     }
-                    if (single_device) {
+                    if (args.single_device) {
                         struct stat st;
                         if (!path.stat(st)) {
                             fmt::print(stderr,"ff: stat({}): {}\n", path.file_path(), error_str());
@@ -1227,7 +1230,7 @@ int main(int argc, const char* argv[])
                         highlight_path(out, t, path, theme, ctx.matches[0].first, ctx.matches[0].second);
                     } else {
                         // match, no highlight
-                        struct {
+                        struct Ctx {
                             bool excluded = false;
                             unsigned dir_len;
                         } ctx { .dir_len = path.dir_len() };
@@ -1235,7 +1238,7 @@ int main(int argc, const char* argv[])
                                 [] (unsigned int id, unsigned long long from,
                                     unsigned long long to, unsigned int flags, void *ctx_data)
                                 {
-                                    auto& x = *static_cast<decltype(&ctx)>(ctx_data);
+                                    auto& x = *static_cast<Ctx*>(ctx_data);
                                     if (id == IdExclusion) {
                                         x.excluded = true;
                                     } else if (to <= x.dir_len) {
@@ -1262,7 +1265,7 @@ int main(int argc, const char* argv[])
                 }
 
                 struct stat st;
-                if (long_form || type_mask || size_from || size_to) {
+                if (args.long_form || args.type_mask || args.size_from || args.size_to) {
                     // need stat
                     if (!path.stat(st)) {
                         fmt::print(stderr,"ff: stat({}): {}\n", path.file_path(), error_str());
@@ -1272,21 +1275,21 @@ int main(int argc, const char* argv[])
                     counters.total_blocks.fetch_add(st.st_blocks, std::memory_order_relaxed);
                 }
 
-                if (type_mask) {
+                if (args.type_mask) {
                     // match type
-                    if (!(st.st_mode & type_mask & S_IFMT))
+                    if (!(st.st_mode & args.type_mask & S_IFMT))
                         return descend;
                     // match rights
-                    if ((type_mask & 07777) && !(st.st_mode & type_mask & 07777))
+                    if ((args.type_mask & 07777) && !(st.st_mode & args.type_mask & 07777))
                         return descend;
                 }
 
-                if (size_from && size_t(st.st_size) < size_from)
+                if (args.size_from && size_t(st.st_size) < args.size_from)
                     return descend;
-                if (size_to && size_t(st.st_size) > size_to)
+                if (args.size_to && size_t(st.st_size) > args.size_to)
                     return descend;
 
-                if (filter_xmagic) {
+                if (args.filter_xmagic) {
                     XMagicDatabase xmagic_db;
                     auto res = xmagic_db.match_file(path);
                     if (res >= XMagicDatabase::NotMatched)
@@ -1297,10 +1300,13 @@ int main(int argc, const char* argv[])
                 if (t == FileTree::File && grep_db) {
                     GrepContext ctx { .theme = theme };
                     auto [read_ok, hs_res] = grep_db.scan_file(path, re_scratch[tn],
-                            [quiet_grep, binary_grep, &content, &ctx]
+                            [&args, &content, &ctx]
                             (const ScanFileBuffers& bufs, PatternId id, uint32_t from, uint32_t to)
                             {
-                                if (ctx.binary && !binary_grep) {
+                                if (ctx.binary && args.grep_skip_binary)
+                                    return 1;  // -> HS_SCAN_TERMINATED
+
+                                if (ctx.binary && !args.grep_binary) {
                                     // stop if a match was found in binary file
                                     if (id == IdMatch) {
                                         content = fmt::format("Binary file matched at {:08x}\n", from);
@@ -1310,7 +1316,7 @@ int main(int argc, const char* argv[])
                                     return 0;
                                 }
 
-                                if (quiet_grep) {
+                                if (args.quiet_grep) {
                                     // stop if a match was found
                                     if (id == IdMatch) {
                                         ctx.matched = true;
@@ -1371,11 +1377,11 @@ int main(int argc, const char* argv[])
                     counters.matched_files.fetch_add(1, std::memory_order_relaxed);
                 }
 
-                if (quiet)
+                if (args.quiet)
                     return false;
 
                 flockfile(stdout);
-                if (long_form)
+                if (args.long_form)
                     print_path_with_attrs(out, path, st);
                 else
                     std::cout << out;
@@ -1399,24 +1405,24 @@ int main(int argc, const char* argv[])
         XCI_UNREACHABLE;
     });
 
-    if (paths.empty()) {
+    if (args.paths.empty()) {
         ft.walk_cwd();
     } else {
-        for (const auto& path : paths) {
+        for (const auto& path : args.paths) {
             ft.walk(path);
         }
     }
 
     ft.main_worker();
 
-    if (show_bin_table) {
+    if (args.show_bin_table) {
         print_bin_table(theme);
     }
 
-    if (show_stats) {
+    if (args.show_stats) {
         print_stats(counters);
     }
 
     // --quiet: 0 = match, 1 = no match
-    return quiet ? int(counters.matched_files == 0) : 0;
+    return args.quiet ? int(counters.matched_files == 0) : 0;
 }

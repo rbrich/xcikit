@@ -24,10 +24,15 @@ add_library(xci-graphics
     shape/RoundedRectangle.cpp
     shape/Shape.cpp
     shape/Triangle.cpp
+    vulkan/Attachments.cpp
+    vulkan/Buffer.cpp
     vulkan/CommandBuffers.cpp
     vulkan/DescriptorPool.cpp
     vulkan/DeviceMemory.cpp
+    vulkan/Framebuffer.cpp
+    vulkan/Image.cpp
     vulkan/Pipeline.cpp
+    vulkan/Sampler.cpp
     vulkan/Swapchain.cpp
 )
 add_library(xcikit::xci-graphics ALIAS xci-graphics)

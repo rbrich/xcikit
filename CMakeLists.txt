@@ -1,7 +1,6 @@
-# 3.18.4 in Debian 11
-# 3.22.1 in Ubuntu 22.04 / Emscripten Docker image
-# 3.25.1 in Debian 12
-cmake_minimum_required(VERSION 3.18...3.27)
+# 3.28.3 in Ubuntu 24.04 (noble)
+# 3.30.3 in Debian 12 (bookworm-backports)
+cmake_minimum_required(VERSION 3.27...3.30)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(XciBuildType)
@@ -12,6 +11,11 @@ project(xcikit
     VERSION "${XCI_VERSION}"
     HOMEPAGE_URL "https://github.com/rbrich/xcikit")
 
+# Disable C++ modules.
+# If not disabled, it breaks build and also CheckCXXSourceCompiles unless
+# the compiler scanning tool is installed (which is optional).
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+
 include(GNUInstallDirs)
 
 # Optional libraries (only xci-core is required)
@@ -20,6 +24,7 @@ option(XCI_CONFIG "Enable component: xci-config" ON)
 option(XCI_VFS "Enable component: xci-vfs" ON)
 option(XCI_WIDGETS "Enable component: xci-widgets" ON)
 option(XCI_SCRIPT "Enable component: xci-script" ON)
+option(XCI_SCENE "Enable component: xci-scene" ON)
 cmake_dependent_option(XCI_TEXT "Enable component: xci-text" ON
     "NOT XCI_WIDGETS" ON)
 cmake_dependent_option(XCI_GRAPHICS "Enable component: xci-graphics (requires Vulkan and SDL)" ON
@@ -43,10 +48,13 @@ option(BUILD_TC_TOOL "Disable to skip building 'tc' (Term Ctl) tool." ON)
 
 # Optional installation artifacts:
 option(XCI_INSTALL_DEVEL "Install headers, CMake config, static libs." ON)
+option(XCI_INSTALL_EXAMPLES "Install headers, CMake config, static libs." ON)
+option(XCI_INSTALL_TESTS "Install tests." OFF)
+option(XCI_INSTALL_BENCHMARKS "Install benchmarks." ON)
 
 # Dependencies
 option(XCI_WITH_TERMINFO "Link with TermInfo and use it for TTY control sequences, instead of builtin sequences." OFF)
-option(XCI_WITH_HYPERSCAN "Hyperscan library is required to build ff tool." OFF)
+option(XCI_WITH_HYPERSCAN "Hyperscan / Vectorscan library is required to build ff tool." OFF)
 
 # negate it for use as option() initial value
 if (EMSCRIPTEN)
@@ -75,6 +83,10 @@ set(XCI_CXX_STANDARD 20)
 if (HAVE_LIBSTDCXX)
     set(CMAKE_CXX_EXTENSIONS ON)  # for __int128
 endif()
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 16)
+    # Enable C++20 ranges in Clang 15
+    add_compile_options(-fexperimental-library)
+endif()
 
 set(XCIKIT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -99,6 +111,10 @@ else()
     add_library(Threads::Threads INTERFACE IMPORTED)
 endif()
 
+if (NOT EMSCRIPTEN AND (XCI_DATA OR XCI_VFS))
+    find_package(ZLIB REQUIRED)
+endif()
+
 # PEGTL
 find_package(pegtl REQUIRED)
 
@@ -118,6 +134,11 @@ find_package(fmt REQUIRED)
 # magic enum
 if (XCI_DATA OR BUILD_EXAMPLES)
     find_package(magic_enum REQUIRED)
+    # Workaround for Conan package, which has wrong include path
+    # (would require <magic_enum/magic_enum.hpp>, which is incompatible with upstream).
+    if (EXISTS ${magic_enum_INCLUDE_DIR}/magic_enum)
+        target_include_directories(magic_enum::magic_enum SYSTEM BEFORE INTERFACE ${magic_enum_INCLUDE_DIR}/magic_enum)
+    endif()
 endif()
 
 # Catch
@@ -127,11 +148,7 @@ endif()
 
 # Google Benchmark
 if (BUILD_BENCHMARKS)
-    find_package(benchmark)
-endif()
-
-if (BUILD_EXAMPLES AND NOT WIN32 AND NOT EMSCRIPTEN)
-    find_package(incbin QUIET)
+    find_package(benchmark REQUIRED)
 endif()
 
 # Doxygen
@@ -213,6 +230,10 @@ if (XCI_SCRIPT)
     add_subdirectory(src/xci/script)
 endif()
 
+if (XCI_SCENE)
+    add_subdirectory(src/xci/scene)
+endif()
+
 if (XCI_GRAPHICS)
     add_subdirectory(src/xci/graphics)
 endif()
@@ -244,7 +265,7 @@ if (BUILD_TOOLS)
         add_subdirectory(tools/term_ctl)
     endif()
     if (BUILD_DAR_TOOL)
-        add_subdirectory(tools/extract_archive)
+        add_subdirectory(tools/data_archive)
     endif()
     if (BUILD_FF_TOOL AND XCI_WITH_HYPERSCAN)
         add_subdirectory(tools/find_file)
@@ -275,7 +296,7 @@ endif()
 # Benchmarks   #
 # ------------ #
 
-if (benchmark_FOUND)
+if (BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
 
@@ -351,6 +372,7 @@ if (TRUE)
     print_flag("? xci-vfs!                     " ${XCI_VFS})
     print_flag("? xci-data!                    " ${XCI_DATA})
     print_flag("? xci-script!                  " ${XCI_SCRIPT})
+    print_flag("? xci-scene!                   " ${XCI_SCENE})
     print_flag("? xci-graphics!                " ${XCI_GRAPHICS})
     print_flag("? xci-text!                    " ${XCI_TEXT})
     print_flag("? xci-widgets!                 " ${XCI_WIDGETS})

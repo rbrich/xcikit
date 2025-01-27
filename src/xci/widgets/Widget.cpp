@@ -1,20 +1,19 @@
 // Widget.cpp created on 2018-04-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Widget.h"
 #include <xci/core/rtti.h>
 #include <xci/graphics/Window.h>
-#include <range/v3/algorithm/any_of.hpp>
+#include <ranges>
 #include <cassert>
 
 namespace xci::widgets {
 
 using namespace xci::graphics;
-using ranges::cpp20::any_of;
-
+using std::ranges::any_of;
 
 void Widget::set_position(const VariCoords& pos)
 {

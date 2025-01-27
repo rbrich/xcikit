@@ -1,16 +1,18 @@
 // Texture.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 
 #ifndef XCI_GRAPHICS_TEXTURE_H
 #define XCI_GRAPHICS_TEXTURE_H
 
-#include <xci/geometry/Vec2.h>
-#include <xci/geometry/Rect.h>
+#include <xci/math/Vec2.h>
+#include <xci/math/Rect.h>
 #include "vulkan/DeviceMemory.h"
+#include "vulkan/Buffer.h"
+#include "vulkan/Image.h"
 
 #include <vulkan/vulkan.h>
 
@@ -21,59 +23,66 @@
 namespace xci::graphics {
 
 class Renderer;
+class CommandBuffer;
 
-using xci::core::Vec2u;
-using xci::core::Rect_u;
 using std::uint8_t;
 
 
 enum class ColorFormat {
-    Grey,  // 256 shades of grey
-    BGRA,  // 32bit color
+    BGRA,          // 32bit color in sRGB colorspace (standard color texture)
+    LinearGrey,    // 256 shades of grey (linear intensity, e.g. font texture)
+    LinearBGRA,    // 32bit color in linear colorspace (e.g. normal-mapping texture)
 };
 
 
-/// Gray-scale texture - 1 byte per pixel
+struct TextureParameters {
+    ColorFormat format = ColorFormat::BGRA;
+    bool mipmaps : 1 = false;  // generate mipmaps
+};
+
+
+uint32_t mip_levels_for_size(Vec2u size);
+
+
 class Texture {
 public:
-    explicit Texture(Renderer& renderer, ColorFormat format);
+    explicit Texture(Renderer& renderer);
     ~Texture() { destroy(); }
 
     // Create or resize the texture
-    bool create(const Vec2u& size);
+    bool create(const Vec2u& size, TextureParameters params);
 
     // Write data to staging memory (don't forget to `update` the texture)
-    void write(const uint8_t* pixels);
+    void write(const void* pixels);
     void write(const uint8_t* pixels, const Rect_u& region);
     void clear();
 
-    // Transfer pending data to texture memory
+    // Transfer pending data to texture memory, generate mipmaps
     void update();
 
     Vec2u size() const { return m_size; }
     VkDeviceSize byte_size() const;
-    ColorFormat color_format() const { return m_format; }
+    ColorFormat color_format() const { return m_params.format; }
+    bool has_mipmaps() const { return m_params.mipmaps; }
+    uint32_t mip_levels() const { return has_mipmaps() ? mip_levels_for_size(m_size) : 1; }
 
     // Vulkan handles
-    VkSampler vk_sampler() const { return m_sampler; }
-    VkImageView vk_image_view() const { return m_image_view; }
+    VkImageView vk_image_view() const { return m_image_view.vk(); }
 
 private:
     VkFormat vk_format() const;
     VkDevice device() const;
+    void generate_mipmaps(CommandBuffer& cmd_buf);
     void destroy();
 
-private:
     Renderer& m_renderer;
-    ColorFormat m_format;
+    TextureParameters m_params {};
     Vec2u m_size;
-    VkBuffer m_staging_buffer {};
-    VkImage m_image {};
-    VkImageView m_image_view {};
+    Buffer m_staging_buffer;
+    Image m_image;
+    ImageView m_image_view;
     VkImageLayout m_image_layout { VK_IMAGE_LAYOUT_UNDEFINED };
-    VkSampler m_sampler {};
     DeviceMemory m_staging_memory;  // FIXME: pool the memory
-    DeviceMemory m_image_memory;  // FIXME: pool the memory
     void* m_staging_mapped = nullptr;
     std::vector<Rect_u> m_pending_regions;
     bool m_pending_clear = false;

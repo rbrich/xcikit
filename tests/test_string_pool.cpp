@@ -1,7 +1,7 @@
 // test_string_pool.cpp created on 2023-09-21 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <catch2/catch_test_macros.hpp>
@@ -58,7 +58,7 @@ TEST_CASE( "Fill 1000 strings", "[StringPool]" )
     StringPool pool;
     for (int i = 0; i != 1000; ++i) {
         auto str = "string number " + std::to_string(i);
-        check_add_retrieve(pool, str.c_str());
+        check_add_retrieve(pool, str);
     }
     CHECK(pool.occupancy() == 1000);  // all strings are longer than 3 chars
 }

@@ -1,7 +1,7 @@
 // sys.h created on 2018-08-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_SYS_H
@@ -27,6 +27,13 @@ namespace fs = std::filesystem;
 // - Mac: sysctl -n hw.ncpu
 // - Linux: grep processor /proc/cpuinfo | wc -l
 int cpu_count();
+
+
+/// Get number of seconds since some unspecified point in time.
+/// Use only difference, for measuring intervals.
+/// The timer is monotonic and does not tick when the system is asleep.
+/// See: https://en.wikipedia.org/wiki/Time_Stamp_Counter
+double get_cpu_time();
 
 
 // Integral thread ID

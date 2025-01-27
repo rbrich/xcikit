@@ -27,7 +27,7 @@ bool WadArchiveLoader::can_load_stream(std::istream& stream)
     stream.seekg(0);
     stream.read(magic.data(), magic.size());
     if (!stream) {
-        log::debug("Vfs: WadArchiveLoader: couldn't read magic: first 4 bytes");
+        log::debug("Vfs: WadArchiveLoader: Couldn't read magic: first 4 bytes");
         return false;
     }
     // "IWAD" or "PWAD"
@@ -68,7 +68,7 @@ VfsFile WadArchive::read_file(const std::string& path) const
         return entry.path() == path;
     });
     if (entry_it == m_entries.cend()) {
-        log::error("Vfs: WadArchive: Not found in archive: {}", path);
+        log::debug("Vfs: WadArchive: Not found in archive: {}", path);
         return {};
     }
 

@@ -1,7 +1,7 @@
 // int128.h created on 2023-09-06 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 // References:
@@ -14,6 +14,7 @@
 #include <sstream>
 #include <iomanip>
 #include <type_traits>
+#include <cstdint>
 
 namespace xci {
 template<class T>

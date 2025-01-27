@@ -1,7 +1,7 @@
 // Sprites.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_SPRITES_H
@@ -9,16 +9,13 @@
 
 #include <xci/graphics/Renderer.h>
 #include <xci/graphics/Primitives.h>
+#include <xci/graphics/Texture.h>
 #include <xci/graphics/Color.h>
-#include <xci/geometry/Vec2.h>
+#include <xci/math/Vec2.h>
 
 namespace xci::graphics { class View; }
 
 namespace xci::graphics {
-
-using xci::core::Rect_u;
-using xci::core::Rect_f;
-using xci::core::Vec2f;
 
 // A collection of sprites (ie. alpha-blended textured quads)
 // sharing the same texture. Each sprite can display different
@@ -26,7 +23,7 @@ using xci::core::Vec2f;
 
 class Sprites {
 public:
-    explicit Sprites(Renderer& renderer, Texture& texture,
+    explicit Sprites(Renderer& renderer, Texture& texture, Sampler& sampler,
                      Color color = Color::White());
 
     // Reserve memory for `num` sprites.
@@ -52,9 +49,10 @@ public:
 
 private:
     Texture& m_texture;
+    Sampler& m_sampler;
     Color m_color;
     Primitives m_quads;
-    Shader& m_shader;
+    Shader m_shader;
 };
 
 
@@ -62,7 +60,7 @@ private:
 
 class ColoredSprites {
 public:
-    explicit ColoredSprites(Renderer& renderer, Texture& texture,
+    explicit ColoredSprites(Renderer& renderer, Texture& texture, Sampler& sampler,
                             Color color = Color::White());
 
     // Reserve memory for `num` sprites.
@@ -89,9 +87,10 @@ public:
 
 private:
     Texture& m_texture;
+    Sampler& m_sampler;
     Color m_color;
     Primitives m_quads;
-    Shader& m_shader;
+    Shader m_shader;
 };
 
 

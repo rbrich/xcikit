@@ -1,14 +1,14 @@
 // ArgParser.cpp created on 2019-06-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "ArgParser.h"
 #include "TermCtl.h"
 #include "string.h"
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include <iostream>
 #include <utility>
@@ -16,6 +16,7 @@
 #include <cassert>
 #include <algorithm>
 #include <filesystem>
+#include <iterator>
 
 namespace xci::core::argparser {
 
@@ -135,12 +136,12 @@ std::string Option::usage() const
         if (!p)
             break;
         if (is_remainder() && p.dashes == 2 && p.len == 0) {
-            res += t.format("[{fg:green}{}{t:normal}] ", std::string(dp + p.pos, p.dashes));
+            res += t.format("[<green>{}<normal>] ", std::string(dp + p.pos, p.dashes));
         } else if (first) {
             first = false;
-            res += t.format("{t:bold}{fg:green}{}{t:normal}", std::string(dp + p.pos, p.dashes + p.len));
+            res += t.format("<bold><green>{}<normal>", std::string(dp + p.pos, p.dashes + p.len));
         } else if (!p.dashes) {
-            res += t.format(" {fg:green}{}{t:normal}", std::string(dp + p.pos, p.len));
+            res += t.format(" <green>{}<normal>", std::string(dp + p.pos, p.len));
         }
         dp += p.end();
     }
@@ -311,7 +312,7 @@ ArgParser& ArgParser::operator()(const char* argv[], bool detect_width, unsigned
     if (!parse_program_name(argv[0])) {
         // this should not occur
         auto& t = TermCtl::stderr_instance();
-        t.print("{t:bold}{fg:red}Missing program name (argv[0]){t:normal}\n");
+        t.print("<bold><red>Missing program name (argv[0])<normal>\n");
         exit(1);
     }
     try {
@@ -325,7 +326,7 @@ ArgParser& ArgParser::operator()(const char* argv[], bool detect_width, unsigned
         }
     } catch (const BadArgument& e) {
         auto& t = TermCtl::stderr_instance();
-        t.print("{t:bold}{fg:yellow}Error: {fg:red}{}{t:normal}\n\n", e.what());
+        t.print("<bold><yellow>Error: <red>{}<normal>\n\n", e.what());
         print_usage();
         print_help_notice();
         exit(1);
@@ -524,7 +525,7 @@ void ArgParser::print_usage() const
 
     unsigned indent = 0;
     {
-        auto head = t.format("{t:bold}{fg:yellow}Usage:{t:normal} {t:bold}{}{t:normal} ", m_progname);
+        auto head = t.format("<bold><yellow>Usage:<normal> <bold>{}<normal> ", m_progname);
         indent = TermCtl::stripped_width(head);
         cout << head;
     }
@@ -544,7 +545,7 @@ void ArgParser::print_help() const
         desc_cols = std::max(desc_cols, (unsigned) opt.desc().size());
     print_usage();
     auto& t = TermCtl::stdout_instance();
-    t.print("\n{t:bold}{fg:yellow}Options:{t:normal}\n");
+    t.print("\n<bold><yellow>Options:<normal>\n");
     for (const auto& opt : m_opts) {
         cout << "  " << opt.formatted_desc(desc_cols) << "  ";
         wrapping_print(opt.help(), desc_cols + 4, 0, m_max_width);

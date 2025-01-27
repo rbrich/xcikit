@@ -8,6 +8,7 @@
 #define XCI_CONFIG_PARSER_H
 
 #include <string>
+#include <string_view>
 #include <filesystem>
 
 namespace xci::config {
@@ -32,7 +33,7 @@ public:
     virtual ~ConfigParser() = default;
 
     bool parse_file(const fs::path& path);
-    bool parse_string(const std::string& str);
+    bool parse_string(std::string_view str);
 
     // visitor callbacks
 

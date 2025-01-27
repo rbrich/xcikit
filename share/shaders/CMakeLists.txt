@@ -16,12 +16,15 @@ endif()
 # ------------ #
 
 set(SHADER_SOURCES
+    blur_radial.frag
     cursor.vert
     cursor.frag
     ellipse.vert
     ellipse.frag
     ellipse_c.vert
     ellipse_c.frag
+    flat.vert
+    flat.frag
     flat_c.vert
     flat_c.frag
     fps.vert
@@ -30,6 +33,10 @@ set(SHADER_SOURCES
     line.frag
     line_c.vert
     line_c.frag
+    phong.vert
+    phong.frag
+    pick.vert
+    pick.frag
     polygon.vert
     polygon.frag
     polygon_c.vert

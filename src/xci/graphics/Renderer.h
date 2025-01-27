@@ -1,24 +1,26 @@
 // Renderer.h created on 2018-04-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_RENDERER_H
 #define XCI_GRAPHICS_RENDERER_H
 
 #include "Shader.h"
-#include <xci/geometry/Vec2.h>
+#include <xci/math/Vec2.h>
 #include <xci/vfs/Vfs.h>
 #include <xci/config.h>
 #include <xci/graphics/vulkan/Swapchain.h>
 #include <xci/graphics/vulkan/Pipeline.h>
 #include <xci/graphics/vulkan/DescriptorPool.h>
+#include <xci/graphics/vulkan/Sampler.h>
 
 #include <vulkan/vulkan.h>
 
 #include <unordered_map>
 #include <optional>
+#include <map>
 #include <memory>
 #include <array>
 #include <cstdint>
@@ -45,6 +47,18 @@ public:
     void set_present_mode(PresentMode mode) { m_swapchain.set_present_mode(mode); }
     PresentMode present_mode() const { return m_swapchain.present_mode(); }
 
+    /// Enable depth buffering.
+    /// This is prerequisite for fragment depth test, which is enabled separately in Pipeline
+    /// (possibly via Primitives).
+    /// Default: disabled
+    void set_depth_buffering(bool enable) { m_swapchain.set_depth_buffering(enable); }
+    bool depth_buffering() const { return m_swapchain.depth_buffering(); }
+
+    /// Multisampling (MSAA)
+    void set_sample_count(uint32_t count) { m_swapchain.set_sample_count(count); }
+    uint32_t sample_count() const { return m_swapchain.sample_count(); }
+    uint32_t max_sample_count() const { return uint32_t(m_max_sample_count); }
+
     void set_device_id(uint32_t device_id) { m_device_id = device_id; }
 
     // -------------------------------------------------------------------------
@@ -53,21 +67,38 @@ public:
     // Max texture size
     uint32_t max_image_dimension_2d() const { return m_max_image_dimension_2d; }
     VkDeviceSize min_uniform_offset_alignment() const { return m_min_uniform_offset_alignment; }
+    VkDeviceSize non_coherent_atom_size() const { return m_non_coherent_atom_size; }
 
     // -------------------------------------------------------------------------
     // Shaders
 
-    /// Get one of the predefined shaders
-    /// \param shader_id Use `Custom` to create new shader
-    /// \return shared_ptr to the shader or nullptr on error
-    Shader& get_shader(ShaderId shader_id);
+    /// Load or use cached shader modules to create a Shader program.
+    /// \param vert_name    Name of shader in VFS ("shaders/<name>.vert")
+    /// \param frag_name    Name of shader in VFS ("shaders/<name>.frag")
+    /// \throws VulkanError on error
+    Shader get_shader(std::string_view vert_name, std::string_view frag_name);
 
-    /// Load one of the predefined shaders
-    /// This creates new Shader object. Use `get_shader` to get one
-    /// from the cache instead.
-    bool load_shader(ShaderId shader_id, Shader& shader);
+    /// Load shader module (vertex or fragment shader), or return a cached one.
+    /// \returns Optional reference to the module. Null on failure.
+    ShaderModule* load_shader_module(const std::string& vfs_path);
 
-    void clear_shader_cache();
+    void clear_shader_cache() { m_shader_module.clear(); }
+
+    // -------------------------------------------------------------------------
+    // Samplers
+
+    float max_sampler_anisotropy() const { return m_max_sampler_anisotropy; }
+
+    /// Get existing sampler or create a new one.
+    /// \param address_mode     Addressing mode for both U, V coords
+    /// \param anisotropy       Max anisotropy level. Use 0.f to disable.
+    ///                         Capped at max_sampler_anisotropy(), which is usually 16.
+    /// \param max_lod          Max mipmap level. Can be bigger than mip levels available in the texture.
+    ///                         Set to 0 to disable mipmaps.
+    Sampler& get_sampler(SamplerAddressMode address_mode = SamplerAddressMode::ClampToEdge,
+                         float anisotropy = 0.f, unsigned max_lod = 16);
+
+    void clear_sampler_cache();
 
     // -------------------------------------------------------------------------
     // Pipelines
@@ -100,6 +131,7 @@ public:
     bool create_surface(SDL_Window* window);
     void destroy_surface();
     void reset_framebuffer(VkExtent2D new_size = {UINT32_MAX, UINT32_MAX}) { m_swapchain.reset_framebuffer(new_size); }
+    Swapchain& swapchain() { return m_swapchain; }
 
     // Vulkan handles
     VkInstance vk_instance() const { return m_instance; }
@@ -111,27 +143,26 @@ public:
     VkCommandPool vk_command_pool() const { return m_command_pool; }
     VkCommandPool vk_transient_command_pool() const { return m_transient_command_pool; }
     VkExtent2D vk_image_extent() const { return m_swapchain.vk_image_extent(); }
-    VkRenderPass vk_render_pass() const { return m_render_pass; }
+    VkRenderPass vk_render_pass() const { return m_swapchain.attachments().render_pass(); }
     VkFramebuffer vk_framebuffer(uint32_t index) const { return m_swapchain.vk_framebuffer(index); }
 
 private:
     bool create_instance();
     void create_device();
     void destroy_device();
-    void create_renderpass();
-    void destroy_renderpass();
 
     std::optional<uint32_t> query_queue_families(VkPhysicalDevice device);
 
-    void load_device_limits(const VkPhysicalDeviceLimits& limits);
+    void load_device_properties(const VkPhysicalDeviceProperties& props);
 
     Vfs& m_vfs;
-    static constexpr auto c_num_shaders = (size_t) ShaderId::NumItems_;
-    std::array<std::unique_ptr<Shader>, c_num_shaders> m_shader = {};
+    std::map<std::string, ShaderModule> m_shader_module = {};
 
+    // Vulkan object deduplication caches
     std::unordered_map<PipelineLayoutCreateInfo, PipelineLayout> m_pipeline_layout;
     std::unordered_map<PipelineCreateInfo, Pipeline> m_pipeline;
     std::unordered_map<DescriptorPoolSizes, std::vector<DescriptorPool>> m_descriptor_pool;
+    std::unordered_map<SamplerCreateInfo, Sampler> m_sampler;
 
     VkInstance m_instance {};
     VkSurfaceKHR m_surface {};
@@ -139,7 +170,6 @@ private:
     VkDevice m_device {};
     VkQueue m_queue {};
     Swapchain m_swapchain {*this};
-    VkRenderPass m_render_pass {};
     VkCommandPool m_command_pool {};
     VkCommandPool m_transient_command_pool {};
 
@@ -152,6 +182,9 @@ private:
     // Device limits
     uint32_t m_max_image_dimension_2d = 0;
     VkDeviceSize m_min_uniform_offset_alignment = 0;
+    VkDeviceSize m_non_coherent_atom_size = 0;
+    float m_max_sampler_anisotropy = 0.0f;
+    VkSampleCountFlagBits m_max_sample_count = VK_SAMPLE_COUNT_1_BIT;  // for MSAA
 };
 
 

@@ -17,20 +17,20 @@
 #              (multiple options are evaluated as logical OR)
 # * `public` - set True if the library headers are used in public interface
 #
-# Run `precache_upstream_deps.py` to download and export `upstream` deps as specified.
+# Run `build_deps.py` to download and export `upstream` deps as specified.
 # This is alternative to ConanCenter, but may be needed when a fix didn't yet make it
 # into ConanCenter. The `upstream` must contain a `CMakeLists.txt` with installation commands.
 
 requirements:
   fmt:
-    cmake: "fmt/10.0.0"
-    conan: "fmt/10.1.1"
-    upstream: "github.com fmtlib/fmt 10.1.1"
-    cmake_defs: FMT_TEST=OFF FMT_DOC=OFF FMT_SYSTEM_HEADERS=ON CMAKE_POSITION_INDEPENDENT_CODE=ON
+    cmake: "fmt/11.0.0"
+    conan: "fmt/11.0.2"
+    upstream: "github.com fmtlib/fmt 11.0.2"
+    cmake_defs: FMT_TEST=OFF FMT_DOC=OFF FMT_SYSTEM_HEADERS=ON
     public: True
   range_v3:
     cmake: "range-v3/0.12.0"
-    conan: "range-v3/0.12.0"
+    conan: "range-v3/cci.20240905"
     upstream: "github.com ericniebler/range-v3 0.12.0"
     cmake_defs: RANGE_V3_TESTS=OFF RANGE_V3_EXAMPLES=OFF RANGE_V3_PERF=OFF RANGE_V3_DOCS=OFF RANGE_V3_HEADER_CHECKS=OFF
     prereq:
@@ -39,28 +39,30 @@ requirements:
       - widgets
   pegtl:
     cmake: "pegtl/"
-    conan: "taocpp-pegtl/3.2.7"
-    upstream: "github.com taocpp/PEGTL 3.2.7"
+    conan: "taocpp-pegtl/3.2.8"
+    upstream: "github.com taocpp/PEGTL 3.2.8"
     cmake_defs: PEGTL_BUILD_TESTS=OFF PEGTL_BUILD_EXAMPLES=OFF
     public: True
   magic_enum:
-    cmake: "magic_enum/0.7.3"
-    conan: "magic_enum/0.9.3"
+    cmake: "magic_enum/0.9.5"
+    conan: "magic_enum/0.9.6"
+    upstream: "github.com Neargye/magic_enum v0.9.6"
+    cmake_defs: MAGIC_ENUM_OPT_BUILD_EXAMPLES=OFF MAGIC_ENUM_OPT_BUILD_TESTS=OFF
     public: True
     prereq:
       - data
       - examples
   zlib:
     cmake: "ZLIB/"
-    conan: "zlib/1.3"
+    conan: "zlib/1.3.1"
     prereq:
       - data
   libzip:
     cmake: "libzip/1.7.0"
-    conan: "libzip/1.10.1"
+    conan: "libzip/1.11.1"
   sdl:
     cmake: "SDL2/2.0.14"
-    conan: "sdl/2.28.5"
+    conan: "sdl/2.30.5"
     prereq:
       - graphics
   vulkan:
@@ -70,44 +72,45 @@ requirements:
     prereq:
       - graphics
   spirv-cross:
-    cmake: "spirv-cross/"
-    conan: "spirv-cross/1.3.243.0"
+    cmake:
+      - "spirv_cross_core/"
+      - "spirv_cross_glsl/"
+    conan: "spirv-cross/1.3.268.0"
+    upstream: "github.com KhronosGroup/SPIRV-Cross vulkan-sdk-1.3.296"
+    cmake_defs: SPIRV_CROSS_STATIC=ON SPIRV_CROSS_SHARED=OFF SPIRV_CROSS_CLI=OFF
     prereq:
       - shed_tool
   freetype:
     cmake: "Freetype/2.10.0"
-    conan: "freetype/2.13.0"
+    conan: "freetype/2.13.2"
     prereq:
       - text
   harfbuzz:
     cmake: "harfbuzz/"
-    conan: "harfbuzz/8.2.2"
+    conan: "harfbuzz/8.3.0"
     prereq:
       - text
   hyperscan:
     cmake: "Hyperscan/"
+    upstream: "github.com VectorCamp/vectorscan vectorscan/5.4.11"
+    cmake_defs: BUILD_BENCHMARKS=OFF BUILD_EXAMPLES=OFF BUILD_SHARED_LIBS=ON
     prereq:
       - ff_tool
   boost:
     cmake: "Boost/1.75.0"
-    conan: "pfr/2.1.0"
+    conan: "pfr/2.2.0"
     public: True
     prereq:
       - data
   catch2:
     cmake: "Catch2/3"
-    conan: "catch2/3.4.0"
-    upstream: "github.com catchorg/Catch2 v3.4.0"
+    conan: "catch2/3.7.1"
+    upstream: "github.com catchorg/Catch2 v3.7.1"
     cmake_defs: CATCH_INSTALL_DOCS=OFF CMAKE_CXX_STANDARD=20
     prereq:
       - tests
   benchmark:
     cmake: "benchmark/1.5.0"
-    conan: "benchmark/1.8.3"
+    conan: "benchmark/1.9.0"
     prereq:
       - benchmarks
-  incbin:
-    cmake: "incbin/"
-    conan: "incbin/cci.20211107"
-    prereq:
-      - examples

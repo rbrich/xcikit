@@ -94,8 +94,8 @@ Technologies:
 Supported compilers:
 
 * GCC >= 10
-* Clang >= 13
-* Xcode >= 13
+* Clang >= 15
+* Xcode >= 14
 * Visual Studio >= 16
 
 Any Unix-like OS with C++20 compliant compiler should work.
@@ -114,6 +114,10 @@ Text rendering and text layout.
 === xci::graphics
 
 The basic building blocks for rendering of text and UI elements.
+
+=== xci::scene
+
+Support for building 3D scenes.
 
 === xci::script
 
@@ -142,9 +146,33 @@ dati examples/script/some.firm -s /tmp/firm.schema
 fire examples/script/some.firm
 ----
 
+=== xci::vfs
+
+Virtual file system. Unified reading of files in filesystem directories and in archive files.
+Contains support for custom archive format - DAR.
+
 === xci::data
 
 Serialization and deserialization of structured data.
+
+=== xci::config
+
+Parse and dump config file. The format is custom:
+
+```
+bool_item false   // true/false
+int_item 1
+float_item 2.3
+string_item "abc\n"  // quotes are required, supports C-style escape sequences
+group {
+  value 1
+  subgroup { foo 42; bar "baz" }  // semicolon is used as a delimiter for multiple items on same line
+}
+```
+
+=== xci::math
+
+Linear algebra: vectors, matrices, 2D rectangle, geometric computations.
 
 === xci::core
 
@@ -165,10 +193,6 @@ Core utilities. These have little or no dependencies. Mostly just stdlib + OS AP
 * `rtti.h` - C++ demangled type names.
 * `string.h` - String manipulation, unicode utilities.
 * `sys.h` - A replacement for `std::this_thread::get_id()`, providing the canonical TID.
-
-=== xci::geometry
-
-Linear algebra: vectors, matrices, 2D rectangle, geometric computations.
 
 === xci::compat
 
@@ -211,15 +235,18 @@ Libraries:
   https://github.com/KhronosGroup/glslang[glslangValidator] (xci-graphics)
 - https://github.com/catchorg/Catch2[Catch2] (tests)
 - https://github.com/google/benchmark[Google Benchmark] (benchmarks)
-- https://github.com/graphitemaster/incbin[incbin] (examples)
 
 Obtaining dependencies:
 
 * Install them into *_system_* or otherwise make them visible to CMake's `find_*` functions.
   - This works for almost all deps, except *fmt*, *pfr*, *magic_enum*.
   - Deps that must be installed this way: *libzip*, *hyperscan*.
+* Build deps from Git locally for this project
+  - Run `./build_deps.sh`, it will clone each repo and build it via CMake to `./.deps`
+  - The build script picks up these deps as if they were installed in the system
 * Install them via *_Conan_*. See <<ide-conan,How to build from IDE>> or build with `build.sh`
   which runs conan automatically.
+  - Conan can be skipped via `--no-conan-deps` (if you have all deps preinstalled in system or in `./.deps`)
 
 [#system-package-manager]
 Installing the dependencies with *_system package managers_*:
@@ -379,6 +406,14 @@ Add these CMake options in the IDE settings:
 The `CONAN_OPTIONS` are just an example, in this case Conan will skip installing graphical libs,
 so they can be searched in the system instead. Those libs must be preinstalled.
 
+==== Troubleshooting
+
+If linking tests fails with unresolved symbols from catch2 (`error LNK2019: unresolved external symbol ...`), it's because Conan picked incompatible package.
+To avoid issues like this, it's best to completely disable the https://docs.conan.io/2.0/reference/extensions/binary_compatibility.html[compatibility extension].
+
+There are multiple ways how to disable it. One way is to edit `cppstd_compat.py`
+and make it always `return []`. Do not forget to also remove header comments,
+so Conan doesn't destroy your changes.
 
 [#emscripten]
 === Porting to Emscripten

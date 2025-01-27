@@ -17,7 +17,8 @@ namespace xci::graphics {
 using namespace xci::core;
 
 
-std::vector<std::uint32_t> Shader::read_spirv_file(const fs::path& pathname)
+/// Auxiliary function to read spirv file into int32 vector.
+std::vector<std::uint32_t> read_spirv_file(const fs::path& pathname)
 {
     std::ifstream f(pathname, std::ios::ate | std::ios::binary);
     if (!f)
@@ -36,90 +37,50 @@ std::vector<std::uint32_t> Shader::read_spirv_file(const fs::path& pathname)
 }
 
 
-Shader::Shader(Renderer& renderer) : m_device(renderer.vk_device()) {}
+ShaderModule::ShaderModule(Renderer& renderer) : m_device(renderer.vk_device()) {}
 
 
-bool Shader::load_from_vfs(const Vfs& vfs, const std::string& vertex, const std::string& fragment)
+bool ShaderModule::create(std::span<const uint32_t> code)
 {
-    auto vert_file = vfs.read_file(vertex);
-    auto frag_file = vfs.read_file(fragment);
-    auto vert_data = vert_file.content();
-    auto frag_data = frag_file.content();
-    return load_from_memory(
-        reinterpret_cast<const char*>(vert_data->data()), static_cast<int>(vert_data->size()),
-        reinterpret_cast<const char*>(frag_data->data()), static_cast<int>(frag_data->size()));
-}
-
-
-VkShaderModule Shader::create_module(const uint32_t* code, size_t size)
-{
+    if (m_module)
+        destroy();
     const VkShaderModuleCreateInfo module_create_info = {
             .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-            .codeSize = size,
-            .pCode = code,
+            .codeSize = code.size_bytes(),
+            .pCode = code.data(),
     };
-
-    VkShaderModule module;
-    VK_TRY("vkCreateShaderModule",
-            vkCreateShaderModule(m_device, &module_create_info, nullptr, &module));
-    return module;
+    VK_TRY_RET("vkCreateShaderModule",
+           vkCreateShaderModule(m_device, &module_create_info, nullptr, &m_module));
+    return true;
 }
 
 
-bool Shader::load_from_file(const fs::path& vertex, const fs::path& fragment)
+bool ShaderModule::create(const char* data, size_t size)
 {
-    auto vertex_code = read_spirv_file(vertex);
-    auto fragment_code = read_spirv_file(fragment);
+    assert(intptr_t(data) % 4 == 0);  // must have 4-byte alignment
+    assert(size % 4 == 0);  // size must be divisible by 4
 
-    if (vertex_code.empty() || fragment_code.empty())
+    return create({reinterpret_cast<const uint32_t*>(data), size / sizeof(uint32_t)});
+}
+
+
+bool ShaderModule::load_from_file(const fs::path& path)
+{
+    log::info("Loading shader: {}", path);
+    auto code = read_spirv_file(path);
+    if (code.empty())
         return false;
-
-    load_from_memory(vertex_code, fragment_code);
-
-    log::info("Loaded vertex shader: {}", vertex);
-    log::info("Loaded fragment shader: {}", fragment);
-    return true;
+    return create(code);
 }
 
 
-bool Shader::load_from_memory(
-        const char* vertex_data, int vertex_size,
-        const char* fragment_data, int fragment_size)
+bool ShaderModule::load_from_vfs(const Vfs& vfs, const std::string& path)
 {
-    assert(intptr_t(vertex_data) % 4 == 0);  // must have 4-byte alignment
-    assert(intptr_t(fragment_data) % 4 == 0);  // must have 4-byte alignment
-    assert(vertex_size % sizeof(uint32_t) == 0);  // size must be divisible by 4
-    assert(fragment_size % sizeof(uint32_t) == 0);  // size must be divisible by 4
-
-    clear();
-    m_vertex_module = create_module(
-            reinterpret_cast<const uint32_t*>(vertex_data), vertex_size);
-    m_fragment_module = create_module(
-            reinterpret_cast<const uint32_t*>(fragment_data), fragment_size);
-    return true;
-}
-
-
-bool Shader::load_from_memory(std::span<const uint32_t> vertex_code,
-                              std::span<const uint32_t> fragment_code)
-{
-    clear();
-    m_vertex_module = create_module(vertex_code.data(), vertex_code.size_bytes());
-    m_fragment_module = create_module(fragment_code.data(), fragment_code.size_bytes());
-    return true;
-}
-
-
-bool Shader::is_ready() const
-{
-    return m_vertex_module != VK_NULL_HANDLE && m_fragment_module != VK_NULL_HANDLE;
-}
-
-
-void Shader::clear()
-{
-    vkDestroyShaderModule(m_device, m_vertex_module, nullptr);
-    vkDestroyShaderModule(m_device, m_fragment_module, nullptr);
+    log::info("Loading shader: {}", path);
+    auto data = vfs.read_file(path).content();
+    if (!data)
+        return false;
+    return create(reinterpret_cast<const char*>(data->data()), data->size());
 }
 
 

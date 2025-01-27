@@ -1,13 +1,13 @@
 // Class.cpp created on 2019-09-11 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Class.h"
 #include "Function.h"
 
-#include <range/v3/algorithm.hpp>
+#include <ranges>
 
 namespace xci::script {
 
@@ -42,7 +42,7 @@ Instance::Instance(Class& cls, SymbolTable& symtab)
 
 bool Instance::is_generic() const
 {
-    return ranges::any_of(m_types, [](const TypeInfo& t) { return t.has_generic(); });
+    return std::ranges::any_of(m_types, [](const TypeInfo& t) { return t.has_generic(); });
 }
 
 

@@ -45,7 +45,7 @@ int main(int argc, const char* argv[])
 
     setup_window(window, "XCI layout demo", argv);
 
-    Font font {renderer};
+    Font font {renderer, 512u};
     if (!font.add_face(vfs, "fonts/Lora/Lora[wght].ttf", 0))
         return EXIT_FAILURE;
     if (!font.add_face(vfs, "fonts/Lora/Lora-Italic[wght].ttf", 0))
@@ -85,7 +85,7 @@ int main(int argc, const char* argv[])
     help_text_3.set_color(Color(200, 100, 50));
     help_text_3.set_font_size(3_vp);
 
-    Sprites font_texture(renderer, font.texture(), Color(0, 50, 255));
+    Sprites font_texture(renderer, font.texture(), font.sampler(), Color(0, 50, 255));
 
     View::DebugFlags debug_flags = 0;
     window.set_key_callback([&](View& view, KeyEvent ev) {

@@ -3,22 +3,25 @@
 # * clang-analyzer-security.insecureAPI.bzero -- bzero is used internally by system macros (e.g. FD_ZERO)
 # * concurrency-mt-unsafe -- reports exit() etc., not going to fix that
 # * readability-container-size-empty -- in Catch2 tests, comparing with empty string produces better failed test message
-# * readability-qualified-auto -- wants to auto `const auto*` for `std::string_view::iterator` on Clang => that would be unportable
-# * modernize-redundant-void-arg -- used intentionally in xci::script to emphasize visitors of 'void' type
+# * readability-qualified-auto -- wants to change `auto` to `const auto*` for `std::string_view::iterator` on Clang => that would be unportable
 # * performance-no-int-to-ptr -- nothing found in our code, but warns about SIG_ERR macro content
 Checks: >
   bugprone-*,
+  -bugprone-assignment-in-if-condition,
   -bugprone-branch-clone,
   -bugprone-sizeof-expression,
   -bugprone-easily-swappable-parameters,
   -bugprone-exception-escape,
   -bugprone-implicit-widening-of-multiplication-result,
+  -bugprone-switch-missing-default-case,
   clang-analyzer-*,
   -clang-analyzer-deadcode.DeadStores,
   -clang-analyzer-security.insecureAPI.bzero,
   clang-diagnostic-*,
   concurrency-*,
   -concurrency-mt-unsafe,
+  cppcoreguidelines-interfaces-global-init,
+  cppcoreguidelines-slicing,
   google-default-arguments,
   google-global-names-in-headers,
   google-runtime-operator,
@@ -28,18 +31,17 @@ Checks: >
   -misc-non-private-member-variables-in-classes,
   -misc-no-recursion,
   -misc-use-anonymous-namespace,
+  -misc-include-cleaner,
   modernize-*,
   -modernize-avoid-c-arrays,
   -modernize-deprecated-headers,
   -modernize-use-auto,
   -modernize-use-emplace,
   -modernize-use-nodiscard,
-  -modernize-use-nullptr,
   -modernize-use-trailing-return-type,
-  -modernize-redundant-void-arg,
   -modernize-return-braced-init-list,
   performance-*,
-  -performance-no-int-to-ptr,
+  -performance-avoid-endl,
   -performance-inefficient-string-concatenation,
   portability-*,
   readability-*,
@@ -60,7 +62,6 @@ Checks: >
   -readability-identifier-length,
   -readability-use-anyofallof
 CheckOptions:
-  - key: bugprone-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
-    value: 'false'
-  - key: bugprone-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
-    value: 'false'
+  bugprone-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion: false
+  bugprone-narrowing-conversions.WarnOnFloatingPointNarrowingConversion: false
+  misc-const-correctness.AnalyzeValues: false

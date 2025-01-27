@@ -48,7 +48,7 @@ int main(int argc, const char* argv[])
 
     setup_window(window, "XCI font demo", argv);
 
-    Font font {renderer};
+    Font font {renderer, 512u};
     if (!font.add_face(vfs, "fonts/Enriqueta/Enriqueta-Regular.ttf", 0))
         return EXIT_FAILURE;
     if (!font.add_face(vfs, "fonts/Enriqueta/Enriqueta-Bold.ttf", 0))
@@ -89,14 +89,17 @@ int main(int argc, const char* argv[])
         help_text.layout().update(view);
     };
 
-    Sprites font_texture(renderer, font.texture(), Color::Blue());
-    Sprites emoji_font_texture(renderer, emoji_font.texture(), Color::Blue());
+    Sprites font_texture(renderer, font.texture(), font.sampler(), Color::Blue());
+    Sprites emoji_font_texture(renderer, emoji_font.texture(), emoji_font.sampler(), Color::Blue());
 
     Rectangle rects(renderer);
 
     FramebufferPixels emoji_offset = 0.f;
 
     window.set_size_callback([&](View& view) {
+        font.clear_cache();
+        emoji_font.clear_cache();
+
         text.resize(view);
         emoji.resize(view);
         help_text.resize(view);

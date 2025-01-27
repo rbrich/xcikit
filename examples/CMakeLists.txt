@@ -20,7 +20,7 @@ function(add_demo TARGET)
     target_include_directories(${TARGET} PRIVATE ${EXAMPLES_DIR})
 
     if (ARG_LINK)
-        target_link_libraries(${TARGET} ${ARG_LINK})
+        target_link_libraries(${TARGET} PRIVATE ${ARG_LINK})
     endif()
 
     if (ARG_DEPS)
@@ -31,7 +31,14 @@ function(add_demo TARGET)
         target_compile_definitions(${TARGET} PRIVATE ${ARG_CDEFS})
     endif()
 
-    install(TARGETS ${TARGET} EXPORT xcikit DESTINATION ${DEMO_DEST})
+    if (XCI_INSTALL_EXAMPLES)
+        if (APPLE)
+            set_target_properties(${TARGET} PROPERTIES INSTALL_RPATH "@executable_path/../../lib")
+        else()
+            set_target_properties(${TARGET} PROPERTIES INSTALL_RPATH "$ORIGIN/../../lib")
+        endif()
+        install(TARGETS ${TARGET} EXPORT xcikit DESTINATION ${DEMO_DEST})
+    endif()
 endfunction()
 
 
@@ -55,6 +62,12 @@ endif()
 
 if (XCI_DATA)
     add_subdirectory(data)
+endif()
+
+# xci-scene
+
+if (XCI_SCENE)
+    add_subdirectory(scene)
 endif()
 
 # xci-script

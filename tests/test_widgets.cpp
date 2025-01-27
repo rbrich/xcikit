@@ -1,7 +1,7 @@
 // test_widgets.cpp created on 2018-08-06 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <catch2/catch_test_macros.hpp>
@@ -10,7 +10,7 @@
 #include <xci/core/string.h>
 #include <xci/compat/macros.h>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 using namespace xci::widgets;
 using namespace xci::text;

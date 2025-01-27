@@ -1,7 +1,7 @@
 // Window.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_WINDOW_H
@@ -10,7 +10,7 @@
 #include "View.h"
 #include <xci/graphics/vulkan/CommandBuffers.h>
 #include <xci/graphics/Color.h>
-#include <xci/geometry/Vec2.h>
+#include <xci/math/Vec2.h>
 #include <xci/core/mixin.h>
 
 #include <vulkan/vulkan.h>
@@ -26,9 +26,6 @@ union SDL_Event;
 
 namespace xci::graphics {
 
-using xci::core::Vec2u;
-using xci::core::Vec2f;
-using xci::core::Vec2i;
 
 // Key names come from GLFW, with only minor changes
 enum class Key: uint8_t {
@@ -95,7 +92,6 @@ struct ModKey {
 
     bool operator== (ModKey other) const
         { return shift == other.shift && ctrl == other.ctrl && alt == other.alt && super == other.super;}
-    bool operator!= (ModKey other) const { return !(*this == other); }
 };
 
 
@@ -192,6 +188,9 @@ public:
     bool is_fullscreen() const { return m_fullscreen; }
     void set_fullscreen_mode(FullscreenMode mode) { m_fullscreen_mode = mode; }
 
+    // Obtain current window size
+    Vec2u get_size() const;
+
     // Set clipboard text (in UTF-8)
     bool set_clipboard_text(const std::string& text) const;
     // Get clipboard text (in UTF-8)
@@ -227,7 +226,7 @@ public:
     ScrollCallback scroll_callback() { return m_scroll_cb; }
 
     /// Color used to clear the framebuffer after swapping. Default: black
-    void set_clear_color(Color color) { m_clear_color = color; }
+    void set_clear_color(Color color);
 
     // Refresh mode:
     // - OnDemand is energy-saving mode, good for normal GUI applications (forms etc.)
@@ -250,6 +249,8 @@ public:
     /// \param origin       The position of (0,0) coordinates. Default is Center.
     void set_view_origin(ViewOrigin origin);
 
+    View& view() { return m_view; }
+
     void set_debug_flags(View::DebugFlags flags);
 
     /// Wait for asynchronous draw commands to finish.
@@ -260,16 +261,17 @@ public:
     SDL_Window* sdl_window() const { return m_window; }
 
     // Vulkan - current command buffer
-    VkCommandBuffer vk_command_buffer() const { return m_command_buffers[m_current_cmd_buf]; }
+    CommandBuffer& command_buffer() { return m_command_buffers[m_current_cmd_buf]; }
+    VkCommandBuffer vk_command_buffer() const { return m_command_buffers.vk(m_current_cmd_buf); }
     uint32_t command_buffer_index() const { return m_current_cmd_buf; }
-    void add_command_buffer_resource(const ResourcePtr& resource) { m_command_buffers.add_resource(m_current_cmd_buf, resource); }
+    CommandBuffers& command_buffers() { return m_command_buffers; }
 
 private:
     void setup_view();
     void create_command_buffers();
     void resize_framebuffer();
     void draw();
-    void handle_event(SDL_Event& event);
+    void handle_event(const SDL_Event& event);
 
 public:
     static constexpr uint32_t cmd_buf_count = 2;
@@ -279,7 +281,6 @@ private:
     SDL_Window* m_window = nullptr;
     View m_view {this};
     RefreshMode m_refresh_mode = RefreshMode::OnDemand;
-    Color m_clear_color;
     std::chrono::microseconds m_timeout {0};
     FullscreenMode m_fullscreen_mode = FullscreenMode::Default;
     uint32_t m_sdl_wakeup_event;

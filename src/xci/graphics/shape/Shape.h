@@ -30,12 +30,12 @@ public:
 protected:
     explicit Shape(Renderer& renderer,
                    VertexFormat vertex_format, PrimitiveType primitive_type,
-                   ShaderId shader_id)
+                   std::string_view vert_shader, std::string_view frag_shader)
             : m_primitives(renderer, vertex_format, primitive_type),
-              m_shader(renderer.get_shader(shader_id)) {}
+              m_shader(renderer.get_shader(vert_shader, frag_shader)) {}
 
     Primitives m_primitives;
-    Shader& m_shader;
+    Shader m_shader;
 };
 
 
@@ -53,8 +53,8 @@ public:
 protected:
     explicit UniformColorShape(Renderer& renderer,
                                VertexFormat vertex_format, PrimitiveType primitive_type,
-                               ShaderId shader_id)
-    : Shape(renderer, vertex_format, primitive_type, shader_id) {}
+                               std::string_view vert_shader, std::string_view frag_shader)
+    : Shape(renderer, vertex_format, primitive_type, vert_shader, frag_shader) {}
 };
 
 
@@ -69,8 +69,8 @@ public:
 protected:
     explicit VaryingColorShape(Renderer& renderer,
                                VertexFormat vertex_format, PrimitiveType primitive_type,
-                               ShaderId shader_id)
-    : Shape(renderer, vertex_format, primitive_type, shader_id) {}
+                               std::string_view vert_shader, std::string_view frag_shader)
+    : Shape(renderer, vertex_format, primitive_type, vert_shader, frag_shader) {}
 };
 
 

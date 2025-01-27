@@ -489,7 +489,6 @@ struct Operator {
     bool is_dot_call() const { return op == DotCall; }
     bool is_comma() const { return op == Comma; }
     bool operator==(const Operator& rhs) const { return op == rhs.op; }
-    bool operator!=(const Operator& rhs) const { return op != rhs.op; }
 
     Op op = Undefined;
 };

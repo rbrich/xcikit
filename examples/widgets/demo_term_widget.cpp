@@ -1,7 +1,7 @@
 // demo_term_widget.cpp created on 2018-07-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -12,10 +12,11 @@
 #include <xci/core/log.h>
 #include <xci/config.h>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <cstdlib>
 #include <cstdio>
 
+using namespace xci;
 using namespace xci::widgets;
 using namespace xci::graphics::unit_literals;
 using fmt::format;

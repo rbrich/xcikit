@@ -1,7 +1,7 @@
 // FpsCounter.cpp created on 2018-04-13 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "FpsCounter.h"
@@ -12,8 +12,8 @@ namespace xci::core {
 void FpsCounter::tick(float frame_time)
 {
     m_delta += frame_time;
-    while (m_delta >= m_fraction) {
-        m_delta -= m_fraction;
+    while (m_delta >= fraction) {
+        m_delta -= fraction;
         m_idx ++;
         if (m_idx >= m_samples.size())
             m_idx = 0;
@@ -28,12 +28,14 @@ void FpsCounter::tick(float frame_time)
 void FpsCounter::foreach_sample(const std::function<void(float)>& cb) const
 {
     float last_sample = 0.f;
-    for (auto i = (m_idx+1 == m_samples.size()) ? 0 : m_idx+1;;
-              i = (i+1 == m_samples.size()) ? 0 : i+1) {
+    for (auto i = m_idx;;) {
         const auto& s = m_samples[i];
         if (s.num_frames > 0)
             last_sample = s.total_time / float(s.num_frames);
         cb(last_sample);
+        ++i;
+        if (i == m_samples.size())
+            i = 0;
         if (i == m_idx)
             break;
     }

@@ -1,15 +1,15 @@
 // ConfigParser.cpp created on 2023-11-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "ConfigParser.h"
 #include <xci/core/log.h>
+#include <xci/core/parser/raw_string.h>
 #include <xci/core/parser/unescape_rules.h>
 
 #include <tao/pegtl.hpp>
-#include <fmt/ostream.h>
 
 namespace xci::config {
 
@@ -42,6 +42,10 @@ struct DecNumExp: seq< one<'e'>, opt<Sign>, must<UPlus<digit>> > {};
 struct Bool: sor<KFalse, KTrue> {};
 struct Number: seq<opt<Sign>, UPlus<digit>, opt<DecNumFrac>, opt<DecNumExp>> {};
 struct String: if_must< one<'"'>, until< one<'"'>, StringChUni > > {};
+struct EscapedQuotes: seq<one<'\\'>, three<'"'>, star<one<'"'>>> {};
+struct RawStringCh: any {};
+struct RawStringContent: until<three<'"'>, sor<EscapedQuotes, RawStringCh>> {};
+struct RawString : if_must< three<'"'>, RawStringContent > {};
 
 // Group
 struct GroupContent;
@@ -51,7 +55,7 @@ struct Group: seq<GroupBegin, GroupContent, SkipWS, GroupEnd> {};
 
 // Item
 struct Name: identifier {};
-struct Value: sor<Bool, Number, String, Group> {};
+struct Value: sor<Bool, Number, RawString, String, Group> {};
 struct Item: seq<SkipWS, Name, plus<blank>, must<Value>, Sep> {};
 
 // File
@@ -146,6 +150,26 @@ struct Action<String> : change_states< std::string > {
 };
 
 
+template<> struct Action<RawStringCh> : StringAppendChar {};
+
+template<>
+struct Action<EscapedQuotes> {
+    template<typename Input>
+    static void apply(const Input &in, std::string& str) {
+        assert(in.size() >= 4);
+        str.append(in.begin() + 1, in.end());
+    }
+};
+
+template<>
+struct Action<RawString> : change_states< std::string > {
+    template<typename Input>
+    static void success(const Input &in, std::string& str, ConfigParser& visitor) {
+        visitor.string_value(core::parser::strip_raw_string(std::move(str)));
+    }
+};
+
+
 template<>
 struct Action<GroupBegin> {
     template<typename Input>
@@ -217,7 +241,7 @@ bool ConfigParser::parse_file(const fs::path& path)
 }
 
 
-bool ConfigParser::parse_string(const std::string &str)
+bool ConfigParser::parse_string(std::string_view str)
 {
     tao::pegtl::memory_input in(str, "<buffer>");
     return _parse(*this, in);

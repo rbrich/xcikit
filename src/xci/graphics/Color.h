@@ -16,7 +16,7 @@ namespace xci::graphics {
 
 
 /// RGBA color in 4x 8bit integer format
-
+/// The values are in nonlinear sRGB colorspace.
 struct Color {
     constexpr Color() = default;
 
@@ -78,21 +78,24 @@ struct Color {
     /// an error message is logged and the color is set to Red.
     explicit Color(std::string_view spec);
 
-    // Access components as float values (0.0 .. 1.0)
-    // See FloatColor below for conversion of whole Color to float[4] format
-    constexpr float red_f() const { return float(r) / 255.f; }
-    constexpr float green_f() const { return float(g) / 255.f; }
-    constexpr float blue_f() const { return float(b) / 255.f; }
-    constexpr float alpha_f() const { return float(a) / 255.f; }
+    // Convert components to float values (0.0 .. 1.0)
+    float red_f() const { return float(r) / 255.f; }
+    float green_f() const { return float(g) / 255.f; }
+    float blue_f() const { return float(b) / 255.f; }
+    float alpha_f() const { return float(a) / 255.f; }
+    // See LinearColor for conversion of whole Color to linear float[4] format
+    float red_linear_f() const { return to_linear_f(r); }
+    float green_linear_f() const { return to_linear_f(g); }
+    float blue_linear_f() const { return to_linear_f(b); }
+    static float to_linear_f(uint8_t v);
 
     // Test transparency
     constexpr bool is_transparent() const { return a == 0; }
     constexpr bool is_opaque() const { return a == 255; }
 
-    // Comparison operators
+    // Comparison operator
     constexpr bool operator==(Color rhs) const
         { return std::tie(r, g, b, a) == std::tie(rhs.r, rhs.g, rhs.b, rhs.a); }
-    constexpr bool operator!=(Color rhs) const { return !(rhs == *this); }
 
     friend std::ostream& operator <<(std::ostream& s, Color c) {
         return s << "Color(" << int(c.r) << ',' << int(c.g) << ',' << int(c.b) << ',' << int(c.a) << ')';
@@ -107,13 +110,13 @@ struct Color {
 
 
 /// RGBA color in 4x 32bit float format
-/// (this format is used in GLSL shaders as vec4)
-
-struct FloatColor {
-    constexpr FloatColor(Color color)  // NOLINT (implicit conversion)
-            : r(color.red_f())
-            , g(color.green_f())
-            , b(color.blue_f())
+/// When constructing from Color, the values are converted from nonlinear sRGB colorspace.
+/// This format is intended for passing to GLSL shaders as vec4 uniform.
+struct LinearColor {
+    LinearColor(Color color)  // NOLINT (implicit conversion)
+            : r(color.red_linear_f())
+            , g(color.green_linear_f())
+            , b(color.blue_linear_f())
             , a(color.alpha_f()) {}
 
     // Direct access to components

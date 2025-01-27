@@ -6,6 +6,7 @@ add_library(xci-widgets
     Button.cpp
     Checkbox.cpp
     ColorPicker.cpp
+    Dialog.cpp
     Form.cpp
     FpsDisplay.cpp
     Icon.cpp

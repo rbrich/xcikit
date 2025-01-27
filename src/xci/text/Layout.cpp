@@ -22,6 +22,7 @@ void Layout::clear()
 {
     m_page.clear();
     m_elements.clear();
+    m_span_names.clear();
 }
 
 
@@ -308,19 +309,30 @@ void Layout::advance_line(float lines)
 
 void Layout::begin_span(const std::string& name)
 {
-    m_elements.push_back(std::make_unique<BeginSpan>(name));
+    m_span_names.push_back(name);
+    m_elements.push_back(std::make_unique<BeginSpan>());
 }
 
 
-void Layout::end_span(const std::string& name)
+bool Layout::end_span(const std::string& name)
 {
-    m_elements.push_back(std::make_unique<EndSpan>(name));
+    auto i = m_span_names.size();
+    while (i != 0) {
+        if (m_span_names[--i] == name) {
+            m_elements.push_back(std::make_unique<EndSpan>(i));
+            return true;
+        }
+    }
+    return false;
 }
 
 
 Span* Layout::get_span(const std::string& name)
 {
-    return m_page.get_span(name);
+    auto it = std::find(m_span_names.begin(), m_span_names.end(), name);
+    if (it == m_span_names.end())
+        return nullptr;
+    return m_page.get_span(it - m_span_names.begin());
 }
 
 

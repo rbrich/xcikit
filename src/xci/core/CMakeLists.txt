@@ -16,6 +16,7 @@ add_library(xci-core
     rtti.cpp
     TermCtl.cpp
     container/StringPool.cpp
+    parser/raw_string.cpp
     $<TARGET_OBJECTS:third_party::widechar_width>
     )
 add_library(xcikit::xci-core ALIAS xci-core)
@@ -77,13 +78,12 @@ target_link_libraries(xci-core
         Threads::Threads
     PRIVATE
         ${CMAKE_DL_LIBS}
+        $<COMPILE_ONLY:taocpp::pegtl>
+        $<COMPILE_ONLY:third_party::widechar_width>
     )
 target_include_directories(xci-core
     PUBLIC
         ${XCI_INCLUDE_DIRS}
-    PRIVATE
-        $<TARGET_PROPERTY:third_party::widechar_width,INTERFACE_INCLUDE_DIRECTORIES>
-        $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
     )
 
 # Link with tinfo if available

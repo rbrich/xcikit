@@ -1,7 +1,7 @@
 // Options.cpp.c created on 2021-03-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2023 Radek Brich
+// Copyright 2021–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Options.h"
@@ -10,7 +10,8 @@
 #include <xci/core/TermCtl.h>
 
 #include <range/v3/all.hpp>
-#include <fmt/core.h>
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 
 namespace xci::script::tool {
 
@@ -57,11 +58,11 @@ static Flags pass_name_to_flag(std::string_view name)
     }) | to< std::vector<PassItem> >();
     auto& t = TermCtl::stderr_instance();
     if (filtered.empty()) {
-        t.print("{t:bold}Note:{t:normal} {} did not match any pass name\n", name);
+        t.print("<bold>Note:<normal> {} did not match any pass name\n", name);
         return Flags(~0);
     }
     if (filtered.size() > 1) {
-        t.print("{t:bold}Note:{t:normal} {} matched multiple pass names: {}\n",
+        t.print("<bold>Note:<normal> {} matched multiple pass names: {}\n",
                    name, fmt::join(filtered | keys, " "));
         return Flags(~0);
     }

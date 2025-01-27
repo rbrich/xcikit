@@ -1,43 +1,74 @@
 xci-compat:
-  - src/xci/compat/*.h
+- changed-files:
+  - any-glob-to-any-file:
+    - src/xci/compat/*.h
 xci-config:
-  - src/xci/config/*.+(cpp|h)
-  - src/xci/config/**/*.+(cpp|h)
+- changed-files:
+  - any-glob-to-any-file:
+    - src/xci/config/*.+(cpp|h)
+    - src/xci/config/**/*.+(cpp|h)
 xci-core:
-  - src/xci/core/*.+(cpp|h)
-  - src/xci/core/**/*.+(cpp|h)
+- changed-files:
+  - any-glob-to-any-file:
+    - src/xci/core/*.+(cpp|h)
+    - src/xci/core/**/*.+(cpp|h)
 xci-data:
-  - src/xci/data/*.+(cpp|h)
-  - src/xci/data/**/*.+(cpp|h)
-xci-geometry:
-  - src/xci/geometry/*.+(cpp|h)
-  - src/xci/geometry/**/*.+(cpp|h)
+- changed-files:
+  - any-glob-to-any-file:
+    - src/xci/data/*.+(cpp|h)
+    - src/xci/data/**/*.+(cpp|h)
 xci-graphics:
-  - src/xci/graphics/*.+(cpp|h)
-  - src/xci/graphics/**/*.+(cpp|h)
+- changed-files:
+  - any-glob-to-any-file:
+    - src/xci/graphics/*.+(cpp|h)
+    - src/xci/graphics/**/*.+(cpp|h)
+xci-math:
+- changed-files:
+  - any-glob-to-any-file:
+    - src/xci/math/*.+(cpp|h)
+    - src/xci/math/**/*.+(cpp|h)
+xci-scene:
+- changed-files:
+  - any-glob-to-any-file:
+    - src/xci/scene/*.+(cpp|h)
+    - src/xci/scene/**/*.+(cpp|h)
 xci-script:
-  - src/xci/script/*.+(cpp|h)
-  - src/xci/script/**/*.+(cpp|h)
+- changed-files:
+  - any-glob-to-any-file:
+    - src/xci/script/*.+(cpp|h)
+    - src/xci/script/**/*.+(cpp|h)
 xci-text:
-  - src/xci/text/*.+(cpp|h)
-  - src/xci/text/**/*.+(cpp|h)
+- changed-files:
+  - any-glob-to-any-file:
+    - src/xci/text/*.+(cpp|h)
+    - src/xci/text/**/*.+(cpp|h)
 xci-vfs:
-  - src/xci/vfs/*.+(cpp|h)
-  - src/xci/vfs/**/*.+(cpp|h)
+- changed-files:
+  - any-glob-to-any-file:
+    - src/xci/vfs/*.+(cpp|h)
+    - src/xci/vfs/**/*.+(cpp|h)
 xci-widgets:
-  - src/xci/widgets/*.+(cpp|h)
-  - src/xci/widgets/**/*.+(cpp|h)
+- changed-files:
+  - any-glob-to-any-file:
+    - src/xci/widgets/*.+(cpp|h)
+    - src/xci/widgets/**/*.+(cpp|h)
 tools:
-  - tools/**/*.+(cpp|h)
+- changed-files:
+  - any-glob-to-any-file:
+    - tools/**/*.+(cpp|h)
 extras:
-  - extras/**/*.+(py|js|html)
+- changed-files:
+  - any-glob-to-any-file:
+    - extras/**/*.+(py|js|html)
 build/ci:
-  - ./*.sh
-  - conanfile.py
-  - xcikit-config.cmake.in
-  - Dockerfile
-  - docker/**/*
-  - .circleci/*
-  - .travis.yml
-  - .github/*
-  - .github/**/*
+- changed-files:
+  - any-glob-to-any-file:
+    - ./*.sh
+    - conanfile.py
+    - xcikit-config.cmake.in
+    - Dockerfile
+    - docker/**/*
+    - .circleci/*
+    - .travis.yml
+    - .github/*
+    - .github/**/*

@@ -111,7 +111,7 @@ void Word::update(const graphics::View& target)
     }
 
     auto render_sprites = [&](std::optional<graphics::Sprites>& sprites, graphics::Color color) {
-        sprites.emplace(renderer, font->texture(), color);
+        sprites.emplace(renderer, font->texture(), font->sampler(), color);
 
         FramebufferCoords pen;
         for (const auto& shaped_glyph : m_shaped) {
@@ -325,8 +325,7 @@ void Page::finish_line()
     // Add new line
     m_lines.emplace_back();
     // Add new part to open spans
-    for (auto& span_pair : m_spans) {
-        auto& span = span_pair.second;
+    for (auto& span : m_spans) {
         if (span.is_open()) {
             span.add_part();
         }
@@ -379,8 +378,7 @@ void Page::add_word(const std::string& string)
     line.add_word(m_words.back());
 
     // Add word to open spans
-    for (auto& span_pair : m_spans) {
-        auto& span = span_pair.second;
+    for (auto& span : m_spans) {
         if (span.is_open()) {
             span.add_word(m_words.back());
         }
@@ -396,39 +394,36 @@ FramebufferPixels Page::space_width()
 }
 
 
-bool Page::begin_span(const std::string& name)
+auto Page::begin_span() -> SpanIndex
 {
-    auto result = m_spans.emplace(name, Span());
-    if (!result.second) {
-        log::error("Page: Span '{}' already exists!", name);
+    m_spans.emplace_back();
+    return m_spans.size() - 1;
+}
+
+
+bool Page::end_span(SpanIndex index)
+{
+    if (index >= m_spans.size()) {
+        log::error("Page::end_span: Span {} does not exists!", index);
         return false;
     }
+    auto& span = m_spans[index];
+    if (!span.is_open()) {
+        log::error("Page::end_span: Span {} is not open!", index);
+        return false;
+    }
+    span.close();
     return true;
 }
 
 
-bool Page::end_span(const std::string& name)
+Span* Page::get_span(SpanIndex index)
 {
-    auto iter = m_spans.find(name);
-    if (iter == m_spans.end()) {
-        log::error("Page: Span '{}' does not exists!", name);
-        return false;
+    if (index >= m_spans.size()) {
+        log::error("Page::get_span: Span {} does not exists!", index);
+        return nullptr;
     }
-    if (!iter->second.is_open()) {
-        log::error("Page: Span '{}' is not open!", name);
-        return false;
-    }
-    iter->second.close();
-    return true;
-}
-
-
-Span* Page::get_span(const std::string& name)
-{
-    auto iter = m_spans.find(name);
-    if (iter == m_spans.end())
-        return nullptr;  // does not exist
-    return &iter->second;
+    return &m_spans[index];
 }
 
 
@@ -462,8 +457,8 @@ void Page::foreach_line(const std::function<void(const Line& line)>& cb) const
 void Page::foreach_span(const std::function<void(const Span& span)>& cb) const
 {
     if (!cb) return;
-    for (const auto& pair : m_spans) {
-        cb(pair.second);
+    for (const auto& span : m_spans) {
+        cb(span);
     }
 }
 

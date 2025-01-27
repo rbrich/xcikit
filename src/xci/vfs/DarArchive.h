@@ -1,13 +1,14 @@
 // DarArchive.h created on 2023-11-07 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_VFS_DAR_ARCHIVE_H
 #define XCI_VFS_DAR_ARCHIVE_H
 
 #include "Vfs.h"
+#include <string_view>
 
 namespace xci::vfs {
 
@@ -22,8 +23,9 @@ public:
 
 
 /// Lookup files in DAR archive, which is mapped to VFS path
-/// DAR is custom uncompressed archive format, see `tools/pack_assets.py`
-/// Unlike ZipArchive, this has no external dependency and very simple implementation.
+/// DAR is custom uncompressed archive format, see `docs/data/archive_format.adoc` and `tools/data_archive`.
+/// Unlike ZipArchive, this has minimal dependencies (only zlib for optional compression)
+/// and very simple implementation.
 class DarArchive: public VfsDirectory {
 public:
     explicit DarArchive(std::string&& path, std::unique_ptr<std::istream>&& stream);
@@ -42,11 +44,17 @@ private:
     struct IndexEntry {
         uint32_t offset;
         uint32_t size;
+        uint32_t metadata_size;
+        char _encoding[2];
         std::string name;
+
+        std::string_view encoding() const { return {_encoding, 2}; }
     };
 
     bool read_index(size_t size);
     VfsFile read_entry(const IndexEntry& entry) const;
+    VfsFile read_entry_plain(const IndexEntry& entry) const;
+    VfsFile read_entry_zlib(const IndexEntry& entry) const;
     void close_archive();
 
     std::string m_path;

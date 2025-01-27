@@ -18,7 +18,8 @@ namespace xci::graphics {
 class Rectangle: public UniformColorShape {
 public:
     explicit Rectangle(Renderer& renderer)
-    : UniformColorShape(renderer, VertexFormat::V2t22, PrimitiveType::TriFans, ShaderId::Rectangle) {}
+    : UniformColorShape(renderer, VertexFormat::V2t22, PrimitiveType::TriFans,
+                        "rectangle", "rectangle") {}
 
     /// Reserve memory for a number of rectangles.
     void reserve(size_t rectangles) { m_primitives.reserve(4 * rectangles); }
@@ -46,7 +47,8 @@ public:
 class ColoredRectangle: public VaryingColorShape {
 public:
     explicit ColoredRectangle(Renderer& renderer)
-    : VaryingColorShape(renderer, VertexFormat::V2c44t22, PrimitiveType::TriFans, ShaderId::RectangleC) {}
+    : VaryingColorShape(renderer, VertexFormat::V2c44t22, PrimitiveType::TriFans,
+                        "rectangle_c", "rectangle_c") {}
 
     /// Reserve memory for a number of rectangles.
     void reserve(size_t rectangles) { m_primitives.reserve(4 * rectangles); }

@@ -9,11 +9,9 @@ add_library(xci-config
 add_library(xcikit::xci-config ALIAS xci-config)
 target_precompile_headers(xci-config REUSE_FROM xci-core)
 
-target_link_libraries(xci-config PUBLIC xci-core)
-target_include_directories(xci-config
-    PRIVATE $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
-)
-
+target_link_libraries(xci-config
+    PUBLIC xci-core
+    PRIVATE $<COMPILE_ONLY:taocpp::pegtl>)
 
 if (BUILD_SHARED_LIBS)
     set_target_properties(xci-config PROPERTIES CXX_VISIBILITY_PRESET default)

@@ -1,7 +1,7 @@
 // resolve_spec.cpp created on 2022-08-13 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022–2023 Radek Brich
+// Copyright 2022–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_spec.h"
@@ -17,8 +17,8 @@
 #include <xci/core/log.h>
 
 #include <range/v3/view/enumerate.hpp>
-#include <range/v3/view/reverse.hpp>
 
+#include <ranges>
 #include <sstream>
 #include <optional>
 #include <span>
@@ -28,7 +28,7 @@ namespace xci::script {
 using std::stringstream;
 using namespace xci::core;
 using ranges::views::enumerate;
-using ranges::cpp20::views::reverse;
+using std::ranges::views::reverse;
 
 
 class ResolveSpecVisitor final: public ast::VisitorExclTypes {

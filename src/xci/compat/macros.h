@@ -1,7 +1,7 @@
 // macros.h created on 2018-11-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_COMPAT_MACROS_H
@@ -26,6 +26,12 @@
 #   define XCI_INLINE       inline __attribute__((always_inline))
 #endif
 
+// Do not generate debuginfo for a function or variable
+#ifdef __clang__
+#   define XCI_NODEBUG      __attribute__((nodebug))
+#else
+#   define XCI_NODEBUG
+#endif
 
 // Alternative to [[maybe_unused]] which can be applied to a statement
 #define XCI_UNUSED          (void)

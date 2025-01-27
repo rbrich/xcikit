@@ -1,14 +1,20 @@
 # CI builder with Emscripten (DockerHub public image), local build check:
-#   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-emscripten . -f docker/emscripten.dockerfile
-#   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-emscripten
+#   docker build --platform linux/amd64 --pull --build-arg UID=$(id -u) -t rbrich/xcikit-emscripten . -f docker/emscripten.dockerfile
+#   docker run --platform linux/amd64 --rm -v $PWD:/src -w /src -it rbrich/xcikit-emscripten
 # CMake arguments (for Clion IDE):
 #   -DFORCE_COLORS=1 -DXCI_WIDGETS=0 -DXCI_TEXT=0 -DXCI_GRAPHICS=0
 #   -DCONAN_OPTIONS="-c;tools.cmake.cmaketoolchain:user_toolchain=['/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake']"
 
-FROM emscripten/emsdk:3.1.48 AS builder
+FROM emscripten/emsdk:3.1.64 AS builder
 
 RUN echo "dev tools"; apt-get update && apt-get install --no-install-recommends -y \
-    gdb ninja-build python3-setuptools && rm -rf /var/lib/apt/lists/*
+    gdb ninja-build python3-setuptools gpg && rm -rf /var/lib/apt/lists/*
+
+# Ubuntu 22.04 has CMake 3.22.1, which is too old. Get newer version (https://apt.kitware.com/).
+RUN echo "cmake"; apt-get purge -y cmake && \
+    curl https://apt.kitware.com/keys/kitware-archive-latest.asc | gpg --dearmor - > /usr/share/keyrings/kitware-archive-keyring.gpg && \
+    echo 'deb [signed-by=/usr/share/keyrings/kitware-archive-keyring.gpg] https://apt.kitware.com/ubuntu/ jammy main' > /etc/apt/sources.list.d/kitware.list && \
+    apt-get update && apt-get install --no-install-recommends -y cmake && rm -rf /var/lib/apt/lists/*
 
 RUN echo "conan"; pip3 --no-cache-dir install conan
 

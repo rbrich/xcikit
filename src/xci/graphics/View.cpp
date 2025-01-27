@@ -1,11 +1,12 @@
 // View.cpp created on 2018-03-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "View.h"
 #include "Window.h"
+
 #include <cassert>
 
 namespace xci::graphics {
@@ -89,22 +90,17 @@ std::ostream& operator<<(std::ostream& s, VariUnits rhs)
 }
 
 
-std::array<float, 16> View::projection_matrix() const
+Mat4f View::projection_matrix() const
 {
-    float xs = 2.0f / framebuffer_size().x.value;
-    float ys = 2.0f / framebuffer_size().y.value;
+    const float xs = 2.0f / framebuffer_size().x.value;
+    const float ys = 2.0f / framebuffer_size().y.value;
     float xt = offset().x.value * xs;
     float yt = offset().y.value * ys;
     if (m_origin == ViewOrigin::TopLeft) {
         xt -= 1.0;
         yt -= 1.0;
     }
-    return {{
-            xs,   0.0f, 0.0f, 0.0f,
-            0.0f, ys,  0.0f, 0.0f,
-            0.0f, 0.0f, 1.0f, 0.0f,
-            xt,   yt,  0.0f, 1.0f,
-    }};
+    return Mat4f::scale({xs, ys, 1.0f}, {xt, yt, 0.0f});
 }
 
 
@@ -238,6 +234,21 @@ auto View::push_crop(const FramebufferRect& region) -> PopHelper<FramebufferRect
 }
 
 
+void View::apply_crop(CommandBuffer& cmd_buf)
+{
+    // set scissor region
+    if (has_crop()) {
+        const auto crop = get_crop().moved(framebuffer_origin());
+        cmd_buf.set_scissor({crop.x.as<uint32_t>(),
+                             crop.y.as<uint32_t>(),
+                             crop.w.as<uint32_t>(),
+                             crop.h.as<uint32_t>()});
+    } else {
+        cmd_buf.set_scissor({0, 0, INT32_MAX, INT32_MAX});
+    }
+}
+
+
 bool View::pop_refresh()
 {
     bool res = m_needs_refresh;
@@ -249,17 +260,6 @@ bool View::pop_refresh()
 void View::finish_draw()
 {
     window()->finish_draw();
-}
-
-
-void View::set_debug_flag(View::Debug flag, bool enabled) {
-    if (has_debug_flag(flag) != enabled)
-        m_debug ^= (DebugFlags) flag;
-}
-
-
-bool View::has_debug_flag(View::Debug flag) const {
-    return bool(m_debug & (DebugFlags)flag);
 }
 
 

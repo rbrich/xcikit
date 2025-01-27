@@ -1,22 +1,20 @@
 // Sprites.cpp created on 2018-03-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Sprites.h"
-
 #include <xci/config.h>
 
 namespace xci::graphics {
 
 
-Sprites::Sprites(Renderer& renderer, Texture& texture, Color color)
-        : m_texture(texture), m_color(color),
+Sprites::Sprites(Renderer& renderer, Texture& texture, Sampler& sampler, Color color)
+        : m_texture(texture), m_sampler(sampler), m_color(color),
           m_quads(renderer, VertexFormat::V2t2, PrimitiveType::TriFans),
-          m_shader(renderer.get_shader(
-                      texture.color_format() == ColorFormat::Grey ?
-                      ShaderId::SpriteR : ShaderId::Sprite))
+          m_shader(renderer.get_shader("sprite",
+                   texture.color_format() == ColorFormat::LinearGrey ? "sprite_r" : "sprite"))
 {}
 
 
@@ -58,9 +56,10 @@ void Sprites::add_sprite(const FramebufferRect& rect, const Rect_u& texrect)
 void Sprites::update()
 {
     m_quads.clear_uniforms();
-    m_quads.add_uniform(1, m_color);
+    m_quads.set_uniform(1, m_color);
     m_quads.set_blend(BlendFunc::AlphaBlend);
-    m_quads.set_texture(2, m_texture);
+    m_texture.update();
+    m_quads.set_texture(2, m_texture, m_sampler);
     m_quads.set_shader(m_shader);
     m_quads.update();
 }
@@ -76,10 +75,10 @@ void Sprites::draw(View& view, VariCoords pos)
 
 
 ColoredSprites::ColoredSprites(Renderer& renderer,
-                               Texture& texture, Color color)
-    : m_texture(texture), m_color(color),
+                               Texture& texture, Sampler& sampler, Color color)
+    : m_texture(texture), m_sampler(sampler), m_color(color),
       m_quads(renderer, VertexFormat::V2c4t2, PrimitiveType::TriFans),
-      m_shader(renderer.get_shader(ShaderId::SpriteC))
+      m_shader(renderer.get_shader("sprite_c", "sprite_c"))
 {}
 
 
@@ -120,7 +119,8 @@ void ColoredSprites::add_sprite(const FramebufferRect& rect, const Rect_u& texre
 
 void ColoredSprites::update()
 {
-    m_quads.set_texture(1, m_texture);
+    m_texture.update();
+    m_quads.set_texture(1, m_texture, m_sampler);
     m_quads.set_shader(m_shader);
     m_quads.set_blend(BlendFunc::AlphaBlend);
     m_quads.update();

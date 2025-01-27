@@ -6,4 +6,6 @@ if (XCI_TEXT)
 endif()
 if (XCI_WIDGETS)
     add_demo(demo_fps LINK xci-widgets xci-text xci-graphics xci-config DEPS shaders fonts)
+    add_demo(demo_3d SOURCES demo_3d.cpp 3d/Object.cpp
+                     LINK xci-widgets xci-text xci-graphics xci-config DEPS shaders fonts)
 endif()

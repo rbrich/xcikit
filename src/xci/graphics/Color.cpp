@@ -1,15 +1,17 @@
 // Color.cpp created on 2018-08-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Color.h"
 #include <xci/core/log.h>
 #include <xci/core/string.h>
+#include <xci/compat/macros.h>
 #include <array>
 #include <string_view>
 #include <sstream>
+#include <cmath>
 
 namespace xci::graphics {
 
@@ -142,6 +144,14 @@ Color::Color(std::string_view spec)
     // not matched
     log::error("Color: could not interpret \"{}\"", spec);
     *this = Color::Red();
+}
+
+
+XCI_NODEBUG
+float Color::to_linear_f(uint8_t v)
+{
+    return v > 10 ? std::pow((float(v) / 255.f + 0.055f) / 1.055f, 2.4f)
+                  : float(v) / (255 * 12.92f);
 }
 
 

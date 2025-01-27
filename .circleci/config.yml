@@ -5,17 +5,13 @@
 version: 2.1
 
 executors:
-  debian11:
-    docker:
-      - image: rbrich/xcikit-debian:11
-    resource_class: large
   debian12:
     docker:
       - image: rbrich/xcikit-debian:12
     resource_class: large
-  ubuntu:
+  debian13:
     docker:
-      - image: rbrich/xcikit-ubuntu:latest
+      - image: rbrich/xcikit-tidy:latest
     resource_class: large
   emscripten:
     docker:
@@ -96,23 +92,19 @@ workflows:
   workflow:
     jobs:
       - build:
-          name: Debian 11 - GCC 10
-          image: debian11
-          label: debian11-gcc10
-      - build:
           name: Debian 12 - GCC 12
           image: debian12
           label: debian12-gcc12
       - build:
-          name: Ubuntu 22.04 - Clang-Tidy 14
-          image: ubuntu
-          label: ubuntu-tidy14
+          name: Debian 13 - Clang-Tidy 16
+          image: debian13
+          label: debian13-tidy16
           build-args: "--tidy -DFAIL_ON_WARNINGS=1 -DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
       - build:
           name: Emscripten
           image: emscripten
           build-args: "--emscripten core vfs data script"
       - conan_package:
-          name: Ubuntu 22.04 - Clang 14 - Conan package
-          image: ubuntu
+          name: Debian 13 - Clang 16 - Conan package
+          image: debian13
           build-args: -o xcikit/*:tools=False -o xcikit/*:examples=False -o xcikit/*:tests=False -o xcikit/*:benchmarks=False

@@ -1,13 +1,13 @@
 // TypeInfo.cpp created on 2019-06-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2024 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TypeInfo.h"
 #include "Error.h"
 #include <xci/compat/macros.h>
-#include <range/v3/algorithm/any_of.hpp>
+#include <ranges>
 #include <numeric>
 
 namespace xci::script {
@@ -378,7 +378,7 @@ bool TypeInfo::has_unknown() const
             return elem_type().has_unknown();
         case Type::Tuple:
         case Type::Struct:
-            return ranges::any_of(subtypes(), [](const TypeInfo& type_info) {
+            return std::ranges::any_of(subtypes(), [](const TypeInfo& type_info) {
                 return type_info.has_unknown();
             });
         default:
@@ -398,7 +398,7 @@ bool TypeInfo::has_generic() const
             return elem_type().has_generic();
         case Type::Tuple:
         case Type::Struct:
-            return ranges::any_of(subtypes(), [](const TypeInfo& type_info) {
+            return std::ranges::any_of(subtypes(), [](const TypeInfo& type_info) {
                 return type_info.has_generic();
             });
         default:
@@ -447,7 +447,7 @@ TypeInfo& TypeInfo::underlying()
 
 bool Signature::has_generic_nonlocals() const
 {
-    return ranges::any_of(nonlocals, [](const TypeInfo& type_info) {
+    return std::ranges::any_of(nonlocals, [](const TypeInfo& type_info) {
         return type_info.has_generic();
     });
 }
@@ -455,7 +455,7 @@ bool Signature::has_generic_nonlocals() const
 
 bool Signature::has_unknown_nonlocals() const
 {
-    return ranges::any_of(nonlocals, [](const TypeInfo& type_info) {
+    return std::ranges::any_of(nonlocals, [](const TypeInfo& type_info) {
         return type_info.has_unknown();
     });
 }
