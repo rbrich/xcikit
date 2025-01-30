@@ -54,8 +54,8 @@ private:
         size_t child_index;
         Hint hint;
 
-        bool operator<(const ChildHint& rhs) const {
-            return child_index < rhs.child_index;
+        friend bool operator<(const ChildHint& lhs, const ChildHint& rhs) {
+            return lhs.child_index < rhs.child_index;
         }
     };
     std::vector<ChildHint> m_hint;

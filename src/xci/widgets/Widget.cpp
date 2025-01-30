@@ -1,7 +1,7 @@
 // Widget.cpp created on 2018-04-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2024 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Widget.h"
@@ -182,14 +182,14 @@ bool Composite::tab_focus(View& view, int& step)
     // No focus child - change to first or last focusable child
     if (m_focus == nullptr) {
         if (step >= 0) {
-            auto it = std::find_if(m_child.begin(), m_child.end(), [&view, &step](auto& w) {
+            auto it = std::ranges::find_if(m_child, [&view, &step](auto& w) {
                 return w->tab_focus(view, step);
             });
             if (it == m_child.end())
                 return false;
             set_focus(view, *it);
         } else {
-            auto it = std::find_if(m_child.rbegin(), m_child.rend(), [&view, &step](auto& w) {
+            auto it = std::ranges::find_if(std::ranges::reverse_view(m_child), [&view, &step](auto& w) {
                 return w->tab_focus(view, step);
             });
             if (it == m_child.rend())
@@ -207,7 +207,7 @@ bool Composite::tab_focus(View& view, int& step)
 
     // Step to next focusable child
     if (step > 0) {
-        auto it = std::find(m_child.begin(), m_child.end(), m_focus);
+        auto it = std::ranges::find(m_child, m_focus);
         assert(it != m_child.end());
         it = std::find_if(it+1, m_child.end(), [&view, &step](auto& w) {
             return w->tab_focus(view, step);
@@ -220,7 +220,7 @@ bool Composite::tab_focus(View& view, int& step)
         }
     }
     if (step < 0)  {
-        auto it = std::find(m_child.rbegin(), m_child.rend(), m_focus);
+        auto it = std::ranges::find(std::ranges::reverse_view(m_child), m_focus);
         assert(it != m_child.rend());
         it = std::find_if(it+1, m_child.rend(), [&view, &step](auto& w) {
             return w->tab_focus(view, step);

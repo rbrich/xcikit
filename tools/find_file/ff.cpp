@@ -1,7 +1,7 @@
 // ff.cpp created on 2020-03-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2024 Radek Brich
+// Copyright 2020–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// Find File (ff) command line tool
@@ -63,12 +63,12 @@ struct Theme {
 
 
 struct Counters {
-    std::atomic_uint64_t total_size {};
-    std::atomic_uint64_t total_blocks {};
-    std::atomic_uint seen_dirs {};
-    std::atomic_uint seen_files {};
-    std::atomic_uint matched_dirs {};
-    std::atomic_uint matched_files {};
+    std::atomic_uint64_t total_size;
+    std::atomic_uint64_t total_blocks;
+    std::atomic_uint seen_dirs;
+    std::atomic_uint seen_files;
+    std::atomic_uint matched_dirs;
+    std::atomic_uint matched_files;
 };
 
 
@@ -87,7 +87,7 @@ static constinit const char* s_default_ignore_list[] = {
 
 static bool is_default_ignored(std::string_view path)
 {
-    return std::any_of(std::begin(s_default_ignore_list), std::end(s_default_ignore_list),
+    return std::ranges::any_of(s_default_ignore_list,
             [&path](const char* ignore_path) { return path == ignore_path; });
 }
 
@@ -587,8 +587,8 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
     // Adaptive column width for user, group
     static std::atomic<size_t> w_user = 0;
     static std::atomic<size_t> w_group = 0;
-    thread_local auto memoized_uid_to_user_name = memoize(uid_to_user_name);
-    thread_local auto memoized_gid_to_group_name = memoize(gid_to_group_name);
+    thread_local auto memoized_uid_to_user_name = memoize(uid_to_user_name);   // NOLINT(misc-use-internal-linkage)
+    thread_local auto memoized_gid_to_group_name = memoize(gid_to_group_name); // NOLINT(misc-use-internal-linkage)
     const auto user = memoized_uid_to_user_name(st.st_uid);
     const auto group = memoized_uid_to_user_name(st.st_gid);
     const size_t w_user_new = std::max(w_user.load(std::memory_order_acquire), user.length());

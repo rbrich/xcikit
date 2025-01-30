@@ -1,4 +1,0 @@
-include(linux_gcc)
-
-[settings]
-compiler.version=12

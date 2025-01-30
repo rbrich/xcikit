@@ -1,7 +1,7 @@
 // demo_layout.cpp created on 2018-03-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -131,15 +131,11 @@ int main(int argc, const char* argv[])
                 break;
             case Key::Minus:  // -/_ key
             case Key::KeypadMinus:
-                font_weight -= 50;
-                if (font_weight < 400)
-                    font_weight = 400;
+                font_weight = std::max(font_weight - 50, 400);
                 break;
             case Key::Equal:  // =/+ key
             case Key::KeypadPlus:
-                font_weight += 50;
-                if (font_weight > 700)
-                    font_weight = 700;
+                font_weight = std::min(font_weight + 50, 700);
                 break;
             default:
                 return;

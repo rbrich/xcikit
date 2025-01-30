@@ -17,6 +17,8 @@
 
 #include "MaxRectsBinPack.h"
 
+#include <xci/compat/macros.h>
+
 namespace rbp {
 
 using namespace std;
@@ -141,6 +143,7 @@ Rect MaxRectsBinPack::ScoreRect(int width, int height, FreeRectChoiceHeuristic m
 		break;
 	case RectBestLongSideFit: newNode = FindPositionForNewNodeBestLongSideFit(width, height, score2, score1); break;
 	case RectBestAreaFit: newNode = FindPositionForNewNodeBestAreaFit(width, height, score1, score2); break;
+	default: XCI_UNREACHABLE;
 	}
 
 	// Cannot fit the current rectangle.

@@ -1,7 +1,7 @@
 // demo_vulkan.cpp created on 2019-10-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2024 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "common.h"
@@ -19,7 +19,7 @@ using xci::Vec2;
 using namespace xci::graphics::unit_literals;
 
 
-void generate_checkerboard(Texture& texture)
+static void generate_checkerboard(Texture& texture)
 {
     std::vector<uint8_t> pixels(texture.byte_size());
     auto size = texture.size();
@@ -42,7 +42,7 @@ void generate_checkerboard(Texture& texture)
 }
 
 
-void update_poly(Primitives& poly, const View& view, float time_frac)
+static void update_poly(Primitives& poly, const View& view, float time_frac)
 {
     poly.clear();
     poly.begin_primitive();

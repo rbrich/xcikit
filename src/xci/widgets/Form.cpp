@@ -1,10 +1,11 @@
 // Form.cpp created on 2018-06-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Form.h"
+
 #include <utility>
 
 namespace xci::widgets {
@@ -127,7 +128,7 @@ void Form::resize(View& view)
     // Position children
     FramebufferCoords pos = {0, max_ascent};
     const auto margin = view.to_fb(m_margin);
-    std::sort(m_hint.begin(), m_hint.end());
+    std::sort(m_hint.begin(), m_hint.end());  // NOLINT(modernize-use-ranges) - ranges::sort requires more than just operator<
     size_t index = 0;
     auto hint_it = m_hint.cbegin();
     for (auto& child : m_child) {

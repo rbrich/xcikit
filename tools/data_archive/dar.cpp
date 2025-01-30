@@ -1,7 +1,7 @@
 // dar.cpp created on 2023-11-05 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023–2024 Radek Brich
+// Copyright 2023–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// DAR archive extractor (dar) command line tool
@@ -71,7 +71,7 @@ static bool is_wad_map_subentry(const std::string& name)
 /// * "_1/<lump name>" for repeated lump names (_1 is the second occurrence, increments for each repetition)
 /// * "_MAP01/<lump name>" for map lumps
 /// The filename (without subdir) always matches the original lump name.
-void extract_wad(VfsDirectory& vfs_dir, const fs::path& output_path)
+static void extract_wad(VfsDirectory& vfs_dir, const fs::path& output_path)
 {
     if (fs::exists(output_path / ".wad")) {
         log::warning("Not overwriting existing .wad at {}", output_path);

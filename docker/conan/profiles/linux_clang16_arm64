@@ -1,5 +1,0 @@
-include(linux_clang)
-
-[settings]
-arch=armv8
-compiler.version=16

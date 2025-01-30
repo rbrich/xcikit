@@ -1,7 +1,7 @@
 // Primitives.cpp created on 2018-08-03 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2024 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Primitives.h"
@@ -16,6 +16,7 @@
 
 #include <range/v3/view/enumerate.hpp>
 
+#include <ranges>
 #include <cassert>
 #include <cstring>
 
@@ -402,7 +403,7 @@ void Primitives::set_shader(Shader shader)
 
 void Primitives::set_texture(uint32_t binding, VkImageView image_view, VkSampler sampler)
 {
-    const auto it = std::find_if(m_textures.begin(), m_textures.end(),
+    const auto it = std::ranges::find_if(m_textures,
                  [binding](const TextureBinding& t) { return t.binding == binding; });
     if (it == m_textures.end()) {
         m_textures.push_back({binding, image_view, sampler});
@@ -520,7 +521,7 @@ void Primitives::reserve_storage(uint32_t binding, size_t size)
 
 void Primitives::set_storage_data(uint32_t binding, const void* data, size_t size)
 {
-    const auto it = std::find_if(m_storage.begin(), m_storage.end(),
+    const auto it = std::ranges::find_if(m_storage,
                                  [binding](const StorageBinding& b) { return b.binding == binding; });
     if (it == m_storage.end()) {
         // add new
@@ -539,7 +540,7 @@ void Primitives::set_storage_data(uint32_t binding, const void* data, size_t siz
 
 void Primitives::set_storage_read_cb(uint32_t binding, size_t size, StorageReadCb cb)
 {
-    const auto it = std::find_if(m_storage.begin(), m_storage.end(),
+    const auto it = std::ranges::find_if(m_storage,
                                  [binding](const StorageBinding& b) { return b.binding == binding; });
     if (it == m_storage.end()) {
         reserve_storage(binding, size);

@@ -1,13 +1,15 @@
 // SymbolTable.cpp created on 2019-07-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "SymbolTable.h"
 #include "Module.h"
 #include "TypeInfo.h"
+
 #include <cassert>
+#include <ranges>
 #include <algorithm>
 
 namespace xci::script {
@@ -206,7 +208,7 @@ const Symbol& SymbolTable::get(Index idx) const
 
 SymbolPointer SymbolTable::find(const Symbol& symbol)
 {
-    auto it = std::find_if(m_symbols.begin(), m_symbols.end(),
+    const auto it = std::ranges::find_if(m_symbols,
                            [&symbol](const Symbol& other){ return symbol == other; });
     if (it == m_symbols.end())
         return {*this, no_index};
@@ -216,7 +218,7 @@ SymbolPointer SymbolTable::find(const Symbol& symbol)
 
 SymbolPointer SymbolTable::find_by_name(NameId name)
 {
-    auto it = std::find_if(m_symbols.rbegin(), m_symbols.rend(),
+    const auto it = std::ranges::find_if(std::ranges::reverse_view(m_symbols),
             [name](const Symbol& sym){ return sym.name() == name; });
     if (it == m_symbols.rend())
         return {*this, no_index};
@@ -226,7 +228,7 @@ SymbolPointer SymbolTable::find_by_name(NameId name)
 
 SymbolPointer SymbolTable::find_by_index(Symbol::Type type, Index index)
 {
-    auto it = std::find_if(m_symbols.rbegin(), m_symbols.rend(),
+    const auto it = std::ranges::find_if(std::ranges::reverse_view(m_symbols),
                            [type,index](const Symbol& sym)
                            { return sym.type() == type && sym.index() == index; });
     if (it == m_symbols.rend())
@@ -238,7 +240,7 @@ SymbolPointer SymbolTable::find_by_index(Symbol::Type type, Index index)
 SymbolPointer SymbolTable::find_last_of(NameId name,
                                         Symbol::Type type)
 {
-    auto it = std::find_if(m_symbols.rbegin(), m_symbols.rend(),
+    const auto it = std::ranges::find_if(std::ranges::reverse_view(m_symbols),
                    [name, type](const Symbol& sym) {
                         return sym.type() == type && sym.name() == name;
                    });
@@ -250,7 +252,7 @@ SymbolPointer SymbolTable::find_last_of(NameId name,
 
 SymbolPointer SymbolTable::find_last_of(Symbol::Type type)
 {
-    auto it = std::find_if(m_symbols.rbegin(), m_symbols.rend(),
+    const auto it = std::ranges::find_if(std::ranges::reverse_view(m_symbols),
             [type](const Symbol& sym) { return sym.type() == type; });
     if (it == m_symbols.rend())
         return {*this, no_index};
@@ -286,7 +288,7 @@ SymbolPointerList SymbolTable::filter(NameId name, Symbol::Type type)
 
 SymbolTable* SymbolTable::find_child_by_name(NameId name)
 {
-    auto it = std::find_if(m_children.begin(), m_children.end(),
+    const auto it = std::ranges::find_if(m_children,
             [name](const SymbolTable& s){ return s.name() == name; });
     if (it == m_children.end())
         return nullptr;

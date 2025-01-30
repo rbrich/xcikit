@@ -1,3 +1,4 @@
+# Targeting Clang Tidy 19
 # Full list: https://clang.llvm.org/extra/clang-tidy/
 # Disabled because...
 # * clang-analyzer-security.insecureAPI.bzero -- bzero is used internally by system macros (e.g. FD_ZERO)
@@ -14,9 +15,13 @@ Checks: >
   -bugprone-exception-escape,
   -bugprone-implicit-widening-of-multiplication-result,
   -bugprone-switch-missing-default-case,
+  -bugprone-inc-dec-in-conditions,
+  -bugprone-multi-level-implicit-pointer-conversion,
   clang-analyzer-*,
   -clang-analyzer-deadcode.DeadStores,
   -clang-analyzer-security.insecureAPI.bzero,
+  -clang-analyzer-optin.core.EnumCastOutOfRange,
+  -clang-analyzer-unix.BlockInCriticalSection,
   clang-diagnostic-*,
   concurrency-*,
   -concurrency-mt-unsafe,
@@ -36,6 +41,7 @@ Checks: >
   -modernize-avoid-c-arrays,
   -modernize-deprecated-headers,
   -modernize-use-auto,
+  -modernize-use-designated-initializers,
   -modernize-use-emplace,
   -modernize-use-nodiscard,
   -modernize-use-trailing-return-type,
@@ -43,6 +49,7 @@ Checks: >
   performance-*,
   -performance-avoid-endl,
   -performance-inefficient-string-concatenation,
+  -performance-enum-size,
   portability-*,
   readability-*,
   -readability-implicit-bool-conversion,
@@ -60,6 +67,11 @@ Checks: >
   -readability-qualified-auto,
   -readability-isolate-declaration,
   -readability-identifier-length,
+  -readability-math-missing-parentheses,
+  -readability-avoid-return-with-void-value,
+  -readability-avoid-nested-conditional-operator,
+  -readability-enum-initial-value,
+  -readability-use-std-min-max,
   -readability-use-anyofallof
 CheckOptions:
   bugprone-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion: false

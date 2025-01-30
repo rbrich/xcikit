@@ -128,6 +128,8 @@ public:
         using pointer = T*;
         using iterator_category = std::forward_iterator_tag;
 
+        iterator() = default;
+
         bool operator==(const iterator& rhs) const { return m_chunk_idx == rhs.m_chunk_idx && m_slot_idx == rhs.m_slot_idx; }
 
         iterator& operator++() {
@@ -145,14 +147,13 @@ public:
         WeakIndex weak_index() const { return {index(), tenant()}; }
 
     private:
-        explicit iterator(std::vector<Chunk>& chunk) : m_chunk(&chunk) {}
         explicit iterator(std::vector<Chunk>& chunk, Index) : m_chunk(&chunk), m_chunk_idx(0), m_slot_idx(0) {
             jump_to_next();
         }
 
         void jump_to_next();
 
-        std::vector<Chunk>* m_chunk;
+        std::vector<Chunk>* m_chunk = nullptr;
         Index m_chunk_idx = no_index;
         Index m_slot_idx = no_index;
     };
@@ -165,6 +166,8 @@ public:
         using reference = const T&;
         using pointer = const T*;
         using iterator_category = std::forward_iterator_tag;
+
+        const_iterator() = default;
 
         bool operator==(const const_iterator& rhs) const { return m_chunk_idx == rhs.m_chunk_idx && m_slot_idx == rhs.m_slot_idx; }
 
@@ -183,24 +186,23 @@ public:
         WeakIndex weak_index() const { return {index(), tenant()}; }
 
     private:
-        explicit const_iterator(const std::vector<Chunk>& chunk) : m_chunk(&chunk) {}
         explicit const_iterator(const std::vector<Chunk>& chunk, Index) : m_chunk(&chunk), m_chunk_idx(0), m_slot_idx(0) {
             jump_to_next();
         }
 
         void jump_to_next();
 
-        const std::vector<Chunk>* m_chunk;
+        const std::vector<Chunk>* m_chunk = nullptr;
         Index m_chunk_idx = no_index;
         Index m_slot_idx = no_index;
     };
 
-    iterator begin()                { return iterator{m_chunk, 0}; }
-    const_iterator begin() const    { return const_iterator{m_chunk, 0}; }
-    const_iterator cbegin() const   { return const_iterator{m_chunk, 0}; }
-    iterator end()                  { return iterator{m_chunk}; }
-    const_iterator end() const      { return const_iterator{m_chunk}; }
-    const_iterator cend() const     { return const_iterator{m_chunk}; }
+    iterator begin() noexcept               { return iterator{m_chunk, 0}; }
+    const_iterator begin() const noexcept   { return const_iterator{m_chunk, 0}; }
+    const_iterator cbegin() const noexcept  { return const_iterator{m_chunk, 0}; }
+    iterator end() noexcept                 { return iterator{}; }
+    const_iterator end() const noexcept     { return const_iterator{}; }
+    const_iterator cend() const noexcept    { return const_iterator{}; }
 
 private:
     Slot* allocate_slots();

@@ -1,7 +1,7 @@
 // TermCtl.cpp created on 2018-07-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2024 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 // References:
@@ -104,9 +104,10 @@ static constexpr auto clear_tab = CSI "g";
 } // namespace seq
 
 
-inline constexpr const char* xci_tparm(const char* seq) { return seq; }
+static constexpr const char* xci_tparm(const char* seq) { return seq; }
+
 template<typename ...Args>
-inline std::string xci_tparm(const char* seq, Args... args) {
+static std::string xci_tparm(const char* seq, Args... args) {
     return fmt::format(fmt::runtime(seq), args...);
 }
 

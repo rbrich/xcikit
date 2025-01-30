@@ -1,7 +1,7 @@
 // demo_argparser.cpp created on 2020-01-28 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/core/ArgParser.h>
@@ -12,7 +12,7 @@ using namespace xci::core::argparser;
 using std::cout;
 using std::endl;
 
-bool check_color(const char* arg)
+static bool check_color(const char* arg)
 {
     const std::string color(arg);
     return color == "red" || color == "green" || color == "blue";

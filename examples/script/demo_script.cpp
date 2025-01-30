@@ -1,7 +1,7 @@
 // demo_script.cpp created on 2020-01-11 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2024 Radek Brich
+// Copyright 2020–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/script/Interpreter.h>
@@ -19,7 +19,7 @@ using namespace xci::script;
 using namespace xci::core;
 
 
-void hello_fun(Stack& stack, void*, void*)
+static void hello_fun(Stack& stack, void*, void*)
 {
     // pull arguments according to function signature
     auto arg = stack.pull<value::String>();
@@ -51,7 +51,7 @@ static std::string toupper_at(std::string_view word, int32_t index)
 }
 
 
-void toupper_at_wrapped(Stack& stack, void*, void*)
+static void toupper_at_wrapped(Stack& stack, void*, void*)
 {
     auto arg1 = stack.pull<value::String>();
     auto arg2 = stack.pull<value::Int32>();
@@ -124,8 +124,8 @@ int main()
     module->import_module("std");    // `add` function, which is alias of `+` operator
 
     auto result2 = interpreter.eval(module, R"(10 + 2)");
-    assert(result2.type() == Type::Int32);
-    assert(result2.get<int32_t>() == 12);
+    assert(result2.type() == Type::Int64);
+    assert(result2.get<int64_t>() == 12);
 
     return 0;
 }

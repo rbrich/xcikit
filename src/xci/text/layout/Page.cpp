@@ -1,7 +1,7 @@
 // Page.cpp created on 2018-03-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/text/layout/Page.h>
@@ -12,6 +12,7 @@
 #include <cassert>
 #include <utility>
 #include <algorithm>
+#include <ranges>
 
 namespace xci::text { class Style; }
 
@@ -267,7 +268,7 @@ void Span::adjust_style(const std::function<void(Style& word_style)>& fn_adjust)
 
 bool Span::contains(FramebufferCoords point) const
 {
-    return std::any_of(m_parts.begin(), m_parts.end(),
+    return std::ranges::any_of(m_parts,
                [&point](const Line& line) { return line.bbox().contains(point); });
 }
 
@@ -311,7 +312,7 @@ void Page::clear()
 void Page::add_tab_stop(FramebufferPixels x)
 {
     m_tab_stops.push_back(x);
-    std::sort(m_tab_stops.begin(), m_tab_stops.end());
+    std::ranges::sort(m_tab_stops);
 }
 
 

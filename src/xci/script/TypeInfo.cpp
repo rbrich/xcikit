@@ -1,7 +1,7 @@
 // TypeInfo.cpp created on 2019-06-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2024 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TypeInfo.h"
@@ -418,7 +418,7 @@ auto TypeInfo::elem_type() const -> const TypeInfo&
 const TypeInfo* TypeInfo::struct_item_by_key(NameId key) const
 {
     const auto& items = subtypes();
-    auto it = std::find_if(items.begin(), items.end(), [key](const TypeInfo& item) {
+    const auto it = std::ranges::find_if(items, [key](const TypeInfo& item) {
          return item.key() == key;
     });
     if (it == items.end())

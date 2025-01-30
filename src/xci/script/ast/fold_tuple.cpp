@@ -1,12 +1,14 @@
 // fold_tuple.cpp created on 2021-02-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2023 Radek Brich
+// Copyright 2021–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "fold_tuple.h"
 #include <xci/script/Function.h>
 #include <xci/script/Module.h>
+
+#include <ranges>
 
 namespace xci::script {
 
@@ -56,7 +58,7 @@ public:
                     m_collapsed->items.push_back(std::move(expr));
                 } else {
                     // it is a tuple, fold it
-                    std::move(std::begin(tuple->items), std::end(tuple->items),
+                    std::ranges::move(tuple->items,
                             std::back_inserter(m_collapsed->items));
                 }
             };
