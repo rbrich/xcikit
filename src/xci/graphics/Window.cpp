@@ -1,7 +1,7 @@
 // Window.cpp created on 2019-10-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2024 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Window.h"
@@ -9,8 +9,8 @@
 #include "vulkan/VulkanError.h"
 #include <xci/core/log.h>
 
-#include <SDL.h>
-#include <SDL_vulkan.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 
 namespace xci::graphics {
 
@@ -52,16 +52,6 @@ bool Window::create(const Vec2u& size, const std::string& title)
         log::error("{} failed: {}", "SDL_CreateWindow", SDL_GetError());
         return false;
     }
-
-    // This is a workaround for https://github.com/libsdl-org/SDL/issues/1059
-    SDL_SetEventFilter([](void* data, SDL_Event* event){
-        if (event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
-            auto self = (Window*) data;
-            self->handle_event(*event);
-            return 0;
-        }
-        return 1;
-    }, this);
 
     return m_renderer.create_surface(m_window);
 }
@@ -114,7 +104,7 @@ void Window::wakeup() const
     SDL_Event event {
         .type = m_sdl_wakeup_event
     };
-    if (SDL_PushEvent(&event) < 0) {
+    if (!SDL_PushEvent(&event)) {
         log::error("{} failed: {}", "SDL_PushEvent", SDL_GetError());
     }
 }
@@ -137,11 +127,11 @@ void Window::set_fullscreen(bool fullscreen)
 
     if (fullscreen_mode == FullscreenMode::BorderlessWindow) {
         if (m_fullscreen) {
-            SDL_SetWindowBordered(m_window, SDL_FALSE);
+            SDL_SetWindowBordered(m_window, false);
             SDL_MaximizeWindow(m_window);
         } else {
             SDL_RestoreWindow(m_window);
-            SDL_SetWindowBordered(m_window, SDL_TRUE);
+            SDL_SetWindowBordered(m_window, true);
         }
         return;
     }
@@ -155,7 +145,7 @@ void Window::set_fullscreen(bool fullscreen)
         SDL_SetWindowFullscreenMode(m_window, nullptr);
     }
 
-    if (SDL_SetWindowFullscreen(m_window, m_fullscreen ? SDL_WINDOW_FULLSCREEN : 0) != 0) {
+    if (!SDL_SetWindowFullscreen(m_window, m_fullscreen ? SDL_WINDOW_FULLSCREEN : 0)) {
         log::error("{} failed: {}", "SDL_SetWindowFullscreen", SDL_GetError());
     }
 }
@@ -171,7 +161,7 @@ Vec2u Window::get_size() const
 
 bool Window::set_clipboard_text(const std::string& text) const
 {
-    if (SDL_SetClipboardText(text.c_str()) != 0) {
+    if (!SDL_SetClipboardText(text.c_str())) {
         log::error("{} failed: {}", "SDL_SetClipboardText", SDL_GetError());
         return false;
     }
@@ -238,6 +228,17 @@ void Window::setup_view()
         m_size_cb(m_view);
 
     create_command_buffers();
+
+    // This is a workaround for https://github.com/libsdl-org/SDL/issues/1059
+    // (Still doesn't get resize events on Mac with SDL 3.2.0, this workaround still helps)
+    SDL_SetEventFilter([](void* data, SDL_Event* event){
+        if (event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+            auto* self = (Window*) data;
+            self->handle_event(*event);
+            return false;
+        }
+        return true;
+    }, this);
 }
 
 
@@ -246,8 +247,8 @@ static Key translate_sdl_keycode(SDL_Keycode key)
     // Printable keys
     if (key >= SDLK_0 && key <= SDLK_9)
         return Key(key - SDLK_0 + int(Key::Num0));
-    if (key >= SDLK_a && key <= SDLK_z)
-        return Key(key - SDLK_a + int(Key::A));
+    if (key >= SDLK_A && key <= SDLK_Z)
+        return Key(key - SDLK_A + int(Key::A));
 
     // Function keys
     if (key >= SDLK_F1 && key <= SDLK_F12)
@@ -256,14 +257,14 @@ static Key translate_sdl_keycode(SDL_Keycode key)
     switch (key) {
         // Printable keys (continued)
         case SDLK_SPACE: return Key::Space;
-        case SDLK_QUOTE: return Key::Apostrophe;
+        case SDLK_APOSTROPHE: return Key::Apostrophe;
         case SDLK_COMMA: return Key::Comma;
         case SDLK_MINUS: return Key::Minus;
         case SDLK_PERIOD: return Key::Period;
         case SDLK_SLASH: return Key::Slash;
         case SDLK_SEMICOLON: return Key::Semicolon;
         case SDLK_EQUALS: return Key::Equal;
-        case SDLK_BACKQUOTE: return Key::Backtick;
+        case SDLK_GRAVE: return Key::Backtick;
         case SDLK_LEFTBRACKET: return Key::LeftBracket;
         case SDLK_BACKSLASH: return Key::Backslash;
         case SDLK_RIGHTBRACKET: return Key::RightBracket;
@@ -341,7 +342,7 @@ static MouseButton translate_sdl_mouse_button(uint8_t button)
 void Window::handle_event(const SDL_Event& event)
 {
     switch (event.type) {
-        case SDL_QUIT:
+        case SDL_EVENT_QUIT:
             TRACE("SDL quit event");
             m_quit = true;
             break;
@@ -369,15 +370,15 @@ void Window::handle_event(const SDL_Event& event)
         case SDL_EVENT_KEY_DOWN:
         case SDL_EVENT_KEY_UP:
             if (m_key_cb) {
-                Key ev_key = translate_sdl_keycode(event.key.keysym.sym);
-                Action action = event.key.state == SDL_PRESSED ? Action::Press : Action::Release;
+                Key ev_key = translate_sdl_keycode(event.key.key);
+                Action action = event.key.down ? Action::Press : Action::Release;
                 if (event.key.repeat)
                     action = Action::Repeat;
                 const ModKey mod = {
-                    bool(event.key.keysym.mod & SDL_KMOD_SHIFT),
-                    bool(event.key.keysym.mod & SDL_KMOD_CTRL),
-                    bool(event.key.keysym.mod & SDL_KMOD_ALT),
-                    bool(event.key.keysym.mod & SDL_KMOD_GUI),
+                    bool(event.key.mod & SDL_KMOD_SHIFT),
+                    bool(event.key.mod & SDL_KMOD_CTRL),
+                    bool(event.key.mod & SDL_KMOD_ALT),
+                    bool(event.key.mod & SDL_KMOD_GUI),
                 };
                 m_key_cb(m_view, KeyEvent{ev_key, mod, action});
             }
@@ -417,7 +418,7 @@ void Window::handle_event(const SDL_Event& event)
             if (m_mbtn_cb) {
                 const auto pos = m_view.px_to_fb(ScreenCoords{float(event.button.x), float(event.button.y)})
                                  - m_view.framebuffer_origin();
-                const Action action = event.button.state == SDL_PRESSED ? Action::Press : Action::Release;
+                const Action action = event.button.down ? Action::Press : Action::Release;
                 const MouseButton button = translate_sdl_mouse_button(event.button.button);
                 m_mbtn_cb(m_view, MouseBtnEvent{button, action, pos});
             }

@@ -1,9 +1,14 @@
+#ifndef XCI_EXAMPLES_COMMON_H
+#define XCI_EXAMPLES_COMMON_H
+
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Renderer.h>
 #include <xci/graphics/vulkan/VulkanError.h>
 #include <xci/core/ArgParser.h>
 #include <xci/config/Config.h>
 #include <xci/core/log.h>
+
+#include <SDL3/SDL_main.h>  // NOLINT (unused)
 
 using namespace xci::graphics;
 using namespace xci::core;
@@ -43,3 +48,6 @@ inline void setup_window(Window& window, const char* title, const char* argv[])
     if (!window.create({800, 600}, title))
         exit(EXIT_FAILURE);
 }
+
+
+#endif // include guard

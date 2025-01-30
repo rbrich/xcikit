@@ -1,7 +1,7 @@
 // demo_3d.cpp created on 2023-12-29 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023–2024 Radek Brich
+// Copyright 2023–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "common.h"
@@ -96,7 +96,7 @@ int main(int, const char* argv[])
 
     log::info("Multisampling: {}", renderer.sample_count());
 
-    Theme theme(renderer);
+    Theme theme(window);
     if (!theme.load_default())
         return EXIT_FAILURE;
 

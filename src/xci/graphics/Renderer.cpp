@@ -1,7 +1,7 @@
 // Renderer.cpp created on 2018-11-24 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2024 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Renderer.h"
@@ -10,9 +10,8 @@
 #include <xci/config.h>
 #include <xci/core/log.h>
 
-#include <SDL.h>
-#include <SDL_vulkan.h>
-#include <SDL_hints.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/view/enumerate.hpp>
@@ -89,7 +88,7 @@ vulkan_debug_callback(
 Renderer::Renderer(Vfs& vfs)
         : m_vfs(vfs)
 {
-    if (SDL_Init(SDL_INIT_VIDEO) != 0)
+    if (!SDL_Init(SDL_INIT_VIDEO))
         VK_THROW(fmt::format("Couldn't initialize SDL: {}", SDL_GetError()));
 }
 
@@ -315,7 +314,7 @@ bool Renderer::create_surface(SDL_Window* window)
     if (!create_instance())
         return false;
 
-    if (SDL_Vulkan_CreateSurface(window, m_instance, nullptr, &m_surface) == SDL_FALSE) {
+    if (!SDL_Vulkan_CreateSurface(window, m_instance, nullptr, &m_surface)) {
         log::error("{} failed", "SDL_Vulkan_CreateSurface");
         return false;
     }
@@ -328,7 +327,7 @@ bool Renderer::create_surface(SDL_Window* window)
     }
 
     int width, height;
-    if (SDL_GetWindowSizeInPixels(window, &width, &height) != 0) {
+    if (!SDL_GetWindowSizeInPixels(window, &width, &height)) {
         log::error("SDL_GetWindowSizeInPixels: {}", SDL_GetError());
         return false;
     }

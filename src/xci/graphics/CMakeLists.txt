@@ -48,8 +48,8 @@ target_link_libraries(xci-graphics
         xci-vfs
         ${CMAKE_DL_LIBS}
         Vulkan::Vulkan
-    PRIVATE
         SDL3::SDL3
+    PRIVATE
         range-v3::range-v3
 )
 add_dependencies(xci-graphics shaders)

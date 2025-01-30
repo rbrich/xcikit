@@ -1,7 +1,7 @@
 // shed.cpp created on 2023-02-21 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023–2024 Radek Brich
+// Copyright 2023–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// Shader Editor (shed) tool
@@ -18,6 +18,9 @@
 #include <xci/core/TermCtl.h>
 #include <xci/core/dispatch.h>
 #include <xci/core/log.h>
+
+#include <SDL3/SDL_main.h>
+
 #include <atomic>
 
 using namespace xci::core;
@@ -98,7 +101,7 @@ int main(int argc, const char* argv[])
     if (!window.create({1024, 768}, "XCI Shader Editor"))
         return EXIT_FAILURE;
 
-    Theme theme(renderer);
+    Theme theme(window);
     if (!theme.load_default())
         return EXIT_FAILURE;
 
