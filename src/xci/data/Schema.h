@@ -11,7 +11,7 @@
 #include <xci/core/rtti.h>
 #include <xci/core/string.h>
 
-#include <magic_enum.hpp>
+#include <magic_enum/magic_enum.hpp>
 
 #include <iostream>
 #include <vector>

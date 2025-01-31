@@ -25,7 +25,7 @@ requirements:
   fmt:
     cmake: "fmt/11.0.0"
     conan: "fmt/11.1.1"
-    upstream: "github.com fmtlib/fmt 11.0.2"
+    upstream: "github.com fmtlib/fmt 11.1.3"
     cmake_defs: FMT_TEST=OFF FMT_DOC=OFF FMT_SYSTEM_HEADERS=ON
     public: True
   range_v3:
@@ -44,9 +44,9 @@ requirements:
     cmake_defs: PEGTL_BUILD_TESTS=OFF PEGTL_BUILD_EXAMPLES=OFF
     public: True
   magic_enum:
-    cmake: "magic_enum/0.9.5"
-    conan: "magic_enum/0.9.6"
-    upstream: "github.com Neargye/magic_enum v0.9.6"
+    cmake: "magic_enum/0.9.7"
+    conan: "magic_enum/0.9.7"
+    upstream: "github.com Neargye/magic_enum v0.9.7"
     cmake_defs: MAGIC_ENUM_OPT_BUILD_EXAMPLES=OFF MAGIC_ENUM_OPT_BUILD_TESTS=OFF
     public: True
     prereq:
@@ -59,7 +59,7 @@ requirements:
       - data
   libzip:
     cmake: "libzip/1.7.0"
-    conan: "libzip/1.11.1"
+    conan: "libzip/1.11.3"
   sdl:
     cmake: "SDL2/2.0.14"
     conan: "sdl/2.30.5"
@@ -67,7 +67,7 @@ requirements:
       - graphics
   vulkan:
     cmake: "Vulkan/1.2.0"
-    conan: "vulkan-loader/1.3.231"
+    conan: "vulkan-loader/1.3.290.0"
     public: True
     prereq:
       - graphics
@@ -104,13 +104,13 @@ requirements:
       - data
   catch2:
     cmake: "Catch2/3"
-    conan: "catch2/3.8.0"
-    upstream: "github.com catchorg/Catch2 v3.8.0"
+    conan: "catch2/3.7.1"
+    upstream: "github.com catchorg/Catch2 v3.7.1"
     cmake_defs: CATCH_INSTALL_DOCS=OFF CMAKE_CXX_STANDARD=20
     prereq:
       - tests
   benchmark:
     cmake: "benchmark/1.5.0"
-    conan: "benchmark/1.9.0"
+    conan: "benchmark/1.9.1"
     prereq:
       - benchmarks
