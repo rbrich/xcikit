@@ -1,13 +1,15 @@
 // TypeChecker.cpp created on 2022-07-24 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022–2023 Radek Brich
+// Copyright 2022–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TypeChecker.h"
 #include <xci/script/Error.h>
 
 #include <range/v3/view/zip.hpp>
+
+#include <ranges>
 
 namespace xci::script {
 
@@ -124,7 +126,7 @@ MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& expected)
     MatchScore res;
     for (const auto& inf_type : candidate_types) {
         assert(inf_type.key());
-        auto exp_it = std::find_if(expected_types.begin(), expected_types.end(),
+        const auto exp_it = std::ranges::find_if(expected_types,
                                    [&inf_type](const TypeInfo& exp) {
                                        return exp.key() == inf_type.key();
                                    });
@@ -208,7 +210,7 @@ auto TypeChecker::resolve(const TypeInfo& inferred, const SourceLocation& loc) -
 void TypeChecker::check_struct_item(NameId key, const TypeInfo& inferred, const SourceLocation& loc) const
 {
     const auto& spec_items = eval_type().underlying().subtypes();
-    auto spec_it = std::find_if(spec_items.begin(), spec_items.end(),
+    const auto spec_it = std::ranges::find_if(spec_items,
                                 [key](const TypeInfo& spec) {
                                     return spec.key() == key;
                                 });

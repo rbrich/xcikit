@@ -1,7 +1,7 @@
 // ArgParser.cpp created on 2019-06-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2024 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "ArgParser.h"
@@ -11,10 +11,10 @@
 #include <fmt/format.h>
 
 #include <iostream>
+#include <ranges>
 #include <utility>
 #include <cstring>
 #include <cassert>
-#include <algorithm>
 #include <filesystem>
 #include <iterator>
 
@@ -273,13 +273,13 @@ void ArgParser::validate() const
         // check short, long
         opt.foreach_name([&opt, &shorts, &longs](char shortopt, string_view longopt) {
             if (shortopt != 0) {
-                if (std::find_if(shorts.cbegin(), shorts.cend(),
+                if (std::ranges::find_if(shorts,
                         [shortopt](char v){ return shortopt == v; }) != shorts.cend())
                     throw BadOptionDescription(fmt::format("duplicate name -{} in", shortopt), opt.desc());
                 shorts.push_back(shortopt);
             } else {
                 assert(!longopt.empty());
-                if (std::find_if(longs.cbegin(), longs.cend(),
+                if (std::ranges::find_if(longs,
                         [longopt](string_view v){ return longopt == v; }) != longs.cend())
                     throw BadOptionDescription(fmt::format("duplicate name --{} in", longopt), opt.desc());
                 longs.push_back(longopt);
@@ -287,7 +287,7 @@ void ArgParser::validate() const
         });
         // check env
         if (opt.env()) {
-            if (std::find_if(envs.cbegin(), envs.cend(),
+            if (std::ranges::find_if(envs,
                     [&opt](const char* v){ return !strcmp(v, opt.env()); }) != envs.cend())
                 throw BadOptionDescription("env name repeated", opt.env());
             envs.push_back(opt.env());
@@ -353,11 +353,11 @@ void ArgParser::parse_env()
             continue;
         auto key = s[0];
         auto val = s[1];
-        auto it = find_if(m_opts.begin(), m_opts.end(),
+        auto it = std::ranges::find_if(m_opts,
                 [&key](const Option& opt) { return opt.has_env(key); });
         if (it != m_opts.end()) {
             assert(!it->is_show_help());  // help can't be invoked via env
-            it->eval_env(val.data());
+            it->eval_env(val.data());  // NOLINT(bugprone-suspicious-stringview-data-usage) - environ items are null-terminated
         }
         ++env;
     }
@@ -414,7 +414,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
             throw BadArgument(fmt::format("Unknown option: {}", arg));
         }
         // long option
-        auto it = find_if(m_opts.begin(), m_opts.end(),
+        auto it = std::ranges::find_if(m_opts,
                 [p](const Option& opt) { return opt.has_long(p); });
         if (it == m_opts.end())
             throw BadArgument(fmt::format("Unknown option: {}", arg));
@@ -436,7 +436,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
     if (dashes == 1 && *p) {
         // short option
         while (*p) {
-            auto it = find_if(m_opts.begin(), m_opts.end(),
+            auto it = std::ranges::find_if(m_opts,
                     [p](const Option& opt) { return opt.has_short(*p); });
             if (it == m_opts.end())
                 throw BadArgument(fmt::format("Unknown option: -{} (in {})", p[0], arg));
@@ -469,7 +469,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
         // open option -> pass it the arg
         (*m_curopt)(arg);
     } else {
-        auto it = find_if(m_opts.begin(), m_opts.end(),[](const Option& opt) {
+        auto it = std::ranges::find_if(m_opts,[](const Option& opt) {
             return (opt.is_positional() && opt.can_receive_arg()) || opt.is_remainder();
         });
         if (it == m_opts.end()) {
@@ -556,7 +556,7 @@ void ArgParser::print_help() const
 
 void ArgParser::print_help_notice() const
 {
-    auto it = find_if(m_opts.begin(), m_opts.end(),
+    auto it = std::ranges::find_if(m_opts,
             [](const Option& opt) { return opt.is_show_help(); });
     if (it == m_opts.end())
         return;  // no --help option
@@ -567,7 +567,7 @@ void ArgParser::print_help_notice() const
 bool ArgParser::invoke_remainder(const char** argv)
 {
     assert(argv != nullptr);
-    auto it = find_if(m_opts.begin(), m_opts.end(),
+    auto it = std::ranges::find_if(m_opts,
             [](const Option& opt) { return opt.is_remainder(); });
     if (it == m_opts.end())
         return false;

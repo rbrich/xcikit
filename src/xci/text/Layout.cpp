@@ -1,7 +1,7 @@
 // Layout.cpp created on 2018-03-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Layout.h"
@@ -9,6 +9,7 @@
 #include <xci/graphics/View.h>
 #include <xci/graphics/Window.h>
 
+#include <ranges>
 #include <cassert>
 
 namespace xci::text::layout {
@@ -329,7 +330,7 @@ bool Layout::end_span(const std::string& name)
 
 Span* Layout::get_span(const std::string& name)
 {
-    auto it = std::find(m_span_names.begin(), m_span_names.end(), name);
+    const auto it = std::ranges::find(m_span_names, name);
     if (it == m_span_names.end())
         return nullptr;
     return m_page.get_span(it - m_span_names.begin());

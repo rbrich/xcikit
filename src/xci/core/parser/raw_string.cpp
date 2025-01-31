@@ -1,7 +1,7 @@
 // raw_string.cpp created on 2021-05-06 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2023 Radek Brich
+// Copyright 2021–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "raw_string.h"
@@ -13,7 +13,7 @@ namespace xci::core::parser {
 /// Skip spaces and tabs, success on a newline, fail on any other char
 /// \returns 0 = fail, >0 success (a number of leading blanks including the newline)
 template <typename Iter>
-size_t count_leading_ws(Iter begin, Iter end)
+static size_t count_leading_ws(Iter&& begin, Iter&& end)
 {
     size_t leading_ws = 0;
     auto it = begin;

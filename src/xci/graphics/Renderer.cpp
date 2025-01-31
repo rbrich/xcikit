@@ -19,6 +19,7 @@
 
 #include <fmt/format.h>
 
+#include <ranges>
 #include <memory>
 #include <bitset>
 #include <array>
@@ -445,7 +446,7 @@ void Renderer::create_device()
             if (choose) {
                 chosen_device_extensions.reserve(
                         std::size(required_device_extensions) + std::size(additional_device_extensions));
-                std::copy(std::begin(required_device_extensions), std::end(required_device_extensions),
+                std::ranges::copy(required_device_extensions,
                           std::back_inserter(chosen_device_extensions));
                 for (size_t i = 0; i < std::size(additional_device_extensions); i++) {
                     if (add_exts[i])

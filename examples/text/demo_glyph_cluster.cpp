@@ -1,7 +1,7 @@
 // demo_glyph_cluster.cpp created on 2019-12-16 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -13,6 +13,7 @@
 #include <xci/vfs/Vfs.h>
 #include <xci/core/FpsCounter.h>
 #include <xci/config.h>
+#include <ranges>
 #include <random>
 #include <cstdlib>
 
@@ -37,7 +38,7 @@ struct Word {
 };
 
 
-float lerp(float a, float b, float t) { return a + t * (b - a); }
+static float lerp(float a, float b, float t) { return a + t * (b - a); }
 
 
 int main(int argc, const char* argv[])
@@ -87,7 +88,7 @@ int main(int argc, const char* argv[])
         timer += elapsed;
         if (timer >= step) {
             timer -= step;
-            auto it = std::find_if(words.begin(), words.end(), [](Word& w) { return !w.active; });
+            const auto it = std::ranges::find_if(words, [](Word& w) { return !w.active; });
             if (it != words.end()) {
                 it->active = true;
                 it->age = 0ms;

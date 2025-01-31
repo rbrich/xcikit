@@ -1,7 +1,7 @@
 // resolve_nonlocals.cpp created on 2020-01-05 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_nonlocals.h"
@@ -14,7 +14,7 @@ namespace xci::script {
 static void resolve_nonlocals_for_scope(Scope& scope, ast::Expression& body);
 
 
-void resolve_nonlocals_in_symtab(Scope& scope)
+static void resolve_nonlocals_in_symtab(Scope& scope)
 {
     auto& fn = scope.function();
     if (fn.signature().has_generic_nonlocals()) {

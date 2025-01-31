@@ -1,7 +1,7 @@
 // resolve_spec.cpp created on 2022-08-13 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022–2024 Radek Brich
+// Copyright 2022–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_spec.h"
@@ -20,7 +20,6 @@
 
 #include <ranges>
 #include <sstream>
-#include <optional>
 #include <span>
 
 namespace xci::script {
@@ -397,9 +396,9 @@ public:
             auto* tuple = dynamic_cast<ast::Tuple*>(v.arg.get());
             if (tuple && !tuple->items.empty() && call_ti.is_struct_or_tuple()) {
                 unsigned i = 0;
-                auto call_subtypes = call_ti.subtypes();
+                const auto& call_subtypes = call_ti.subtypes();
                 for (auto& arg : tuple->items) {
-                    auto call_item = call_subtypes[i++];
+                    const auto& call_item = call_subtypes[i++];
                     if (call_item.is_callable()) {
                         m_call_sig.clear();
                         m_call_sig.emplace_back().load_from(call_item.ul_signature(), arg->source_loc);
@@ -772,17 +771,17 @@ private:
             && (!scope.parent()->has_function() || !scope.parent()->function().is_specialized()))
         {
             // when not specializing the parent function...
-            if (std::all_of(m_call_sig.cbegin(), m_call_sig.cend(),
+            if (std::ranges::all_of(m_call_sig,
                     [](const CallSignature& sig) {
                         const CallArg& arg = sig.arg;
                         if (arg.type_info.is_struct_or_tuple() && !arg.type_info.is_void()) {
                             auto subtypes = arg.type_info.subtypes();
-                            return std::all_of(subtypes.begin(), subtypes.end(),
+                            return std::ranges::all_of(subtypes,
                                                [](const TypeInfo& ti) {
                                                    return ti.has_generic();
                                                });
-                        } else
-                            return arg.type_info.has_generic();
+                        }
+                        return arg.type_info.has_generic();
                     }))
                 return {};  // do not specialize with generic args
         }

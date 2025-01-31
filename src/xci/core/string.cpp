@@ -1,7 +1,7 @@
 // string.cpp created on 2018-03-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2024 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "string.h"
@@ -18,19 +18,18 @@
 #include <xci/compat/windows.h>  // stringapiset.h / WideCharToMultiByte
 #endif
 
-#include <cctype>
+#include <ranges>
 #include <locale>
+#include <cctype>
 #include <cassert>
 
 namespace xci::core {
 
-using std::string;
-using std::vector;
 using std::string_view;
 using fmt::format;
 
 
-bool remove_prefix(string& str, const string& prefix)
+bool remove_prefix(std::string& str, const std::string& prefix)
 {
     if (!str.starts_with(prefix))
         return false;
@@ -39,7 +38,7 @@ bool remove_prefix(string& str, const string& prefix)
 }
 
 
-bool remove_suffix(string& str, const string& suffix)
+bool remove_suffix(std::string& str, const std::string& suffix)
 {
     if (!str.ends_with(suffix))
         return false;
@@ -68,7 +67,7 @@ std::string replace_all(std::string_view str, std::string_view substring, std::s
 
 
 template <class TDelim>
-vector<string_view> _split(string_view str, TDelim delim, size_t delim_len, int maxsplit)
+static std::vector<std::string_view> _split(string_view str, TDelim delim, size_t delim_len, int maxsplit)
 {
     std::vector<string_view> res;
     size_t pos = 0;
@@ -87,7 +86,7 @@ vector<string_view> _split(string_view str, TDelim delim, size_t delim_len, int 
 std::vector<std::string_view> split(std::string_view str, char delim, int maxsplit) { return _split(str, delim, 1, maxsplit); }
 std::vector<std::string_view> split(std::string_view str, std::string_view delim, int maxsplit)  { return _split(str, delim, delim.size(), maxsplit); }
 
-vector<string_view> split_ws(string_view str, int maxsplit)
+std::vector<std::string_view> split_ws(string_view str, int maxsplit)
 {
     constexpr const char* whitespace = " \n\r\t\v\f";
     std::vector<string_view> res;
@@ -106,7 +105,7 @@ vector<string_view> split_ws(string_view str, int maxsplit)
 }
 
 template <class TDelim>
-vector<string_view> _rsplit(string_view str, TDelim delim, size_t delim_len, int maxsplit)
+static std::vector<std::string_view> _rsplit(string_view str, TDelim delim, size_t delim_len, int maxsplit)
 {
     std::vector<string_view> res;
     size_t pos = str.size();
@@ -126,7 +125,7 @@ std::vector<std::string_view> rsplit(std::string_view str, char delim, int maxsp
 std::vector<std::string_view> rsplit(std::string_view str, std::string_view delim, int maxsplit)  { return _rsplit(str, delim, delim.size(), maxsplit); }
 
 
-std::string escape(string_view str, bool extended, bool utf8)
+std::string escape(std::string_view str, bool extended, bool utf8)
 {
     std::string out;
     out.reserve(str.size());
@@ -182,7 +181,7 @@ struct UnescapeControl : tao::pegtl::normal< Rule >
 };
 
 template<typename Rule>
-std::string gen_unescape(string_view str)
+static std::string gen_unescape(string_view str)
 {
     tao::pegtl::memory_input<
         tao::pegtl::tracking_mode::eager,
@@ -210,8 +209,7 @@ std::string unescape_uni(string_view str) { return gen_unescape<parser::unescape
 std::string to_lower(std::string_view str)
 {
     std::string result(str.size(), '\0');
-    std::transform(
-        str.begin(), str.end(),
+    std::ranges::transform(str,
         result.begin(), [](char c){ return (char) std::tolower(c); });
     return result;
 }
@@ -219,7 +217,7 @@ std::string to_lower(std::string_view str)
 
 bool ci_equal(std::string_view s1, std::string_view s2)
 {
-    return std::equal(s1.begin(), s1.end(), s2.begin(), s2.end(),
+    return std::ranges::equal(s1, s2,
                       [](char a, char b) { return std::tolower(a) == std::tolower(b); });
 }
 

@@ -1,0 +1,6 @@
+include(default)
+
+[settings]
+compiler=clang
+compiler.version=19
+compiler.cppstd=20

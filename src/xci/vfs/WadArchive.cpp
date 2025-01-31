@@ -1,14 +1,14 @@
 // WadArchive.cpp created on 2023-11-07 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "WadArchive.h"
 #include <xci/core/log.h>
 #include <xci/compat/endian.h>
 
-#include <algorithm>
+#include <ranges>
 
 namespace xci::vfs {
 
@@ -64,7 +64,7 @@ WadArchive::WadArchive(std::string&& path, std::unique_ptr<std::istream>&& strea
 VfsFile WadArchive::read_file(const std::string& path) const
 {
     // search for the entry
-    auto entry_it = std::find_if(m_entries.cbegin(), m_entries.cend(), [&path](auto& entry){
+    const auto entry_it = std::ranges::find_if(m_entries, [&path](auto& entry){
         return entry.path() == path;
     });
     if (entry_it == m_entries.cend()) {

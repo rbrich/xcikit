@@ -1,10 +1,11 @@
 // Dialog.cpp created on 2023-12-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Dialog.h"
+#include <ranges>
 
 namespace xci::widgets {
 
@@ -29,7 +30,7 @@ void Dialog::create_items_from_spans()
 
 auto Dialog::get_item(std::string span_name) -> Item*
 {
-    auto it = std::find_if(m_items.begin(), m_items.end(),
+    const auto it = std::ranges::find_if(m_items,
                 [&span_name](const Item& item) { return item.span_name == span_name; });
     if (it == m_items.end())
         return nullptr;

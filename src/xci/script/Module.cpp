@@ -1,7 +1,7 @@
 // Module.cpp created on 2019-06-12 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Module.h"
@@ -15,6 +15,7 @@
 #include <xci/core/string.h>
 
 #include <fstream>
+#include <ranges>
 
 namespace xci::script {
 
@@ -67,7 +68,7 @@ Index Module::add_imported_module(std::shared_ptr<Module> mod)
 
 Index Module::get_imported_module_index(Module* mod) const
 {
-    auto it = find_if(m_modules.begin(), m_modules.end(),
+    const auto it = std::ranges::find_if(m_modules,
             [mod](const std::shared_ptr<Module>& a){ return mod == a.get(); });
     if (it == m_modules.end())
         return no_index;
@@ -77,7 +78,7 @@ Index Module::get_imported_module_index(Module* mod) const
 
 Index Module::get_imported_module_index(NameId name) const
 {
-    auto it = find_if(m_modules.begin(), m_modules.end(),
+    auto it = std::ranges::find_if(m_modules,
                       [name](const std::shared_ptr<Module>& a){ return name == a->name(); });
     if (it == m_modules.end())
         return no_index;
@@ -93,7 +94,7 @@ auto Module::add_function(Function&& fn) -> WeakFunctionId
 
 auto Module::find_function(NameId name) const -> WeakFunctionId
 {
-    auto it = std::find_if(m_functions.begin(), m_functions.end(),
+    const auto it = std::ranges::find_if(m_functions,
                            [name](const Function& fn) { return fn.name() == name; });
     if (it == m_functions.end())
         return decltype(m_functions)::not_found;
@@ -131,7 +132,7 @@ Index Module::add_value(TypedValue&& value)
 
 Index Module::find_value(const TypedValue& value) const
 {
-    auto it = std::find(m_values.begin(), m_values.end(), value);
+    const auto it = std::ranges::find(m_values, value);
     if (it == m_values.end())
         return no_index;
     return it - m_values.begin();
@@ -164,7 +165,7 @@ void Module::update_type(Index index, TypeInfo type_info)
 Index Module::find_type(const TypeInfo& type_info) const
 {
     assert(!type_info.has_generic());
-    auto it = std::find(m_types.begin(), m_types.end(), type_info);
+    const auto it = std::ranges::find(m_types, type_info);
     if (it == m_types.end())
         return no_index;
     return it - m_types.begin();

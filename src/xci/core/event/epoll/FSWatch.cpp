@@ -1,7 +1,7 @@
 // epoll/FSWatch.cpp created on 2018-04-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "FSWatch.h"
@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <vector>
+#include <ranges>
 #include <climits>
 #include <cassert>
 #include <unistd.h>
@@ -46,7 +47,7 @@ bool FSWatch::add(const fs::path& pathname, FSWatch::PathCallback cb)
 
     // Is the directory already watched?
     auto dir = pathname.parent_path();
-    auto it = std::find_if(m_dir.begin(), m_dir.end(),
+    auto it = std::ranges::find_if(m_dir,
                            [&dir](const Dir& d) { return d.name == dir; });
     int dir_wd;
     if (it == m_dir.end()) {
@@ -80,7 +81,7 @@ bool FSWatch::remove(const fs::path& pathname)
     auto dir = pathname.parent_path();
     int dir_wd;
     {
-        auto it = std::find_if(m_dir.begin(), m_dir.end(),
+        auto it = std::ranges::find_if(m_dir,
                                [&dir](const Dir& d) { return d.name == dir; });
         if (it == m_dir.end()) {
             // not found
@@ -91,7 +92,7 @@ bool FSWatch::remove(const fs::path& pathname)
 
     // Find file record
     auto filename = pathname.filename();
-    auto it = std::find_if(m_file.begin(), m_file.end(),
+    auto it = std::ranges::find_if(m_file,
                            [&filename, dir_wd](const File& f) {
                                return f.dir_wd == dir_wd && f.name == filename;
                            });
@@ -111,7 +112,7 @@ bool FSWatch::remove(const fs::path& pathname)
         return true;
 
     // Otherwise, remove also the watched dir
-    auto it_dir = std::find_if(m_dir.begin(), m_dir.end(),
+    auto it_dir = std::ranges::find_if(m_dir,
                                [dir_wd](const Dir& d) { return d.wd == dir_wd; });
     if (it_dir == m_dir.end()) {
         assert(!"FSWatch: Watched dir not found!");
@@ -151,14 +152,14 @@ void FSWatch::_notify(uint32_t epoll_events)
 void FSWatch::handle_event(int wd, uint32_t mask, const std::string& name)
 {
     // Lookup dir name
-    auto it_dir = std::find_if(m_dir.begin(), m_dir.end(),
+    auto it_dir = std::ranges::find_if(m_dir,
                                [wd](const Dir& d) { return d.wd == wd; });
     if (it_dir == m_dir.end()) {
         return;
     }
 
     // Lookup file callback
-    auto it_file = std::find_if(m_file.begin(), m_file.end(),
+    auto it_file = std::ranges::find_if(m_file,
                                 [&name, wd](const File& f) {
                                     return f.dir_wd == wd && f.name == name;
                                 });
