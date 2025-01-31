@@ -717,7 +717,7 @@ void TextTerminal::erase_to_cursor()
 
 void TextTerminal::erase_page()
 {
-    m_buffer->remove_lines(size_t(m_buffer_offset), m_buffer->size() - m_buffer_offset);
+    m_buffer->remove_lines(m_buffer_offset, m_buffer->size() - m_buffer_offset);
     m_buffer->add_line();
     m_cursor = {0, 0};
 }

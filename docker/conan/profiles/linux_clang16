@@ -1,4 +1,0 @@
-include(linux_clang)
-
-[settings]
-compiler.version=16

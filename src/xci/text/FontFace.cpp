@@ -1,7 +1,7 @@
 // FontFace.cpp created on 2018-09-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "FontFace.h"
@@ -20,6 +20,7 @@
 #include <hb-ft.h>
 
 #include <bit>
+#include <ranges>
 #include <cassert>
 
 namespace xci::text {
@@ -27,7 +28,7 @@ namespace xci::text {
 using namespace xci::core;
 
 
-const char* ft_error_cstr(FT_Error error_code)
+static const char* ft_error_cstr(FT_Error error_code)
 {
 #if defined(FT_CONFIG_OPTION_ERROR_STRINGS) || defined(FT_DEBUG_LEVEL_ERROR)
     return FT_Error_String(error_code);
@@ -51,20 +52,20 @@ const char* ft_error_cstr(FT_Error error_code)
 #define FT_CHECK_RETURN_FALSE(err, msg)  FT_CHECK_OR(err, msg, return false)
 
 
-static inline float ft_to_float(FT_F26Dot6 ft_units) {
+static float ft_to_float(FT_F26Dot6 ft_units) {
     return (float)(ft_units) / 64.f;
 }
 
-static inline FT_F26Dot6 float_to_ft(float units) {
+static FT_F26Dot6 float_to_ft(float units) {
     return (FT_F26Dot6) roundf(units * 64.f);
 }
 
 
-static inline float ft_fixed_to_float(FT_Fixed units) {
+static float ft_fixed_to_float(FT_Fixed units) {
     return (float)(units) / 65536.f;
 }
 
-static inline FT_Fixed float_to_ft_fixed(float units) {
+static FT_Fixed float_to_ft_fixed(float units) {
     return (FT_Fixed) roundf(units * 65536.f);
 }
 
@@ -344,7 +345,7 @@ std::vector<float> FontFace::get_variable_axes_coords() const
     FT_CHECK_OR(err, "FT_Get_Var_Design_Coordinates", return {});
     // transform to float coords
     std::vector<float> coords;
-    std::transform(ft_coords.begin(), ft_coords.end(), std::back_inserter(coords), ft_fixed_to_float);
+    std::ranges::transform(ft_coords, std::back_inserter(coords), ft_fixed_to_float);
     return coords;
 }
 
@@ -353,7 +354,7 @@ bool FontFace::set_variable_axes_coords(const std::vector<float>& coords)
 {
     std::vector<FT_Fixed> ft_coords;
     ft_coords.reserve(coords.size());
-    std::transform(coords.begin(), coords.end(), std::back_inserter(ft_coords), float_to_ft_fixed);
+    std::ranges::transform(coords, std::back_inserter(ft_coords), float_to_ft_fixed);
     auto err = FT_Set_Var_Design_Coordinates(m_face, FT_UInt(ft_coords.size()), ft_coords.data());
     FT_CHECK_RETURN_FALSE(err, "FT_Set_Var_Design_Coordinates");
     return true;

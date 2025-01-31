@@ -1,7 +1,7 @@
 // EditLine.cpp created on 2021-02-26 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021 Radek Brich
+// Copyright 2021–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 // Key binding reference:
@@ -13,6 +13,7 @@
 #include "log.h"
 
 #include <string>
+#include <ranges>
 
 namespace xci::core {
 
@@ -57,14 +58,14 @@ void EditLine::add_history(std::string_view input)
     // ' ' single-line
     // '~' multi-line first line
     // '|' multi-line following lines
-    if (std::find(input.cbegin(), input.cend(), '\n') == input.end()) {
+    if (std::ranges::find(input, '\n') == input.end()) {
         // single-line
         m_history_file << ' ' << input << '\n';
         m_history_file.flush();
     } else {
         // multi-line
         auto begin = input.begin();
-        auto end = input.end();
+        const auto end = input.end();
         decltype(begin) pos;
         do {
             pos = std::find(begin, end, '\n');

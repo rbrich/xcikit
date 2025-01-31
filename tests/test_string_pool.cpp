@@ -1,7 +1,7 @@
 // test_string_pool.cpp created on 2023-09-21 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023–2024 Radek Brich
+// Copyright 2023–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <catch2/catch_test_macros.hpp>
@@ -11,7 +11,7 @@
 using namespace xci::core;
 
 
-void check_add_retrieve(StringPool& pool, std::string_view str) {
+static void check_add_retrieve(StringPool& pool, std::string_view str) {
     auto id = pool.add(str);
     CHECK(pool.view(id) == str);
 }

@@ -1,13 +1,15 @@
 // Swapchain.cpp created on 2023-10-31 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023–2024 Radek Brich
+// Copyright 2023–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Swapchain.h"
 #include "VulkanError.h"
 #include <xci/graphics/Renderer.h>
 #include <xci/core/log.h>
+
+#include <ranges>
 #include <cassert>
 
 namespace xci::graphics {
@@ -198,7 +200,7 @@ bool Swapchain::query(VkPhysicalDevice device)
     if (format_count == 0 || mode_count == 0)
         return false;
 
-    bool mode_found = std::find(modes.begin(), modes.end(), present_mode_to_vk(m_present_mode)) != modes.end();
+    const bool mode_found = std::ranges::find(modes, present_mode_to_vk(m_present_mode)) != modes.end();
     if (!mode_found) {
         const auto selected_mode = static_cast<PresentMode>(modes[0]);
         log::warning("vulkan: requested present mode not supported: {}, falling back to {}",

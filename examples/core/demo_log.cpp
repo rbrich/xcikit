@@ -15,14 +15,14 @@ using namespace xci::core;
 using namespace xci::core::log;
 
 class ArbitraryObject {};
-std::ostream& operator<<(std::ostream& stream, const ArbitraryObject&) {
+static std::ostream& operator<<(std::ostream& stream, const ArbitraryObject&) {
     return stream << "I am arbitrary!";
 }
 
 template <> struct fmt::formatter<ArbitraryObject> : ostream_formatter {};
 
 
-void thread_run(const std::string& thread_name)
+static void thread_run(const std::string& thread_name)
 {
     info("Log from {}", thread_name);
 }

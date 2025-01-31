@@ -1,7 +1,7 @@
 // Crc32.cpp created on 2020-06-07 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Crc32.h"
@@ -10,7 +10,7 @@
 namespace xci::data {
 
 
-inline uint32_t init_crc()
+static uint32_t init_crc()
 {
     return (uint32_t) crc32_z(0L, Z_NULL, 0);
 }

@@ -1,13 +1,15 @@
 // Function.cpp created on 2019-05-30 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Function.h"
 #include "Module.h"
+
 #include <utility>
 #include <numeric>
+#include <ranges>
 
 namespace xci::script {
 
@@ -142,7 +144,7 @@ Function& Scope::function() const
 
 Index Scope::add_subscope(Index scope_idx)
 {
-    auto it = std::find(m_subscopes.begin(), m_subscopes.end(), scope_idx);
+    const auto it = std::ranges::find(m_subscopes, scope_idx);
     if (it != m_subscopes.end()) {
         // Return previously added function index
         return Index(it - m_subscopes.begin());
@@ -167,7 +169,7 @@ void Scope::copy_subscopes(const Scope& from)
 
 Index Scope::get_index_of_subscope(Index mod_scope_idx) const
 {
-    auto it = std::find(m_subscopes.begin(), m_subscopes.end(), mod_scope_idx);
+    const auto it = std::ranges::find(m_subscopes, mod_scope_idx);
     return Index(it - m_subscopes.begin());
 }
 
@@ -239,7 +241,7 @@ size_t Scope::nonlocal_raw_offset(Index index, const TypeInfo& ti) const
 bool Scope::has_unresolved_type_params() const
 {
     SymbolTable& symtab = function().symtab();
-    return std::any_of(symtab.begin(), symtab.end(), [this, &symtab](const Symbol& sym) {
+    return std::ranges::any_of(symtab, [this, &symtab](const Symbol& sym) {
         return sym.type() == Symbol::TypeVar && !sym.is_implicit() &&
                m_type_args.get(symtab.find(sym)).is_unknown();
     });

@@ -1,7 +1,7 @@
 // Value.cpp created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2024 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Value.h"
@@ -366,7 +366,7 @@ std::string_view StringV::value() const
 
 
 template <typename InIter = byte*>
-auto list_deleter_read_offsets(InIter& data, size_t size) -> std::vector<size_t>
+static auto list_deleter_read_offsets(InIter& data, size_t size) -> std::vector<size_t>
 {
     std::vector<size_t> offsets;
     InIter end = data + size;
@@ -376,7 +376,7 @@ auto list_deleter_read_offsets(InIter& data, size_t size) -> std::vector<size_t>
 }
 
 template <typename InIter = byte*, typename F>
-void list_deleter_foreach_heap_slot(InIter& data, uint32_t length,
+static void list_deleter_foreach_heap_slot(InIter& data, uint32_t length,
                                     const std::vector<size_t>& offsets, F&& cb)
 {
    const size_t n_skip = offsets.back();
@@ -949,7 +949,7 @@ UInt8::UInt8(std::string_view str)
 
 
 Char::Char(std::string_view utf8)
-    : Value(core::utf8_codepoint(utf8.data()))
+    : Value(core::utf8_codepoint(utf8.data()))  // NOLINT(bugprone-suspicious-stringview-data-usage)
 {}
 
 

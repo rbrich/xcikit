@@ -1,7 +1,7 @@
 // ModuleManager.cpp created on 2022-01-03 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022–2024 Radek Brich
+// Copyright 2022–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "ModuleManager.h"
@@ -9,7 +9,10 @@
 #include "Interpreter.h"
 #include "Builtin.h"
 #include "Error.h"
+
 #include <fmt/format.h>
+
+#include <ranges>
 
 namespace xci::script {
 
@@ -66,7 +69,7 @@ Index ModuleManager::replace_module(NameId name, ModulePtr mod)  // NOLINT(perfo
 
 Index ModuleManager::get_module_index(const Module& mod) const
 {
-    auto it = find_if(m_modules.begin(), m_modules.end(),
+    const auto it = std::ranges::find_if(m_modules,
                       [&mod](const ModulePtr& a){ return &mod == a.get(); });
     if (it == m_modules.end())
         return no_index;

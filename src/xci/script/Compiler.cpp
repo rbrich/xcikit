@@ -1,7 +1,7 @@
 // Compiler.cpp created on 2019-05-30 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2024 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Compiler.h"
@@ -114,7 +114,7 @@ public:
         // build struct on stack according to struct_type, fill in defaults
         for (const auto& ti : reverse(v.ti.underlying().subtypes())) {
             // lookup the name in StructInit
-            auto it = std::find_if(v.items.begin(), v.items.end(),
+            const auto it = std::ranges::find_if(v.items,
                 [&ti](const ast::StructInit::Item& item) {
                   return item.first.name == ti.key();
                 });

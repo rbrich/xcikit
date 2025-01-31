@@ -1,7 +1,7 @@
 // demo_plugin.cpp created on 2018-04-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/core/SharedLibrary.h>
@@ -20,8 +20,8 @@ static const char* filename = "./pluggable.dll";
 #else
 static const char* filename = "./libpluggable.so";
 #endif
-std::atomic_bool done {false};
-std::atomic_bool reload {false};
+static std::atomic_bool done {false};
+static std::atomic_bool reload {false};
 
 static void sigterm(int)
 {

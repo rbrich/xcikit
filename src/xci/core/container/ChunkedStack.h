@@ -111,6 +111,8 @@ public:
         using pointer = T*;
         using iterator_category = std::forward_iterator_tag;
 
+        iterator() = default;
+
         bool operator==(const iterator& rhs) const { return m_bucket == rhs.m_bucket && m_item == rhs.m_item; }
 
         iterator& operator++();
@@ -120,7 +122,6 @@ public:
         pointer operator->() const { return &m_bucket->items[m_item]; }
 
     private:
-        iterator() = default;
         explicit iterator(Bucket* head)
             : m_head(head), m_bucket{head->count == 0 ? nullptr : head} {}
 
@@ -138,6 +139,8 @@ public:
         using pointer = const T*;
         using iterator_category = std::forward_iterator_tag;
 
+        const_iterator() = default;
+
         bool operator==(const const_iterator& rhs) const { return m_bucket == rhs.m_bucket && m_item == rhs.m_item; }
 
         const_iterator& operator++();
@@ -147,7 +150,6 @@ public:
         pointer operator->() const { return &m_bucket->items[m_item]; }
 
     private:
-        const_iterator() = default;
         explicit const_iterator(Bucket* head)
             : m_head(head), m_bucket{head->count == 0 ? nullptr : head} {}
 
@@ -156,12 +158,12 @@ public:
         uint32_t m_item = 0;
     };
 
-    iterator begin()                { return iterator{head()}; }
-    const_iterator begin() const    { return const_iterator{head()}; }
-    const_iterator cbegin() const   { return const_iterator{head()}; }
-    iterator end()                  { return iterator{}; }
-    const_iterator end() const      { return const_iterator{}; }
-    const_iterator cend() const     { return const_iterator{}; }
+    iterator begin() noexcept               { return iterator{head()}; }
+    const_iterator begin() const noexcept   { return const_iterator{head()}; }
+    const_iterator cbegin() const noexcept  { return const_iterator{head()}; }
+    iterator end() noexcept                 { return iterator{}; }
+    const_iterator end() const noexcept     { return const_iterator{}; }
+    const_iterator cend() const noexcept    { return const_iterator{}; }
 
     // dump current allocation info (the sizes and usage of buckets)
     template <class S> void alloc_info(S& stream);

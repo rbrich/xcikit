@@ -1,5 +1,0 @@
-include(linux_gcc)
-
-[settings]
-arch=armv8
-compiler.version=12

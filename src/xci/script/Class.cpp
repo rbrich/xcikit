@@ -1,7 +1,7 @@
 // Class.cpp created on 2019-09-11 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2024 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Class.h"
@@ -28,7 +28,7 @@ Class::Class(Class&& rhs) noexcept
 
 Index Class::get_index_of_function(Index mod_scope_idx) const
 {
-    auto it = std::find(m_scopes.begin(), m_scopes.end(), mod_scope_idx);
+    const auto it = std::ranges::find(m_scopes, mod_scope_idx);
     return Index(it - m_scopes.begin());
 }
 

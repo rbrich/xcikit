@@ -1,7 +1,7 @@
 // AST.cpp created on 2019-05-15 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2024 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "AST.h"
@@ -10,7 +10,7 @@
 #include <xci/core/string.h>
 
 #include <ranges>
-#include <string>
+#include <string_view>
 #include <cassert>
 
 namespace xci::script::ast {
@@ -33,7 +33,7 @@ void Visitor::visit(Parenthesized& v)
 
 
 template <class T>
-auto copy_vector(const std::vector<T>& s)
+static auto copy_vector(const std::vector<T>& s)
 {
     std::vector<T> r;
     r.reserve(s.size());
@@ -44,7 +44,7 @@ auto copy_vector(const std::vector<T>& s)
 
 
 template <class T>
-auto copy_ptr_vector(const std::vector<std::unique_ptr<T>>& s)
+static auto copy_ptr_vector(const std::vector<std::unique_ptr<T>>& s)
 {
     std::vector<std::unique_ptr<T>> r;
     r.reserve(s.size());
@@ -68,7 +68,7 @@ std::unique_ptr<ast::Expression> Function::make_copy() const
 }
 
 
-Condition::IfThen copy(const Condition::IfThen& s)
+static Condition::IfThen copy(const Condition::IfThen& s)
 {
     return {s.first->make_copy(), s.second->make_copy()};
 }
