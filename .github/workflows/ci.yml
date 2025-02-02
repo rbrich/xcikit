@@ -152,14 +152,14 @@ jobs:
         if [[ "$RUNNER_OS" == "Linux" ]]; then
             sudo apt-get update
             sudo apt-get install --no-install-recommends -y ninja-build \
-                libsdl2-dev libfreetype6-dev libharfbuzz-dev libhyperscan-dev \
+                libfreetype6-dev libharfbuzz-dev libhyperscan-dev \
                 ${{ matrix.apt }}
             export CC=${{ matrix.cc }}-${{ matrix.cc_ver }}
             export CXX=${{ matrix.cxx }}-${{ matrix.cc_ver }}
             echo "CC='$CC'" >> $GITHUB_ENV
             echo "CXX='$CXX'" >> $GITHUB_ENV
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew install ninja sdl2 doxygen google-benchmark libzip
+            brew install ninja sdl3 doxygen google-benchmark libzip
             if [[ "$(uname -m)" == "x86_64" ]]; then
                 brew install hyperscan
                 # WORKAROUND: broken cmake config in brew harfbuzz package

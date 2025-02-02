@@ -61,8 +61,8 @@ requirements:
     cmake: "libzip/1.7.0"
     conan: "libzip/1.11.3"
   sdl:
-    cmake: "SDL2/2.0.14"
-    conan: "sdl/2.30.5"
+    cmake: "SDL3/3.2.0"
+    conan: "sdl/3.2.0"
     prereq:
       - graphics
   vulkan:

@@ -57,6 +57,7 @@ print_usage()
     echo "      --build-dir             Build directory (default: ./build/<build-config>)"
     echo "      --install-dir           Installation directory (default: ./artifacts/<build-config>)"
     echo "      --toolchain FILE        CMake toolchain, also passed to Conan"
+    echo "      --vcpkg                 Install deps from vcpkg instead of Conan"
 }
 
 setup_ninja()
@@ -204,6 +205,10 @@ while [[ $# -gt 0 ]] ; do
             CMAKE_TOOLCHAIN="$2"
             BUILD_DEPS_ARGS+=("--toolchain" "$2")
             shift 2 ;;
+        --vcpkg )
+            CONAN_DEPS=0
+            CMAKE_TOOLCHAIN="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            shift 1 ;;
         -h | --help )
             print_usage
             exit 0 ;;

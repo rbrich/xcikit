@@ -145,7 +145,7 @@ void Window::set_fullscreen(bool fullscreen)
         SDL_SetWindowFullscreenMode(m_window, nullptr);
     }
 
-    if (!SDL_SetWindowFullscreen(m_window, m_fullscreen ? SDL_WINDOW_FULLSCREEN : 0)) {
+    if (!SDL_SetWindowFullscreen(m_window, m_fullscreen)) {
         log::error("{} failed: {}", "SDL_SetWindowFullscreen", SDL_GetError());
     }
 }
