@@ -207,7 +207,8 @@ while [[ $# -gt 0 ]] ; do
             shift 2 ;;
         --vcpkg )
             CONAN_DEPS=0
-            CMAKE_TOOLCHAIN="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            SYSTEM_DEPS=0
+            CMAKE_TOOLCHAIN="${VCPKG_ROOT:-${VCPKG_INSTALLATION_ROOT}}/scripts/buildsystems/vcpkg.cmake"
             shift 1 ;;
         -h | --help )
             print_usage

@@ -118,12 +118,12 @@ jobs:
           name: "VS 16 / Release"
           cc: msvc
           cc_ver: 192
-          build_args: "-DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
+          build_args: "--vcpkg -DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
         - os: windows-2022
           name: "VS 17 / Release"
           cc: msvc
           cc_ver: 194
-          build_args: "-DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
+          build_args: "--vcpkg -DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
 
     name: ${{ matrix.os }} / ${{ matrix.name }}
 
@@ -159,6 +159,7 @@ jobs:
             echo "CC='$CC'" >> $GITHUB_ENV
             echo "CXX='$CXX'" >> $GITHUB_ENV
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            brew update --auto-update
             brew install ninja sdl3 doxygen google-benchmark libzip
             if [[ "$(uname -m)" == "x86_64" ]]; then
                 brew install hyperscan
@@ -185,10 +186,12 @@ jobs:
             which ccache; ccache --version
             which ninja; ninja --version
         fi
-        # Install conan
-        pip3 --no-cache-dir install conan
-        conan --version
-        echo "CONAN_HOME=$(conan config home)" >> $GITHUB_OUTPUT
+        if [[ "$RUNNER_OS" != "Windows" ]]; then
+            # Install conan
+            pip3 --no-cache-dir install conan
+            conan --version
+            echo "CONAN_HOME=$(conan config home)" >> $GITHUB_OUTPUT
+        fi
 
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2.13
@@ -196,6 +199,7 @@ jobs:
         key: ${{ matrix.os }}-${{ matrix.name }}
 
     - name: conan cache
+      if: ${{ ! startsWith(matrix.os, 'windows') }}
       uses: actions/cache@v4
       with:
         path: ${{ steps.tools.outputs.CONAN_HOME }}
@@ -206,6 +210,7 @@ jobs:
           ${{ matrix.os }}-
 
     - name: conan config
+      if: ${{ ! startsWith(matrix.os, 'windows') }}
       run: |
         mkdir -p "$(conan config home)/profiles"
         cat <<EOF > "$(conan config home)/profiles/default"
