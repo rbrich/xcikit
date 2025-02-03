@@ -15,7 +15,7 @@ using namespace xci::core;
 using namespace xci::core::log;
 using namespace std::chrono;
 
-int main(int argc, char** argv)
+int main(int argc, char* argv[])
 {
     EventLoop loop;
 

@@ -13,7 +13,7 @@ using namespace xci::core;
 using namespace xci::core::log;
 
 
-int main(int argc, char** argv)
+int main(int argc, char* argv[])
 {
     if (argc != 2) {
         info("Usage: {} <file_to_watch>", argv[0]);

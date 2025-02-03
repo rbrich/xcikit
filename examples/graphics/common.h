@@ -15,7 +15,7 @@ using namespace xci::core;
 using namespace xci::config;
 
 
-inline void setup_window(Window& window, const char* title, const char* argv[])
+inline void setup_window(Window& window, const char* title, char** argv)
 {
     uint32_t device_id = ~0u;
     fs::path config_file;

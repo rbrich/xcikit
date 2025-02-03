@@ -23,7 +23,7 @@
 // this brings in all required namespaces
 using namespace xci::demo;
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))

@@ -63,7 +63,7 @@ static bool reload_fragment_shader(const ShaderCompiler& sc, ShaderModule& shade
 }
 
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     fs::path vert_path, frag_path;
     uint32_t device_id = ~0u;

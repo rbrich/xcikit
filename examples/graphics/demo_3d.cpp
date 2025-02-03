@@ -78,7 +78,7 @@ private:
 };
 
 
-int main(int, const char* argv[])
+int main(int, char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))

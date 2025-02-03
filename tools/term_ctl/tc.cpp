@@ -17,7 +17,7 @@ using namespace xci::core::argparser;
 static constexpr auto c_version = "0.1";
 
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     bool show_version = false;
     bool isatty_always = false;

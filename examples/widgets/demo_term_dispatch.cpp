@@ -37,7 +37,7 @@ private:
     size_t m_pending = 0;
 };
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     Logger::init();
     Vfs vfs;

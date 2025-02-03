@@ -34,7 +34,7 @@ static const char * sample_text =
         "Here is a ligature: in<c:#FAA>fi</c>nity ∞";
 
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))

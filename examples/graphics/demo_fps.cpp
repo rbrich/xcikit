@@ -19,7 +19,7 @@ using namespace xci::text;
 using namespace xci::vfs;
 using fmt::format;
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))
