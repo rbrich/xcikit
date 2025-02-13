@@ -158,6 +158,13 @@ jobs:
             export CXX=${{ matrix.cxx }}-${{ matrix.cc_ver }}
             echo "CC='$CC'" >> $GITHUB_ENV
             echo "CXX='$CXX'" >> $GITHUB_ENV
+            # Build SDL3 from source
+            curl -LO https://github.com/libsdl-org/SDL/releases/download/release-3.2.4/SDL3-3.2.4.tar.gz
+            tar -xf SDL3-3.2.4.tar.gz && cd SDL3-3.2.4
+            mkdir build && cd build
+            cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DSDL_UNIX_CONSOLE_BUILD=ON ..
+            cmake --build .
+            sudo cmake --install .
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
             brew update --auto-update
             brew install ninja sdl3 doxygen google-benchmark libzip
