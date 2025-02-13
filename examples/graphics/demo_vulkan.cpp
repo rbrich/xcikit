@@ -62,7 +62,7 @@ static void update_poly(Primitives& poly, const View& view, float time_frac)
 }
 
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))

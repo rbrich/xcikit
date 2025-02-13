@@ -1,7 +1,7 @@
 // demo_term_dispatch.cpp created on 2019-04-06 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2024 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -37,7 +37,7 @@ private:
     size_t m_pending = 0;
 };
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     Logger::init();
     Vfs vfs;
@@ -48,7 +48,7 @@ int main(int argc, const char* argv[])
     Window window {renderer};
     setup_window(window, "XCI TextTerminal + Dispatch demo", argv);
 
-    Theme theme(renderer);
+    Theme theme(window);
     if (!theme.load_default())
         return EXIT_FAILURE;
 

@@ -96,7 +96,7 @@ static std::optional<int64_t> int_value(uint8_t type, const std::byte* data, siz
 }
 
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     std::string schema_file;
     std::vector<const char*> files;

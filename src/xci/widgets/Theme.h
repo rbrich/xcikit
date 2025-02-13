@@ -1,7 +1,7 @@
 // Theme.h created on 2018-04-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_THEME_H
@@ -9,6 +9,7 @@
 
 #include <xci/text/Font.h>
 #include <xci/graphics/Color.h>
+#include <xci/graphics/Window.h>
 #include <xci/vfs/Vfs.h>
 #include <array>
 
@@ -54,9 +55,10 @@ using ColorMap = std::array<graphics::Color, ColorMapSize>;
 
 class Theme {
 public:
-    explicit Theme(graphics::Renderer& renderer);
+    explicit Theme(graphics::Window& window);
 
-    graphics::Renderer& renderer() const { return m_renderer; }
+    graphics::Window& window() const { return m_window; }
+    graphics::Renderer& renderer() const { return m_window.renderer(); }
 
     // default theme
     bool load_default();
@@ -83,7 +85,7 @@ public:
     graphics::Color color(ColorId color_id);
 
 private:
-    graphics::Renderer& m_renderer;
+    graphics::Window& m_window;
     std::array<text::Font, sizeof(FontId)> m_fonts;
     IconMap m_icon_map {};
     // colors

@@ -255,7 +255,7 @@ public:
     /// \param max_width    Max width in columns for help and usage text.
     ///                     Set to 0 to disable wrapping.
     ArgParser& operator()(const char* argv[], bool detect_width = true, unsigned max_width = 120);
-    ArgParser& operator()(char* argv[]) { return operator()((const char**) argv); }
+    ArgParser& operator()(char* argv[]) { return operator()(const_cast<const char**>(argv)); }
 
     enum ParseResult {
         Continue,

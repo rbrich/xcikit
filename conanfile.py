@@ -318,7 +318,7 @@ class XcikitConan(ConanFile):
                 self._add_dep('system_range_v3', component, "range-v3::range-v3")
             if name == 'graphics':
                 component.requires += ["xci-core"]
-                self._add_dep('system_sdl', component, "SDL2::SDL2", "sdl::sdl")
+                self._add_dep('system_sdl', component, "SDL3::SDL3", "sdl::sdl")
                 self._add_dep('system_vulkan', component, "vulkan-loader::vulkan-loader")
                 self._add_dep('system_range_v3', component, "range-v3::range-v3")
             if name == 'text':

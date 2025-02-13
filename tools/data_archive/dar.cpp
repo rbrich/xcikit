@@ -130,7 +130,7 @@ static void extract_wad(VfsDirectory& vfs_dir, const fs::path& output_path)
 }
 
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     std::vector<const char*> files;
     std::vector<const char*> entries;

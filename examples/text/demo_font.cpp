@@ -37,7 +37,7 @@ Eg kan eta glas utan å skada meg.<br>
 Ik kan glas eten, het doet mĳ geen kwaad.<br>
 )SAMPLE";
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))

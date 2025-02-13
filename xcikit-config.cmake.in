@@ -21,7 +21,7 @@ if (@XCI_GRAPHICS@ OR @XCI_SCRIPT@)
 endif()
 
 if (@XCI_GRAPHICS@)
-    find_dependency(SDL2)
+    find_dependency(SDL3)
     find_dependency(Vulkan)
 endif()
 

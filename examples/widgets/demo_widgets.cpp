@@ -1,7 +1,7 @@
 // demo_widget.cpp created on 2018-03-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -18,7 +18,7 @@
 using namespace xci::widgets;
 using namespace xci::text;
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))
@@ -28,7 +28,7 @@ int main(int argc, const char* argv[])
     Window window {renderer};
     setup_window(window, "XCI widgets demo", argv);
 
-    Theme theme(renderer);
+    Theme theme(window);
     if (!theme.load_default())
         return EXIT_FAILURE;
 

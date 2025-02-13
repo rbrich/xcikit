@@ -1,7 +1,7 @@
 // Theme.cpp created on 2018-04-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Theme.h"
@@ -13,18 +13,18 @@ namespace xci::widgets {
 #define TRY(stmt)  do { auto res = stmt; if (!res) return false; } while(0)
 
 
-Theme::Theme(graphics::Renderer& renderer)
-        : m_renderer(renderer),
-          m_fonts{text::Font(renderer),  // base
-                  text::Font(renderer, 1024u),  // emoji
-                  text::Font(renderer),  // icon
-                  text::Font(renderer)}  // alt
+Theme::Theme(graphics::Window& window)
+        : m_window(window),
+          m_fonts{text::Font(window.renderer()),  // base
+                  text::Font(window.renderer(), 1024u),  // emoji
+                  text::Font(window.renderer()),  // icon
+                  text::Font(window.renderer())}  // alt
 {}
 
 
 bool Theme::load_default()
 {
-    const Vfs& vfs = m_renderer.vfs();
+    const Vfs& vfs = renderer().vfs();
 
     // Base font
     TRY(load_font_face(vfs, "fonts/RobotoMono/RobotoMono_wght.ttf", 0, FontId::Base));
