@@ -45,8 +45,12 @@ Window::~Window()
 
 bool Window::create(const Vec2u& size, const std::string& title)
 {
+    // See https://wiki.libsdl.org/SDL3/README/highdpi
+    float scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+    if (scale == 0.0f)
+        scale = 1.0f;
     m_window = SDL_CreateWindow(title.c_str(),
-        int(size.x), int(size.y),
+        int(size.x * scale), int(size.y * scale),
         SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (!m_window) {
         log::error("{} failed: {}", "SDL_CreateWindow", SDL_GetError());
@@ -154,7 +158,14 @@ void Window::set_fullscreen(bool fullscreen)
 Vec2u Window::get_size() const
 {
     Vec2i size;
-    SDL_GetWindowSize(m_window, &size.x, &size.y);
+    if (!SDL_GetWindowSize(m_window, &size.x, &size.y)) {
+        log::error("{} failed: {}", "SDL_GetWindowSize", SDL_GetError());
+        return Vec2u{};
+    }
+    // See https://wiki.libsdl.org/SDL3/README/highdpi
+    float scale = SDL_GetDisplayContentScale(SDL_GetDisplayForWindow(m_window));
+    if (scale != 0.0f && scale != 1.0f)
+        return Vec2u{unsigned(size.x / scale), unsigned(size.y / scale)};
     return Vec2u{size};
 }
 

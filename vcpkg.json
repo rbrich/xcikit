@@ -10,7 +10,7 @@
     "zlib",
     "libzip",
     "boost-pfr",
-    "sdl3",
+    {"name": "sdl3", "features": ["vulkan"]},
     "sdl3-image",
     "vulkan-loader",
     "freetype",

@@ -188,7 +188,8 @@ public:
     bool is_fullscreen() const { return m_fullscreen; }
     void set_fullscreen_mode(FullscreenMode mode) { m_fullscreen_mode = mode; }
 
-    // Obtain current window size
+    /// Obtain current window size
+    // \returns {0, 0} on error
     Vec2u get_size() const;
 
     // Set clipboard text (in UTF-8)
