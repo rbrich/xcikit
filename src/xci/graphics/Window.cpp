@@ -241,7 +241,8 @@ void Window::setup_view()
     create_command_buffers();
 
     // This is a workaround for https://github.com/libsdl-org/SDL/issues/1059
-    // (Still doesn't get resize events on Mac with SDL 3.2.0, this workaround still helps)
+    // (Still doesn't get resize events on Mac nor Windows with SDL 3.2.0,
+    // this workaround still helps)
     SDL_SetEventFilter([](void* data, SDL_Event* event){
         if (event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
             auto* self = (Window*) data;
@@ -363,6 +364,7 @@ void Window::handle_event(const SDL_Event& event)
             break;
 
         case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
+        case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
         case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
             TRACE("Window display or size changed ({})", event.type);
             resize_framebuffer();
@@ -370,6 +372,8 @@ void Window::handle_event(const SDL_Event& event)
             break;
         }
 
+        case SDL_EVENT_WINDOW_MOVED:
+        case SDL_EVENT_WINDOW_RESIZED:
         case SDL_EVENT_WINDOW_MAXIMIZED:
         case SDL_EVENT_WINDOW_RESTORED:
         case SDL_EVENT_WINDOW_EXPOSED:
@@ -415,6 +419,16 @@ void Window::handle_event(const SDL_Event& event)
             }
             break;
 
+        case SDL_EVENT_WINDOW_MOUSE_ENTER:
+        case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+            TRACE("Window mouse enter/leave: ({})", event.type);
+            break;
+
+        case SDL_EVENT_WINDOW_FOCUS_GAINED:
+        case SDL_EVENT_WINDOW_FOCUS_LOST:
+            TRACE("Window focus gained/lost: ({})", event.type);
+            break;
+
         case SDL_EVENT_MOUSE_MOTION:
             if (m_mpos_cb) {
                 const auto pos = m_view.px_to_fb(ScreenCoords{float(event.motion.x), float(event.motion.y)})
@@ -447,7 +461,7 @@ void Window::handle_event(const SDL_Event& event)
             break;
 
         default:
-            log::debug("SDL event not handled: {}", event.type);
+            TRACE("SDL event not handled: {}", event.type);
             break;
     }
 }
@@ -494,11 +508,16 @@ void Window::resize_framebuffer()
 {
     int fb_width, fb_height;
     SDL_GetWindowSizeInPixels(m_window, &fb_width, &fb_height);
-
     const VkExtent2D fb_size {uint32_t(fb_width), uint32_t(fb_height)};
+    {
+        const auto& current_size = m_renderer.vk_image_extent();
+        if (fb_size.width == current_size.width && fb_size.height == current_size.height)
+            return;  // no change
+    }
+
     m_renderer.reset_framebuffer(fb_size);
 
-    const auto& actual_size = m_renderer.vk_image_extent();  // normally the same
+    const auto& actual_size = m_renderer.vk_image_extent();  // normally same as fb_size
     m_view.set_framebuffer_size({float(actual_size.width), float(actual_size.height)});
 
     const auto sc_size = get_size();

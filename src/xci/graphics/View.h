@@ -427,7 +427,6 @@ public:
 private:
     void rescale_viewport();
 
-private:
     Window* m_window = nullptr;  // Window which created this View
     ViewportSize m_viewport_size;       // eg. {2.666, 2.0}
     ScreenSize m_screen_size;           // eg. {800, 600}
