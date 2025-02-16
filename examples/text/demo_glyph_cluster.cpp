@@ -41,7 +41,7 @@ struct Word {
 static float lerp(float a, float b, float t) { return a + t * (b - a); }
 
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))

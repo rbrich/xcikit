@@ -1,7 +1,7 @@
 // demo_term_widget.cpp created on 2018-07-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2024 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -21,7 +21,7 @@ using namespace xci::widgets;
 using namespace xci::graphics::unit_literals;
 using fmt::format;
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     Logger::init();
     Vfs vfs;
@@ -32,7 +32,7 @@ int main(int argc, const char* argv[])
     Window window {renderer};
     setup_window(window, "XCI TextTerminal demo", argv);
 
-    Theme theme(renderer);
+    Theme theme(window);
     if (!theme.load_default())
         return EXIT_FAILURE;
 

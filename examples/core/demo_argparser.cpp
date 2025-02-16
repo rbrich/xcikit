@@ -18,7 +18,7 @@ static bool check_color(const char* arg)
     return color == "red" || color == "green" || color == "blue";
 }
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     bool verbose = false;
     int optimize = -1;

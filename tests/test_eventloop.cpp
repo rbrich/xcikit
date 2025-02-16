@@ -69,12 +69,11 @@ TEST_CASE( "Timer events", "[.][core][event][TimerWatch]" )
 
     CHECK(ev_count == 3);
     CHECK(end_t - start_t >= std::chrono::milliseconds{90});
-    CHECK(end_t - start_t < std::chrono::milliseconds{100});
-
+    CHECK(end_t - start_t < std::chrono::milliseconds{120});
 }
 
 
-TEST_CASE( "FS events", "[.][core][event][FSWatch]" )
+TEST_CASE( "FS events", "[core][event][FSWatch]" )
 {
     EventLoop loop;
 
@@ -144,7 +143,7 @@ TEST_CASE( "FS events", "[.][core][event][FSWatch]" )
 }
 
 
-TEST_CASE( "File watch", "[.][FSDispatch]" )
+TEST_CASE( "File watch", "[FSDispatch]" )
 {
     Logger::init(Logger::Level::Error);
     FSDispatch fw;

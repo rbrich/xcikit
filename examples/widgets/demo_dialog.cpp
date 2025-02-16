@@ -1,7 +1,7 @@
 // demo_dialog.cpp created on 2023-12-03 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023–2024 Radek Brich
+// Copyright 2023–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -16,7 +16,7 @@
 
 using namespace xci::widgets;
 
-int main(int, const char* argv[])
+int main(int, char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))
@@ -26,7 +26,7 @@ int main(int, const char* argv[])
     Window window {renderer};
     setup_window(window, "XCI dialog demo", argv);
 
-    Theme theme(renderer);
+    Theme theme(window);
     if (!theme.load_default())
         return EXIT_FAILURE;
 

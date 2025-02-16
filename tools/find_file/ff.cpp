@@ -908,7 +908,7 @@ private:
 };
 
 
-int main(int argc, const char* argv[])
+int main(int argc, char* argv[])
 {
     struct {
         std::vector<fs::path> paths;

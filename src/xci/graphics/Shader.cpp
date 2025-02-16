@@ -50,7 +50,8 @@ bool ShaderModule::create(std::span<const uint32_t> code)
             .pCode = code.data(),
     };
     VK_TRY_RET("vkCreateShaderModule",
-           vkCreateShaderModule(m_device, &module_create_info, nullptr, &m_module));
+           vkCreateShaderModule(m_device, &module_create_info, nullptr, &m_module),
+           false);
     return true;
 }
 

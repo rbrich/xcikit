@@ -9,8 +9,8 @@
 #include "vulkan/VulkanError.h"
 #include <xci/core/log.h>
 
-#include <SDL.h>
-#include <SDL_vulkan.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 
 namespace xci::graphics {
 
@@ -19,7 +19,9 @@ using namespace std::chrono;
 
 
 Window::Window(Renderer& renderer) : m_renderer(renderer), m_command_buffers(renderer)
-{}
+{
+    m_sdl_wakeup_event = SDL_RegisterEvents(1);
+}
 
 Window::~Window()
 {
@@ -43,23 +45,17 @@ Window::~Window()
 
 bool Window::create(const Vec2u& size, const std::string& title)
 {
+    // See https://wiki.libsdl.org/SDL3/README/highdpi
+    float scale = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
+    if (scale == 0.0f)
+        scale = 1.0f;
     m_window = SDL_CreateWindow(title.c_str(),
-        SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, int(size.x), int(size.y),
-        SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN | SDL_WINDOW_ALLOW_HIGHDPI);
+        int(size.x * scale), int(size.y * scale),
+        SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (!m_window) {
         log::error("{} failed: {}", "SDL_CreateWindow", SDL_GetError());
         return false;
     }
-
-    // This is a workaround for https://github.com/libsdl-org/SDL/issues/1059
-    SDL_SetEventFilter([](void* data, SDL_Event* event){
-        if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
-            auto self = (Window*) data;
-            self->handle_event(*event);
-            return 0;
-        }
-        return 1;
-    }, this);
 
     return m_renderer.create_surface(m_window);
 }
@@ -109,9 +105,10 @@ void Window::display()
 
 void Window::wakeup() const
 {
-    SDL_Event event { .type = SDL_WINDOWEVENT };
-    event.window.event = SDL_WINDOWEVENT_NONE;
-    if (SDL_PushEvent(&event) < 0) {
+    SDL_Event event {
+        .type = m_sdl_wakeup_event
+    };
+    if (!SDL_PushEvent(&event)) {
         log::error("{} failed: {}", "SDL_PushEvent", SDL_GetError());
     }
 }
@@ -134,29 +131,25 @@ void Window::set_fullscreen(bool fullscreen)
 
     if (fullscreen_mode == FullscreenMode::BorderlessWindow) {
         if (m_fullscreen) {
-            SDL_SetWindowBordered(m_window, SDL_FALSE);
+            SDL_SetWindowBordered(m_window, false);
             SDL_MaximizeWindow(m_window);
         } else {
             SDL_RestoreWindow(m_window);
-            SDL_SetWindowBordered(m_window, SDL_TRUE);
+            SDL_SetWindowBordered(m_window, true);
         }
         return;
     }
 
-    uint32_t flags = 0;
-    if (!m_fullscreen) {
-        flags = 0;
-    } else if (fullscreen_mode == FullscreenMode::Exclusive) {
-        SDL_DisplayMode video_mode;
-        if (SDL_GetDesktopDisplayMode(SDL_GetWindowDisplayIndex(m_window), &video_mode) == 0) {
-            SDL_SetWindowDisplayMode(m_window, &video_mode);
+    if (m_fullscreen && fullscreen_mode == FullscreenMode::Exclusive) {
+        const SDL_DisplayMode* video_mode = SDL_GetDesktopDisplayMode(SDL_GetDisplayForWindow(m_window));
+        if (video_mode != nullptr) {
+            SDL_SetWindowFullscreenMode(m_window, video_mode);
         }
-        flags = SDL_WINDOW_FULLSCREEN;
-    } else if (fullscreen_mode == FullscreenMode::Desktop) {
-        flags = SDL_WINDOW_FULLSCREEN_DESKTOP;
+    } else {
+        SDL_SetWindowFullscreenMode(m_window, nullptr);
     }
 
-    if (SDL_SetWindowFullscreen(m_window, flags) != 0) {
+    if (!SDL_SetWindowFullscreen(m_window, m_fullscreen)) {
         log::error("{} failed: {}", "SDL_SetWindowFullscreen", SDL_GetError());
     }
 }
@@ -165,14 +158,21 @@ void Window::set_fullscreen(bool fullscreen)
 Vec2u Window::get_size() const
 {
     Vec2i size;
-    SDL_GetWindowSize(m_window, &size.x, &size.y);
+    if (!SDL_GetWindowSize(m_window, &size.x, &size.y)) {
+        log::error("{} failed: {}", "SDL_GetWindowSize", SDL_GetError());
+        return Vec2u{};
+    }
+    // See https://wiki.libsdl.org/SDL3/README/highdpi
+    float scale = SDL_GetDisplayContentScale(SDL_GetDisplayForWindow(m_window));
+    if (scale != 0.0f && scale != 1.0f)
+        return Vec2u{unsigned(size.x / scale), unsigned(size.y / scale)};
     return Vec2u{size};
 }
 
 
 bool Window::set_clipboard_text(const std::string& text) const
 {
-    if (SDL_SetClipboardText(text.c_str()) != 0) {
+    if (!SDL_SetClipboardText(text.c_str())) {
         log::error("{} failed: {}", "SDL_SetClipboardText", SDL_GetError());
         return false;
     }
@@ -239,6 +239,18 @@ void Window::setup_view()
         m_size_cb(m_view);
 
     create_command_buffers();
+
+    // This is a workaround for https://github.com/libsdl-org/SDL/issues/1059
+    // (Still doesn't get resize events on Mac nor Windows with SDL 3.2.0,
+    // this workaround still helps)
+    SDL_SetEventFilter([](void* data, SDL_Event* event){
+        if (event->type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED) {
+            auto* self = (Window*) data;
+            self->handle_event(*event);
+            return false;
+        }
+        return true;
+    }, this);
 }
 
 
@@ -247,8 +259,8 @@ static Key translate_sdl_keycode(SDL_Keycode key)
     // Printable keys
     if (key >= SDLK_0 && key <= SDLK_9)
         return Key(key - SDLK_0 + int(Key::Num0));
-    if (key >= SDLK_a && key <= SDLK_z)
-        return Key(key - SDLK_a + int(Key::A));
+    if (key >= SDLK_A && key <= SDLK_Z)
+        return Key(key - SDLK_A + int(Key::A));
 
     // Function keys
     if (key >= SDLK_F1 && key <= SDLK_F12)
@@ -257,14 +269,14 @@ static Key translate_sdl_keycode(SDL_Keycode key)
     switch (key) {
         // Printable keys (continued)
         case SDLK_SPACE: return Key::Space;
-        case SDLK_QUOTE: return Key::Apostrophe;
+        case SDLK_APOSTROPHE: return Key::Apostrophe;
         case SDLK_COMMA: return Key::Comma;
         case SDLK_MINUS: return Key::Minus;
         case SDLK_PERIOD: return Key::Period;
         case SDLK_SLASH: return Key::Slash;
         case SDLK_SEMICOLON: return Key::Semicolon;
         case SDLK_EQUALS: return Key::Equal;
-        case SDLK_BACKQUOTE: return Key::Backtick;
+        case SDLK_GRAVE: return Key::Backtick;
         case SDLK_LEFTBRACKET: return Key::LeftBracket;
         case SDLK_BACKSLASH: return Key::Backslash;
         case SDLK_RIGHTBRACKET: return Key::RightBracket;
@@ -342,63 +354,52 @@ static MouseButton translate_sdl_mouse_button(uint8_t button)
 void Window::handle_event(const SDL_Event& event)
 {
     switch (event.type) {
-        case SDL_QUIT:
+        case SDL_EVENT_QUIT:
             TRACE("SDL quit event");
             m_quit = true;
             break;
 
-        case SDL_WINDOWEVENT:
-            switch (event.window.event) {
-                case SDL_WINDOWEVENT_NONE:  // from wakeup()
-                    TRACE("Window wakeup event: {}", event.window.event);
-                    break;
-
-                case SDL_WINDOWEVENT_CLOSE:
-                    m_quit = true;
-                    break;
-
-                #if SDL_VERSION_ATLEAST(2,0,18)
-                case SDL_WINDOWEVENT_DISPLAY_CHANGED:
-                #endif
-                case SDL_WINDOWEVENT_SIZE_CHANGED: {
-                    TRACE("Window display or size changed: {}", event.window.event);
-                    resize_framebuffer();
-                    draw();
-                    break;
-                }
-
-                case SDL_WINDOWEVENT_MAXIMIZED:
-                case SDL_WINDOWEVENT_RESTORED:
-                case SDL_WINDOWEVENT_EXPOSED:
-                case SDL_WINDOWEVENT_SHOWN:
-                    TRACE("Window refresh event: {}", event.window.event);
-                    m_view.refresh();
-                    break;
-
-                default:
-                    TRACE("Window other event: {}", event.window.event);
-                    break;
-            }
+        case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+            m_quit = true;
             break;
 
-        case SDL_KEYDOWN:
-        case SDL_KEYUP:
+        case SDL_EVENT_WINDOW_DISPLAY_CHANGED:
+        case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
+        case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
+            TRACE("Window display or size changed ({})", event.type);
+            resize_framebuffer();
+            draw();
+            break;
+        }
+
+        case SDL_EVENT_WINDOW_MOVED:
+        case SDL_EVENT_WINDOW_RESIZED:
+        case SDL_EVENT_WINDOW_MAXIMIZED:
+        case SDL_EVENT_WINDOW_RESTORED:
+        case SDL_EVENT_WINDOW_EXPOSED:
+        case SDL_EVENT_WINDOW_SHOWN:
+            TRACE("Window refresh event: ({})", event.type);
+            m_view.refresh();
+            break;
+
+        case SDL_EVENT_KEY_DOWN:
+        case SDL_EVENT_KEY_UP:
             if (m_key_cb) {
-                Key ev_key = translate_sdl_keycode(event.key.keysym.sym);
-                Action action = event.key.state == SDL_PRESSED ? Action::Press : Action::Release;
+                Key ev_key = translate_sdl_keycode(event.key.key);
+                Action action = event.key.down ? Action::Press : Action::Release;
                 if (event.key.repeat)
                     action = Action::Repeat;
                 const ModKey mod = {
-                    bool(event.key.keysym.mod & KMOD_SHIFT),
-                    bool(event.key.keysym.mod & KMOD_CTRL),
-                    bool(event.key.keysym.mod & KMOD_ALT),
-                    bool(event.key.keysym.mod & KMOD_GUI),
+                    bool(event.key.mod & SDL_KMOD_SHIFT),
+                    bool(event.key.mod & SDL_KMOD_CTRL),
+                    bool(event.key.mod & SDL_KMOD_ALT),
+                    bool(event.key.mod & SDL_KMOD_GUI),
                 };
                 m_key_cb(m_view, KeyEvent{ev_key, mod, action});
             }
             break;
 
-        case SDL_TEXTINPUT:
+        case SDL_EVENT_TEXT_INPUT:
             if (m_text_cb) {
                 TextInputEvent ev{};
                 std::memcpy(ev.text, event.text.text,
@@ -407,7 +408,7 @@ void Window::handle_event(const SDL_Event& event)
             }
             break;
 
-        case SDL_TEXTEDITING:
+        case SDL_EVENT_TEXT_EDITING:
             if (m_text_cb) {
                 TextInputEvent ev{};
                 std::memcpy(ev.text, event.edit.text,
@@ -418,38 +419,53 @@ void Window::handle_event(const SDL_Event& event)
             }
             break;
 
-        case SDL_MOUSEMOTION:
+        case SDL_EVENT_WINDOW_MOUSE_ENTER:
+        case SDL_EVENT_WINDOW_MOUSE_LEAVE:
+            TRACE("Window mouse enter/leave: ({})", event.type);
+            break;
+
+        case SDL_EVENT_WINDOW_FOCUS_GAINED:
+        case SDL_EVENT_WINDOW_FOCUS_LOST:
+            TRACE("Window focus gained/lost: ({})", event.type);
+            break;
+
+        case SDL_EVENT_MOUSE_MOTION:
             if (m_mpos_cb) {
-                const auto pos = m_view.px_to_fb(ScreenCoords{float(event.motion.x), float(event.motion.y)})
-                                 - m_view.framebuffer_origin();
-                const ScreenCoords rel {float(event.motion.xrel), float(event.motion.yrel)};
+                float scale = SDL_GetWindowPixelDensity(m_window);
+                if (scale == 0.0f)
+                    scale = 1.0f;
+                const auto pos = FramebufferCoords(event.motion.x * scale, event.motion.y * scale) - m_view.framebuffer_origin();
+                const FramebufferCoords rel {event.motion.xrel * scale, event.motion.yrel * scale};
                 m_mpos_cb(m_view, MousePosEvent{pos, rel});
             }
             break;
 
-        case SDL_MOUSEBUTTONDOWN:
-        case SDL_MOUSEBUTTONUP:
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case SDL_EVENT_MOUSE_BUTTON_UP:
             if (m_mbtn_cb) {
-                const auto pos = m_view.px_to_fb(ScreenCoords{float(event.button.x), float(event.button.y)})
-                                 - m_view.framebuffer_origin();
-                const Action action = event.button.state == SDL_PRESSED ? Action::Press : Action::Release;
+                float scale = SDL_GetWindowPixelDensity(m_window);
+                if (scale == 0.0f)
+                    scale = 1.0f;
+                const auto pos = FramebufferCoords(event.button.x * scale, event.button.y * scale) - m_view.framebuffer_origin();
+                const Action action = event.button.down ? Action::Press : Action::Release;
                 const MouseButton button = translate_sdl_mouse_button(event.button.button);
                 m_mbtn_cb(m_view, MouseBtnEvent{button, action, pos});
             }
             break;
 
-        case SDL_MOUSEWHEEL:
+        case SDL_EVENT_MOUSE_WHEEL:
             if (m_scroll_cb) {
-                #if SDL_VERSION_ATLEAST(2,0,18)
-                m_scroll_cb(m_view, ScrollEvent{{float(event.wheel.preciseX), float(event.wheel.preciseY)}});
-                #else
-                m_scroll_cb(m_view, ScrollEvent{{float(event.wheel.x), float(event.wheel.y)}});
-                #endif
+                m_scroll_cb(m_view, ScrollEvent{ .offset={event.wheel.x, event.wheel.y} });
             }
             break;
 
+        case SDL_EVENT_USER:
+            assert(event.type == m_sdl_wakeup_event);
+            TRACE("Window wakeup event");
+            break;
+
         default:
-            log::debug("SDL event not handled: {}", event.type);
+            TRACE("SDL event not handled: {}", event.type);
             break;
     }
 }
@@ -495,12 +511,17 @@ void Window::finish_draw()
 void Window::resize_framebuffer()
 {
     int fb_width, fb_height;
-    SDL_Vulkan_GetDrawableSize(m_window, &fb_width, &fb_height);
-
+    SDL_GetWindowSizeInPixels(m_window, &fb_width, &fb_height);
     const VkExtent2D fb_size {uint32_t(fb_width), uint32_t(fb_height)};
+    {
+        const auto& current_size = m_renderer.vk_image_extent();
+        if (fb_size.width == current_size.width && fb_size.height == current_size.height)
+            return;  // no change
+    }
+
     m_renderer.reset_framebuffer(fb_size);
 
-    const auto& actual_size = m_renderer.vk_image_extent();  // normally the same
+    const auto& actual_size = m_renderer.vk_image_extent();  // normally same as fb_size
     m_view.set_framebuffer_size({float(actual_size.width), float(actual_size.height)});
 
     const auto sc_size = get_size();

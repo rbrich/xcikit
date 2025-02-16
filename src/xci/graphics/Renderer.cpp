@@ -1,7 +1,7 @@
 // Renderer.cpp created on 2018-11-24 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2024 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Renderer.h"
@@ -10,9 +10,8 @@
 #include <xci/config.h>
 #include <xci/core/log.h>
 
-#include <SDL.h>
-#include <SDL_vulkan.h>
-#include <SDL_hints.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/view/enumerate.hpp>
@@ -90,16 +89,12 @@ vulkan_debug_callback(
 Renderer::Renderer(Vfs& vfs)
         : m_vfs(vfs)
 {
-#if SDL_VERSION_ATLEAST(2,24,0)
-    SDL_SetHint(SDL_HINT_WINDOWS_DPI_SCALING, "1");
-#endif
-
-    if (SDL_Init(SDL_INIT_VIDEO) != 0)
+    if (!SDL_Init(SDL_INIT_VIDEO))
         VK_THROW(fmt::format("Couldn't initialize SDL: {}", SDL_GetError()));
 }
 
 
-bool Renderer::create_instance(SDL_Window* window)
+bool Renderer::create_instance()
 {
     const VkApplicationInfo application_info = {
             .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -118,8 +113,9 @@ bool Renderer::create_instance(SDL_Window* window)
             .pApplicationInfo = &application_info,
     };
 
-    std::vector<const char *> extensions;
-    vk_get_vector(extensions, SDL_Vulkan_GetInstanceExtensions, window);
+    uint32_t sdlExtensionCount = 0;
+    const auto* sdlExtensions = SDL_Vulkan_GetInstanceExtensions(&sdlExtensionCount);
+    std::vector<const char*> extensions(sdlExtensions, sdlExtensions + sdlExtensionCount);
 
 #ifdef XCI_DEBUG_VULKAN
     // enable validation layers
@@ -196,7 +192,8 @@ bool Renderer::create_instance(SDL_Window* window)
     instance_create_info.ppEnabledExtensionNames = extensions.data();
 
     VK_TRY_RET("vkCreateInstance",
-            vkCreateInstance(&instance_create_info, nullptr, &m_instance));
+            vkCreateInstance(&instance_create_info, nullptr, &m_instance),
+            false);
 
 #ifdef XCI_DEBUG_VULKAN
     // create debug messenger
@@ -208,7 +205,8 @@ bool Renderer::create_instance(SDL_Window* window)
     }
     VK_TRY_RET("vkCreateDebugUtilsMessengerEXT",
             vkCreateDebugUtilsMessengerEXT(m_instance, &debugCreateInfo,
-                    nullptr, &m_debug_messenger));
+                    nullptr, &m_debug_messenger),
+            false);
 #endif
 
     return true;
@@ -316,10 +314,10 @@ Renderer::get_descriptor_pool(uint32_t reserved_sets, DescriptorPoolSizes pool_s
 
 bool Renderer::create_surface(SDL_Window* window)
 {
-    if (!create_instance(window))
+    if (!create_instance())
         return false;
 
-    if (SDL_Vulkan_CreateSurface(window, m_instance, &m_surface) == SDL_FALSE) {
+    if (!SDL_Vulkan_CreateSurface(window, m_instance, nullptr, &m_surface)) {
         log::error("{} failed", "SDL_Vulkan_CreateSurface");
         return false;
     }
@@ -332,7 +330,10 @@ bool Renderer::create_surface(SDL_Window* window)
     }
 
     int width, height;
-    SDL_Vulkan_GetDrawableSize(window, &width, &height);
+    if (!SDL_GetWindowSizeInPixels(window, &width, &height)) {
+        log::error("SDL_GetWindowSizeInPixels: {}", SDL_GetError());
+        return false;
+    }
 
     try {
         m_swapchain.query_surface_capabilities(m_physical_device, { uint32_t(width), uint32_t(height) });

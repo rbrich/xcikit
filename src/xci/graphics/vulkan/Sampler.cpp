@@ -54,7 +54,8 @@ bool SamplerCreateInfo::operator==(const SamplerCreateInfo& rhs) const
 bool Sampler::create(VkDevice device, const SamplerCreateInfo& sampler_ci)
 {
     VK_TRY_RET("vkCreateSampler",
-               vkCreateSampler(device, &sampler_ci.vk(), nullptr, &m_sampler));
+               vkCreateSampler(device, &sampler_ci.vk(), nullptr, &m_sampler),
+               false);
     return true;
 }
 

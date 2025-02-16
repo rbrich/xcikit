@@ -126,14 +126,14 @@ enum class MouseButton {
 };
 
 struct MousePosEvent {
-    FramebufferCoords pos; // FIXME: ScreenCoords
-    ScreenCoords rel;  // relative movement in screen coordinates
+    FramebufferCoords pos;
+    FramebufferCoords rel;
 };
 
 struct MouseBtnEvent {
     MouseButton button;
     Action action;
-    FramebufferCoords pos;  // FIXME: ScreenCoords
+    FramebufferCoords pos;
 };
 
 
@@ -188,7 +188,8 @@ public:
     bool is_fullscreen() const { return m_fullscreen; }
     void set_fullscreen_mode(FullscreenMode mode) { m_fullscreen_mode = mode; }
 
-    // Obtain current window size
+    /// Obtain current window size
+    // \returns {0, 0} on error
     Vec2u get_size() const;
 
     // Set clipboard text (in UTF-8)
@@ -283,6 +284,7 @@ private:
     RefreshMode m_refresh_mode = RefreshMode::OnDemand;
     std::chrono::microseconds m_timeout {0};
     FullscreenMode m_fullscreen_mode = FullscreenMode::Default;
+    uint32_t m_sdl_wakeup_event;
     bool m_quit = false;
     bool m_fullscreen = false;
     bool m_clear_timeout = false;
