@@ -431,9 +431,11 @@ void Window::handle_event(const SDL_Event& event)
 
         case SDL_EVENT_MOUSE_MOTION:
             if (m_mpos_cb) {
-                const auto pos = m_view.px_to_fb(ScreenCoords{float(event.motion.x), float(event.motion.y)})
-                                 - m_view.framebuffer_origin();
-                const ScreenCoords rel {float(event.motion.xrel), float(event.motion.yrel)};
+                float scale = SDL_GetWindowPixelDensity(m_window);
+                if (scale == 0.0f)
+                    scale = 1.0f;
+                const auto pos = FramebufferCoords(event.motion.x * scale, event.motion.y * scale) - m_view.framebuffer_origin();
+                const FramebufferCoords rel {event.motion.xrel * scale, event.motion.yrel * scale};
                 m_mpos_cb(m_view, MousePosEvent{pos, rel});
             }
             break;
@@ -441,8 +443,10 @@ void Window::handle_event(const SDL_Event& event)
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
         case SDL_EVENT_MOUSE_BUTTON_UP:
             if (m_mbtn_cb) {
-                const auto pos = m_view.px_to_fb(ScreenCoords{float(event.button.x), float(event.button.y)})
-                                 - m_view.framebuffer_origin();
+                float scale = SDL_GetWindowPixelDensity(m_window);
+                if (scale == 0.0f)
+                    scale = 1.0f;
+                const auto pos = FramebufferCoords(event.button.x * scale, event.button.y * scale) - m_view.framebuffer_origin();
                 const Action action = event.button.down ? Action::Press : Action::Release;
                 const MouseButton button = translate_sdl_mouse_button(event.button.button);
                 m_mbtn_cb(m_view, MouseBtnEvent{button, action, pos});
@@ -451,7 +455,7 @@ void Window::handle_event(const SDL_Event& event)
 
         case SDL_EVENT_MOUSE_WHEEL:
             if (m_scroll_cb) {
-                m_scroll_cb(m_view, ScrollEvent{{float(event.wheel.x), float(event.wheel.y)}});
+                m_scroll_cb(m_view, ScrollEvent{ .offset={event.wheel.x, event.wheel.y} });
             }
             break;
 

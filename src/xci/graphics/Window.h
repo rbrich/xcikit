@@ -126,14 +126,14 @@ enum class MouseButton {
 };
 
 struct MousePosEvent {
-    FramebufferCoords pos; // FIXME: ScreenCoords
-    ScreenCoords rel;  // relative movement in screen coordinates
+    FramebufferCoords pos;
+    FramebufferCoords rel;
 };
 
 struct MouseBtnEvent {
     MouseButton button;
     Action action;
-    FramebufferCoords pos;  // FIXME: ScreenCoords
+    FramebufferCoords pos;
 };
 
 

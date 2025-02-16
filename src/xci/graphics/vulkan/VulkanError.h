@@ -102,8 +102,8 @@ inline void vk_log_error(std::string_view msg, enum VkResult vk_res)
 
 
 #ifndef VK_TRY_RET
-#define VK_TRY_RET(msg, expr) \
-    do { if (const VkResult res = (expr); res != VK_SUCCESS) { vk_log_error(msg, res); return false; } } while(0)
+#define VK_TRY_RET(msg, expr, ...) \
+    do { if (const VkResult res = (expr); res != VK_SUCCESS) { vk_log_error(msg, res); return __VA_ARGS__; } } while(0)
 #endif
 
 

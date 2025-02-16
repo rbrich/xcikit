@@ -192,7 +192,8 @@ bool Renderer::create_instance()
     instance_create_info.ppEnabledExtensionNames = extensions.data();
 
     VK_TRY_RET("vkCreateInstance",
-            vkCreateInstance(&instance_create_info, nullptr, &m_instance));
+            vkCreateInstance(&instance_create_info, nullptr, &m_instance),
+            false);
 
 #ifdef XCI_DEBUG_VULKAN
     // create debug messenger
@@ -204,7 +205,8 @@ bool Renderer::create_instance()
     }
     VK_TRY_RET("vkCreateDebugUtilsMessengerEXT",
             vkCreateDebugUtilsMessengerEXT(m_instance, &debugCreateInfo,
-                    nullptr, &m_debug_messenger));
+                    nullptr, &m_debug_messenger),
+            false);
 #endif
 
     return true;
