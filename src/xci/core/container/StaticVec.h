@@ -1,7 +1,7 @@
 // StaticVec.h created on 2023-09-25 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_STATIC_VEC_H
@@ -32,10 +32,10 @@ public:
     StaticVec(std::span<const T> r);
 
     StaticVec(const StaticVec& r);
-    StaticVec(StaticVec&& r);
+    StaticVec(StaticVec&& r) noexcept;
 
     StaticVec& operator=(const StaticVec& r);
-    StaticVec& operator=(StaticVec&& r);
+    StaticVec& operator=(StaticVec&& r) noexcept;
 
     friend bool operator==(const StaticVec& a, const StaticVec& b) {
         return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin());
@@ -55,9 +55,9 @@ public:
     const T& operator[](size_t i) const { return m_vec[i]; }
 
     const_iterator begin() const { return m_vec.get(); }
-    const_iterator end() const { return &m_vec[m_size]; }
+    const_iterator end() const { return m_vec.get() + m_size; }
     iterator begin() { return m_vec.get(); }
-    iterator end() { return &m_vec[m_size]; }
+    iterator end() { return m_vec.get() + m_size; }
 
     operator std::span<const T>() const { return {begin(), end()}; }
 
@@ -99,7 +99,7 @@ StaticVec<T>::StaticVec(const StaticVec& r)
 }
 
 template<class T>
-StaticVec<T>::StaticVec(StaticVec&& r)
+StaticVec<T>::StaticVec(StaticVec&& r) noexcept
         : m_vec(std::move(r.m_vec)), m_size(r.size())
 {
     r.m_size = 0;
@@ -113,7 +113,7 @@ auto StaticVec<T>::operator=(const StaticVec& r) -> StaticVec& {
 }
 
 template<class T>
-auto StaticVec<T>::operator=(StaticVec&& r) -> StaticVec& {
+auto StaticVec<T>::operator=(StaticVec&& r) noexcept -> StaticVec& {
     m_vec = std::move(r.m_vec);
     m_size = r.m_size;
     r.m_size = 0;

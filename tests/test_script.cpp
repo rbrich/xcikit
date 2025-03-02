@@ -442,7 +442,7 @@ TEST_CASE( "Stack push/pull", "[script][machine]" )
     CHECK(stack.size() == 1);
     stack.push(value::Int32{73});
     CHECK(stack.size() == 1+4);
-    const value::String str{"hello"};
+    value::String str{"hello"};
     stack.push(str);
     CHECK(stack.size() == 1+4 + sizeof(void*));
     CHECK(stack.n_values() == 3);
@@ -1396,6 +1396,38 @@ TEST_CASE( "Modules", "[script][module]" )
 }
 
 
+TEST_CASE( "Build module", "[script][module]" )
+{
+    // This is roughly what happens in REPL for each input line
+
+    Context& ctx = context();
+    auto module_name = intern("<input>");
+    const char* module_source = R"( f = fun x { write "Hello!\n"; flush; x } )";
+    const auto src_id = ctx.interpreter.source_manager().add_source(module_name, module_source);
+
+    // prepare_module
+    auto module = std::make_shared<Module>(ctx.interpreter.module_manager(), module_name);
+    module->import_module("builtin");
+    module->import_module("std");
+
+    const auto r = ctx.interpreter.module_manager().replace_module(module_name, module);
+    REQUIRE(r != no_index);
+
+    // parse and compile
+    ast::Module ast;
+    ctx.interpreter.parser().parse(src_id, ast);
+    ctx.interpreter.compiler().compile(module->get_main_scope(), ast);
+
+    // evaluate_module
+    const auto& main_fn = module->get_main_function();
+    ctx.interpreter.machine().call(main_fn, [&](TypedValue&& invoked) {
+            invoked.decref();
+        });
+    const auto result = ctx.interpreter.machine().stack().pull_typed(main_fn.effective_return_type());
+    CHECK(result.type_info() == ti_void());
+}
+
+
 TEST_CASE( "Format", "[script][std]")
 {
     CHECK(interpret_std("to_string false") == R"("false")");
@@ -1437,7 +1469,7 @@ TEST_CASE( "Native to Value mapping", "[script][native]" )
     CHECK(native::ValueType<int64_t>(1ll << 60).value() == 1ll << 60);
     CHECK(native::ValueType<float>(3.14f).value() == 3.14f);
     CHECK(native::ValueType<double>(2./3).value() == 2./3);
-    const native::ValueType<std::string> str ("test"s);
+    native::ValueType<std::string> str ("test"s);
     CHECK(str.value() == "test"s);
     str.decref();
 }

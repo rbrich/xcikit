@@ -1,7 +1,7 @@
 // Machine.cpp created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2024 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Machine.h"
@@ -566,7 +566,7 @@ void Machine::run(const InvokeCallback& cb)
 
             case Opcode::DecRef: {
                 auto arg = leb128_decode<Stack::StackRel>(it);
-                const HeapSlot slot {static_cast<byte*>(m_stack.get_ptr(arg))};
+                HeapSlot slot {static_cast<byte*>(m_stack.get_ptr(arg))};
                 if (slot.decref())
                     m_stack.clear_ptr(arg);  // without this, stack dump would read after use
                 break;

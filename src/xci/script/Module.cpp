@@ -25,7 +25,7 @@ Module::~Module()
     #ifdef TRACE_REFCOUNT
     std::cout << "* in ~Module " << name() << std::endl;
     #endif
-    for (const auto& val : m_values) {
+    for (auto& val : m_values) {
         val.decref();
     }
 }

@@ -1,7 +1,7 @@
 // Heap.h created on 2019-08-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_HEAP_H
@@ -45,8 +45,8 @@ public:
     void read(const std::byte* buffer) { std::memcpy(&m_slot, buffer, sizeof(m_slot)); }
 
     RefCount refcount() const;
-    void incref() const;
-    bool decref() const;  // free the object and return true when refcount = 0
+    void incref() const;  // constness is disputable here, but logically the object is not affected, only its refcount
+    bool decref();  // free the object and return true when refcount = 0
 
     std::byte* data() { return data_(); }
     const std::byte* data() const { return data_(); }

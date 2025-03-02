@@ -247,7 +247,7 @@ std::string to_utf8(std::u32string_view u32str)
 {
     std::string res;
     res.reserve(u32str.size());
-    for (char32_t c : u32str) {
+    for (const char32_t c : u32str) {
         res += to_utf8(c);
     }
     return res;

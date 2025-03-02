@@ -1,7 +1,7 @@
 // Builtin.cpp created on 2019-05-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Builtin.h"
@@ -257,9 +257,10 @@ static void cast_string_to_bytes(Stack& stack, void*, void*)
 static void cast_chars_to_string(Stack& stack, void*, void*)
 {
     auto in = stack.pull(ti_chars());
-    const auto * data = in.get<ListV>().raw_data();
+    const auto* data = in.get<ListV>().raw_data();
     const auto size = in.get<ListV>().length();
-    auto utf8 = core::to_utf8(std::u32string_view(reinterpret_cast<const char32_t*>(data), size));
+    const std::u32string u32s(reinterpret_cast<const char32_t*>(data), size);
+    const auto utf8 = core::to_utf8(u32s);
     in.decref();
     stack.push(value::String{utf8});
 }

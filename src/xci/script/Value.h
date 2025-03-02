@@ -1,7 +1,7 @@
 // Value.h created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2024 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_VALUE_H
@@ -253,7 +253,7 @@ public:
 
     // Reference count management
     void incref() const;
-    void decref() const;
+    void decref();
 
     void apply(value::Visitor& visitor) const;
 
@@ -396,7 +396,7 @@ public:
     Type type() const { return m_type_info.type(); }
 
     void incref() const { m_value.incref(); }
-    void decref() const { m_value.decref(); }
+    void decref() { m_value.decref(); }
 
     void apply(value::Visitor& visitor) const { m_value.apply(visitor); }
 
