@@ -1,7 +1,7 @@
 // StaticVec.h created on 2023-09-25 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_STATIC_VEC_H
@@ -55,9 +55,9 @@ public:
     const T& operator[](size_t i) const { return m_vec[i]; }
 
     const_iterator begin() const { return m_vec.get(); }
-    const_iterator end() const { return &m_vec[m_size]; }
+    const_iterator end() const { return m_vec.get() + m_size; }
     iterator begin() { return m_vec.get(); }
-    iterator end() { return &m_vec[m_size]; }
+    iterator end() { return m_vec.get() + m_size; }
 
     operator std::span<const T>() const { return {begin(), end()}; }
 
