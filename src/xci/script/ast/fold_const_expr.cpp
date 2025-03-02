@@ -1,7 +1,7 @@
 // fold_const_expr.cpp created on 2019-06-13 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2024 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "fold_const_expr.h"
@@ -143,14 +143,13 @@ public:
                     if (all_const) {
                         m_collapsed = std::move(item.second);
                         return;
-                    } else {
-                        // remove this branch - mark it, sweep below
-                        // (The condition is const-true, so we can collapse
-                        // the then-expression into the following else-expression.)
-                        item.first.reset();
-                        if (!replacement_else_expr)
-                            replacement_else_expr = std::move(item.second);
                     }
+                    // remove this branch - mark it, sweep below
+                    // (The condition is const-true, so we can collapse
+                    // the then-expression into the following else-expression.)
+                    item.first.reset();
+                    if (!replacement_else_expr)
+                        replacement_else_expr = std::move(item.second);
                 } else {
                     // remove this branch - mark it, sweep below
                     item.first.reset();

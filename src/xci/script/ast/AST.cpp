@@ -297,6 +297,7 @@ void FunctionType::copy_to(FunctionType& r) const
 std::unique_ptr<ast::Expression> Literal::make_copy() const
 {
     auto r = std::make_unique<Literal>(value);
+    value.incref();
     Expression::copy_to(*r);
     r->ti = ti;
     return r;
