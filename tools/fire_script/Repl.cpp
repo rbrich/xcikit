@@ -1,7 +1,7 @@
 // Repl.cpp.c created on 2021-03-16 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2024 Radek Brich
+// Copyright 2021–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Repl.h"
@@ -33,7 +33,7 @@ bool Repl::evaluate(NameId module_name, std::string module_source, EvalMode mode
 
     m_ctx.interpreter.configure(m_opts.compiler_flags);
 
-    auto src_id = source_manager.add_source(module_name, std::move(module_source));
+    const auto src_id = source_manager.add_source(module_name, std::move(module_source));
 
     try {
         ResourceUsage rusage;
@@ -50,7 +50,7 @@ bool Repl::evaluate(NameId module_name, std::string module_source, EvalMode mode
 
         // create new module for the input
         auto module = prepare_module(module_name);
-        auto r = module_manager.replace_module(module_name, module);
+        const auto r = module_manager.replace_module(module_name, module);
         assert(r != no_index); (void) r;
 
         // compile

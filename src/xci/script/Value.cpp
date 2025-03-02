@@ -8,7 +8,7 @@
 #include "Function.h"
 #include "Module.h"
 #include "Error.h"
-#include "dump.h"
+#include "dump.h"  // NOLINT - not unused
 #include <xci/data/coding/leb128.h>
 #include <xci/core/string.h>
 #include <xci/core/template/helpers.h>
@@ -19,6 +19,10 @@
 #include <sstream>
 #include <limits>
 #include <cassert>
+
+#ifdef TRACE_REFCOUNT
+#include <iostream>
+#endif
 
 namespace xci::script {
 
@@ -39,22 +43,19 @@ concept HasHeapSlot = requires(const T& v) {
 
 Value create_value(const TypeInfo& type_info)
 {
-    const auto type = type_info.type();
-    switch (type) {
+    switch (type_info.type()) {
         case Type::List:
             if (type_info.elem_type() == TypeInfo{Type::UInt8})
                 return value::Bytes();  // List subclass, with special output formatting
-            else
-                return value::List();
+            return value::List();
         case Type::Tuple:
         case Type::Struct:
             return value::Tuple{type_info.subtypes()};
         case Type::Named:
             return create_value(type_info.named_type().type_info);
         default:
-            return create_value(type);
+            return create_value(type_info.type());
     }
-    return {};
 }
 
 
@@ -93,9 +94,7 @@ Value create_value(Type type)
 
 bool Value::operator==(const Value& rhs) const
 {
-    return std::visit([](const auto& a, const auto& b) -> bool {
-        using TA = std::decay_t<decltype(a)>;
-        using TB = std::decay_t<decltype(b)>;
+    return std::visit([]<typename TA, typename TB>(const TA& a, const TB& b) -> bool {
         if constexpr (std::is_same_v<TA, TB>)
             return a == b;
         else
@@ -107,8 +106,7 @@ bool Value::operator==(const Value& rhs) const
 size_t Value::write(byte* buffer) const
 {
     static_assert(sizeof(bool) == 1);
-    return std::visit([buffer](auto&& v) -> size_t {
-        using T = std::decay_t<decltype(v)>;
+    return std::visit([buffer]<typename T>(const T& v) -> size_t {
         if constexpr (std::is_same_v<T, std::monostate>)
             return 0;  // Unknown
         else if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, byte>) {
@@ -129,6 +127,9 @@ size_t Value::write(byte* buffer) const
         } else if constexpr(std::is_trivially_copyable_v<T>) {
             std::memcpy(buffer, &v, sizeof(T));
             return sizeof(T);
+        } else {
+            assert(!"write: unhandled value type");
+            return 0;
         }
     }, m_value);
 }
@@ -136,8 +137,7 @@ size_t Value::write(byte* buffer) const
 
 size_t Value::read(const byte* buffer)
 {
-    return std::visit([buffer](auto& v) -> size_t {
-        using T = std::decay_t<decltype(v)>;
+    return std::visit([buffer]<typename T>(T& v) -> size_t {
         if constexpr (std::is_same_v<T, std::monostate>)
             return 0;  // Unknown
         else if constexpr (std::is_same_v<T, bool>) {
@@ -173,13 +173,12 @@ size_t Value::read(const byte* buffer)
 size_t Value::size_on_stack() const noexcept
 {
     static_assert(sizeof(bool) == 1);
-    return std::visit([](auto&& v) -> size_t {
-        using T = std::decay_t<decltype(v)>;
+    return std::visit([]<typename T>(const T& v) -> size_t {
         if constexpr (std::is_same_v<T, std::monostate>)
             return 0;  // Unknown
         else if constexpr (std::is_same_v<T, TupleV>) {
             size_t res = 0;
-            for (Value* it = v.values.get(); !it->is_unknown(); ++it)
+            for (const Value* it = v.values.get(); !it->is_unknown(); ++it)
                 res += it->size_on_stack();
             return res;
         } else
@@ -190,8 +189,7 @@ size_t Value::size_on_stack() const noexcept
 
 const HeapSlot* Value::heapslot() const
 {
-    return std::visit([](auto& v) -> const HeapSlot* {
-        using T = std::decay_t<decltype(v)>;
+    return std::visit([]<typename T>(T& v) -> const HeapSlot* {
         if constexpr (HasHeapSlot<T>)
             return &v.slot;
         else
@@ -206,8 +204,7 @@ void Value::incref() const
 #ifdef TRACE_REFCOUNT
     std::cout << "+ref " << *this << std::endl;
 #endif
-    return std::visit([](auto& v) {
-        using T = std::decay_t<decltype(v)>;
+    return std::visit([]<typename T>(T& v) {
         if constexpr (HasHeapSlot<T>)
             v.slot.incref();
         else if constexpr (std::is_same_v<T, TupleV>) {
@@ -218,13 +215,12 @@ void Value::incref() const
 }
 
 
-void Value::decref() const
+void Value::decref()
 {
 #ifdef TRACE_REFCOUNT
     std::cout << "-ref " << *this << std::endl;
 #endif
-    return std::visit([](auto& v) {
-        using T = std::decay_t<decltype(v)>;
+    return std::visit([]<typename T>(T& v) {
         if constexpr (HasHeapSlot<T>)
             v.slot.decref();
         else if constexpr (std::is_same_v<T, TupleV>) {
@@ -237,8 +233,7 @@ void Value::decref() const
 
 void Value::apply(value::Visitor& visitor) const
 {
-    std::visit([&visitor](const auto& v) {
-        using T = std::decay_t<decltype(v)>;
+    std::visit([&visitor]<typename T>(const T& v) {
         if constexpr (std::is_same_v<T, std::monostate>) {
             assert(!"Cannot apply Value of unknown type");  // Unknown
         } else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, StreamV>
@@ -282,10 +277,7 @@ Type Value::type() const
 
 bool Value::cast_from(const Value& src)
 {
-    return std::visit([](auto& to, const auto& from) -> bool {
-        using TTo = std::decay_t<decltype(to)>;
-        using TFrom = std::decay_t<decltype(from)>;
-
+    return std::visit([]<typename TTo, typename TFrom>(TTo& to, const TFrom& from) -> bool {
         // same types
         if constexpr (std::is_same_v<TFrom, TTo>) {
             to = from;

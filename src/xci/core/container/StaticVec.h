@@ -32,10 +32,10 @@ public:
     StaticVec(std::span<const T> r);
 
     StaticVec(const StaticVec& r);
-    StaticVec(StaticVec&& r);
+    StaticVec(StaticVec&& r) noexcept;
 
     StaticVec& operator=(const StaticVec& r);
-    StaticVec& operator=(StaticVec&& r);
+    StaticVec& operator=(StaticVec&& r) noexcept;
 
     friend bool operator==(const StaticVec& a, const StaticVec& b) {
         return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin());
@@ -99,7 +99,7 @@ StaticVec<T>::StaticVec(const StaticVec& r)
 }
 
 template<class T>
-StaticVec<T>::StaticVec(StaticVec&& r)
+StaticVec<T>::StaticVec(StaticVec&& r) noexcept
         : m_vec(std::move(r.m_vec)), m_size(r.size())
 {
     r.m_size = 0;
@@ -113,7 +113,7 @@ auto StaticVec<T>::operator=(const StaticVec& r) -> StaticVec& {
 }
 
 template<class T>
-auto StaticVec<T>::operator=(StaticVec&& r) -> StaticVec& {
+auto StaticVec<T>::operator=(StaticVec&& r) noexcept -> StaticVec& {
     m_vec = std::move(r.m_vec);
     m_size = r.m_size;
     r.m_size = 0;

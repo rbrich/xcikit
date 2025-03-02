@@ -442,7 +442,7 @@ TEST_CASE( "Stack push/pull", "[script][machine]" )
     CHECK(stack.size() == 1);
     stack.push(value::Int32{73});
     CHECK(stack.size() == 1+4);
-    const value::String str{"hello"};
+    value::String str{"hello"};
     stack.push(str);
     CHECK(stack.size() == 1+4 + sizeof(void*));
     CHECK(stack.n_values() == 3);
@@ -1437,7 +1437,7 @@ TEST_CASE( "Native to Value mapping", "[script][native]" )
     CHECK(native::ValueType<int64_t>(1ll << 60).value() == 1ll << 60);
     CHECK(native::ValueType<float>(3.14f).value() == 3.14f);
     CHECK(native::ValueType<double>(2./3).value() == 2./3);
-    const native::ValueType<std::string> str ("test"s);
+    native::ValueType<std::string> str ("test"s);
     CHECK(str.value() == "test"s);
     str.decref();
 }

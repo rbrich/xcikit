@@ -1,7 +1,7 @@
 // Heap.cpp created on 2019-08-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Heap.h"
@@ -37,7 +37,7 @@ void HeapSlot::incref() const
 }
 
 
-bool HeapSlot::decref() const
+bool HeapSlot::decref()
 {
     if (m_slot == nullptr)
         return false;  // caller's pointer is already null
@@ -49,10 +49,9 @@ bool HeapSlot::decref() const
             deleter(data_());
         delete[] m_slot;
         return true;  // freed, the caller may want to clear the pointer
-    } else {
-        memcpy(m_slot, &refs, sizeof(refs));
-        return false;
     }
+    memcpy(m_slot, &refs, sizeof(refs));
+    return false;
 }
 
 
