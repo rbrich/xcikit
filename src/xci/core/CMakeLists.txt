@@ -4,6 +4,7 @@
 
 add_library(xci-core
     ArgParser.cpp
+    backtrace.cpp
     file.cpp
     EditBuffer.cpp
     EditLine.cpp
