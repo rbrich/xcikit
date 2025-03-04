@@ -89,7 +89,7 @@ void Composite::update(View& view, State state)
 
 void Composite::draw(View& view)
 {
-    auto pop_offset = view.push_offset(position());
+    auto view_offset = view.push_offset(position());
     for (auto& child : m_child) {
         if (!child->is_hidden())
             child->draw(view);
@@ -101,6 +101,7 @@ bool Composite::key_event(View& view, const KeyEvent& ev)
 {
     // Propagate the event to the focused child
     if (m_focus != nullptr) {
+        auto view_offset = view.push_offset(position());
         if (m_focus->key_event(view, ev))
             return true;
     }
@@ -112,14 +113,16 @@ bool Composite::key_event(View& view, const KeyEvent& ev)
 
 void Composite::text_input_event(View& view, const TextInputEvent& ev)
 {
-    if (m_focus != nullptr)
+    if (m_focus != nullptr) {
+        auto view_offset = view.push_offset(position());
         m_focus->text_input_event(view, ev);
+    }
 }
 
 
 void Composite::mouse_pos_event(View& view, const MousePosEvent& ev)
 {
-    auto pop_offset = view.push_offset(position());
+    auto view_offset = view.push_offset(position());
     for (auto& child : m_child) {
         if (!child->is_hidden())
             child->mouse_pos_event(view, ev);
@@ -129,7 +132,7 @@ void Composite::mouse_pos_event(View& view, const MousePosEvent& ev)
 
 bool Composite::mouse_button_event(View& view, const MouseBtnEvent& ev)
 {
-    auto pop_offset = view.push_offset(position());
+    auto view_offset = view.push_offset(position());
     for (auto& child : m_child) {
         if (child->is_hidden())
             continue;
@@ -155,6 +158,7 @@ bool Composite::click_focus(View& view, FramebufferCoords pos)
 {
     bool handled = false;
     const auto* original_focus = m_focus;
+    auto view_offset = view.push_offset(position());
     for (auto* child : m_child) {
         if (child->is_hidden())
             continue;
@@ -165,6 +169,7 @@ bool Composite::click_focus(View& view, FramebufferCoords pos)
             break;
         }
     }
+    view_offset.pop();
     if (original_focus != m_focus) {
         resize(view);
         view.refresh();
@@ -178,6 +183,8 @@ bool Composite::tab_focus(View& view, int& step)
     // No children at all - early exit (this is just an optimization)
     if (m_child.empty())
         return false;
+
+    auto view_offset = view.push_offset(position());
 
     // No focus child - change to first or last focusable child
     if (m_focus == nullptr) {
@@ -196,6 +203,7 @@ bool Composite::tab_focus(View& view, int& step)
                 return false;
             set_focus(view, *it);
         }
+        view_offset.pop();
         resize(view);
         view.refresh();
         return true;
@@ -233,6 +241,7 @@ bool Composite::tab_focus(View& view, int& step)
         }
     }
 
+    view_offset.pop();
     resize(view);
     view.refresh();
     return m_focus != nullptr;
