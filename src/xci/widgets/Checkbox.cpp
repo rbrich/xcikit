@@ -1,7 +1,7 @@
 // Checkbox.cpp created on 2018-04-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Checkbox.h"
@@ -41,7 +41,7 @@ void Checkbox::set_checked(bool checked)
 
 bool Checkbox::key_event(View& view, const KeyEvent& ev)
 {
-    if (ev.action == Action::Press && ev.key == Key::Return) {
+    if (ev.action == Action::Press && ev.key == Key::Space) {
         do_click(view);
         return true;
     }
