@@ -157,20 +157,21 @@ void Composite::scroll_event(View& view, const ScrollEvent& ev)
 bool Composite::click_focus(View& view, FramebufferCoords pos)
 {
     bool handled = false;
-    const auto* original_focus = m_focus;
+    Widget* new_focus = nullptr;
     auto view_offset = view.push_offset(position());
     for (auto* child : m_child) {
         if (child->is_hidden())
             continue;
-        // Propagate the event
+        // Propagate the event to all children, to allow them to unfocus
         if (child->click_focus(view, pos - position())) {
-            set_focus(view, child);
-            handled = true;
-            break;
+            // In case of overlap, focus first one
+            if (!new_focus)
+                new_focus = child;
         }
     }
-    view_offset.pop();
-    if (original_focus != m_focus) {
+    if (new_focus != m_focus) {
+        set_focus(view, new_focus);
+        view_offset.pop();
         resize(view);
         view.refresh();
     }
@@ -354,7 +355,8 @@ Bind::Bind(graphics::Window& window, Widget& root)
         if (m_mbtn_cb)
             m_mbtn_cb(v, e);
         if (!root.is_hidden()) {
-            root.click_focus(v, e.pos);
+            if (e.action == Action::Press)
+                root.click_focus(v, e.pos);
             root.mouse_button_event(v, e);
         }
     });
