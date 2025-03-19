@@ -13,8 +13,9 @@ namespace xci::core {
 
 
 /// Get backtrace for current thread. C++ symbols are demangled if possible.
+/// \param file_lines  Enable file and line information. Implemented only on Windows.
 /// \return String with formatted backtrace, in format similar to backtrace_symbols(3).
-std::string get_backtrace();
+std::string get_backtrace(bool file_lines = false);
 
 
 } // namespace xci::core
