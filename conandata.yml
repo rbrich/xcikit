@@ -62,7 +62,7 @@ requirements:
     conan: "libzip/1.11.3"
   sdl:
     cmake: "SDL3/3.2.0"
-    conan: "sdl/3.2.0"
+    conan: "sdl/3.2.6"
     prereq:
       - graphics
   vulkan:
@@ -83,11 +83,13 @@ requirements:
   freetype:
     cmake: "Freetype/2.10.0"
     conan: "freetype/2.13.3"
+    conan_traits:
+      - force=True
     prereq:
       - text
   harfbuzz:
     cmake: "harfbuzz/"
-    conan: "harfbuzz/8.3.0"
+    conan: "harfbuzz/10.4.0"
     prereq:
       - text
   hyperscan:
