@@ -92,6 +92,10 @@ if (XCI_WITH_TERMINFO)
     target_link_libraries(xci-core PRIVATE Terminfo::terminfo)
 endif()
 
+if (WIN32)
+    target_link_libraries(xci-core PRIVATE dbghelp)
+endif()
+
 if (BUILD_SHARED_LIBS)
     set_target_properties(xci-core PROPERTIES CXX_VISIBILITY_PRESET default)
 endif()
