@@ -4,7 +4,6 @@
 
 add_library(xci-core
     ArgParser.cpp
-    backtrace.cpp
     file.cpp
     EditBuffer.cpp
     EditLine.cpp
@@ -92,6 +91,10 @@ if (XCI_WITH_TERMINFO)
     target_link_libraries(xci-core PRIVATE Terminfo::terminfo)
 endif()
 
+# backtrace
+if (NOT EMSCRIPTEN)
+    target_sources(xci-core PRIVATE backtrace.cpp)
+endif()
 if (WIN32)
     target_link_libraries(xci-core PRIVATE dbghelp)
 endif()
