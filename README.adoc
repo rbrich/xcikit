@@ -264,7 +264,7 @@ pip3 install conan
 brew install cmake ninja ccache
 pip3 install conan
 # Libs
-brew install pegtl libzip freetype sdl3 doxygen catch2 google-benchmark hyperscan
+brew install pegtl libzip freetype sdl3 doxygen catch2 google-benchmark vectorscan
 ----
 - macOS (MacPorts):
 +
@@ -273,7 +273,7 @@ brew install pegtl libzip freetype sdl3 doxygen catch2 google-benchmark hypersca
 port install cmake ninja ccache
 pip3 install conan
 # Libs
-port install vulkan-* MoltenVK libsdl3 harfbuzz-devel hyperscan libfmt catch2
+port install vulkan-* MoltenVK SDL3 harfbuzz-devel vectorscan libfmt catch2
 ----
 
 [#using-build-script]

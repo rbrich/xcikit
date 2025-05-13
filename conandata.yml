@@ -90,6 +90,7 @@ requirements:
   harfbuzz:
     cmake: "harfbuzz/"
     conan: "harfbuzz/10.4.0"
+    upstream: "github.com harfbuzz/harfbuzz 10.4.0"
     prereq:
       - text
   hyperscan:
@@ -98,8 +99,8 @@ requirements:
     cmake_defs: BUILD_BENCHMARKS=OFF BUILD_EXAMPLES=OFF BUILD_SHARED_LIBS=ON
     prereq:
       - ff_tool
-  boost:
-    cmake: "Boost/1.75.0"
+  pfr:
+    cmake: "pfr/2.2.0"
     conan: "pfr/2.2.0"
     public: True
     prereq:

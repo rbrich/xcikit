@@ -56,7 +56,7 @@ class XcikitConan(ConanFile):
         "system_spirv-cross": [True, False],
         "system_freetype": [True, False],
         "system_harfbuzz": [True, False],
-        "system_boost": [True, False],
+        "system_pfr": [True, False],
         "system_range_v3": [True, False],
         "system_catch2": [True, False],
         "system_benchmark": [True, False],
@@ -102,7 +102,7 @@ class XcikitConan(ConanFile):
         "system_spirv-cross": False,
         "system_freetype": False,
         "system_harfbuzz": False,
-        "system_boost": False,
+        "system_pfr": False,
         "system_range_v3": False,
         "system_catch2": False,
         "system_benchmark": False,
@@ -111,12 +111,10 @@ class XcikitConan(ConanFile):
         "with_hyperscan": False,
 
         # Disable unnecessary transient deps by default.
-        "libzip/*:with_bzip2": False,
         "libzip/*:with_lzma": False,
         "libzip/*:with_zstd": False,
         "libzip/*:crypto": False,
         "libzip/*:tools": False,
-        "freetype/*:with_bzip2": False,
         "freetype/*:with_brotli": False,
         "harfbuzz/*:with_glib": False,
         "vulkan-loader/*:with_wsi_xcb": False,
@@ -315,7 +313,7 @@ class XcikitConan(ConanFile):
                 self._add_dep('system_libzip', component, "libzip::zip", "libzip::libzip")
             if name == 'data':
                 self._add_dep('system_zlib', component, "zlib::zlib")
-                self._add_dep('system_boost', component, "pfr::pfr")
+                self._add_dep('system_pfr', component, "pfr::pfr")
             if name == 'script':
                 component.requires += ['xci-core']
                 self._add_dep('system_range_v3', component, "range-v3::range-v3")
