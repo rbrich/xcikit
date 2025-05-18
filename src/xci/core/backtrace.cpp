@@ -4,6 +4,8 @@
 // Copyright 2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
+// Possibly: binutils/addr2line.c https://sourceware.org/git/?p=binutils-gdb.git;a=blob;f=binutils/addr2line.c;hb=HEAD
+
 #include "backtrace.h"
 #include <xci/compat/unistd.h>
 #include <xci/core/rtti.h>
