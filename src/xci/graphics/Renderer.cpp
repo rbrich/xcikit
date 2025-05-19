@@ -89,6 +89,10 @@ vulkan_debug_callback(
 Renderer::Renderer(Vfs& vfs)
         : m_vfs(vfs)
 {
+#ifdef __linux__
+    // Prefer Wayland on Linux
+    SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "wayland,x11");
+#endif
     if (!SDL_Init(SDL_INIT_VIDEO))
         VK_THROW(fmt::format("Couldn't initialize SDL: {}", SDL_GetError()));
 }
