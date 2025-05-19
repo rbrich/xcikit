@@ -240,6 +240,7 @@ void Window::setup_view()
 
     create_command_buffers();
 
+#ifndef __linux__
     // This is a workaround for https://github.com/libsdl-org/SDL/issues/1059
     // (Still doesn't get resize events on Mac nor Windows with SDL 3.2.0,
     // this workaround still helps)
@@ -251,6 +252,7 @@ void Window::setup_view()
         }
         return true;
     }, this);
+#endif
 }
 
 
