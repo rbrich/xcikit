@@ -1,7 +1,7 @@
 // log_termctl.cpp created on 2021-03-27 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2024 Radek Brich
+// Copyright 2021–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "log.h"
@@ -46,7 +46,7 @@ void Logger::default_handler(Logger::Level lvl, std::string_view msg)
 {
     TermCtl& t = TermCtl::stderr_instance();
     const auto lvl_num = static_cast<int>(lvl);
-    const auto tm = fmt::localtime(std::time(nullptr));
+    const auto tm = localtime(std::time(nullptr));
     const auto tid = get_thread_id() & 0xFFFFFF;  // clip to 6 hex digits
     const auto lines = split(msg, '\n');
     size_t cont = 0;

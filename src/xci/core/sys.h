@@ -1,7 +1,7 @@
 // sys.h created on 2018-08-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_SYS_H
@@ -12,6 +12,7 @@
 #include <string>
 #include <cstdint>
 #include <csignal>
+#include <ctime>
 
 #ifndef _WIN32
 #include <sys/types.h>
@@ -34,6 +35,19 @@ int cpu_count();
 /// The timer is monotonic and does not tick when the system is asleep.
 /// See: https://en.wikipedia.org/wiki/Time_Stamp_Counter
 double get_cpu_time();
+
+
+/// Convenience wrapper around localtime_r
+inline std::tm localtime(std::time_t t)
+{
+    std::tm r {};
+#ifdef _WIN32
+    localtime_s(&r, &t);
+#else
+    localtime_r(&t, &r);
+#endif
+    return r;
+}
 
 
 // Integral thread ID

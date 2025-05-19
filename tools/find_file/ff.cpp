@@ -607,7 +607,7 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
             user, w_user_new, group, w_group_new,
             term.fg(size_unit_to_color(size_unit)), size, term.dim(), size_unit, term.normal(),
             term.fg(size_unit_to_color(alloc_unit)), alloc, term.dim(), alloc_unit, term.normal(),
-            fmt::localtime(st.st_mtime));
+            localtime(st.st_mtime));
     std::cout << name;
     if (S_ISLNK(st.st_mode)) {
         std::string target;
