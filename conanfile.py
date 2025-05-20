@@ -156,6 +156,7 @@ class XcikitConan(ConanFile):
             info['option'] = f"system_{name}" if 'conan' in info else f"with_{name}"
             info.setdefault('prereq', [])
             info.setdefault('public', False)
+            info.setdefault('conan_traits', [])
             yield info
 
     def validate(self):
@@ -233,12 +234,14 @@ class XcikitConan(ConanFile):
             # Install requirement via Conan if `system_<lib>` option exists and is set to False
             opt = self.options.get_safe('system_' + info['name'])
             if opt is not None and not opt:
+                traits = {k : {'False':False, 'True':True}[v] for k, v in
+                          (it.split('=', 1) for it in info['conan_traits'])}
                 if 'tests' in info['prereq'] or 'benchmarks' in info['prereq']:
-                    self.test_requires(info['conan'])
+                    self.test_requires(info['conan'], **traits)
                 elif info['public']:
-                    self.requires(info['conan'], transitive_headers=True, transitive_libs=True)
+                    self.requires(info['conan'], transitive_headers=True, transitive_libs=True, **traits)
                 else:
-                    self.requires(info['conan'], headers=True, libs=True)
+                    self.requires(info['conan'], headers=True, libs=True, **traits)
 
     def _set_cmake_defs(self, defs):
         if self.package_folder:

@@ -1,7 +1,7 @@
 // FpsDisplay.cpp created on 2018-04-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2024 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "FpsDisplay.h"
@@ -115,8 +115,8 @@ void FpsDisplay::update_texture()
     constexpr float sample_max = 1.f / 30.f;
     uint8_t pixels[FpsCounter::resolution];
     uint8_t* pixel = pixels;
-    m_fps.foreach_sample([&](float sample) {
-        *pixel++ = uint8_t(sample / sample_max * 255.f);
+    m_fps.foreach_sample([&pixel](float sample) {
+        *pixel++ = uint8_t(std::min(sample / sample_max * 255.f, 255.f));
     });
     m_texture.write(pixels);
     m_texture.update();

@@ -1,7 +1,7 @@
 // rtti.h created on 2018-07-03 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_RTTI_H
@@ -12,6 +12,8 @@
 
 namespace xci::core {
 
+// Demangle name (GCC/Clang)
+std::string demangle(const char* name);
 
 // Demangle type name when mangled (GCC/Clang)
 std::string demangle_type_name(const char* name);
