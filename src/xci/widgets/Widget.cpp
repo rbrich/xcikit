@@ -323,7 +323,7 @@ Bind::Bind(graphics::Window& window, Widget& root)
         if (root.is_hidden() || root.key_event(v, e))
             return;
         // Switch focus with Tab, Shift+Tab
-        if (e.action == Action::Press && e.key == Key::Tab) {
+        if (e.key == Key::Tab && (e.action == Action::Press || e.action == Action::Repeat)) {
             int step = e.mod.shift ? -1 : 1;
             // When root widget returns false, it means that either
             // - there is no focusable widget, or
