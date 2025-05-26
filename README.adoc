@@ -277,7 +277,7 @@ brew install pegtl libzip freetype sdl3 doxygen catch2 google-benchmark vectorsc
 port install cmake ninja ccache
 pip3 install conan
 # Libs
-port install vulkan-* MoltenVK SDL3 harfbuzz-devel vectorscan libfmt catch2
+port install vulkan-* MoltenVK SDL3 freetype vectorscan libfmt catch2
 ----
 
 [#using-build-script]
