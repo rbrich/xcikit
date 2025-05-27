@@ -166,8 +166,8 @@ jobs:
             cmake --build .
             sudo cmake --install .
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew update --auto-update
-            brew install ninja sdl3 doxygen google-benchmark libzip
+            #brew update --auto-update
+            brew install ccache ninja sdl3 doxygen google-benchmark libzip
             if [[ "$(uname -m)" == "x86_64" ]]; then
                 brew install hyperscan
                 # WORKAROUND: broken cmake config in brew harfbuzz package
@@ -201,7 +201,7 @@ jobs:
         fi
 
     - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2.13
+      uses: hendrikmuhs/ccache-action@v1.2.18
       with:
         key: ${{ matrix.os }}-${{ matrix.name }}
 
