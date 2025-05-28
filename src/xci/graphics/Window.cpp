@@ -240,6 +240,7 @@ void Window::setup_view()
 
     create_command_buffers();
 
+#ifndef __linux__
     // This is a workaround for https://github.com/libsdl-org/SDL/issues/1059
     // (Still doesn't get resize events on Mac nor Windows with SDL 3.2.0,
     // this workaround still helps)
@@ -251,6 +252,7 @@ void Window::setup_view()
         }
         return true;
     }, this);
+#endif
 }
 
 
@@ -403,7 +405,7 @@ void Window::handle_event(const SDL_Event& event)
             if (m_text_cb) {
                 TextInputEvent ev{};
                 std::memcpy(ev.text, event.text.text,
-                            std::min(sizeof(ev.text), sizeof(event.text.text)));
+                            std::min(sizeof(ev.text), std::strlen(event.text.text) + 1));
                 m_text_cb(m_view, ev);
             }
             break;
@@ -412,7 +414,7 @@ void Window::handle_event(const SDL_Event& event)
             if (m_text_cb) {
                 TextInputEvent ev{};
                 std::memcpy(ev.text, event.edit.text,
-                            std::min(sizeof(ev.text), sizeof(event.edit.text)));
+                            std::min(sizeof(ev.text), std::strlen(event.edit.text) + 1));
                 ev.edit_cursor = event.edit.start;
                 ev.edit_length = event.edit.length;
                 m_text_cb(m_view, ev);

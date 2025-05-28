@@ -56,7 +56,7 @@ class XcikitConan(ConanFile):
         "system_spirv-cross": [True, False],
         "system_freetype": [True, False],
         "system_harfbuzz": [True, False],
-        "system_boost": [True, False],
+        "system_pfr": [True, False],
         "system_range_v3": [True, False],
         "system_catch2": [True, False],
         "system_benchmark": [True, False],
@@ -102,7 +102,7 @@ class XcikitConan(ConanFile):
         "system_spirv-cross": False,
         "system_freetype": False,
         "system_harfbuzz": False,
-        "system_boost": False,
+        "system_pfr": False,
         "system_range_v3": False,
         "system_catch2": False,
         "system_benchmark": False,
@@ -111,12 +111,10 @@ class XcikitConan(ConanFile):
         "with_hyperscan": False,
 
         # Disable unnecessary transient deps by default.
-        "libzip/*:with_bzip2": False,
         "libzip/*:with_lzma": False,
         "libzip/*:with_zstd": False,
         "libzip/*:crypto": False,
         "libzip/*:tools": False,
-        "freetype/*:with_bzip2": False,
         "freetype/*:with_brotli": False,
         "harfbuzz/*:with_glib": False,
         "vulkan-loader/*:with_wsi_xcb": False,
@@ -156,6 +154,7 @@ class XcikitConan(ConanFile):
             info['option'] = f"system_{name}" if 'conan' in info else f"with_{name}"
             info.setdefault('prereq', [])
             info.setdefault('public', False)
+            info.setdefault('conan_traits', [])
             yield info
 
     def validate(self):
@@ -233,12 +232,14 @@ class XcikitConan(ConanFile):
             # Install requirement via Conan if `system_<lib>` option exists and is set to False
             opt = self.options.get_safe('system_' + info['name'])
             if opt is not None and not opt:
+                traits = {k : {'False':False, 'True':True}[v] for k, v in
+                          (it.split('=', 1) for it in info['conan_traits'])}
                 if 'tests' in info['prereq'] or 'benchmarks' in info['prereq']:
-                    self.test_requires(info['conan'])
+                    self.test_requires(info['conan'], **traits)
                 elif info['public']:
-                    self.requires(info['conan'], transitive_headers=True, transitive_libs=True)
+                    self.requires(info['conan'], transitive_headers=True, transitive_libs=True, **traits)
                 else:
-                    self.requires(info['conan'], headers=True, libs=True)
+                    self.requires(info['conan'], headers=True, libs=True, **traits)
 
     def _set_cmake_defs(self, defs):
         if self.package_folder:
@@ -312,7 +313,7 @@ class XcikitConan(ConanFile):
                 self._add_dep('system_libzip', component, "libzip::zip", "libzip::libzip")
             if name == 'data':
                 self._add_dep('system_zlib', component, "zlib::zlib")
-                self._add_dep('system_boost', component, "pfr::pfr")
+                self._add_dep('system_pfr', component, "pfr::pfr")
             if name == 'script':
                 component.requires += ['xci-core']
                 self._add_dep('system_range_v3', component, "range-v3::range-v3")

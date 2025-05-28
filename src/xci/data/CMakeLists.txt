@@ -2,23 +2,15 @@
 # Dependencies #
 # ------------ #
 
-# Prefer Boost, which may be preinstalled in system
-# Fallback to PFR from Conan
-find_package(Boost CONFIG 1.75.0)
-if (Boost_FOUND)
-    set_target_properties(Boost::headers PROPERTIES IMPORTED_GLOBAL TRUE)
-    add_library(pfr::pfr ALIAS Boost::headers)
-else()
-    find_package(pfr QUIET)
-    if (NOT pfr_FOUND)
-        # vcpkg doesn't provide any cmake config, find the headers directly
-        find_path(pfr_INCLUDE_DIR NAMES boost/pfr/config.hpp)
-        if (pfr_INCLUDE_DIR)
-            add_library(pfr::pfr INTERFACE IMPORTED)
-            target_include_directories(pfr::pfr INTERFACE ${pfr_INCLUDE_DIR})
-        else ()
-            message(ERROR "pfr not found!")
-        endif()
+find_package(pfr QUIET)
+if (NOT pfr_FOUND)
+    # vcpkg doesn't provide any cmake config, find the headers directly
+    find_path(pfr_INCLUDE_DIR NAMES boost/pfr/config.hpp)
+    if (pfr_INCLUDE_DIR)
+        add_library(pfr::pfr INTERFACE IMPORTED)
+        target_include_directories(pfr::pfr INTERFACE ${pfr_INCLUDE_DIR})
+    else ()
+        message(FATAL_ERROR "pfr not found!")
     endif()
 endif()
 

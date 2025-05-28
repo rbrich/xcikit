@@ -13,6 +13,7 @@ BUILD_DEPS=0
 BUILD_DEPS_ARGS=()
 JOBS_ARGS=()
 CONAN_DEPS=1
+CONAN_GRAPH=0
 CMAKE_ARGS=(-D"CMAKE_POSITION_INDEPENDENT_CODE=ON")
 CONAN_ARGS=()
 CONAN_PROFILE=${CONAN_DEFAULT_PROFILE:-default}
@@ -200,6 +201,9 @@ while [[ $# -gt 0 ]] ; do
             CONAN_PROFILE="$2"
             BUILD_DEPS_ARGS+=("--profile" "$2")
             shift 2 ;;
+        --graph )
+            CONAN_GRAPH=1
+            shift 1 ;;
         --toolchain )
             CONAN_ARGS+=(-c "tools.cmake.cmaketoolchain:user_toolchain=[\"$2\"]")
             CMAKE_TOOLCHAIN="$2"
@@ -355,6 +359,10 @@ if phase deps; then
 
         if [[ "${CONAN_DEPS}" -eq 1 ]]; then
             export BUILD_DIR
+            if [[ "${CONAN_GRAPH}" -eq 1 ]]; then
+                run conan graph info "${ROOT_DIR}" --build missing -s "build_type=${BUILD_TYPE}" "${CONAN_ARGS[@]}" \
+                    > 'conan_graph.txt'
+            fi
             run conan install "${ROOT_DIR}" \
                 --build missing \
                 -s "build_type=${BUILD_TYPE}" \

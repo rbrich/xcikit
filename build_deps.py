@@ -42,12 +42,12 @@ def requirements():
 def upstream_requirements():
     for name, info in requirements().items():
         if 'upstream' in info:
-            yield name, info['upstream'], info.get('cmake_defs', '')
+            yield name, info['upstream'], info.get('upstream_tool', 'cmake'), info.get('upstream_defs', '')
 
 
 def main():
     args = parse_args()
-    platform = f"{sys.platform}-{args.profile if args.profile is not None else 'default'}"
+    platform = f"{sys.platform}-{args.profile or 'default'}"
     force_rebuild = args.force
     filter_deps = set(args.name)
 
@@ -56,7 +56,7 @@ def main():
     deps_source_dir = deps_dir / '.source'
     deps_build_dir = deps_dir / '.build'
 
-    for name, upstream, cmake_defs in upstream_requirements():
+    for name, upstream, build_tool, defs in upstream_requirements():
         if filter_deps and name not in filter_deps:
             continue
         repo, project, git_ref = upstream.split(' ')
@@ -91,17 +91,30 @@ def main():
         if force_rebuild:
             rmtree(build_dir)
         build_dir.mkdir(parents=True, exist_ok=True)
-        cmake_args = ["-D" + d for d in cmake_defs.split()]
+        tool_args = ["-D" + d for d in defs.split()]
         if args.toolchain is not None:
-            cmake_args += ["--toolchain", args.toolchain]
-        run(["cmake", "-G", "Ninja",
-             "-S", source_dir, "-B", build_dir,
-             "-DCMAKE_BUILD_TYPE=Release",
-             "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
-             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
-             *cmake_args])
-        run(["cmake", "--build", build_dir])
-        run(["cmake", "--install", build_dir])
+            tool_args += ["--toolchain", args.toolchain]
+        if build_tool == 'cmake':
+            run(["cmake", "-G", "Ninja",
+                 "-S", source_dir, "-B", build_dir,
+                 "-DCMAKE_BUILD_TYPE=Release",
+                 "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
+                 f"-DCMAKE_INSTALL_PREFIX={install_dir}",
+                 *tool_args])
+            run(["cmake", "--build", build_dir])
+            run(["cmake", "--install", build_dir])
+        elif build_tool == 'meson':
+            run(["meson", "setup", build_dir, source_dir,
+                 "--reconfigure",
+                 "--backend", "ninja",
+                 "--buildtype", "release",
+                 "--prefix", install_dir,
+                 *tool_args])
+            run(["ninja", "-C", build_dir])
+            run(["ninja", "-C", build_dir, "install"])
+        else:
+            print(f"\nERROR: Unsupported build tool: {build_tool}", file=sys.stderr)
+            exit(1)
 
         package_dir.unlink(missing_ok=True)
         package_dir.symlink_to(install_dir_rel, target_is_directory=True)

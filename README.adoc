@@ -31,13 +31,13 @@ This should be enough for a program to render:
 * settings screen,
 * dialogs.
 
-The library uses GLFW and Vulkan for graphics.
+The library uses SDL3 and Vulkan for graphics.
 
 === Name
 
-XCI is 91 in Roman numerals. I perceive 91 as a beautiful number.
+XCI is 91 in Roman numerals.
 
-It might stand for **Extended C++ Interface**, but this is an afterthought.
+It might also stand for **Extended C++ Interface**.
 
 == Features
 
@@ -70,7 +70,7 @@ on the libraries listed below it. (TODO: draw a dependency graph)
 The top-level `xci-widgets` provides UI components with event processing.
 It uses text layout engine `xci-text`, which can also be used separately.
 
-All rendering goes through GLFW and Vulkan based `xci-graphics` library.
+All rendering goes through SDL3 and Vulkan based `xci-graphics` library.
 Graphics lib can be used separately when neither UI nor text rendering
 is needed.
 
@@ -230,7 +230,7 @@ Libraries:
 - PEGTL (xci-core)
 - libzip (xci-vfs)
 - FreeType (xci-text)
-- GLFW, Vulkan (xci-graphics)
+- SDL3, Vulkan (xci-graphics)
 - https://github.com/google/shaderc[glslc] or
   https://github.com/KhronosGroup/glslang[glslangValidator] (xci-graphics)
 - https://github.com/catchorg/Catch2[Catch2] (tests)
@@ -254,8 +254,12 @@ Installing the dependencies with *_system package managers_*:
 - Debian:
 +
 ----
-apt install libzip-dev cmake ninja-build
-pip3 install conan
+# Tools
+apt install pipx cmake ninja-build ccache
+pipx install conan
+# Libs
+apt install libvulkan-dev vulkan-validationlayers glslc libsdl3-dev libfreetype-dev libharfbuzz-dev \
+            libzip-dev libvectorscan-dev libbenchmark-dev
 ----
 - macOS (Homebrew):
 +
@@ -264,7 +268,7 @@ pip3 install conan
 brew install cmake ninja ccache
 pip3 install conan
 # Libs
-brew install pegtl libzip freetype sdl3 doxygen catch2 google-benchmark hyperscan
+brew install pegtl libzip freetype sdl3 doxygen catch2 google-benchmark vectorscan
 ----
 - macOS (MacPorts):
 +
@@ -273,7 +277,7 @@ brew install pegtl libzip freetype sdl3 doxygen catch2 google-benchmark hypersca
 port install cmake ninja ccache
 pip3 install conan
 # Libs
-port install vulkan-* MoltenVK libsdl3 harfbuzz-devel hyperscan libfmt catch2
+port install vulkan-* MoltenVK SDL3 freetype vectorscan libfmt catch2
 ----
 
 [#using-build-script]
@@ -319,6 +323,37 @@ cmake --build . --target 'test'
 # Install artifacts
 cmake --build . --target 'install'
 ----
+
+
+[#ide-conan]
+=== Building in IDE with CMake support
+
+Tested with Clion, may also work in other IDEs.
+Clion also has a Conan plugin, which might work, but we won't use it in this howto.
+
+First, clone https://github.com/conan-io/cmake-conan[cmake-conan] somewhere (in the below example, it's in `~/src/cmake-conan`).
+
+Then open the xcikit project, let the IDE load the top-level `CMakeLists.txt`. It won't find some dependencies.
+
+Go to CMake Settings (or Build, Execution, Deployment > CMake):
+
+- Select a profile, e.g. **Debug**
+- Check the Environment, make sure the PATH variable contains path where `conan` can be found
+- In CMake options, add:
++
+----
+-GNinja
+-DFORCE_COLORS=1
+-DCMAKE_INSTALL_PREFIX=~/sdk/xcikit-debug
+-DCMAKE_DISABLE_PRECOMPILE_HEADERS=1
+-DCMAKE_PROJECT_TOP_LEVEL_INCLUDES=~/src/cmake-conan/conan_provider.cmake
+-DCONAN_HOST_PROFILE=default
+-DCONAN_BUILD_PROFILE=default
+-DCONAN_INSTALL_ARGS="-s;build_type=Debug;--build=missing;-o;xcikit/*:system_sdl=True;-o;xcikit/*:system_vulkan=True;-o;xcikit/*:system_freetype=True;-o;xcikit/*:system_harfbuzz=True;-o;xcikit/*:system_zlib=True"
+----
+
+Adjust `CONAN_INSTALL_ARGS` as needed. The deps with `system_foo=True` won't be installed via Conan, so they have to be present in the system.
+
 
 === Building on macOS older than Catalina (10.15)
 
@@ -387,24 +422,6 @@ What doesn't work:
 
 Note that the build script detects "MINGW64_NT" as target platform, but this is not true. It builds native Windows binaries.
 The string is just the output of `uname` in Git Bash. I don't know any better way how to detect host platform on Windows (please tell me if you know).
-
-[#ide-conan]
-==== How to build from IDE with CMake support
-
-Works with Clion, and may work with Visual Studio (I did not test).
-
-Separately, clone this fork of `cmake-conan` which adds `CONAN_OPTIONS`: https://github.com/rbrich/cmake-conan
-
-Then open the xcikit project, let the IDE load the top-level `CMakeLists.txt`.
-
-Add these CMake options in the IDE settings:
-----
--DCMAKE_PROJECT_TOP_LEVEL_INCLUDES=/path/to/cmake-conan/conan_provider.cmake
--DCONAN_OPTIONS="-o;xcikit/*:system_sdl=True;-o;xcikit/*:system_vulkan=True;-o;xcikit/*:system_freetype=True;-o;xcikit/*:system_harfbuzz=True;-o;xcikit/*:system_zlib=True"
-----
-
-The `CONAN_OPTIONS` are just an example, in this case Conan will skip installing graphical libs,
-so they can be searched in the system instead. Those libs must be preinstalled.
 
 ==== Troubleshooting
 
