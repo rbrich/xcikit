@@ -1,7 +1,7 @@
 // TextInput.h created on 2018-06-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_TEXTINPUT_H
@@ -46,6 +46,8 @@ public:
     void focus_change(View& view, const FocusChange& ev) override;
 
 private:
+    void update_input_area(const View& view);
+
     core::EditBuffer m_buffer;
     core::EditBuffer m_ime_buffer;
     text::Layout m_layout;
