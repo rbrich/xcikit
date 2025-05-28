@@ -37,7 +37,6 @@ RUN $XCIKIT/build.sh deps --emscripten script
 RUN $XCIKIT/build.sh deps --emscripten script --debug
 
 # Preinstall Emscripten ports (it has no explicit install command, workaround...)
-RUN echo "int main(){}" > ~/dummy.c
-RUN cd ; emcc -s USE_ZLIB=1 dummy.c -o dummy.out && rm dummy.*
+RUN embuilder build zlib
 
 CMD ./build.sh --emscripten core vfs data script
