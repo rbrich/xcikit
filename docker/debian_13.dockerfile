@@ -14,7 +14,7 @@ RUN echo "gcc"; apt-get update && apt-get install --no-install-recommends -y \
     g++ && rm -rf /var/lib/apt/lists/*
 
 RUN echo "dev tools"; apt-get update && apt-get install --no-install-recommends -y \
-    gdb ca-certificates curl cmake make ninja-build ccache \
+    gdb ca-certificates curl cmake make ninja-build ccache git openssh-client \
     python3-minimal python3-pip libpython3-stdlib && \
     rm -rf /var/lib/apt/lists/*
 

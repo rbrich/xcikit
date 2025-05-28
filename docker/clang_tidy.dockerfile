@@ -15,7 +15,7 @@ RUN echo "clang"; apt-get update && apt-get install --no-install-recommends -y \
     clang clang-tidy && rm -rf /var/lib/apt/lists/*
 
 RUN echo "dev tools"; apt-get update && apt-get install --no-install-recommends -y \
-    gdb ca-certificates curl cmake make ninja-build ccache \
+    gdb ca-certificates curl cmake make ninja-build ccache git openssh-client \
     python3-minimal python3-pip libpython3-stdlib && \
     rm -rf /var/lib/apt/lists/*
 ENV CMAKE_GENERATOR=Ninja CONAN_CMAKE_GENERATOR=Ninja

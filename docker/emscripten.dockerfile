@@ -8,7 +8,7 @@
 FROM emscripten/emsdk:4.0.9 AS builder
 
 RUN echo "dev tools"; apt-get update && apt-get install --no-install-recommends -y \
-    gdb ninja-build python3-setuptools gpg && rm -rf /var/lib/apt/lists/*
+    gdb ninja-build python3-setuptools gpg git openssh-client && rm -rf /var/lib/apt/lists/*
 
 # Ubuntu 22.04 has CMake 3.22.1, which is too old. Get newer version (https://apt.kitware.com/).
 RUN echo "cmake"; apt-get purge -y cmake && \
