@@ -1,14 +1,13 @@
 # Debian 13 with Clang-Tidy 19
 #
 # CI builder (DockerHub public image), local build check:
-#   docker buildx build --platform linux/amd64,linux/arm64/v8 --pull --build-arg UID=$(id -u) -t rbrich/xcikit-tidy:19 . -f docker/clang_tidy.dockerfile
-#   docker run --platform linux/amd64 --rm -v $PWD:/src -w /src -it rbrich/xcikit-tidy:19
-#   docker run --platform linux/arm64/v8 --rm -v $PWD:/src -w /src -it rbrich/xcikit-tidy:19
+#   podman build --platform linux/amd64,linux/arm64 --manifest rbrich/xcikit-tidy:19 . -f docker/clang_tidy.dockerfile
+#   podman run --platform linux/amd64 --rm -v $PWD:/src -w /src -it rbrich/xcikit-tidy:19
 # CMake arguments (for Clion IDE):
 #   -DFORCE_COLORS=1
 #   -DCONAN_OPTIONS="-o;xcikit/*:system_sdl=True;-o;xcikit/*:system_vulkan=True;-o;xcikit/*:system_freetype=True;-o;xcikit/*:system_harfbuzz=True;-o;xcikit/*:system_benchmark=True;-o;xcikit/*:system_zlib=True;-o;xcikit/*:system_range_v3=True;-o;xcikit/*:with_hyperscan=True"
 
-FROM debian:trixie-slim AS builder
+FROM docker.io/debian:trixie-slim AS builder
 
 # Clang with libstdc++. Alternatively, install also: libc++-dev libc++abi-dev
 RUN echo "clang"; apt-get update && apt-get install --no-install-recommends -y \
@@ -26,17 +25,13 @@ RUN echo "xcikit deps"; apt-get update && apt-get install --no-install-recommend
 
 RUN echo "conan"; pip3 install --no-cache-dir --break-system-packages conan
 
-ARG UID=10002
-RUN useradd -m -p np -u ${UID} -s /bin/bash builder
-USER builder
-
-COPY --chown=builder docker/conan /home/builder/conan
-RUN conan config install /home/builder/conan && conan profile detect
+COPY docker/conan /tmp/conan
+RUN conan config install /tmp/conan && conan profile detect
 ENV CONAN_DEFAULT_PROFILE=clang19
 
 # Preinstall Conan deps
-ENV XCIKIT=/home/builder/xcikit
-COPY --chown=builder build.sh detect_system_deps.py conanfile.py conandata.yml VERSION $XCIKIT/
+ENV XCIKIT=/tmp/xcikit
+COPY build.sh detect_system_deps.py conanfile.py conandata.yml VERSION $XCIKIT/
 RUN $XCIKIT/build.sh deps
 RUN $XCIKIT/build.sh deps --debug
 
