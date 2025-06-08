@@ -15,20 +15,37 @@ find_package(harfbuzz REQUIRED)
 # Libraries    #
 # ------------ #
 
-add_library(xci-text
-    FontFace.cpp
-    FontLibrary.cpp
-    FontTexture.cpp
-    Font.cpp
-    GlyphCluster.cpp
-    Layout.cpp
-    Markup.cpp
-    Style.cpp
-    Text.cpp
-    layout/Page.cpp
-    $<TARGET_OBJECTS:third_party::rbp>
-    )
+add_library(xci-text)
 add_library(xcikit::xci-text ALIAS xci-text)
+
+target_sources(xci-text
+    PRIVATE
+        FontFace.cpp
+        FontLibrary.cpp
+        FontTexture.cpp
+        Font.cpp
+        GlyphCluster.cpp
+        Layout.cpp
+        Markup.cpp
+        Style.cpp
+        Text.cpp
+        layout/Page.cpp
+    PUBLIC
+    FILE_SET HEADERS
+    BASE_DIRS ${CMAKE_SOURCE_DIR}/src
+    FILES
+        FontFace.h
+        FontLibrary.h
+        FontTexture.h
+        Font.h
+        GlyphCluster.h
+        Layout.h
+        Markup.h
+        Style.h
+        Text.h
+        layout/Element.h
+        layout/Page.h
+    )
 
 target_precompile_headers(xci-text REUSE_FROM xci-core)
 
@@ -72,5 +89,9 @@ if (BUILD_FRAMEWORKS)
 endif()
 
 if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
-    install(TARGETS xci-text EXPORT xcikit DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    install(TARGETS xci-text
+        EXPORT xcikit
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
 endif()
