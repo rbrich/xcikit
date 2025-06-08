@@ -207,6 +207,7 @@ else()
     set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
 endif()
 
+add_subdirectory(src/xci/compat)
 add_subdirectory(src/xci/core)
 
 if (XCI_CONFIG)
@@ -223,6 +224,10 @@ endif()
 
 if (XCI_SCRIPT)
     add_subdirectory(src/xci/script)
+endif()
+
+if (XCI_SCENE OR XCI_GRAPHICS)
+    add_subdirectory(src/xci/math)
 endif()
 
 if (XCI_SCENE)
@@ -395,11 +400,6 @@ pop_indent()
 # ------------- #
 
 if (XCI_INSTALL_DEVEL)
-    # Headers
-    install(DIRECTORY src/xci DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-        FILES_MATCHING
-        PATTERN "*.h")
-
     # config.h
     install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/xci DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 

@@ -8,34 +8,68 @@ find_package(Vulkan REQUIRED)
 # Libraries    #
 # ------------ #
 
-add_library(xci-graphics
-    Color.cpp
-    Primitives.cpp
-    Renderer.cpp
-    Shader.cpp
-    Sprites.cpp
-    Texture.cpp
-    View.cpp
-    Window.cpp
-    shape/Ellipse.cpp
-    shape/Line.cpp
-    shape/Polygon.cpp
-    shape/Rectangle.cpp
-    shape/RoundedRectangle.cpp
-    shape/Shape.cpp
-    shape/Triangle.cpp
-    vulkan/Attachments.cpp
-    vulkan/Buffer.cpp
-    vulkan/CommandBuffers.cpp
-    vulkan/DescriptorPool.cpp
-    vulkan/DeviceMemory.cpp
-    vulkan/Framebuffer.cpp
-    vulkan/Image.cpp
-    vulkan/Pipeline.cpp
-    vulkan/Sampler.cpp
-    vulkan/Swapchain.cpp
-)
+add_library(xci-graphics)
 add_library(xcikit::xci-graphics ALIAS xci-graphics)
+
+
+target_sources(xci-graphics
+    PRIVATE
+        Color.cpp
+        Primitives.cpp
+        Renderer.cpp
+        Shader.cpp
+        Sprites.cpp
+        Texture.cpp
+        View.cpp
+        Window.cpp
+        shape/Ellipse.cpp
+        shape/Line.cpp
+        shape/Polygon.cpp
+        shape/Rectangle.cpp
+        shape/RoundedRectangle.cpp
+        shape/Shape.cpp
+        shape/Triangle.cpp
+        vulkan/Attachments.cpp
+        vulkan/Buffer.cpp
+        vulkan/CommandBuffers.cpp
+        vulkan/DescriptorPool.cpp
+        vulkan/DeviceMemory.cpp
+        vulkan/Framebuffer.cpp
+        vulkan/Image.cpp
+        vulkan/Pipeline.cpp
+        vulkan/Sampler.cpp
+        vulkan/Swapchain.cpp
+    PUBLIC
+    FILE_SET HEADERS
+    BASE_DIRS ${CMAKE_SOURCE_DIR}/src
+    FILES
+        Color.h
+        Primitives.h
+        Renderer.h
+        Shader.h
+        Sprites.h
+        Texture.h
+        View.h
+        Window.h
+        shape/Ellipse.h
+        shape/Line.h
+        shape/Polygon.h
+        shape/Rectangle.h
+        shape/RoundedRectangle.h
+        shape/Shape.h
+        shape/Triangle.h
+        vulkan/Attachments.h
+        vulkan/Buffer.h
+        vulkan/CommandBuffers.h
+        vulkan/DescriptorPool.h
+        vulkan/DeviceMemory.h
+        vulkan/Framebuffer.h
+        vulkan/Image.h
+        vulkan/Pipeline.h
+        vulkan/Sampler.h
+        vulkan/Swapchain.h
+        vulkan/VulkanError.h
+)
 
 target_include_directories(xci-graphics
     PUBLIC
@@ -72,5 +106,9 @@ if (BUILD_FRAMEWORKS)
 endif()
 
 if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
-    install(TARGETS xci-graphics EXPORT xcikit DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    install(TARGETS xci-graphics
+        EXPORT xcikit
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
 endif()
