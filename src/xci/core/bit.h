@@ -35,13 +35,11 @@ namespace xci::core {
 ///     auto b = bit_copy<uint16_t>(ptr + 4);
 
 template <class To, class From>
-typename std::enable_if<
-        std::is_trivially_copyable<From>::value &&
-        (std::is_trivial<To>::value || std::is_same_v<To, uint128>) &&
-        !std::is_pointer<From>::value &&
-        (sizeof(From) == 1 || sizeof(From) == sizeof(To)),
-        To>::type
-bit_copy(const From* src) noexcept
+requires (std::is_trivially_copyable_v<From> &&
+        (std::is_trivial_v<To> || std::is_same_v<To, uint128>) &&
+        !std::is_pointer_v<From> &&
+        (sizeof(From) == 1 || sizeof(From) == sizeof(To)))
+To bit_copy(const From* src) noexcept
 {
     To dst;
     std::memcpy(&dst, src, sizeof(To));
