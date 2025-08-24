@@ -1,7 +1,7 @@
 // IndexedMap.h created on 2020-03-01 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2023 Radek Brich
+// Copyright 2020–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_INDEXED_MAP_H
@@ -59,6 +59,7 @@ public:
         Index index = ~0u;
         Tenant tenant = ~0u;
         bool operator==(const WeakIndex& rhs) const noexcept = default;
+        explicit operator bool() const noexcept { return index != ~0u; }
     };
 
     static constexpr Index no_index {~0u};
