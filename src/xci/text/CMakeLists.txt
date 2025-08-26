@@ -63,6 +63,7 @@ target_link_libraries(xci-text
         Freetype::Freetype
         harfbuzz::harfbuzz
         $<COMPILE_ONLY:third_party::rbp>
+        $<TARGET_OBJECTS:third_party::rbp>
         $<COMPILE_ONLY:taocpp::pegtl>
     )
 
