@@ -2,22 +2,42 @@
 # Libraries    #
 # ------------ #
 
-add_library(xci-widgets
-    Button.cpp
-    Checkbox.cpp
-    ColorPicker.cpp
-    Dialog.cpp
-    Form.cpp
-    FpsDisplay.cpp
-    Icon.cpp
-    Label.cpp
-    Spinner.cpp
-    TextInput.cpp
-    TextTerminal.cpp
-    Theme.cpp
-    Widget.cpp
-    )
+add_library(xci-widgets)
 add_library(xcikit::xci-widgets ALIAS xci-widgets)
+
+target_sources(xci-widgets
+    PRIVATE
+        Button.cpp
+        Checkbox.cpp
+        ColorPicker.cpp
+        Dialog.cpp
+        Form.cpp
+        FpsDisplay.cpp
+        Icon.cpp
+        Label.cpp
+        Spinner.cpp
+        TextInput.cpp
+        TextTerminal.cpp
+        Theme.cpp
+        Widget.cpp
+    PUBLIC
+    FILE_SET HEADERS
+    BASE_DIRS ${CMAKE_SOURCE_DIR}/src
+    FILES
+        Button.h
+        Checkbox.h
+        ColorPicker.h
+        Dialog.h
+        Form.h
+        FpsDisplay.h
+        Icon.h
+        Label.h
+        Spinner.h
+        TextInput.h
+        TextTerminal.h
+        Theme.h
+        Widget.h
+    )
 
 target_link_libraries(xci-widgets
     PUBLIC
@@ -50,5 +70,9 @@ if (BUILD_FRAMEWORKS)
 endif()
 
 if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
-    install(TARGETS xci-widgets EXPORT xcikit DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    install(TARGETS xci-widgets
+        EXPORT xcikit
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
 endif()

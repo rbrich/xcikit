@@ -19,14 +19,29 @@ endif()
 # Libraries    #
 # ------------ #
 
-add_library(xci-data
-    BinaryWriter.cpp
-    BinaryReader.cpp
-    Crc32.cpp
-    Dumper.cpp
-    Schema.cpp
-    )
+add_library(xci-data)
 add_library(xcikit::xci-data ALIAS xci-data)
+
+target_sources(xci-data
+    PRIVATE
+        BinaryWriter.cpp
+        BinaryReader.cpp
+        Crc32.cpp
+        Dumper.cpp
+        Schema.cpp
+    PUBLIC
+    FILE_SET HEADERS
+    BASE_DIRS ${CMAKE_SOURCE_DIR}/src
+    FILES
+        ArchiveBase.h
+        BinaryBase.h
+        BinaryReader.h
+        BinaryWriter.h
+        Crc32.h
+        Dumper.h
+        Schema.h
+        coding/leb128.h
+    )
 
 target_link_libraries(xci-data
     PUBLIC
@@ -52,5 +67,9 @@ if (BUILD_SHARED_LIBS)
 endif()
 
 if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
-    install(TARGETS xci-data EXPORT xcikit DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    install(TARGETS xci-data
+        EXPORT xcikit
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        FILE_SET HEADERS DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
 endif()

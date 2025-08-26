@@ -37,8 +37,8 @@ public:
 
 // integers
 template <class T>
-typename std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, bool>
-value_from_cstr(const char* s, T& value)
+requires (std::is_integral_v<T> && !std::is_same_v<T, bool>)
+bool value_from_cstr(const char* s, T& value)
 {
     char* end;
     errno = 0;
@@ -53,8 +53,9 @@ value_from_cstr(const char* s, T& value)
 
 // bool
 template <class T>
-typename std::enable_if_t<std::is_same_v<T, bool>, bool>
-value_from_cstr(const char* s, T& value) {
+requires (std::is_same_v<T, bool>)
+bool value_from_cstr(const char* s, T& value)
+{
     if ((*s == '0' || tolower(*s) == 'f' || tolower(*s) == 'n') && s[1] == '\0')
         value = false;
     else if ((*s == '1' || tolower(*s) == 't' || tolower(*s) == 'y') && s[1] == '\0')
@@ -70,13 +71,12 @@ value_from_cstr(const char* s, T& value) {
 
 // const char* (original, unparsed C string)
 template <class T>
-typename std::enable_if_t<
-            std::is_same_v<T, const char*> || (
+requires (std::is_same_v<T, const char*> || (
                 std::is_assignable_v<T&, const char*> &&            // types with `operator=(const char*)`
                 !std::is_trivially_assignable_v<T&, const char*>    // exclude `bool& v = const char* u` etc.
-            ),
-        bool>
-value_from_cstr(const char* s, T& value) {
+            ))
+bool value_from_cstr(const char* s, T& value)
+{
     value = s;
     return true;
 }
