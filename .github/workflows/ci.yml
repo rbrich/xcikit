@@ -114,12 +114,7 @@ jobs:
           clang: Xcode_16.1.0
           os_target: "15.0"
           build_args: ""
-        - os: windows-2019
-          name: "VS 16 / Release"
-          cc: msvc
-          cc_ver: 192
-          build_args: "--vcpkg -DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
-        - os: windows-2022
+        - os: windows-2025
           name: "VS 17 / Release"
           cc: msvc
           cc_ver: 194
