@@ -26,8 +26,8 @@
 requirements:
   fmt:
     cmake: "fmt/11.0.0"
-    conan: "fmt/11.2.0"
-    upstream: "github.com fmtlib/fmt 11.2.0"
+    conan: "fmt/12.1.0"
+    upstream: "github.com fmtlib/fmt 12.1.0"
     upstream_defs: FMT_TEST=OFF FMT_DOC=OFF FMT_SYSTEM_HEADERS=ON
     public: True
   range_v3:
@@ -61,15 +61,15 @@ requirements:
       - data
   libzip:
     cmake: "libzip/1.7.0"
-    conan: "libzip/1.11.3"
+    conan: "libzip/1.11.4"
   sdl:
     cmake: "SDL3/3.2.0"
-    conan: "sdl/3.2.6"
+    conan: "sdl/3.2.20"
     prereq:
       - graphics
   vulkan:
     cmake: "Vulkan/1.2.0"
-    conan: "vulkan-loader/1.3.290.0"
+    conan: "vulkan-loader/1.4.313.0"
     public: True
     prereq:
       - graphics
@@ -77,21 +77,21 @@ requirements:
     cmake:
       - "spirv_cross_core/"
       - "spirv_cross_glsl/"
-    conan: "spirv-cross/1.4.309.0"
-    upstream: "github.com KhronosGroup/SPIRV-Cross vulkan-sdk-1.4.313.0"
+    conan: "spirv-cross/1.4.321.0"
+    upstream: "github.com KhronosGroup/SPIRV-Cross vulkan-sdk-1.4.328.1"
     upstream_defs: SPIRV_CROSS_STATIC=ON SPIRV_CROSS_SHARED=OFF SPIRV_CROSS_CLI=OFF
     prereq:
       - shed_tool
   freetype:
     cmake: "Freetype/2.10.0"
-    conan: "freetype/2.13.3"
+    conan: "freetype/2.14.1"
     conan_traits:
       - force=True
     prereq:
       - text
   harfbuzz:
     cmake: "harfbuzz/"
-    conan: "harfbuzz/10.4.0"
+    conan: "harfbuzz/11.4.1"
     upstream: "github.com harfbuzz/harfbuzz 11.2.1"
     upstream_tool: meson
     upstream_defs: tests=disabled
@@ -111,14 +111,14 @@ requirements:
       - data
   catch2:
     cmake: "Catch2/3"
-    conan: "catch2/3.8.1"
+    conan: "catch2/3.11.0"
     upstream: "github.com catchorg/Catch2 v3.8.1"
     upstream_defs: CATCH_INSTALL_DOCS=OFF CMAKE_CXX_STANDARD=20
     prereq:
       - tests
   benchmark:
     cmake: "benchmark/1.5.0"
-    conan: "benchmark/1.9.1"
+    conan: "benchmark/1.9.4"
     upstream: "github.com google/benchmark v1.9.4"
     upstream_defs: BENCHMARK_ENABLE_TESTING=OFF
     prereq:
