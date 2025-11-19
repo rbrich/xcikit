@@ -1,7 +1,7 @@
 // Config.cpp created on 2023-11-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Config.h"
@@ -84,13 +84,6 @@ auto Config::get_next(const std::string& name, iterator prev) -> iterator
 {
     return _get_next(*this, name, prev);
 }
-
-
-ConfigItem& Config::back() noexcept { return m_items.back(); }
-const ConfigItem& Config::back() const noexcept { return m_items.back(); }
-ConfigItem& Config::front() noexcept { return m_items.front(); }
-const ConfigItem& Config::front() const noexcept { return m_items.front(); }
-size_t Config::size() const { return m_items.size(); }
 
 
 bool Config::parse_file(const fs::path& path)

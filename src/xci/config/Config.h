@@ -1,7 +1,7 @@
 // Config.h created on 2023-11-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CONFIG_CONFIG_H
@@ -35,7 +35,7 @@ public:
     ConfigItem& operator[](const std::string& name) { return set(name); }
     const ConfigItem& operator[](const std::string& name) const { return get(name); }
 
-    /// Add item to the back. Does not check uniquiness.
+    /// Add item to the back. Does not check uniqueness.
     ConfigItem& add(const std::string& name);
 
     /// Find item, or add new null item if not found.
@@ -50,10 +50,10 @@ public:
     const_iterator get_next(const std::string& name, const_iterator prev = const_iterator{}) const;
     iterator get_next(const std::string& name, iterator prev = iterator{});
 
-    const_iterator begin() const noexcept { return m_items.begin(); }
-    const_iterator end() const noexcept { return m_items.end(); }
-    iterator begin() noexcept { return m_items.begin(); }
-    iterator end() noexcept { return m_items.end(); }
+    const_iterator begin() const noexcept;
+    const_iterator end() const noexcept;
+    iterator begin() noexcept;
+    iterator end() noexcept;
 
     const ConfigItem& front() const noexcept;
     const ConfigItem& back() const noexcept;
@@ -147,6 +147,18 @@ private:
     std::string m_name;
     ConfigValue m_value;
 };
+
+
+inline Config::const_iterator Config::begin() const noexcept { return m_items.begin(); }
+inline Config::const_iterator Config::end() const noexcept { return m_items.end(); }
+inline Config::iterator Config::begin() noexcept { return m_items.begin(); }
+inline Config::iterator Config::end() noexcept { return m_items.end(); }
+
+inline ConfigItem& Config::back() noexcept { return m_items.back(); }
+inline const ConfigItem& Config::back() const noexcept { return m_items.back(); }
+inline ConfigItem& Config::front() noexcept { return m_items.front(); }
+inline const ConfigItem& Config::front() const noexcept { return m_items.front(); }
+inline size_t Config::size() const { return m_items.size(); }
 
 
 }  // namespace xci::config
