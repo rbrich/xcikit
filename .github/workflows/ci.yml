@@ -162,7 +162,7 @@ jobs:
             sudo cmake --install .
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
             #brew update --auto-update
-            brew install ccache ninja sdl3 doxygen google-benchmark libzip
+            brew install ccache ninja sdl3 fmt doxygen google-benchmark libzip
             if [[ "$(uname -m)" == "x86_64" ]]; then
                 brew install hyperscan
                 # WORKAROUND: broken cmake config in brew harfbuzz package
@@ -246,9 +246,6 @@ jobs:
 
     - name: deps
       run: |
-        if [[ "$RUNNER_OS" == "macOS" ]]; then
-            ./build_deps.py fmt
-        fi
         ./build.sh deps $BUILD_ARGS
 
     - name: configure
