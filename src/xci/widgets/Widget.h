@@ -83,6 +83,8 @@ public:
     virtual bool mouse_button_event(View& view, const MouseBtnEvent& ev) { return false; }
     virtual void scroll_event(View& view, const ScrollEvent& ev) {}
     virtual void focus_change(View& view, const FocusChange& ev) {}
+
+    // Return true if focus was accepted, i.e. this widget or a child of it contains `pos`
     virtual bool click_focus(View& view, FramebufferCoords pos) { return is_click_focusable() && contains(pos); }
     virtual bool tab_focus(View& view, int& step) { return is_tab_focusable(); }
 

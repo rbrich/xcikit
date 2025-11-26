@@ -238,7 +238,7 @@ void TextInput::focus_change(View& view, const FocusChange& ev)
 void TextInput::update_input_area(const View& view)
 {
     // Get 1-point wide rectangle at cursor position, height is of the whole input widget.
-    // Note: SDL_SetTextInputArea's cursor parameters doesn't work, so don't bother with whole input area
+    // Note: SDL_SetTextInputArea's cursor parameters don't work, so don't bother with whole input area
     auto fb_rect = m_layout.bbox();
     apply_padding(fb_rect, view);
     const layout::Span* cursor_span = m_layout.get_span("cursor");

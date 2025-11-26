@@ -156,7 +156,6 @@ void Composite::scroll_event(View& view, const ScrollEvent& ev)
 
 bool Composite::click_focus(View& view, FramebufferCoords pos)
 {
-    bool handled = false;
     Widget* new_focus = nullptr;
     auto view_offset = view.push_offset(position());
     for (auto* child : m_child) {
@@ -175,7 +174,7 @@ bool Composite::click_focus(View& view, FramebufferCoords pos)
         resize(view);
         view.refresh();
     }
-    return handled;
+    return new_focus != nullptr;
 }
 
 
