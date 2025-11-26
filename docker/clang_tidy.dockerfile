@@ -21,7 +21,7 @@ ENV CMAKE_GENERATOR=Ninja CONAN_CMAKE_GENERATOR=Ninja
 
 RUN echo "xcikit deps"; apt-get update && apt-get install --no-install-recommends -y \
     librange-v3-dev libsdl3-dev glslang-tools libvulkan-dev libfreetype6-dev libharfbuzz-dev \
-    libhyperscan-dev libbenchmark-dev && rm -rf /var/lib/apt/lists/*
+    libvectorscan-dev libbenchmark-dev && rm -rf /var/lib/apt/lists/*
 
 RUN echo "conan"; pip3 install --no-cache-dir --break-system-packages conan
 
