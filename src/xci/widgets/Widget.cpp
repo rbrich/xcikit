@@ -174,7 +174,7 @@ bool Composite::click_focus(View& view, FramebufferCoords pos)
         resize(view);
         view.refresh();
     }
-    return new_focus != nullptr;
+    return m_focus != nullptr;
 }
 
 

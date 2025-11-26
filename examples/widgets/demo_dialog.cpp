@@ -74,7 +74,7 @@ int main(int, char* argv[])
             case Key::F11:
                 window.toggle_fullscreen();
                 break;
-            case Key::D:
+            case Key::F4:
                 root.dump(std::cout);
                 std::cout << std::endl;
                 break;
