@@ -122,11 +122,11 @@ jobs:
       BUILD_ARGS: ${{ matrix.build_args }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         show-progress: false
 
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v6
       with:
         python-version: '3.x'
         architecture: 'x64'
@@ -181,7 +181,7 @@ jobs:
         fi
 
     - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2.18
+      uses: hendrikmuhs/ccache-action@v1.2.20
       with:
         key: ${{ matrix.os }}-${{ matrix.name }}
 
@@ -252,7 +252,7 @@ jobs:
 
     - name: artifacts - tarball
       if: ${{ matrix.name == 'Release build' }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: xcikit-artifacts
         path: |
@@ -260,7 +260,7 @@ jobs:
 
     - name: artifacts - test report
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: test-report
         path: |
