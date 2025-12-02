@@ -1,6 +1,8 @@
 # 3.28.3 in Ubuntu 24.04 (noble)
 # 3.30.3 in Debian 12 (bookworm-backports)
-cmake_minimum_required(VERSION 3.27...3.30)
+# 3.31.6 in Debian 13
+# 4.0.2 in JetBrains Clion
+cmake_minimum_required(VERSION 3.27...4.0.2)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(XciBuildType)

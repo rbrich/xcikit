@@ -402,21 +402,25 @@ What doesn't work:
 
 3. We need these commands to work:
 
+    * `cl` (VS compiler)
     * `git` (to clone the project)
     * `cmake`, `ninja` (build tools)
-    * `conan 1.x` (C++ package manager)
-    * `cl` (VS compiler)
+    * `conan` (C++ package manager)
+    * `glslc` (e.g. from https://vulkan.lunarg.com/sdk/home#windows[Vulkan SDK])
 
-4. Beginning from the last one:
+4. Beginning from the compiler:
 
     * Find `vcvars64.bat` in Visual Studio installation. I have *Visual Studio Build Tools 2019* and it's here:
-      `"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"`
+      `"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"`
       (The directory slightly differs for Community and Professional edition.)
     * Paste the path including the quotes into Git Bash and execute it.
     * Now we should have `cl`, `cmake` and `ninja` working.
     * (For convenience, add https://stackoverflow.com/a/69027383/6013024[Git Bash + VS] configuration to https://docs.microsoft.com/en-us/windows/terminal/[Windows Terminal].)
 
-5. Install conan: `pip install conan` (Python should also work via VS developer tools)
+5. Install Python and Conan:
+
+    * Try `python`, if it brings up Microsoft Store with Python app, click "Get"
+    * Install Conan either with `pip install conan` (requires adjusting PATH) or go to https://conan.io/downloads and choose Download x86_64 Installer. Install it, restart terminal to apply new PATH.
 
 6. Run `./build.sh`
 

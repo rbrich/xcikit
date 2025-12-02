@@ -21,7 +21,7 @@ CMAKE_TOOLCHAIN=
 DETECT_ARGS=()
 CSI=$'\x1b['
 
-run() { echo "➤➤➤ $*"; "$@"; }
+run() { echo "➤➤➤ " "$@"; "$@"; }
 
 print_usage()
 {
@@ -318,6 +318,10 @@ if [[ -z "$PYTHON" ]] ; then
     for name in python3 python; do
         if command -v $name >/dev/null && $name -c '' 2>/dev/null; then PYTHON=$name; break; fi
     done
+    if [[ -z "$PYTHON" ]] ; then
+        echo "ERROR: Python not found. Set env PYTHON or add 'python' / 'python3' to PATH."
+        exit 1
+    fi
 fi
 
 export XCI_CMAKE_COLORS=1

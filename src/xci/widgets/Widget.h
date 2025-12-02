@@ -1,7 +1,7 @@
 // Widget.h created on 2018-04-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2025 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_WIDGET_H
@@ -83,6 +83,8 @@ public:
     virtual bool mouse_button_event(View& view, const MouseBtnEvent& ev) { return false; }
     virtual void scroll_event(View& view, const ScrollEvent& ev) {}
     virtual void focus_change(View& view, const FocusChange& ev) {}
+
+    // Return true if focus was accepted, i.e. this widget or a child of it contains `pos`
     virtual bool click_focus(View& view, FramebufferCoords pos) { return is_click_focusable() && contains(pos); }
     virtual bool tab_focus(View& view, int& step) { return is_tab_focusable(); }
 
@@ -113,7 +115,7 @@ class Composite: public Widget {
 public:
     explicit Composite(Theme& theme) : Widget(theme) {}
 
-    void add_child(Widget& child) { m_child.push_back(&child); if (!m_focus && child.is_click_focusable()) m_focus = &child; }
+    void add_child(Widget& child) { m_child.push_back(&child); }
     void remove_child(size_t child_index) { m_child.erase(m_child.begin() + child_index); m_focus = nullptr; }
     void replace_child(size_t child_index, Widget& new_child) { m_child[child_index] = &new_child; }
     void clear_children() { m_child.clear(); m_focus = nullptr; }

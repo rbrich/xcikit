@@ -175,6 +175,7 @@ bool TextInput::key_event(View& view, const KeyEvent& ev)
 
     resize(view);
     view.refresh();
+    update_input_area(view);
     if (m_change_cb)
         m_change_cb(*this);
     return true;
@@ -198,6 +199,7 @@ void TextInput::text_input_event(View& view, const TextInputEvent& ev)
     m_buffer.insert(ev.text);
     resize(view);
     view.refresh();
+    update_input_area(view);
     if (m_change_cb)
         m_change_cb(*this);
 }
@@ -225,9 +227,28 @@ bool TextInput::mouse_button_event(View& view, const MouseBtnEvent& ev)
 void TextInput::focus_change(View& view, const FocusChange& ev)
 {
     if (ev.focused) {
+        update_input_area(view);
         SDL_StartTextInput(theme().window().sdl_window());
     } else {
         SDL_StopTextInput(theme().window().sdl_window());
+    }
+}
+
+
+void TextInput::update_input_area(const View& view)
+{
+    // Get 1-point wide rectangle at cursor position, height is of the whole input widget.
+    // Note: SDL_SetTextInputArea's cursor parameters don't work, so don't bother with whole input area
+    auto fb_rect = m_layout.bbox();
+    apply_padding(fb_rect, view);
+    const layout::Span* cursor_span = m_layout.get_span("cursor");
+    fb_rect.x = cursor_span->part(0).bbox().x + padding_fb(view).x;
+    fb_rect.y = 0;
+    const auto px_rect = view.fb_to_px(fb_rect.moved(view.offset() + position())).moved(-view.screen_top_left());
+    SDL_Rect r{px_rect.x.as<int>(), px_rect.y.as<int>(), 1, px_rect.h.as<int>()};
+    log::debug("Set text input area: {} {} {} {}", r.x, r.y, r.w, r.h);
+    if (!SDL_SetTextInputArea(theme().window().sdl_window(), &r, 0)) {
+        log::error("{} failed: {}", "SDL_SetTextInputArea", SDL_GetError());
     }
 }
 
