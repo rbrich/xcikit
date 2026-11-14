@@ -1,7 +1,7 @@
 // dump.cpp created on 2019-10-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2024 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "dump.h"
@@ -239,11 +239,15 @@ std::ostream& operator<<(std::ostream& os, const StructItem& v)
            << put_indent << v.identifier;
         if (v.type)
            os << put_indent << *v.type;
+        if (v.default_value)
+           os << put_indent << *v.default_value;
         return os << less_indent;
     } else {
         os << v.identifier;
         if (v.type)
             os << ':' << *v.type;
+        if (v.default_value)
+            os << '=' << *v.default_value;
         return os;
     }
 }

@@ -1,7 +1,7 @@
 // test_script.cpp created on 2019-05-27 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <catch2/catch_test_macros.hpp>
@@ -669,7 +669,7 @@ TEST_CASE( "Coercion", "[script][interpreter]" )
     // only literals may coerce, not functions/variables
     CHECK_THROWS_EC(interpret("t=(); a:(x:String,y:Int) = t"), FunctionNotFound);
     CHECK_THROWS_EC(interpret("f = fun a:(x:String,y:Int) {a.y}; t = (); f t"), FunctionNotFound);
-    // named type - literal of underlying type coerces
+    // named type - literal of underlying type coerces to the named type
     const std::string num_def = "type Num = Int; f = fun (a:Num, b:Num) -> Num { (a:Int + b:Int):Num };";
     CHECK(interpret_std(num_def + "f (11, 22)") == "33");
     CHECK_THROWS_EC(interpret_std(num_def + "a = 11; f (a, a)"), FunctionNotFound);
@@ -724,6 +724,14 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret_std("x:FormatSpec = (); x") == R"(FormatSpec(fill='\x00', align='\x00', sign='\x00', width=0, precision=0, spec=""))");  // empty tuple stands for empty StructInit
     CHECK_THROWS_EC(interpret_std("x:FormatSpec = ('_', '>')"), DefinitionTypeMismatch);  // when initializing with a tuple, all fields have to be specified (no defaults are filled in)
     CHECK(interpret_std("x:(field:Int) = 2; x") == "(field=2)");  // a single-item struct can be initialized with the field value (as there is no single-field tuple)
+    // explicit default values for struct fields
+    const std::string my_slice = "type MySlice = (start:Int=0, stop:Int=-1, step:Int=1); ";  // named struct
+    // CHECK(interpret(my_slice + "a:MySlice = (start=1); a") == "MySlice(start=1, stop=-1, step=1)");
+    // CHECK(interpret(my_slice + "a:MySlice = (start=10, step=-1); a") == "MySlice(start=10, stop=-1, step=-1)");
+    CHECK(interpret(my_slice + "a:MySlice = (start=1, stop=2, step=-1); a") == "MySlice(start=1, stop=2, step=-1)");
+    // CHECK(interpret(my_slice + "a:MySlice = (); a") == "MySlice(start=0, stop=-1, step=1)");
+    // CHECK(interpret(my_slice + "a:MySlice = (1, 2); a") == "MySlice(start=1, stop=2, step=1)");
+    CHECK(interpret(my_slice + "a:MySlice = (1, 2, -1); a") == "MySlice(start=1, stop=2, step=-1)");
     // cast from underlying type
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a)") == R"(MyStruct(name="hello", age=42))");
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a:(String, Int))") == R"(("hello", 42))");

@@ -1,7 +1,7 @@
 // resolve_decl.cpp created on 2022-07-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022–2023 Radek Brich
+// Copyright 2022–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_decl.h"
@@ -412,6 +412,9 @@ public:
                 st.type->apply(*this);
             m_type_info.set_key(st.identifier.name);
             items[i] = std::move(m_type_info);
+
+            if (st.default_value)
+                st.default_value->apply(*this);
         }
         m_type_info = TypeInfo{TypeInfo::struct_of, std::move(items)};
     }

@@ -1,7 +1,7 @@
 // Parser.cpp created on 2019-05-15 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Parser.h"
@@ -135,7 +135,8 @@ struct FunctionDecl: seq< opt<TypeParams>, SC, DeclParam, SC, opt<DeclResult>, S
 struct PlainTypeName: seq< TypeName, not_at<SC, one<','>> > {};  // not followed by comma (would be TupleType)
 struct ListType: seq< one<'['>, SC, must<UnsafeType>, SC, must<one<']'>> > {};
 struct TupleType: seq< Type, plus<SC, one<','>, SC, Type> > {};
-struct StructItem: seq< Identifier, opt<SC, one<':'>, SC, must<Type>> > {};
+struct StructItemDefault: seq< SC, one<'='>, not_at<one<'='>>, SC, must<ExprArgSafe> > {};
+struct StructItem: seq< Identifier, opt<SC, one<':'>, SC, must<Type>>, opt<StructItemDefault> > {};
 struct StructType: seq< StructItem, star<SC, opt<one<','>>, NSC, StructItem>, opt<SC, one<','>> > {};
 struct ParenthesizedType: seq< one<'('>, NSC, opt<UnsafeType, NSC>, must<one<')'>> > {};
 struct UnsafeType: sor<FunctionType, PlainTypeName, TupleType, StructType, ParenthesizedType, ListType> {};   // usable in context where Type is already expected
@@ -614,6 +615,12 @@ struct Action<ExprArgSafe> : change_states< std::unique_ptr<ast::Expression> > {
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::StructInit& node) {
         node.items.back().second = std::move(expr);
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::StructItem& item) {
+        assert(!item.default_value);
+        item.default_value = std::move(expr);
     }
 };
 

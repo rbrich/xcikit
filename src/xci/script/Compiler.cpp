@@ -1,7 +1,7 @@
 // Compiler.cpp created on 2019-05-30 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Compiler.h"
@@ -122,8 +122,12 @@ public:
                 // not found - use the default
                 if (ti.is_void())
                     return;  // Void value
-                // add to static values
-                auto idx = module().add_value(TypedValue(ti));
+                Index idx = ti.default_value();
+                if (idx == no_index) {
+                    // FIXME: remove this logic, make it an error if the default value is not set
+                    // add zero value to static values
+                    idx = module().add_value(TypedValue(ti));
+                }
                 // LOAD_STATIC <static_idx>
                 code().add_L1(Opcode::LoadStatic, idx);
                 continue;
@@ -639,6 +643,7 @@ void Compiler::compile(Scope& scope, ast::Module& ast)
     ast.body.symtab = &func.symtab();
 
     // Preprocess AST
+    // - simplify and transform some AST nodes (mandatory fold passes)
     // - resolve symbols (SymbolResolver)
     // - infer and check types (TypeResolver)
     // - apply optimizations - const fold etc. (Optimizer)

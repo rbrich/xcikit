@@ -1,7 +1,7 @@
 // TypeInfo.h created on 2019-06-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_TYPEINFO_H
@@ -114,14 +114,14 @@ public:
     explicit TypeInfo(NameId name, TypeInfo&& type_info);
 
     TypeInfo(const TypeInfo& r)
-            : m_type(r.m_type), m_is_literal(r.m_is_literal), m_key(r.m_key)
+            : m_type(r.m_type), m_is_literal(r.m_is_literal), m_key(r.m_key), m_default_value(r.m_default_value)
     {
         assert(this != &r);
         construct_variant();
         copy_variant(r);
     }
     TypeInfo(TypeInfo&& r) noexcept
-            : m_type(r.m_type), m_is_literal(r.m_is_literal), m_key(r.m_key)
+            : m_type(r.m_type), m_is_literal(r.m_is_literal), m_key(r.m_key), m_default_value(r.m_default_value)
     {
         assert(this != &r);
         construct_variant();
@@ -130,6 +130,7 @@ public:
         r.m_var = {};
         r.m_is_literal = true;
         r.m_key = {};
+        r.m_default_value = no_index;
     }
 
     TypeInfo& operator =(const TypeInfo& r);
@@ -195,6 +196,9 @@ public:
     void set_key(NameId key) { m_key = key; }
     const TypeInfo* struct_item_by_key(NameId key) const;  // type = Struct
 
+    Index default_value() const { return m_default_value; }  // default value of struct item or function parameter
+    void set_default_value(Index idx) { m_default_value = idx; }  // use `no_index` to remove default value
+
     Var generic_var() const;  // type = Unknown
     Var& generic_var();  // type = Unknown
     const TypeInfo& elem_type() const;  // type = List (Subtypes[0])
@@ -239,6 +243,7 @@ private:
 
     bool m_is_literal = true;  // literal = any expression that doesn't reference functions/variables
     NameId m_key;
+    Index m_default_value = no_index;  // index of static value in Module that contains this TypeInfo
 };
 
 
@@ -255,6 +260,7 @@ void TypeInfo::save_schema(Archive& ar) const {
         ar(uint8_t(Type::Struct), "subtypes", Subtypes{});
         ar.leave_union();
     }
+    ar("default", m_default_value);
 }
 
 
@@ -283,6 +289,7 @@ void TypeInfo::save(Archive& ar) const {
         default:
             break;
     }
+    ar("default", m_default_value);
 }
 
 
@@ -321,6 +328,7 @@ void TypeInfo::load(Archive& ar)
         default:
             break;
     }
+    ar(m_default_value);
 }
 
 

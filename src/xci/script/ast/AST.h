@@ -1,7 +1,7 @@
 // AST.h created on 2019-05-15 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_AST_H
@@ -278,6 +278,7 @@ struct TupleType: public Type {
 struct StructItem {
     Identifier identifier;  // required
     std::unique_ptr<Type> type;  // required
+    std::unique_ptr<Expression> default_value;  // optional
 };
 
 
@@ -674,9 +675,19 @@ struct Module {
 };
 
 
-template <class T> std::unique_ptr<T> pcopy(const T& v) { auto r = std::make_unique<T>(); v.copy_to(*r); return r; }
-std::unique_ptr<Type> copy(const std::unique_ptr<Type>& v);
-inline StructItem copy(const StructItem& v) { return {v.identifier, copy(v.type)}; }
+template <class T> std::unique_ptr<T> pcopy(const T& v)
+{
+    auto r = std::make_unique<T>();
+    v.copy_to(*r);
+    return r;
+}
+
+template <class T> std::unique_ptr<T> copy(const std::unique_ptr<T>& v)
+{
+    return v ? v->make_copy() : nullptr;
+}
+
+inline StructItem copy(const StructItem& v) { return {v.identifier, copy(v.type), copy(v.default_value)}; }
 inline Variable copy(const Variable& v) { return {v.identifier, copy(v.type)}; }
 inline Parameter copy(const Parameter& v) { return {v.identifier, copy(v.type)}; }
 

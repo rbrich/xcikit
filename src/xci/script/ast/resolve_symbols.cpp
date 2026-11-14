@@ -1,7 +1,7 @@
 // resolve_symbols.cpp created on 2019-06-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_symbols.h"
@@ -411,6 +411,8 @@ public:
                 st.type->apply(*this);
             }
             st.identifier.symbol = add_struct_item(name, no_index);
+            if (st.default_value)
+                st.default_value->apply(*this);
         }
     }
 
