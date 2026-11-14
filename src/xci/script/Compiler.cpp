@@ -11,6 +11,7 @@
 #include "ast/resolve_types.h"
 #include "ast/resolve_spec.h"
 #include "ast/resolve_nonlocals.h"
+#include "ast/resolve_defaults.h"
 #include "ast/fold_const_expr.h"
 #include "ast/fold_dot_call.h"
 #include "ast/fold_tuple.h"
@@ -87,9 +88,12 @@ public:
             // Fill in the defaults.
             for (const auto& ti : reverse(v.ti.underlying().subtypes())) {
                 if (ti.is_void())
-                    return;  // Void value
-                // add to static values
-                auto idx = module().add_value(TypedValue(ti));
+                    continue;  // Void value
+                Index idx = ti.default_value();
+                if (idx == no_index) {
+                    // Default value not specified, use implicit zero value
+                    idx = module().add_value(TypedValue(ti));
+                }
                 // LOAD_STATIC <static_idx>
                 code().add_L1(Opcode::LoadStatic, idx);
             }
@@ -121,7 +125,7 @@ public:
             if (it == v.items.end()) {
                 // not found - use the default
                 if (ti.is_void())
-                    return;  // Void value
+                    continue;  // Void value
                 Index idx = ti.default_value();
                 if (idx == no_index) {
                     // FIXME: remove this logic, make it an error if the default value is not set
@@ -605,7 +609,6 @@ private:
         }
     }
 
-private:
     Compiler& m_compiler;
     Scope& m_scope;
 
@@ -672,6 +675,9 @@ void Compiler::compile(Scope& scope, ast::Module& ast)
 
     if ((m_flags & Flags::ResolveNonlocals) == Flags::ResolveNonlocals)
         resolve_nonlocals(scope, ast.body);
+
+    if ((m_flags & Flags::ResolveDefaults) == Flags::ResolveDefaults)
+        resolve_defaults(scope, ast.body);
 
     if ((m_flags & Flags::CompileFunctions) == Flags::CompileFunctions)
         compile_all_functions(scope);

@@ -726,11 +726,11 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret_std("x:(field:Int) = 2; x") == "(field=2)");  // a single-item struct can be initialized with the field value (as there is no single-field tuple)
     // explicit default values for struct fields
     const std::string my_slice = "type MySlice = (start:Int=0, stop:Int=-1, step:Int=1); ";  // named struct
-    // CHECK(interpret(my_slice + "a:MySlice = (start=1); a") == "MySlice(start=1, stop=-1, step=1)");
-    // CHECK(interpret(my_slice + "a:MySlice = (start=10, step=-1); a") == "MySlice(start=10, stop=-1, step=-1)");
+    CHECK(interpret(my_slice + "a:MySlice = (start=1); a") == "MySlice(start=1, stop=-1, step=1)");
+    CHECK(interpret(my_slice + "a:MySlice = (start=10, step=-1); a") == "MySlice(start=10, stop=-1, step=-1)");
     CHECK(interpret(my_slice + "a:MySlice = (start=1, stop=2, step=-1); a") == "MySlice(start=1, stop=2, step=-1)");
     // CHECK(interpret(my_slice + "a:MySlice = (); a") == "MySlice(start=0, stop=-1, step=1)");
-    // CHECK(interpret(my_slice + "a:MySlice = (1, 2); a") == "MySlice(start=1, stop=2, step=1)");
+    CHECK_THROWS_EC(interpret(my_slice + "a:MySlice = (1, 2); a"), DefinitionTypeMismatch);  // when initializing with a tuple, all fields have to be specified (no defaults are filled in)
     CHECK(interpret(my_slice + "a:MySlice = (1, 2, -1); a") == "MySlice(start=1, stop=2, step=-1)");
     // cast from underlying type
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a)") == R"(MyStruct(name="hello", age=42))");

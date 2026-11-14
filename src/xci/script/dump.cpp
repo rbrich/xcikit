@@ -34,6 +34,7 @@ struct StreamOptions {
     bool qualify_type_vars : 1 = false;
     unsigned level : 6 = 0;
     std::bitset<32> rules;
+    const Module* module = nullptr;
 };
 
 static StreamOptions& stream_options(std::ostream& os) {
@@ -970,6 +971,7 @@ std::ostream& operator<<(std::ostream& os, DumpBytecode&& v)
 
 std::ostream& operator<<(std::ostream& os, const Module& v)
 {
+    stream_options(os).module = &v;
     bool verbose = stream_options(os).module_verbose;
     bool dump_tree = stream_options(os).enable_tree;
     os << "* " << v.num_imported_modules() << " imported modules\n" << more_indent;
@@ -1095,6 +1097,7 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     }
     os << less_indent;
 
+    stream_options(os).module = nullptr;
     return os;
 }
 
@@ -1140,6 +1143,13 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
                 if (item.key())
                     fmt::print(os, "{}: ", item.key());
                 os << item;
+                if (item.has_default_value()) {
+                    const Module* module = stream_options(os).module;
+                    if (module == nullptr)
+                        os << " = @" << item.default_value();
+                    else
+                        os << " = " << module->get_value(item.default_value());
+                }
             }
             return os << ")";
         }

@@ -196,6 +196,7 @@ public:
     void set_key(NameId key) { m_key = key; }
     const TypeInfo* struct_item_by_key(NameId key) const;  // type = Struct
 
+    bool has_default_value() const { return m_default_value != no_index; }
     Index default_value() const { return m_default_value; }  // default value of struct item or function parameter
     void set_default_value(Index idx) { m_default_value = idx; }  // use `no_index` to remove default value
 

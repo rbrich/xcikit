@@ -1,7 +1,7 @@
 // Error.h created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2024 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_ERROR_H
@@ -63,6 +63,7 @@ enum ErrorCode {
     StructUnknownKey,
     StructDuplicateKey,
     StructKeyTypeMismatch,
+    StructDefaultNotConstant,
     IntrinsicsFunctionError,
     UnresolvedSymbol,
     ImportError,
@@ -281,6 +282,11 @@ inline ScriptError struct_duplicate_key(NameId key, const SourceLocation& loc) {
 }
 ScriptError struct_key_type_mismatch(const TypeInfo& struct_type, const TypeInfo& spec,
                                      const TypeInfo& got, const SourceLocation& loc);
+
+inline ScriptError struct_default_not_constant(NameId key, const SourceLocation& loc) {
+    return ScriptError(ErrorCode::StructDefaultNotConstant,
+                       fmt::format("default value for key \"{}\" is not a constant expression", key), loc);
+}
 
 
 inline ScriptError intrinsics_function_error(std::string message, const SourceLocation& loc) {

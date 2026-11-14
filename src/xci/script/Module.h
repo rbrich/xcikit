@@ -1,7 +1,7 @@
 // Module.h created on 2019-06-12 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_MODULE_H
@@ -106,6 +106,7 @@ public:
     void update_type(Index index, TypeInfo type_info);
     const TypeInfo& get_type(Index idx) const { return m_types[idx]; }
     Index find_type(const TypeInfo& type_info) const;
+    Index find_named_type(NameId name) const;
     Size num_types() const { return Size(m_types.size()); }
 
     // Type classes

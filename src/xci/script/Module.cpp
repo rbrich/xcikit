@@ -1,7 +1,7 @@
 // Module.cpp created on 2019-06-12 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Module.h"
@@ -157,7 +157,9 @@ void Module::update_type(Index index, TypeInfo type_info)
 {
     // update possibly Unknown type with a concrete type
     assert(!type_info.has_unknown());
-    assert(m_types[index] == type_info);  // it must differ only in Unknown fields
+    // FIXME: generalize this, allow any change, but return new index if it's not the same TypeInfo
+    //        (use refcount to update inplace if it's referenced just once)
+    //assert(m_types[index] == type_info);  // it must differ only in Unknown fields
     m_types[index] = std::move(type_info);
 }
 
@@ -166,6 +168,17 @@ Index Module::find_type(const TypeInfo& type_info) const
 {
     assert(!type_info.has_generic());
     const auto it = std::ranges::find(m_types, type_info);
+    if (it == m_types.end())
+        return no_index;
+    return it - m_types.begin();
+}
+
+
+Index Module::find_named_type(NameId name) const
+{
+    const auto it = std::ranges::find_if(m_types, [name](const auto& type_info) {
+        return type_info.name() == name;
+    });
     if (it == m_types.end())
         return no_index;
     return it - m_types.begin();
