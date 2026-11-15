@@ -109,6 +109,7 @@ TypeInfo& TypeInfo::operator =(TypeInfo&& r) noexcept {
     r.set_type(Type::Unknown);  // NOLINT(bugprone-use-after-move)
     r.m_var = {};
     m_is_literal = r.m_is_literal; r.m_is_literal = true;
+    m_refcount = r.m_refcount; r.m_refcount = 0;
     m_key = r.m_key; r.m_key = {};
     m_default_value = r.m_default_value; r.m_default_value = no_index;
     return *this;

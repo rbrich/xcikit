@@ -31,12 +31,13 @@ public:
     void visit(ast::Instance& v) override {}
 
     void visit(ast::TypeDef& v) override {
-        auto idx = v.type_name.symbol->index();
+        const auto idx = v.type_name.symbol->index();
         m_type_info = module().get_type(idx).underlying();
 
         v.type->apply(*this);
 
-        module().update_type(idx, TypeInfo{v.type_name.name, std::move(m_type_info)});
+        const auto new_idx = module().update_type(idx, TypeInfo{v.type_name.name, std::move(m_type_info)});
+        v.type_name.symbol->set_index(new_idx);
     }
 
     void visit(ast::TypeAlias& v) override {}

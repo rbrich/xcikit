@@ -121,7 +121,8 @@ public:
         copy_variant(r);
     }
     TypeInfo(TypeInfo&& r) noexcept
-            : m_type(r.m_type), m_is_literal(r.m_is_literal), m_key(r.m_key), m_default_value(r.m_default_value)
+            : m_type(r.m_type), m_is_literal(r.m_is_literal), m_refcount(r.m_refcount),
+              m_key(r.m_key), m_default_value(r.m_default_value)
     {
         assert(this != &r);
         construct_variant();
@@ -129,6 +130,7 @@ public:
         r.set_type(Type::Unknown);
         r.m_var = {};
         r.m_is_literal = true;
+        r.m_refcount = 0;
         r.m_key = {};
         r.m_default_value = no_index;
     }
@@ -219,6 +221,11 @@ public:
     const SignaturePtr& ul_signature_ptr() const { return underlying().signature_ptr(); }
     const Signature& ul_signature() const { return underlying().signature(); }
 
+    void set_refcount(uint16_t refcount) { m_refcount = refcount; }
+    uint16_t refcount() const { return m_refcount; }
+    uint16_t incref() { return ++m_refcount; }
+    uint16_t decref() { return --m_refcount; }
+
     // -------------------------------------------------------------------------
     // Serialization
 
@@ -243,6 +250,7 @@ private:
     Type m_type { Type::Unknown };
 
     bool m_is_literal = true;  // literal = any expression that doesn't reference functions/variables
+    uint16_t m_refcount = 0;
     NameId m_key;
     Index m_default_value = no_index;  // index of static value in Module that contains this TypeInfo
 };

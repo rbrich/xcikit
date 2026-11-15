@@ -103,7 +103,7 @@ public:
 
     // Type information
     Index add_type(TypeInfo type_info);
-    void update_type(Index index, TypeInfo type_info);
+    [[nodiscard]] Index update_type(Index index, TypeInfo type_info);
     const TypeInfo& get_type(Index idx) const { return m_types[idx]; }
     Index find_type(const TypeInfo& type_info) const;
     Index find_named_type(NameId name) const;
