@@ -1,7 +1,7 @@
 // Code.h created on 2019-05-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_CODE_H
@@ -150,7 +150,7 @@ enum class Opcode: uint8_t {
 
     ListSubscript,          // operand = elem type (type index), get list element - pull the list, index:Int32 from stack, push element
     ListLength,             // operand = elem type (type index), get list length - pull the list, push length:UInt32
-    ListSlice,              // operand = elem type, slice a list - pull the list, pull begin:Int, end:Int, step:Int, push sliced list
+    ListSlice,              // operand = elem type, slice a list - pull the list, pull Slice(begin:Int, end:Int, step:Int), push sliced list
     ListConcat,             // operand = elem type, concat two lists - pull a, b lists from stack, push a + b
 
     Invoke,                 // operand = type index in current module, pull value from stack, invoke it

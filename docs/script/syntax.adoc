@@ -880,15 +880,15 @@ In addition, a struct can be initialized with a tuple of same types.
 ----
 type MyStruct = (name:String, age:Int)
 // All of these initializations are valid:
-a: MyStruct = ("Luke", 10)
-a: MyStruct = (name="Luke", age=10)
+a:MyStruct = ("Luke", 10)
+a:MyStruct = (name="Luke", age=10)
 a = ("Luke", 10):MyStruct
 a = (name="Luke", age=10):MyStruct
 // Variables and function return values need explicit cast
 a = ("Luke", 10)
-b: MyStruct = a   // Error: cannot assign (String, Int) to MyStruct
-b: MyStruct = a: MyStruct  // OK
-b = a: MyStruct  // same, type of `b` is inferred
+b:MyStruct = a   // Error: cannot assign (String, Int) to MyStruct
+b:MyStruct = a:MyStruct  // OK
+b = a:MyStruct  // same, type of `b` is inferred
 
 get_age = fun st:MyStruct -> Int { st.age }
 get_age a   // Error, variable does not coerce

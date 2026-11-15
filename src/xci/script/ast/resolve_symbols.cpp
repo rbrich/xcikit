@@ -562,7 +562,6 @@ private:
         }
     }
 
-private:
     Scope& m_scope;
     SymbolTable* m_symtab = &function().symtab();
     ast::Class* m_class = nullptr;
