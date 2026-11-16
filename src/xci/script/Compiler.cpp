@@ -352,6 +352,7 @@ public:
                 assert(!"Instance cannot be called.");
                 break;
             case Symbol::TypeName:
+            case Symbol::TypeAlias:
             case Symbol::TypeVar:
                 break;
             case Symbol::StructItem: {

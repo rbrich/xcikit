@@ -1,7 +1,7 @@
 // TypeChecker.cpp created on 2022-07-24 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022–2025 Radek Brich
+// Copyright 2022–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TypeChecker.h"
@@ -35,7 +35,7 @@ static MatchScore match_named(const TypeInfo& candidate, const TypeInfo& expecte
 {
     if (candidate.name() != expected.name())
         return MatchScore::mismatch();
-    return match_type(candidate.named_type().type_info, expected.named_type().type_info);
+    return match_type(candidate.named_type(), expected.named_type());
 }
 
 
@@ -172,10 +172,12 @@ auto TypeChecker::resolve(const TypeInfo& inferred, const SourceLocation& loc) -
         if (inferred.is_tuple()) {
             if (!match_tuple_to_struct(inferred, underlying))
                 throw definition_type_mismatch(ti, inferred, loc);
+            if (ti.is_named())  // Cannot infer fields in named struct
+                return std::move(eval_type());
             TypeInfo res = std::move(eval_type());
-            for (auto&& [st_item, inf_subtype] : zip(res.underlying().subtypes(), inferred.subtypes())) {
+            for (auto&& [st_item, inf_subtype] : zip(res.subtypes(), inferred.subtypes())) {
                 if (st_item.is_unspecified()) {
-                    auto key = st_item.key();
+                    const auto key = st_item.key();
                     st_item = inf_subtype;
                     st_item.set_key(key);
                 }

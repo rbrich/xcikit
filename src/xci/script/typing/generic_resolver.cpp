@@ -1,7 +1,7 @@
 // generic_resolver.cpp created on 2022-12-31 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022–2023 Radek Brich
+// Copyright 2022–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "generic_resolver.h"
@@ -37,7 +37,7 @@ void get_type_arg(SymbolPointer var, TypeInfo& sig, const TypeArgs& type_args)
         auto ti = type_args.get(var);
         if (ti.is_generic()) {
             sig.copy_from_no_key(ti);
-            var = ti.generic_var();
+            var = ti.symptr();
             continue;
         }
         if (ti) {
@@ -61,8 +61,7 @@ void resolve_generic_type(TypeInfo& sig, const TypeArgs& type_args)
 {
     switch (sig.type()) {
         case Type::Unknown: {
-            auto var = sig.generic_var();
-            if (var) {
+            if (const auto var = sig.symptr()) {
                 get_type_arg(var, sig, type_args);
             }
             break;
@@ -91,14 +90,13 @@ void resolve_generic_type(TypeInfo& sig, const Scope& scope)
 {
     switch (sig.type()) {
         case Type::Unknown: {
-            auto var = sig.generic_var();
-            if (var) {
+            if (auto var = sig.symptr()) {
                 const Scope* scope_p = &scope;
                 for (;;) {
                     auto ti = scope_p->type_args().get(var);
                     if (ti.is_generic()) {
                         sig.copy_from_no_key(ti);
-                        var = ti.generic_var();
+                        var = ti.symptr();
                         scope_p = &scope;
                         continue;
                     }
@@ -177,8 +175,7 @@ void specialize_arg(const TypeInfo& sig, const TypeInfo& deduced,
 {
     switch (sig.type()) {
         case Type::Unknown: {
-            auto var = sig.generic_var();
-            if (var) {
+            if (const auto var = sig.symptr()) {
                 set_type_arg(var, deduced, type_args, exc_cb);
             }
             break;

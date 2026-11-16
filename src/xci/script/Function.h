@@ -1,7 +1,7 @@
 // Function.h created on 2019-05-30 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_FUNCTION_H
@@ -276,14 +276,14 @@ public:
     }
 
     std::pair<iterator, bool> set(SymbolPointer sym, TypeInfo&& ti) {
-        if (ti.is_unknown() && (!ti.is_generic() || ti.generic_var() == sym))
+        if (ti.is_unknown() && (!ti.is_generic() || ti.symptr() == sym))
             return { m_type_args.end(), true };  // "inserted" Unknown to nowhere
         ti.set_key({});
         return m_type_args.try_emplace(sym, std::move(ti));
     }
 
     std::pair<iterator, bool> set(SymbolPointer sym, const TypeInfo& ti) {
-        if (ti.is_unknown() && (!ti.is_generic() || ti.generic_var() == sym))
+        if (ti.is_unknown() && (!ti.is_generic() || ti.symptr() == sym))
             return { m_type_args.end(), true };  // "inserted" Unknown to nowhere
         TypeInfo r = ti;
         r.set_key({});

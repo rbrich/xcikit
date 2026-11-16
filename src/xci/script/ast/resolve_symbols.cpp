@@ -187,7 +187,7 @@ public:
         v.type->apply(*this);
 
         // add new type to symbol table
-        v.type_name.symbol = symtab().add({v.type_name.name, Symbol::TypeName, no_index});
+        v.type_name.symbol = symtab().add({v.type_name.name, Symbol::TypeAlias, no_index});
     }
 
     void visit(ast::Literal&) override {}
@@ -201,7 +201,7 @@ public:
     void visit(ast::List& v) override {
         if (v.items.empty()) {
             // Create implicit type var for empty list literal: `[]`
-            v.ti = ti_list(TypeInfo(create_implicit_type_var(intern("$L"))));
+            v.ti = ti_list(TypeInfo(TypeInfo::unknown, create_implicit_type_var(intern("$L"))));
         } else for (auto& item : v.items) {
             item->apply(*this);
         }

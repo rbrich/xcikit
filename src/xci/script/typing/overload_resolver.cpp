@@ -1,7 +1,7 @@
 // overload_resolver.cpp created on 2022-12-31 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022–2024 Radek Brich
+// Copyright 2022–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "overload_resolver.h"
@@ -171,7 +171,7 @@ TypeArgs resolve_instance_types(const Signature& signature, const std::vector<Ca
     }
     // use m_call_ret only as a hint - if return type var is still unknown
     if (signature.return_type.is_unknown()) {
-        auto var = signature.return_type.generic_var();
+        auto var = signature.return_type.symptr();
         assert(var);
         if (!call_sig_stack.empty() && !call_sig_stack[0].return_type.is_unknown()) {
             set_type_arg(var, call_sig_stack[0].return_type, res,

@@ -1109,7 +1109,7 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
     const bool qualify = stream_options(os).qualify_type_vars;
     switch (v.type()) {
         case Type::Unknown: {
-            auto var = v.generic_var();
+            auto var = v.symptr();
             if (!var)
                 return os << '?';
             if (qualify)
@@ -1202,6 +1202,7 @@ std::ostream& operator<<(std::ostream& os, Symbol::Type v)
         case Symbol::Method:            return os << "Method";
         case Symbol::Instance:          return os << "Instance";
         case Symbol::TypeName:          return os << "TypeName";
+        case Symbol::TypeAlias:         return os << "TypeAlias";
         case Symbol::TypeVar:           return os << "TypeVar";
         case Symbol::StructItem:        return os << "StructItem";
         case Symbol::TypeIndex:         return os << "TypeIndex";
@@ -1306,7 +1307,7 @@ std::ostream& operator<<(std::ostream& os, const Scope& v)
                 os << arg.first.symtab()->qualified_name() << "::";  // qualify non-own symbols
             fmt::print(os, "{}=", arg.first->name());
             if (arg.second.is_unknown()) {
-                auto var = arg.second.generic_var();
+                auto var = arg.second.symptr();
                 stream_options(os).qualify_type_vars = (var.symtab() != &v.function().symtab());
             }
             os << arg.second;

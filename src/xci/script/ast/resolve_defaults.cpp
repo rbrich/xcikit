@@ -32,11 +32,11 @@ public:
 
     void visit(ast::TypeDef& v) override {
         const auto idx = v.type_name.symbol->index();
-        m_type_info = module().get_type(idx).underlying();
+        m_type_info = module().get_type(idx);
 
         v.type->apply(*this);
 
-        const auto new_idx = module().update_type(idx, TypeInfo{v.type_name.name, std::move(m_type_info)});
+        const auto new_idx = module().update_type(idx, std::move(m_type_info));
         v.type_name.symbol->set_index(new_idx);
     }
 
@@ -48,17 +48,7 @@ public:
 
     void visit(ast::Tuple& v) override {}
     void visit(ast::List& v) override {}
-
-    void visit(ast::StructInit& v) override {
-        // Update the TypeInfo to the new one with defaults for the Compiler
-        if (v.ti.is_named()) {
-            // FIXME: It may come from a different module - must save SymbolPtr instead
-            const auto idx = module().find_named_type(v.ti.name());
-            if (idx != no_index)
-                v.ti = module().get_type(idx);
-        }
-    }
-
+    void visit(ast::StructInit& v) override {}
     void visit(ast::Reference& v) override {}
     void visit(ast::Call& v) override {}
     void visit(ast::OpCall& v) override {}

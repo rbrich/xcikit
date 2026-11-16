@@ -1,7 +1,7 @@
 // resolve_spec.cpp created on 2022-08-13 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022–2025 Radek Brich
+// Copyright 2022–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_spec.h"
@@ -166,7 +166,7 @@ public:
             case Symbol::TypeIndex: {
                 if (v.ti.is_unknown()) {
                     // try to resolve via known type args
-                    auto var = v.ti.generic_var();
+                    auto var = v.ti.symptr();
                     const auto& type_args = m_scope.type_args();
                     TypeInfo resolved;
                     get_type_arg(var, resolved, type_args);
@@ -326,6 +326,7 @@ public:
                 break;
             }
             case Symbol::TypeName:
+            case Symbol::TypeAlias:
             case Symbol::TypeVar:
                 break;
             case Symbol::Nonlocal:

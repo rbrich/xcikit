@@ -1,7 +1,7 @@
 // Value.cpp created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Value.h"
@@ -52,7 +52,7 @@ Value create_value(const TypeInfo& type_info)
         case Type::Struct:
             return value::Tuple{type_info.subtypes()};
         case Type::Named:
-            return create_value(type_info.named_type().type_info);
+            return create_value(type_info.named_type());
         default:
             return create_value(type_info.type());
     }
