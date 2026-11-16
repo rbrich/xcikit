@@ -1,52 +1,73 @@
 {
-    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-    "extends": [
-        ":autodetectPinVersions"
-    ],
-    "dependencyDashboard": true,
-    "regexManagers": [
+    $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+    extends: [],
+    dependencyDashboard: {
+        enabled: true,
+    },
+    customManagers: [
         {
-            "fileMatch": ["^conandata.yml$"],
-            "matchStrings": ["conan: \"(?<depName>.*?)/(?<currentValue>.*?)\""],
-            "packageNameTemplate": "{{depName}}/{{currentValue}}@_/_",
-            "depTypeTemplate": "requires",
-            "datasourceTemplate": "conan",
-            "versioningTemplate": "conan"
-        }
+            customType: 'regex',
+            managerFilePatterns: [
+                '/^conandata.yml$/',
+            ],
+            matchStrings: [
+                'conan: "(?<depName>.*?)/(?<currentValue>.*?)"',
+            ],
+            packageNameTemplate: '{{depName}}/{{currentValue}}@_/_',
+            depTypeTemplate: 'requires',
+            datasourceTemplate: 'conan',
+            versioningTemplate: 'conan',
+        },
     ],
-    "enabledManagers": [
-        "regex",
-        "github-actions",
-        "npm",
-        "dockerfile"
+    enabledManagers: [
+        'custom.regex',
+        'github-actions',
+        'npm',
+        'dockerfile',
     ],
-    "packageRules": [
+    packageRules: [
         {
-            "matchManagers": ["github-actions"],
-            "groupName": "github-actions",
-            "separateMajorMinor": false
+            matchManagers: [
+                'github-actions',
+            ],
+            groupName: 'github-actions',
+            separateMajorMinor: false,
         },
         {
-            "matchManagers": ["npm"],
-            "groupName": "npm",
-            "separateMajorMinor": false
+            matchManagers: [
+                'npm',
+            ],
+            groupName: 'npm',
+            separateMajorMinor: false,
         },
         {
-            "matchManagers": ["dockerfile"]
+            matchManagers: [
+                'dockerfile',
+            ],
         },
         {
-            "matchManagers": ["regex"],
-            "matchUpdateTypes": ["patch"],
-            "groupName": "conan dependencies",
-            "groupSlug": "conan-deps-patch"
+            matchManagers: [
+                'custom.regex',
+            ],
+            matchUpdateTypes: [
+                'patch',
+            ],
+            groupName: 'conan dependencies',
+            groupSlug: 'conan-deps-patch',
         },
-        {  // Renovate keeps offering downgrade for this package
-            "matchManagers": ["regex"],
-            "matchDepNames": ["spirv-cross"],
-            "enabled": false
-        }
+        {
+            matchManagers: [
+                'custom.regex',
+            ],
+            matchDepNames: [
+                'spirv-cross',
+            ],
+            enabled: false,
+        },
     ],
-    "dependencyDashboardApproval": true,
-    "semanticCommits": "disabled",
-    "labels": ["deps"]
+    dependencyDashboardApproval: true,
+    semanticCommits: 'disabled',
+    labels: [
+        'deps',
+    ],
 }
