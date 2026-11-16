@@ -55,15 +55,6 @@
             groupName: 'conan dependencies',
             groupSlug: 'conan-deps-patch',
         },
-        {
-            matchManagers: [
-                'custom.regex',
-            ],
-            matchDepNames: [
-                'spirv-cross',
-            ],
-            enabled: false,
-        },
     ],
     dependencyDashboardApproval: true,
     semanticCommits: 'disabled',
