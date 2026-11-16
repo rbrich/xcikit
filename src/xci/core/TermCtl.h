@@ -1,7 +1,7 @@
 // TermCtl.h created on 2018-07-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2024 Radek Brich
+// Copyright 2018–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_TERM_H
@@ -239,7 +239,7 @@ public:
     /// Print string with special color/mode placeholders, see `render` above.
     template<typename... T>
     void print(fmt::format_string<T...> fmt, T&&... args) {
-        write(format(fmt::runtime(fmt), args...));
+        write(format(fmt::runtime(fmt.get()), args...));
     }
     void print(std::string_view markup) {
         write(render(markup));

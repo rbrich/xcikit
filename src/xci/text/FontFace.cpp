@@ -1,7 +1,7 @@
 // FontFace.cpp created on 2018-09-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2025 Radek Brich
+// Copyright 2018–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "FontFace.h"
@@ -22,6 +22,7 @@
 #include <bit>
 #include <ranges>
 #include <cassert>
+#include <cstring>
 
 namespace xci::text {
 
