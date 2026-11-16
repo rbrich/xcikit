@@ -93,6 +93,10 @@ public:
                 if (idx == no_index) {
                     // Default value not specified, use implicit zero value
                     idx = module().add_value(TypedValue(ti));
+                } else if (v.ti.is_named() && v.ti.symptr().symtab()->module() != &module()) {
+                    // In case the default value is a static value from another module, copy it
+                    const TypedValue& val = v.ti.symptr().symtab()->module()->get_value(idx);
+                    idx = module().add_value(TypedValue(val));
                 }
                 // LOAD_STATIC <static_idx>
                 code().add_L1(Opcode::LoadStatic, idx);
@@ -131,6 +135,10 @@ public:
                     // FIXME: remove this logic, make it an error if the default value is not set
                     // add zero value to static values
                     idx = module().add_value(TypedValue(ti));
+                } else if (v.ti.is_named() && v.ti.symptr().symtab()->module() != &module()) {
+                    // In case the default value is a static value from another module, copy it
+                    const TypedValue& val = v.ti.symptr().symtab()->module()->get_value(idx);
+                    idx = module().add_value(TypedValue(val));
                 }
                 // LOAD_STATIC <static_idx>
                 code().add_L1(Opcode::LoadStatic, idx);

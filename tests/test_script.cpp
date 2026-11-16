@@ -51,6 +51,14 @@ static Context& context()
 }
 
 
+template <typename T>
+static std::string dump_to_string(const T& value)
+{
+    std::ostringstream os;
+    os << value;
+    return os.str();
+}
+
 // Check parsing into AST and dumping back to code
 static std::string parse(const std::string& input, bool fold = false)
 {
@@ -64,9 +72,7 @@ static std::string parse(const std::string& input, bool fold = false)
         fold_dot_call(ast.body);
         fold_paren(ast.body);
     }
-    std::ostringstream os;
-    os << ast;
-    return os.str();
+    return dump_to_string(ast);
 }
 
 
@@ -112,9 +118,7 @@ static std::string optimize(const std::string& input)
     Compiler compiler(Compiler::Flags::O2);
     compiler.compile(module.get_main_scope(), ast);
 
-    std::ostringstream os;
-    os << ast;
-    return os.str();
+    return dump_to_string(ast);
 }
 
 
@@ -766,6 +770,32 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
 
     // function
     CHECK(interpret_std("type F = Int -> Int -> Int; f: F = fun x { fun y { x+y } }; f 1 2") == "3");
+}
+
+
+TEST_CASE( "User-defined types: struct defaults across modules", "[script][interpreter]" )
+{
+    Context& ctx = context();
+    auto& module_manager = ctx.interpreter.module_manager();
+    const auto mod_types = module_manager.make_module("mod_types");
+    mod_types->import_module("builtin");
+
+    TypedValue result = ctx.interpreter.eval(mod_types,
+            "type MySlice = (start:Int=0, stop:Int=-1, step:Int=1)");
+    result.decref();
+
+    const auto mod_usage = module_manager.make_module("mod_usage");
+    mod_usage->add_imported_module(mod_types);
+
+    result = ctx.interpreter.eval(mod_usage, "a:MySlice = (); a");
+    CHECK(dump_to_string(result) == "MySlice(start=0, stop=-1, step=1)");
+    result.decref();
+
+    result = ctx.interpreter.eval(mod_usage, "b:MySlice = (start=10); b");
+    CHECK(dump_to_string(result) == "MySlice(start=10, stop=-1, step=1)");
+    result.decref();
+
+    module_manager.clear();
 }
 
 
@@ -1504,6 +1534,7 @@ TEST_CASE( "Native functions: free function", "[script][native]" )
     )");
     CHECK(result.type() == Type::Int64);
     CHECK(result.get<int64_t>() == 1);
+    result.decref();
     ctx.interpreter.module_manager().clear();
 }
 
@@ -1528,6 +1559,7 @@ TEST_CASE( "Native functions: lambda", "[script][native]" )
     )");
     CHECK(result.type() == Type::Int64);
     CHECK(result.get<int64_t>() == 24);
+    result.decref();
     ctx.interpreter.module_manager().clear();
 }
 
