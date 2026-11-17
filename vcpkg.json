@@ -1,7 +1,7 @@
 {
   "name": "xcikit",
   "version-semver": "0.0.0",
-  "builtin-baseline": "d504de05dcd7b55df34976be1c824324ec6bca2b",
+  "builtin-baseline": "d387c3cee25a5de110c2b63f9c1a27c697eaae66",
   "dependencies": [
     "fmt",
     "range-v3",
@@ -10,7 +10,12 @@
     "zlib",
     "libzip",
     "boost-pfr",
-    {"name": "sdl3", "features": ["vulkan"]},
+    {
+      "name": "sdl3",
+      "features": [
+        "vulkan"
+      ]
+    },
     "sdl3-image",
     "vulkan-loader",
     "freetype",

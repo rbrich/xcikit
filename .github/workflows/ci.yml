@@ -82,14 +82,6 @@ jobs:
           clang: llvm@18
           os_target: "15.0"
           build_args: ""
-        - os: macos-14
-          name: "Xcode 15.4 arm64 / Release"
-          cc: apple-clang
-          cc_ver: 15
-          libcxx: libc++
-          clang: Xcode_15.4
-          os_target: "14.0"
-          build_args: ""
         - os: macos-15
           name: "Xcode 16.4 arm64 / Release"
           cc: apple-clang
@@ -99,17 +91,30 @@ jobs:
           os_target: "15.0"
           build_args: ""
         - os: macos-26
-          name: "Xcode 26.0 arm64 / Release"
+          name: "Xcode 26.6 arm64 / Release"
           cc: apple-clang
           cc_ver: 17
           libcxx: libc++
-          clang: Xcode_26.0
+          clang: Xcode_26.6
           os_target: "26.0"
+          build_args: ""
+        - os: xcode-27
+          name: "Xcode 27.2 arm64 / Release"
+          cc: apple-clang
+          cc_ver: 21
+          libcxx: libc++
+          clang: Xcode_27.2
+          os_target: "27.0"
           build_args: ""
         - os: windows-2025
           name: "VS 17 / Release"
           cc: msvc
           cc_ver: 194
+          build_args: "--vcpkg -DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
+        - os: windows-11-arm
+          name: "VS 18 arm64 / Release"
+          cc: msvc
+          cc_ver: 195
           build_args: "--vcpkg -DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
 
     name: ${{ matrix.os }} / ${{ matrix.name }}
@@ -122,11 +127,11 @@ jobs:
       BUILD_ARGS: ${{ matrix.build_args }}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         show-progress: false
 
-    - uses: actions/setup-python@v6
+    - uses: actions/setup-python@v7
       with:
         python-version: '3.x'
         architecture: 'x64'
@@ -181,13 +186,13 @@ jobs:
         fi
 
     - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2.20
+      uses: hendrikmuhs/ccache-action@v1.2.25
       with:
         key: ${{ matrix.os }}-${{ matrix.name }}
 
     - name: conan cache
       if: ${{ ! startsWith(matrix.os, 'windows') }}
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ${{ steps.tools.outputs.CONAN_HOME }}
         key: ${{ matrix.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}-${{github.sha}}
@@ -252,7 +257,7 @@ jobs:
 
     - name: artifacts - tarball
       if: ${{ matrix.name == 'Release build' }}
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       with:
         name: xcikit-artifacts
         path: |
@@ -260,7 +265,7 @@ jobs:
 
     - name: artifacts - test report
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       with:
         name: test-report
         path: |
