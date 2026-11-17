@@ -4,14 +4,14 @@
 [settings]
 os=Emscripten
 arch=wasm
-compiler=clang
-compiler.version=21
+compiler=emcc
+compiler.version=7.0.0
 compiler.cppstd=20
 build_type=Release
 
 [conf]
 tools.cmake.cmaketoolchain:user_toolchain = ["/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake"]
 
-[system_tools]
+[platform_tool_requires]
 # Override cmake tool_requires from benchmark package (the version must match that package, not the system)
-cmake/3.26.3
+cmake/4.5.0

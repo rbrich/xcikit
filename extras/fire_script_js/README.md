@@ -9,6 +9,13 @@ It runs here: https://fire.xci.cz
 
 * Emscripten
 * Node.js, npm
+* [closure-compiler](https://github.com/google/closure-compiler)
+    * Can be installed manually by downloading release jar and creating small startup script:
+
+         ```bash
+         printf '#!/bin/bash\njava -jar /path/to/closure-compiler.jar "$@"\n' > ~/bin/closure-compiler
+         chmod +x ~/bin/closure-compiler
+         ```
 
 ## How to build
 
