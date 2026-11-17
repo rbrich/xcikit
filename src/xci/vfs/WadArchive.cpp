@@ -1,7 +1,7 @@
 // WadArchive.cpp created on 2023-11-07 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023–2025 Radek Brich
+// Copyright 2023–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "WadArchive.h"
@@ -9,6 +9,7 @@
 #include <xci/compat/endian.h>
 
 #include <ranges>
+#include <cstring>
 
 namespace xci::vfs {
 

@@ -1,7 +1,7 @@
 // log.h created on 2018-03-01 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_LOG_H
@@ -81,32 +81,32 @@ XCI_INLINE void plain_message(Logger::Level lvl, fmt::string_view fmt, T&&... ar
 
 template <typename... T>
 XCI_INLINE void message(Logger::Level lvl, fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
-    plain_message(lvl, fmt, args..., XCI_LAST_ERROR_ARG);
+    plain_message(lvl, fmt.get(), args..., XCI_LAST_ERROR_ARG);
 }
 
 template <typename... T>
 XCI_INLINE void trace(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
-    plain_message(Logger::Level::Trace, fmt, args..., XCI_LAST_ERROR_ARG);
+    plain_message(Logger::Level::Trace, fmt.get(), args..., XCI_LAST_ERROR_ARG);
 }
 
 template <typename... T>
 XCI_INLINE void debug(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
-    plain_message(Logger::Level::Debug, fmt, args..., XCI_LAST_ERROR_ARG);
+    plain_message(Logger::Level::Debug, fmt.get(), args..., XCI_LAST_ERROR_ARG);
 }
 
 template <typename... T>
 XCI_INLINE void info(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
-    plain_message(Logger::Level::Info, fmt, args..., XCI_LAST_ERROR_ARG);
+    plain_message(Logger::Level::Info, fmt.get(), args..., XCI_LAST_ERROR_ARG);
 }
 
 template <typename... T>
 XCI_INLINE void warning(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
-    plain_message(Logger::Level::Warning, fmt, args..., XCI_LAST_ERROR_ARG);
+    plain_message(Logger::Level::Warning, fmt.get(), args..., XCI_LAST_ERROR_ARG);
 }
 
 template <typename... T>
 XCI_INLINE void error(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
-    plain_message(Logger::Level::Error, fmt, args..., XCI_LAST_ERROR_ARG);
+    plain_message(Logger::Level::Error, fmt.get(), args..., XCI_LAST_ERROR_ARG);
 }
 
 } // namespace log

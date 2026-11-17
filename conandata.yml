@@ -26,13 +26,13 @@
 requirements:
   fmt:
     cmake: "fmt/11.0.0"
-    conan: "fmt/12.1.0"
-    upstream: "github.com fmtlib/fmt 12.1.0"
+    conan: "fmt/12.2.0"
+    upstream: "github.com fmtlib/fmt 12.2.1"
     upstream_defs: FMT_TEST=OFF FMT_DOC=OFF FMT_SYSTEM_HEADERS=ON
     public: True
   range_v3:
     cmake: "range-v3/0.12.0"
-    conan: "range-v3/cci.20240905"
+    conan: "range-v3/cci.20261010"
     upstream: "github.com ericniebler/range-v3 0.12.0"
     upstream_defs: RANGE_V3_TESTS=OFF RANGE_V3_EXAMPLES=OFF RANGE_V3_PERF=OFF RANGE_V3_DOCS=OFF RANGE_V3_HEADER_CHECKS=OFF
     prereq:
@@ -42,13 +42,13 @@ requirements:
   pegtl:
     cmake: "pegtl/"
     conan: "taocpp-pegtl/3.2.8"
-    upstream: "github.com taocpp/PEGTL 3.2.8"
+    upstream: "github.com taocpp/PEGTL 3.2.9"
     upstream_defs: PEGTL_BUILD_TESTS=OFF PEGTL_BUILD_EXAMPLES=OFF
     public: True
   magic_enum:
     cmake: "magic_enum/0.9.7"
-    conan: "magic_enum/0.9.7"
-    upstream: "github.com Neargye/magic_enum v0.9.7"
+    conan: "magic_enum/0.9.8"
+    upstream: "github.com Neargye/magic_enum v0.9.8"
     upstream_defs: MAGIC_ENUM_OPT_BUILD_EXAMPLES=OFF MAGIC_ENUM_OPT_BUILD_TESTS=OFF
     public: True
     prereq:
@@ -56,20 +56,20 @@ requirements:
       - examples
   zlib:
     cmake: "ZLIB/"
-    conan: "zlib/1.3.1"
+    conan: "zlib/1.4"
     prereq:
       - data
   libzip:
     cmake: "libzip/1.7.0"
-    conan: "libzip/1.11.4"
+    conan: "libzip/1.12.1"
   sdl:
     cmake: "SDL3/3.2.0"
-    conan: "sdl/3.2.20"
+    conan: "sdl/3.4.16"
     prereq:
       - graphics
   vulkan:
     cmake: "Vulkan/1.2.0"
-    conan: "vulkan-loader/1.4.313.0"
+    conan: "vulkan-loader/1.4.357.0"
     public: True
     prereq:
       - graphics
@@ -77,29 +77,29 @@ requirements:
     cmake:
       - "spirv_cross_core/"
       - "spirv_cross_glsl/"
-    conan: "spirv-cross/1.4.321.0"
+    conan: "spirv-cross/1.4.357.0"
     upstream: "github.com KhronosGroup/SPIRV-Cross vulkan-sdk-1.4.328.1"
     upstream_defs: SPIRV_CROSS_STATIC=ON SPIRV_CROSS_SHARED=OFF SPIRV_CROSS_CLI=OFF
     prereq:
       - shed_tool
   freetype:
     cmake: "Freetype/2.10.0"
-    conan: "freetype/2.14.1"
+    conan: "freetype/2.15.0"
     conan_traits:
       - force=True
     prereq:
       - text
   harfbuzz:
     cmake: "harfbuzz/"
-    conan: "harfbuzz/11.4.1"
-    upstream: "github.com harfbuzz/harfbuzz 11.2.1"
+    conan: "harfbuzz/15.0.0"
+    upstream: "github.com harfbuzz/harfbuzz 15.1.0"
     upstream_tool: meson
     upstream_defs: tests=disabled
     prereq:
       - text
   hyperscan:
     cmake: "Hyperscan/"
-    upstream: "github.com VectorCamp/vectorscan vectorscan/5.4.11"
+    upstream: "github.com VectorCamp/vectorscan vectorscan/5.4.14"
     upstream_defs: BUILD_BENCHMARKS=OFF BUILD_EXAMPLES=OFF BUILD_SHARED_LIBS=ON
     prereq:
       - ff_tool
@@ -111,15 +111,15 @@ requirements:
       - data
   catch2:
     cmake: "Catch2/3"
-    conan: "catch2/3.11.0"
-    upstream: "github.com catchorg/Catch2 v3.8.1"
+    conan: "catch2/3.16.1"
+    upstream: "github.com catchorg/Catch2 v3.16.1"
     upstream_defs: CATCH_INSTALL_DOCS=OFF CMAKE_CXX_STANDARD=20
     prereq:
       - tests
   benchmark:
     cmake: "benchmark/1.5.0"
-    conan: "benchmark/1.9.4"
-    upstream: "github.com google/benchmark v1.9.4"
+    conan: "benchmark/1.10.0"
+    upstream: "github.com google/benchmark v1.10.0"
     upstream_defs: BENCHMARK_ENABLE_TESTING=OFF
     prereq:
       - benchmarks

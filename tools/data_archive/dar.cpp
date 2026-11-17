@@ -1,7 +1,7 @@
 // dar.cpp created on 2023-11-05 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023–2025 Radek Brich
+// Copyright 2023–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// DAR archive extractor (dar) command line tool
@@ -17,6 +17,7 @@
 #include <fstream>
 #include <map>
 #include <vector>
+#include <cstring>
 
 using namespace xci::core;
 using namespace xci::core::argparser;
