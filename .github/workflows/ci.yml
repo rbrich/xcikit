@@ -127,11 +127,11 @@ jobs:
       BUILD_ARGS: ${{ matrix.build_args }}
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         show-progress: false
 
-    - uses: actions/setup-python@v6
+    - uses: actions/setup-python@v7
       with:
         python-version: '3.x'
         architecture: 'x64'
@@ -186,13 +186,13 @@ jobs:
         fi
 
     - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2.20
+      uses: hendrikmuhs/ccache-action@v1.2.25
       with:
         key: ${{ matrix.os }}-${{ matrix.name }}
 
     - name: conan cache
       if: ${{ ! startsWith(matrix.os, 'windows') }}
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ${{ steps.tools.outputs.CONAN_HOME }}
         key: ${{ matrix.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}-${{github.sha}}
@@ -257,7 +257,7 @@ jobs:
 
     - name: artifacts - tarball
       if: ${{ matrix.name == 'Release build' }}
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       with:
         name: xcikit-artifacts
         path: |
@@ -265,7 +265,7 @@ jobs:
 
     - name: artifacts - test report
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v7
       with:
         name: test-report
         path: |
