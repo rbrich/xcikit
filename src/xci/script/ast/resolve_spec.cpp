@@ -538,7 +538,7 @@ public:
         // resolve the inner expression -> m_value_type
         // (the Expression might use the specified type from `m_cast_type`)
         resolve_generic_type(v.ti, m_scope.type_args());
-        m_cast_type = v.is_init ? TypeInfo{} : v.ti;
+        m_cast_type = v.ti;
         m_call_sig.clear();
         v.expression->apply(*this);
         m_cast_type = {};

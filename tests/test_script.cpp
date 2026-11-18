@@ -718,10 +718,11 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret(R"(Rec = (name: String, age: Int); a:Rec = (name="hello", age=42); a)") == R"((name="hello", age=42))");  // alias
     const std::string my_struct = "type MyStruct = (name:String, age:Int); ";  // named struct
     CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a)") == R"(MyStruct(name="hello", age=42))");
+    CHECK(interpret(my_struct + R"( a:MyStruct = ("hello", 42); a)") == R"(MyStruct(name="hello", age=42))");
     CHECK(interpret(my_struct + R"( a:MyStruct = "hello", 42; a)") == R"(MyStruct(name="hello", age=42))");
     CHECK(interpret_std(my_struct + R"( a = MyStruct(name="hello", age=42); a)") == R"(MyStruct(name="hello", age=42))");
     CHECK(interpret_std(my_struct + R"( a = MyStruct("hello", 42); a)") == R"(MyStruct(name="hello", age=42))");
-    // struct defaults (left out fields get default "zero" value)
+    // struct defaults (left-out fields get default "zero" value)
     CHECK_THROWS_EC(interpret("x:(Int,Int) = ()"), DefinitionTypeMismatch);  // tuple doesn't have defaults
     CHECK(interpret_std("x:FormatSpec = (fill='_',width=2); x") == R"(FormatSpec(fill='_', align='\x00', sign='\x00', width=2, precision=0, spec=""))");
     CHECK(interpret_std("x:FormatSpec = (width=2); x") == R"(FormatSpec(fill='\x00', align='\x00', sign='\x00', width=2, precision=0, spec=""))");
@@ -733,9 +734,15 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret(my_slice + "a:MySlice = (start=1); a") == "MySlice(start=1, stop=-1, step=1)");
     CHECK(interpret(my_slice + "a:MySlice = (start=10, step=-1); a") == "MySlice(start=10, stop=-1, step=-1)");
     CHECK(interpret(my_slice + "a:MySlice = (start=1, stop=2, step=-1); a") == "MySlice(start=1, stop=2, step=-1)");
-    // CHECK(interpret(my_slice + "a:MySlice = (); a") == "MySlice(start=0, stop=-1, step=1)");
+    CHECK(interpret(my_slice + "a:MySlice = (); a") == "MySlice(start=0, stop=-1, step=1)");
     CHECK_THROWS_EC(interpret(my_slice + "a:MySlice = (1, 2); a"), DefinitionTypeMismatch);  // when initializing with a tuple, all fields have to be specified (no defaults are filled in)
     CHECK(interpret(my_slice + "a:MySlice = (1, 2, -1); a") == "MySlice(start=1, stop=2, step=-1)");
+    CHECK(interpret_std(my_slice + "(start=1):MySlice") == "MySlice(start=1, stop=-1, step=1)");
+    CHECK(interpret_std(my_slice + "(start=10, step=-1):MySlice") == "MySlice(start=10, stop=-1, step=-1)");
+    CHECK(interpret_std(my_slice + "(start=1, stop=2, step=-1):MySlice") == "MySlice(start=1, stop=2, step=-1)");
+    CHECK(interpret_std(my_slice + "MySlice(start=1)") == "MySlice(start=1, stop=-1, step=1)");
+    CHECK(interpret_std(my_slice + "MySlice(start=10, step=-1)") == "MySlice(start=10, stop=-1, step=-1)");
+    CHECK(interpret_std(my_slice + "MySlice(start=1, stop=2, step=-1)") == "MySlice(start=1, stop=2, step=-1)");
     // cast from underlying type
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a)") == R"(MyStruct(name="hello", age=42))");
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a:(String, Int))") == R"(("hello", 42))");

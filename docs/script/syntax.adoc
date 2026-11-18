@@ -884,6 +884,8 @@ a:MyStruct = ("Luke", 10)
 a:MyStruct = (name="Luke", age=10)
 a = ("Luke", 10):MyStruct
 a = (name="Luke", age=10):MyStruct
+a = MyStruct("Luke", 10)  // calls init, can be customized
+a = MyStruct(name="Luke", age=10)
 // Variables and function return values need explicit cast
 a = ("Luke", 10)
 b:MyStruct = a   // Error: cannot assign (String, Int) to MyStruct
