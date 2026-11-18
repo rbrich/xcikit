@@ -159,7 +159,8 @@ Serialization and deserialization of structured data.
 
 Parse and dump config file. The format is custom:
 
-```
+[source]
+----
 bool_item false   // true/false
 int_item 1
 float_item 2.3
@@ -168,7 +169,7 @@ group {
   value 1
   subgroup { foo 42; bar "baz" }  // semicolon is used as a delimiter for multiple items on same line
 }
-```
+----
 
 === xci::math
 

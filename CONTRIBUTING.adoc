@@ -1,18 +1,16 @@
 = Contributing to xcikit
 
-First, note that this is a personal hobby project. It's basically my playground for C++ and graphics stuff.
-Sometimes I rewrite things. Sometimes I remove things. Some parts might be broken at times.
+== Build
 
-== You've found a bug
+The default build command is `./build.sh`. It uses Conan to download dependencies, builds the project, runs tests, installs the release artifacts to `artifacts/`.
 
-Please report an issue, or submit a fix as a pull request. Bug fixes are welcome!
+See `README.adoc` for more detailed instructions.
 
-== You want to add a feature
+== Submitting issues or pull requests
 
-You're of course free to fork this project, and develop your feature.
-If you want it merged eventually, it might be better to discuss it first.
+Be brief and concise. If it's a bug, provide a minimal repro.
 
-== By submitting a pull request
+== Licensing
 
 * You confirm that you are the author of the code and that you have the right to license the contribution to the xcikit project owner.
 
