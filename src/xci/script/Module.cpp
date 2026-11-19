@@ -158,10 +158,12 @@ Index Module::update_type(Index index, TypeInfo type_info)
 {
     // Use refcount to update inplace if it's referenced just once
     if (m_types[index].refcount() == 1) {
+        type_info.set_refcount(1);
         m_types[index] = std::move(type_info);
         return index;
     }
     // Cannot update inplace, add as separate item
+    type_info.set_refcount(1);
     return add_type(std::move(type_info));
 }
 
@@ -170,17 +172,6 @@ Index Module::find_type(const TypeInfo& type_info) const
 {
     assert(!type_info.has_generic());
     const auto it = std::ranges::find(m_types, type_info);
-    if (it == m_types.end())
-        return no_index;
-    return it - m_types.begin();
-}
-
-
-Index Module::find_named_type(NameId name) const
-{
-    const auto it = std::ranges::find_if(m_types, [name](const auto& type_info) {
-        return type_info.name() == name;
-    });
     if (it == m_types.end())
         return no_index;
     return it - m_types.begin();
