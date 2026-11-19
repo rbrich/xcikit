@@ -1,7 +1,7 @@
 // ReplCommand.cpp created on 2020-01-11 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2024 Radek Brich
+// Copyright 2020–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "ReplCommand.h"
@@ -60,7 +60,7 @@ static void print_module_header(const Module& mod)
 }
 
 
-const Module* ReplCommand::module_by_idx(Index mod_idx) {
+Module* ReplCommand::module_by_idx(Index mod_idx) {
     TermCtl& t = m_ctx.term_out;
     auto& module_manager = m_ctx.interpreter.module_manager();
 
@@ -84,16 +84,18 @@ const Module* ReplCommand::module_by_idx(Index mod_idx) {
 }
 
 
-const Module* ReplCommand::module_by_name(std::string_view mod_name) {
+Module* ReplCommand::module_by_name(std::string_view mod_name) {
     if (mod_name == ".")
         return m_module.get();
+    if (mod_name == "builtin" || mod_name == "std")
+        return m_ctx.interpreter.module_manager().import_module(mod_name).get();
 
     const auto name_id = intern(mod_name);
     for (const auto& m : m_ctx.input_modules | reverse) {
         if (m->name() == name_id)
             return m.get();
         for (Index i = 0; i != m->num_imported_modules(); ++i) {
-            const auto& imp_mod = m->get_imported_module(i);
+            auto& imp_mod = m->get_imported_module(i);
             if (imp_mod.name() == name_id)
                 return &imp_mod;
         }
@@ -231,49 +233,67 @@ void ReplCommand::cmd_dump_function(Index fun_idx, Index mod_idx)
 }
 
 
+static bool describe_in_module(Module& mod, NameId name_id, TermCtl& t) {
+    if (mod.name() == name_id) {
+        t.print("Module {}: ", name_id.view());
+        t.stream() << mod.get_main_function().signature() << std::endl;
+        return true;
+    }
+    auto sym_ptr = mod.symtab().find_by_name(name_id);
+    if (!sym_ptr)
+        return false;
+    switch (sym_ptr->type()) {
+        case Symbol::Module: {
+            t.print("Module {} (imported from {}): ", name_id.view(), mod.name());
+            auto& imp_mod = mod.get_imported_module(sym_ptr->index());
+            t.stream() << imp_mod.get_main_function().signature() << std::endl;
+            break;
+        }
+        case Symbol::Function: {
+            const auto& function = sym_ptr.get_generic_scope().function();
+            t.print("Function {}: ", name_id.view());
+            t.stream() << function.signature() << std::endl;
+            break;
+        }
+        case Symbol::TypeName: {
+            const auto& ti = mod.get_type(sym_ptr->index());
+            t.print("Named type {} = ", name_id.view());
+            t.stream() << ti.underlying() << std::endl;
+            break;
+        }
+        case Symbol::TypeAlias: {
+            const auto& ti = mod.get_type(sym_ptr->index());
+            t.print("Type alias {} = ", name_id.view());
+            t.stream() << ti << std::endl;
+            break;
+        }
+        default:
+            t.print("Symbol {} = ", name_id.view());
+            t.stream() << *sym_ptr << std::endl;
+            break;
+    }
+    return true;
+}
+
 void ReplCommand::cmd_describe(std::string_view name) {
     TermCtl& t = m_ctx.term_out;
-
     const auto name_id = intern(name);
-    for (const auto& mod : m_ctx.input_modules | reverse) {
-        if (mod->name() == name_id) {
-            t.print("Module {}: ", name);
-            t.stream() << mod->get_main_function().signature() << std::endl;
+
+    for (auto& mod : m_ctx.input_modules | reverse) {
+        if (describe_in_module(*mod, name_id, t))
             return;
-        }
-        auto sym_ptr = mod->symtab().find_by_name(name_id);
-        if (!sym_ptr)
-            continue;
-        switch (sym_ptr->type()) {
-            case Symbol::Module: {
-                t.print("Module {} (imported from {}): ", name, mod->name());
-                auto& imp_mod = mod->get_imported_module(sym_ptr->index());
-                t.stream() << imp_mod.get_main_function().signature() << std::endl;
-                return;
-            }
-            case Symbol::Function: {
-                const auto& function = sym_ptr.get_generic_scope().function();
-                t.print("Function {}: ", name);
-                t.stream() << function.signature() << std::endl;
-                return;
-            }
-            case Symbol::TypeName: {
-                const auto& ti = mod->get_type(sym_ptr->index());
-                if (ti.is_named() && ti.name() == name_id) {
-                    t.print("Named type {} = ", name);
-                    t.stream() << ti.underlying() << std::endl;
-                } else {
-                    t.print("Type alias {} = ", name);
-                    t.stream() << ti << std::endl;
-                }
-                return;
-            }
-            default:
-                t.print("Symbol {} = ", name);
-                t.stream() << *sym_ptr << std::endl;
+        for (Index i = 0; i != mod->num_imported_modules(); ++i) {
+            auto& imp_mod = mod->get_imported_module(i);
+            if (describe_in_module(imp_mod, name_id, t))
                 return;
         }
     }
+    // std
+    if (describe_in_module(*module_by_idx(-1), name_id, t))
+        return;
+    // builtin
+    if (describe_in_module(*module_by_idx(-2), name_id, t))
+        return;
     t.print("<bold><red>Error: symbol not found: {}<normal>\n",
             name);
 }

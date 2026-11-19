@@ -106,7 +106,7 @@ Function& SymbolPointer::get_function(const Scope& hier) const
 const TypeInfo& SymbolPointer::get_type() const
 {
     auto& sym = m_symtab->get(m_symidx);
-    assert(sym.type() == Symbol::TypeName);
+    assert(sym.type() == Symbol::TypeName || sym.type() == Symbol::TypeAlias);
     assert(m_symtab->module() != nullptr);
     return m_symtab->module()->get_type(sym.index());
 }

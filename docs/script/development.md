@@ -1,3 +1,12 @@
+## Building and running tests and `fire` tool
+
+CMake build targets are `fire`, `test_script`.
+
+Binary location inside build directory (`cmake-build-*` and `build/*`):
+
+* `fire` is `tools/fire_script/fire`
+* `test_script` is `tests/test_script`
+
 ## Test suite
 
 Build `test_script` and run it to check if new code broke something.
@@ -16,10 +25,3 @@ It still brings in some previous passes on which it depends. No bytecode will be
 Another alternative is **REPL mode** - just leave out the `-e` parameter.
 The AST and bytecode dumping still works, it will be printed for each evaluated input.
 Note that each input creates new module, which is then imported by next input. This can uncover bugs that are not seen in single-input `-e` expressions.
-
-## Binary location inside `cmake-build-debug`
-
-* `fire` is `tools/fire_script/fire`
-* `test_script` is `tests/test_script`
-
-Build targets for CMake and ninja are `fire`, `test_script`.
