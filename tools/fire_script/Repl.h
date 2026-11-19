@@ -1,7 +1,7 @@
 // Repl.h created on 2021-03-16 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2023 Radek Brich
+// Copyright 2021–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_TOOL_REPL_H
@@ -9,6 +9,7 @@
 
 #include "Context.h"
 #include "Options.h"
+#include "BytecodeTracer.h"
 
 #include <xci/script/Error.h>
 #include <xci/vfs/Vfs.h>
@@ -42,6 +43,7 @@ private:
     void print_runtime_error(const RuntimeError& e);
 
     Context& m_ctx;
+    BytecodeTracer m_tracer{m_ctx.interpreter.machine(), m_ctx.term_out};
     const ReplOptions& m_opts;
 };
 
