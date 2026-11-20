@@ -1,7 +1,7 @@
 // fold_tuple.cpp created on 2021-02-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2025 Radek Brich
+// Copyright 2021–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "fold_tuple.h"
@@ -94,10 +94,10 @@ public:
         assert(v.items.size() <= 1);
         for (auto& item : v.items) {
             item->apply(*this);
-            if (m_collapsed) {
-                v.items = std::move(m_collapsed->items);
-                m_collapsed.reset();
-            }
+        }
+        if (m_collapsed) {
+            v.items = std::move(m_collapsed->items);
+            m_collapsed.reset();
         }
     }
 
