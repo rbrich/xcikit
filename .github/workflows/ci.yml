@@ -36,6 +36,13 @@ jobs:
           cxx: g++
           libcxx: libstdc++11
           build_args: ""
+        - os: ubuntu-26.04-arm
+          name: "GCC 15 arm64 / Release"
+          cc: gcc
+          cc_ver: 15
+          cxx: g++
+          libcxx: libstdc++11
+          build_args: ""
         - os: ubuntu-22.04
           name: "Clang 15 / Release"
           cc: clang
@@ -60,17 +67,17 @@ jobs:
           libcxx: libc++
           apt: libc++-18-dev libc++abi-18-dev
           build_args: ""
-        - os: ubuntu-24.04
-          name: "GCC 14 / Debug ASAN"
+        - os: ubuntu-26.04
+          name: "GCC 15 / Debug ASAN"
           cc: gcc
-          cc_ver: 14
+          cc_ver: 15
           cxx: g++
           libcxx: libstdc++11
           build_args: "--debug --asan --ubsan"
-        - os: ubuntu-24.04
-          name: "GCC 14 / MinSizeRel Unity"
+        - os: ubuntu-26.04
+          name: "GCC 15 / MinSizeRel Unity"
           cc: gcc
-          cc_ver: 14
+          cc_ver: 15
           cxx: g++
           libcxx: libstdc++11
           build_args: "--minsize --unity"
@@ -134,7 +141,6 @@ jobs:
     - uses: actions/setup-python@v7
       with:
         python-version: '3.x'
-        architecture: 'x64'
 
     - uses: ilammy/msvc-dev-cmd@v1
 
@@ -208,7 +214,7 @@ jobs:
         cat <<EOF > "$(conan config home)/profiles/default"
         [settings]
         os={{ {"Darwin": "Macos"}.get(platform.system(), platform.system()) }}
-        arch={{ {"arm64": "armv8", "AMD64": "x86_64"}.get(platform.machine(), platform.machine()) }}
+        arch={{ {"arm64": "armv8", "aarch64": "armv8", "AMD64": "x86_64"}.get(platform.machine(), platform.machine()) }}
         build_type=Release
         compiler=${{ matrix.cc }}
         compiler.version=${{ matrix.cc_ver }}
