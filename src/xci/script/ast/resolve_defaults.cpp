@@ -9,10 +9,12 @@
 #include <xci/script/Module.h>
 
 #include <range/v3/view/enumerate.hpp>
+#include <range/v3/view/zip.hpp>
 
 namespace xci::script {
 
 using ranges::views::enumerate;
+using ranges::views::zip;
 
 
 class ResolveDefaultsVisitor final: public ast::Visitor {
@@ -20,9 +22,20 @@ public:
     explicit ResolveDefaultsVisitor(Scope& scope) : m_scope(scope) {}
 
     void visit(ast::Definition& dfn) override {
+        if (dfn.variable.type) {
+            Function& fn = dfn.symbol().get_function(m_scope);
+            if (fn.has_nonvoid_parameter()) {
+                m_type_info = TypeInfo(fn.signature_ptr());
+                dfn.variable.type->apply(*this);
+            } else {
+                m_type_info = fn.signature().return_type;
+                dfn.variable.type->apply(*this);
+            }
+        }
         if (dfn.expression) {
             dfn.expression->apply(*this);
         }
+        m_type_info = {};
     }
 
     void visit(ast::Invocation& inv) override {}
@@ -46,9 +59,30 @@ public:
         m_value = v.value;
     }
 
-    void visit(ast::Tuple& v) override {}
+    void visit(ast::Tuple& v) override {
+        if (v.ti.is_struct() && m_type_info.is_struct()) {
+            auto& ti_subtypes = v.ti.subtypes();
+            for (auto&& [sub_ti, def_ti] : zip(ti_subtypes, m_type_info.subtypes())) {
+                if (def_ti.has_default_value()) {
+                    sub_ti.set_default_value(def_ti.default_value());
+                }
+            }
+        }
+    }
+
     void visit(ast::List& v) override {}
-    void visit(ast::StructInit& v) override {}
+
+    void visit(ast::StructInit& v) override {
+        if (v.ti.is_struct() && m_type_info.is_struct()) {
+            auto& ti_subtypes = v.ti.subtypes();
+            for (auto&& [sub_ti, def_ti] : zip(ti_subtypes, m_type_info.subtypes())) {
+                if (def_ti.has_default_value()) {
+                    sub_ti.set_default_value(def_ti.default_value());
+                }
+            }
+        }
+    }
+
     void visit(ast::Reference& v) override {}
     void visit(ast::Call& v) override {}
     void visit(ast::OpCall& v) override {}
@@ -70,9 +104,10 @@ public:
                     throw struct_default_not_constant(st.identifier.name, st.default_value->source_loc);
 
                 // Store the literal value as a static in the module
+                m_value.incref();
                 const Index static_idx = module().add_value(std::move(m_value));
 
-                // Update the TypeInfo stored in the module via m_type_info - see TypeDef
+                // Update the TypeInfo stored in the module via m_type_info - see TypeDef, Definition
                 auto& ti = m_type_info.subtypes()[i];
                 ti.set_default_value(static_idx);
             }

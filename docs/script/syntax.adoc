@@ -910,6 +910,9 @@ a:MySlice = (1,2)               // Error, can initialize only with same-size or 
 a:MySlice = (1,2,3)             // -> MySlice(start=1, stop=2, step=3)
 a:MySlice = (start=10)          // -> MySlice(start=10, stop=-1, step=1)
 a:MySlice = (start=10, step-1)  // -> MySlice(start=10, stop=-1, step=-1)
+a:(name:String="nobody", age:Int) = (); a  // -> (name="nobody", age=0)
+a:(name:String="nobody", age:Int) = (age=42); a  // -> (name="nobody", age=42)
+a:(name:String="nobody", age:Int) = ("joe", 42); a  // -> (name="joe", age=42)
 ----
 
 It's also possible to make an alias of a type:

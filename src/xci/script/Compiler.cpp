@@ -96,6 +96,7 @@ public:
                 } else if (v.ti.is_named() && v.ti.symptr().symtab()->module() != &module()) {
                     // In case the default value is a static value from another module, copy it
                     const TypedValue& val = v.ti.symptr().symtab()->module()->get_value(idx);
+                    val.incref();
                     idx = module().add_value(TypedValue(val));
                 }
                 // LOAD_STATIC <static_idx>
@@ -138,6 +139,7 @@ public:
                 } else if (v.ti.is_named() && v.ti.symptr().symtab()->module() != &module()) {
                     // In case the default value is a static value from another module, copy it
                     const TypedValue& val = v.ti.symptr().symtab()->module()->get_value(idx);
+                    val.incref();
                     idx = module().add_value(TypedValue(val));
                 }
                 // LOAD_STATIC <static_idx>

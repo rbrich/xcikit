@@ -743,6 +743,10 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret_std(my_slice + "MySlice(start=1)") == "MySlice(start=1, stop=-1, step=1)");
     CHECK(interpret_std(my_slice + "MySlice(start=10, step=-1)") == "MySlice(start=10, stop=-1, step=-1)");
     CHECK(interpret_std(my_slice + "MySlice(start=1, stop=2, step=-1)") == "MySlice(start=1, stop=2, step=-1)");
+    const std::string anon_struct = R"(a:(name:String="nobody", age:Int))";
+    CHECK(interpret(anon_struct + R"( = ("joe", 42); a)") == R"((name="joe", age=42))");
+    CHECK(interpret(anon_struct + " = (); a") == R"((name="nobody", age=0))");
+    CHECK(interpret(anon_struct + " = (age=42); a") == R"((name="nobody", age=42))");
     // cast from underlying type
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a)") == R"(MyStruct(name="hello", age=42))");
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a:(String, Int))") == R"(("hello", 42))");
