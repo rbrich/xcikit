@@ -1,7 +1,7 @@
 // dump.h created on 2019-10-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_DUMP_H
@@ -87,10 +87,14 @@ std::ostream& operator<<(std::ostream& os, const SymbolTable& v);
 std::ostream& operator<<(std::ostream& os, const Scope& v);
 std::ostream& operator<<(std::ostream& os, const TypeArgs& v);
 
+// utility types
+inline std::ostream& operator<<(std::ostream& os, NameId v) { return os << v.view(); }
+
 } // namespace xci::script
 
 template <> struct fmt::formatter<xci::script::Symbol::Type> : ostream_formatter {};
 template <> struct fmt::formatter<xci::script::TypeInfo> : ostream_formatter {};
+template <> struct fmt::formatter<xci::script::Function> : ostream_formatter {};
 template <> struct fmt::formatter<xci::script::Signature> : ostream_formatter {};
 template <> struct fmt::formatter<xci::script::TypeArgs> : ostream_formatter {};
 

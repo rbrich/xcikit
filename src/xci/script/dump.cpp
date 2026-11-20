@@ -51,6 +51,21 @@ static StreamOptions& stream_options(std::ostream& os) {
     return *p;
 }
 
+namespace {
+    // Scope helper to set the current module for reading TypeInfo::default_value
+    class StreamSetModule : core::NonMovable, core::NonCopyable {
+    public:
+        StreamSetModule(std::ostream& os, const Module* m) : os(os) {
+            orig_module = stream_options(os).module;
+            stream_options(os).module = m;
+        }
+        ~StreamSetModule() { stream_options(os).module = orig_module; }
+    private:
+        std::ostream& os;
+        const Module* orig_module = nullptr;
+    };
+} // namespace
+
 std::ostream& dump_tree(std::ostream& os)
 {
     stream_options(os).enable_tree = true;
@@ -295,13 +310,13 @@ std::ostream& operator<<(std::ostream& os, const Parameter& v)
 std::ostream& operator<<(std::ostream& os, const Identifier& v)
 {
     if (stream_options(os).enable_tree) {
-        fmt::print(os, "Identifier {}", v.name);
+        os << "Identifier " << v.name;
         if (v.symbol) {
             os << " [" << v.symbol << "]";
         }
         return os << endl;
     } else {
-        return os << v.name.view();
+        return os << v.name;
     }
 }
 
@@ -316,14 +331,14 @@ std::ostream& operator<<(std::ostream& os, const TypeName& v)
 {
     if (stream_options(os).enable_tree) {
         if (v) {
-            fmt::print(os, "TypeName(Type) {}", v.name);
+            os << "TypeName(Type) " << v.name;
             if (v.symbol) {
                 os << " [" << v.symbol << "]";
             }
         }
         return os << endl;
     } else {
-        return os << v.name.view();
+        return os << v.name;
     }
 }
 
@@ -439,12 +454,15 @@ std::ostream& operator<<(std::ostream& os, const Reference& v)
 {
     if (stream_options(os).enable_tree) {
         os << "Reference(Expression)";
-        if (v.ti)
+        if (v.ti) {
+            StreamSetModule m(os, v.module);
             os << " [type_info=" << v.ti << ']';
+        }
         const auto symptr = v.identifier.symbol;
         if (symptr && symptr->type() == Symbol::Function && v.index != no_index) {
-            fmt::print(os, " [Function #{} @{}: {}]", v.index, v.module->name(),
-                       v.module->get_scope(v.index).function().signature());
+            StreamSetModule m(os, v.module);
+            os << " [Function #" << v.index << " @" << v.module->name() << ": "
+               << v.module->get_scope(v.index).function().signature() << "]";
         }
         os << endl
            << more_indent
@@ -761,6 +779,7 @@ std::ostream& operator<<(std::ostream& os, const TypeAlias& v)
 
 std::ostream& operator<<(std::ostream& os, const Block& v)
 {
+    StreamSetModule m(os, v.symtab ? v.symtab->module() : nullptr);
     DumpVisitor visitor(os);
     if (stream_options(os).enable_tree) {
         os << "Block";
@@ -805,6 +824,7 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
 
 std::ostream& operator<<(std::ostream& os, const Function& f)
 {
+    StreamSetModule m(os, &f.module());
     os << f.signature() << endl;
     switch (f.kind()) {
         case Function::Kind::Bytecode:
@@ -876,13 +896,13 @@ static void dump_l1_instruction(std::ostream& os, Opcode opcode, size_t arg, con
         case Opcode::Call0:
         case Opcode::TailCall0: {
             const auto& fn = mod.get_function(Module::FunctionIdx(arg));
-            fmt::print(os, " ({} {})", fn.symtab().name(), fn.signature());
+            os << " (" << fn.symtab().name() << ' ' << fn.signature() << ')';
             break;
         }
         case Opcode::Call1:
         case Opcode::TailCall1: {
             const auto& fn = mod.get_imported_module(0).get_function(Module::FunctionIdx(arg));
-            fmt::print(os, " ({} {})", fn.symtab().name(), fn.signature());
+            os << " (" << fn.symtab().name() << ' ' << fn.signature() << ')';
             break;
         }
         case Opcode::ListSubscript:
@@ -891,7 +911,7 @@ static void dump_l1_instruction(std::ostream& os, Opcode opcode, size_t arg, con
         case Opcode::ListConcat:
         case Opcode::Invoke: {
             const TypeInfo& ti = get_type_info(mod.module_manager(), Index(arg));
-            fmt::print(os, " ({})", ti);
+            os << " (" << ti << ')';
             break;
         }
         default:
@@ -971,9 +991,9 @@ std::ostream& operator<<(std::ostream& os, DumpBytecode&& v)
 
 std::ostream& operator<<(std::ostream& os, const Module& v)
 {
-    stream_options(os).module = &v;
-    bool verbose = stream_options(os).module_verbose;
-    bool dump_tree = stream_options(os).enable_tree;
+    StreamSetModule m(os, &v);
+    const bool verbose = stream_options(os).module_verbose;
+    const bool dump_tree = stream_options(os).enable_tree;
     os << "* " << v.num_imported_modules() << " imported modules\n" << more_indent;
     for (Index i = 0; i < v.num_imported_modules(); ++i) {
         os << put_indent;
@@ -1057,7 +1077,7 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
                 case Symbol::Parameter:
                     break;
                 case Symbol::TypeVar:
-                    fmt::print(os, " {}", sym.name());
+                    os << ' ' << sym.name();
                     break;
                 case Symbol::Function: {
                     if (first_method) {
@@ -1066,8 +1086,8 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
                     }
                     SymbolPointer symptr = cls.symtab().find(sym);
                     os << put_indent;
-                    fmt::print(os, "{}: {}\n", sym.name(),
-                               symptr.get_generic_scope().function().signature());
+                    os << sym.name() << ": "
+                       << symptr.get_generic_scope().function().signature() << '\n';
                     break;
                 }
                 default:
@@ -1091,13 +1111,12 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
             const auto& inst_fn_info = inst.get_function(j);
             const auto& f = inst_fn_info.module->get_scope(inst_fn_info.scope_index).function();
             os << put_indent;
-            fmt::print(os, "{}: {}\n", f.name(), f.signature());
+            os << f.name() << ": " << f.signature() << '\n';
         }
         os << less_indent;
     }
     os << less_indent;
 
-    stream_options(os).module = nullptr;
     return os;
 }
 
@@ -1114,7 +1133,7 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
                 return os << '?';
             if (qualify)
                 os << var.symtab()->qualified_name() << "::";
-            return os << var->name().view();
+            return os << var->name();
         }
         case Type::Bool:        return os << "Bool";
         case Type::Char:        return os << "Char";
@@ -1141,14 +1160,16 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
                 if (&item != &v.subtypes().front())
                     os << ", ";
                 if (item.key())
-                    fmt::print(os, "{}: ", item.key());
+                    os << item.key() << ": ";
                 os << item;
                 if (item.has_default_value()) {
                     const Module* module = stream_options(os).module;
-                    if (module == nullptr)
+                    if (module == nullptr) {
                         os << " = @" << item.default_value();
-                    else
+                    } else {
+                        assert(item.default_value() < module->num_values());
                         os << " = " << module->get_value(item.default_value());
+                    }
                 }
             }
             return os << ")";
@@ -1161,7 +1182,7 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
         case Type::Module:      return os << "Module";
         case Type::Stream:      return os << "Stream";
         case Type::TypeIndex:   return os << "TypeIndex";
-        case Type::Named:       return os << v.name().view();
+        case Type::Named:       return os << v.name();
     }
     XCI_UNREACHABLE;
 }
@@ -1218,8 +1239,10 @@ std::ostream& operator<<(std::ostream& os, const SymbolPointer& v)
         os << " #" << v->index();
     if (v.symtab() != nullptr) {
         fmt::print(os, " @{} ({:x})", v.symtab()->name(), intptr_t(v.symtab()));
-        if (v->type() == Symbol::Function && v.symtab()->module() && v->index() != no_index)
+        if (v->type() == Symbol::Function && v.symtab()->module() && v->index() != no_index) {
+            StreamSetModule m(os, v.symtab()->module());
             os << ": " << v.get_generic_scope().function().signature();
+        }
     }
     if (v->ref())
         os << " -> " << v->ref();
@@ -1330,7 +1353,7 @@ std::ostream& operator<<(std::ostream& os, const TypeArgs& v)
             first = false;
         if (qualify)
             os << arg.first.symtab()->qualified_name() << "::";
-        fmt::print(os, "{}={}", arg.first->name(), arg.second);
+        os << arg.first->name() << '=' << arg.second;
     }
     return os;
 }

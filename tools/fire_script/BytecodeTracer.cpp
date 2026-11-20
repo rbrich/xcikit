@@ -95,11 +95,8 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
 void BytecodeTracer::print_code(size_t frame, const Function& f)
 {
     m_lines_to_erase = 0;
-    fmt::print("[{}] {} {}\n", frame, f.name(), f.signature());
-    for (auto it = f.bytecode().begin(); it != f.bytecode().end();) {
-        ++ m_lines_to_erase;
-        cout << ' ' << DumpBytecode{f, it} << '\n';
-    }
+    fmt::print("[{}] {} {}", frame, f.name(), f);
+    m_lines_to_erase = f.bytecode().size();
 }
 
 
