@@ -324,7 +324,7 @@ public:
     /// Send request, read response from `tin`.
     /// \param request      a control sequence to send as a request
     /// \param tin          TermCtl which is connected to the response channel
-    /// \returns            raw response from the terminal
+    /// \returns            raw response from the terminal, empty string on failure
     std::string query(std::string_view request, TermCtl& tin = stdin_instance());
 
     enum class Key : uint8_t {

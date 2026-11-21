@@ -1,7 +1,7 @@
 // TermCtl.cpp created on 2018-07-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2025 Radek Brich
+// Copyright 2018–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 // References:
@@ -674,6 +674,11 @@ void TermCtl::with_raw_mode(const std::function<void()>& cb, bool isig)
 {
     assert(m_fd == STDIN_FILENO);
 
+    if (!is_tty()) {
+        cb();
+        return;
+    }
+
 #ifdef _WIN32
     HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
     if (h == INVALID_HANDLE_VALUE)
@@ -983,6 +988,10 @@ auto TermCtl::decode_seq(std::string_view input_buffer) -> ControlSequence
 
 std::string TermCtl::query(std::string_view request, TermCtl& tin)
 {
+    // Don't send escape sequences to pipes
+    if (!is_tty())
+        return {};
+
     std::string res;
     tin.with_raw_mode([this, request, &tin, &res] {
         write_raw(request);
