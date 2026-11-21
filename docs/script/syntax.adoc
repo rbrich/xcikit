@@ -351,11 +351,19 @@ make_book = fun (name:String, author:String, isbn:Int) -> MyBook { (name, author
 make_book (name="Title", author="Karel IV", isbn=12345)
 ----
 
-This allows rearranging the arguments, but it doesn't allow skipping arguments
-in middle (the last arguments might be left out to make partial call).
+This allows rearranging the arguments, and also skipping arguments that have default value. The named arguments are actually an anonymous struct type (see <<User-defined types>>).
 
-It also requires that the argument names are available together with function
-prototype.
+[source,fire]
+----
+f = fun (a:Int=1, b:Int=2) -> Int { a+b }
+f()      // -> 3  (call with empty tuple - fill in defaults)
+f(a=10)  // -> 12 (call with single named argument - fill in the other one)
+f(b=10)  // -> 11
+f(1)     // ERROR (won't fill defaults when passed single arg or partial tuple)
+f 1      // ERROR (same as above)
+f(11,12) // -> 23
+f(b=12,a=11) // -> 23
+----
 
 Pass a function as an argument:
 
