@@ -1,7 +1,7 @@
 // TypeInfo.cpp created on 2019-06-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TypeInfo.h"
@@ -85,18 +85,11 @@ TypeInfo::TypeInfo(ListTag, TypeInfo elem)
 }
 
 
-TypeInfo::TypeInfo(NameId name, TypeInfo&& type_info)
-        : m_type(Type::Named)
-{
-    std::construct_at(&m_named_type_ptr,
-                      std::make_shared<NamedType>(NamedType{name, std::move(type_info)}));
-}
-
-
 TypeInfo& TypeInfo::operator =(const TypeInfo& r)
 {
     copy_from_no_key(r);
     m_key = r.m_key;
+    m_default_value = r.m_default_value;
     return *this;
 }
 
@@ -106,9 +99,11 @@ TypeInfo& TypeInfo::operator =(TypeInfo&& r) noexcept {
     set_type(r.m_type);
     move_variant(std::move(r));
     r.set_type(Type::Unknown);  // NOLINT(bugprone-use-after-move)
-    r.m_var = {};
+    r.m_symptr = {};
     m_is_literal = r.m_is_literal; r.m_is_literal = true;
+    m_refcount = r.m_refcount; r.m_refcount = 0;
     m_key = r.m_key; r.m_key = {};
+    m_default_value = r.m_default_value; r.m_default_value = no_index;
     return *this;
 }
 
@@ -124,12 +119,15 @@ void TypeInfo::copy_from_no_key(const TypeInfo& r) noexcept {
 
 void TypeInfo::construct_variant() {
     switch (m_type) {
-        case Type::Unknown: std::construct_at(&m_var); break;
+        case Type::Unknown:
+        case Type::Named:
+            std::construct_at(&m_symptr); break;
         case Type::List:
         case Type::Tuple:
-        case Type::Struct: std::construct_at(&m_subtypes); break;
-        case Type::Function: std::construct_at(&m_signature_ptr); break;
-        case Type::Named: std::construct_at(&m_named_type_ptr); break;
+        case Type::Struct:
+            std::construct_at(&m_subtypes); break;
+        case Type::Function:
+            std::construct_at(&m_signature_ptr); break;
         default:
             break;
     }
@@ -138,59 +136,68 @@ void TypeInfo::construct_variant() {
 
 void TypeInfo::destroy_variant() {
     switch (m_type) {
-        case Type::Unknown: m_var.~Var(); break;
+        case Type::Unknown:
+        case Type::Named:
+            m_symptr.~SymbolPointer(); break;
         case Type::List:
         case Type::Tuple:
-        case Type::Struct: m_subtypes.~Subtypes(); break;
-        case Type::Function: m_signature_ptr.~SignaturePtr(); break;
-        case Type::Named: m_named_type_ptr.~NamedTypePtr(); break;
+        case Type::Struct:
+            m_subtypes.~Subtypes(); break;
+        case Type::Function:
+            m_signature_ptr.~SignaturePtr(); break;
         default:
             break;
     }
 }
 
 
-void TypeInfo::copy_variant(const xci::script::TypeInfo& r)
+void TypeInfo::copy_variant(const TypeInfo& r)
 {
     switch (m_type) {
-        case Type::Unknown: m_var = r.m_var; break;
+        case Type::Unknown:
+        case Type::Named:
+            m_symptr = r.m_symptr; break;
         case Type::List:
         case Type::Tuple:
-        case Type::Struct: m_subtypes = r.m_subtypes; break;
-        case Type::Function: m_signature_ptr = r.m_signature_ptr; break;
-        case Type::Named: m_named_type_ptr = r.m_named_type_ptr; break;
+        case Type::Struct:
+            m_subtypes = r.m_subtypes; break;
+        case Type::Function:
+            m_signature_ptr = r.m_signature_ptr; break;
         default:
             break;
     }
 }
 
 
-void TypeInfo::move_variant(xci::script::TypeInfo&& r)
+void TypeInfo::move_variant(TypeInfo&& r)
 {
     switch (m_type) {
-        case Type::Unknown: m_var = r.m_var; break;
+        case Type::Unknown:
+        case Type::Named:
+            m_symptr = r.m_symptr; break;
         case Type::List:
         case Type::Tuple:
-        case Type::Struct: m_subtypes = std::move(r.m_subtypes); break;
-        case Type::Function: m_signature_ptr = std::move(r.m_signature_ptr); break;
-        case Type::Named: m_named_type_ptr = std::move(r.m_named_type_ptr); break;
+        case Type::Struct:
+            m_subtypes = std::move(r.m_subtypes); break;
+        case Type::Function:
+            m_signature_ptr = std::move(r.m_signature_ptr); break;
         default:
             break;
     }
 }
 
 
-auto TypeInfo::generic_var() const -> Var
+auto TypeInfo::symptr() const -> SymbolPointer
 {
-    assert(m_type == Type::Unknown);
-    return m_var;
+    assert(m_type == Type::Unknown || m_type == Type::Named);
+    return m_symptr;
 }
 
 
-auto TypeInfo::generic_var() -> Var&
+auto TypeInfo::symptr() -> SymbolPointer&
 {
-    assert(m_type == Type::Unknown);
-    return m_var;
+    assert(m_type == Type::Unknown || m_type == Type::Named);
+    return m_symptr;
 }
 
 
@@ -208,18 +215,11 @@ auto TypeInfo::signature_ptr() const -> const SignaturePtr&
 }
 
 
-auto TypeInfo::named_type_ptr() const -> const NamedTypePtr&
-{
-    assert(m_type == Type::Named);
-    return m_named_type_ptr;
-}
-
-
 size_t TypeInfo::size() const
 {
     switch (type()) {
         case Type::Named:
-            return named_type().type_info.size();
+            return named_type().size();
         case Type::Tuple:
         case Type::Struct: {
             const auto& l = subtypes();
@@ -264,7 +264,7 @@ void TypeInfo::replace_var(SymbolPointer var, const TypeInfo& ti)
         return;
     switch (type()) {
         case Type::Unknown:
-            if (generic_var() == var)
+            if (symptr() == var)
                 *this = ti;
             break;
         case Type::Function:
@@ -391,7 +391,7 @@ bool TypeInfo::has_generic() const
 {
     switch (type()) {
         case Type::Unknown:
-            return bool(generic_var());
+            return bool(symptr());
         case Type::Function:
             return signature_ptr()->has_any_generic();
         case Type::List:
@@ -429,19 +429,20 @@ const TypeInfo* TypeInfo::struct_item_by_key(NameId key) const
 
 NameId TypeInfo::name() const
 {
-    return named_type().name;
+    assert(type() == Type::Named);
+    return m_symptr->name();
 }
 
+
+const TypeInfo& TypeInfo::named_type() const
+{
+    assert(type() == Type::Named);
+    return m_symptr.get_type();
+}
 
 const TypeInfo& TypeInfo::underlying() const
 {
-    return is_named() ? named_type().type_info.underlying() : *this;
-}
-
-
-TypeInfo& TypeInfo::underlying()
-{
-    return is_named() ? named_type().type_info.underlying() : *this;
+    return is_named() ? m_symptr.get_type().underlying() : *this;
 }
 
 

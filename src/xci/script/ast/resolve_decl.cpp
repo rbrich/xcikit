@@ -1,7 +1,7 @@
 // resolve_decl.cpp created on 2022-07-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022–2023 Radek Brich
+// Copyright 2022–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_decl.h"
@@ -119,17 +119,17 @@ public:
     void visit(ast::TypeDef& v) override {
         v.type->apply(*this);
 
-        // create new Named type
-        auto index = module().add_type(TypeInfo{v.type_name.name, std::move(m_type_info)});
-        v.type_name.symbol->set_index(index);
+        // add the actual type to Module, referenced by symbol
+        const Index type_idx = module().add_type(std::move(m_type_info));
+        v.type_name.symbol->set_index(type_idx);
     }
 
     void visit(ast::TypeAlias& v) override {
         v.type->apply(*this);
 
         // add the actual type to Module, referenced by symbol
-        Index index = module().add_type(std::move(m_type_info));
-        v.type_name.symbol->set_index(index);
+        const Index type_idx = module().add_type(std::move(m_type_info));
+        v.type_name.symbol->set_index(type_idx);
     }
 
     void visit(ast::Literal& v) override {
@@ -254,6 +254,7 @@ public:
                 }
                 break;
             case Symbol::TypeName:
+            case Symbol::TypeAlias:
             case Symbol::TypeVar:
                 return;
             case Symbol::Nonlocal:
@@ -315,12 +316,11 @@ public:
         // fill in types from specified function type
         if (specified_type.is_callable() && m_type_info.is_callable()) {
             const auto& spec_sig = specified_type.ul_signature();
-            auto& underlying = m_type_info.underlying();
-            if (underlying.signature().return_type.is_unknown() && spec_sig.return_type)
-                underlying.signature().set_return_type(spec_sig.return_type);
-            if (!m_instance && spec_sig.return_type != underlying.signature().return_type)
+            if (m_type_info.signature().return_type.is_unknown() && spec_sig.return_type)
+                m_type_info.signature().set_return_type(spec_sig.return_type);
+            if (!m_instance && spec_sig.return_type != m_type_info.signature().return_type)
                 throw declaration_type_mismatch(specified_type, m_type_info, v.source_loc);
-            auto& param = underlying.signature().param_type;
+            auto& param = m_type_info.signature().param_type;
             const auto& spec = spec_sig.param_type;
             if (param.is_unknown() || param.is_void())
                 param = spec;
@@ -412,6 +412,9 @@ public:
                 st.type->apply(*this);
             m_type_info.set_key(st.identifier.name);
             items[i] = std::move(m_type_info);
+
+            if (st.default_value)
+                st.default_value->apply(*this);
         }
         m_type_info = TypeInfo{TypeInfo::struct_of, std::move(items)};
     }
@@ -423,9 +426,13 @@ private:
     TypeInfo resolve_type_name(SymbolPointer symptr) {
         switch (symptr->type()) {
             case Symbol::TypeName:
+                // Create TypeInfo wrapper for named type
+                return TypeInfo{ TypeInfo::named, symptr };
+            case Symbol::TypeAlias:
+                // Return target TypeInfo for type alias
                 return symptr.symtab()->module()->get_type(symptr->index());
             case Symbol::TypeVar:
-                return TypeInfo{ TypeInfo::Var(symptr) };
+                return TypeInfo{ TypeInfo::unknown, symptr };
             default:
                 return {};
         }

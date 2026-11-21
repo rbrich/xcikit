@@ -1,7 +1,7 @@
 // fold_const_expr.cpp created on 2019-06-13 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "fold_const_expr.h"
@@ -60,6 +60,7 @@ public:
             case Symbol::Instance:
             case Symbol::Method:
             case Symbol::TypeName:
+            case Symbol::TypeAlias:
             case Symbol::TypeVar:
             case Symbol::StructItem:
             case Symbol::TypeIndex:

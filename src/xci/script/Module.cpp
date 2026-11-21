@@ -1,7 +1,7 @@
 // Module.cpp created on 2019-06-12 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Module.h"
@@ -142,23 +142,29 @@ Index Module::find_value(const TypedValue& value) const
 Index Module::add_type(TypeInfo type_info)
 {
     // lookup previous type (deduplicate)
-    if (!type_info.has_unknown()) {
-        auto idx = find_type(type_info);
-        if (idx != no_index)
-            return idx;
+    auto idx = find_type(type_info);
+    if (idx != no_index) {
+        m_types[idx].incref();
+        return idx;
     }
 
+    type_info.set_refcount(1);
     m_types.push_back(std::move(type_info));
     return Index(m_types.size() - 1);
 }
 
 
-void Module::update_type(Index index, TypeInfo type_info)
+Index Module::update_type(Index index, TypeInfo type_info)
 {
-    // update possibly Unknown type with a concrete type
-    assert(!type_info.has_unknown());
-    assert(m_types[index] == type_info);  // it must differ only in Unknown fields
-    m_types[index] = std::move(type_info);
+    // Use refcount to update inplace if it's referenced just once
+    if (m_types[index].refcount() == 1) {
+        type_info.set_refcount(1);
+        m_types[index] = std::move(type_info);
+        return index;
+    }
+    // Cannot update inplace, add as separate item
+    type_info.set_refcount(1);
+    return add_type(std::move(type_info));
 }
 
 

@@ -1,7 +1,7 @@
 // Error.cpp created on 2022-05-07 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2022–2023 Radek Brich
+// Copyright 2022–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Error.h"
@@ -47,6 +47,7 @@ std::ostream& operator<<(std::ostream& os, ErrorCode v)
         case ErrorCode::StructUnknownKey:           return os << "StructUnknownKey";
         case ErrorCode::StructDuplicateKey:         return os << "StructDuplicateKey";
         case ErrorCode::StructKeyTypeMismatch:      return os << "StructKeyTypeMismatch";
+        case ErrorCode::StructDefaultNotConstant:   return os << "StructDefaultNotConstant";
         case ErrorCode::IntrinsicsFunctionError:    return os << "IntrinsicsFunctionError";
         case ErrorCode::UnresolvedSymbol:           return os << "UnresolvedSymbol";
         case ErrorCode::ImportError:                return os << "ImportError";

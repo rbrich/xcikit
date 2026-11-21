@@ -1,7 +1,7 @@
 // TypeInfo.h created on 2019-06-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_TYPEINFO_H
@@ -73,29 +73,31 @@ size_t type_size_on_stack(Type type);
 
 
 struct Signature;
-struct NamedType;
 
 
 class TypeInfo {
 public:
+    struct UnknownTag {};
+    struct NamedTag {};
     struct ListTag {};
     struct TupleTag {};
     struct StructTag {};
 
+    static constexpr UnknownTag unknown {};
+    static constexpr NamedTag named {};
     static constexpr ListTag list_of {};
     static constexpr TupleTag tuple_of {};
     static constexpr StructTag struct_of {};
 
-    using Var = SymbolPointer;  // for unknown type, specifies which type variable this represents
     using Subtypes = core::StaticVec<TypeInfo>;
     using SignaturePtr = std::shared_ptr<Signature>;
-    using NamedTypePtr = std::shared_ptr<NamedType>;
 
     // Unknown / generic
     TypeInfo() { construct_variant(); }
     ~TypeInfo() { destroy_variant(); }
 
-    explicit TypeInfo(Var var) { std::construct_at(&m_var, var); }
+    // Unknown type, specifies which type variable this represents
+    explicit TypeInfo(UnknownTag, SymbolPointer var) : m_type(Type::Unknown) { std::construct_at(&m_symptr, var); }
     // Default-construct any type
     explicit TypeInfo(Type type) : m_type(type) { construct_variant(); }
     // Function
@@ -111,25 +113,28 @@ public:
     explicit TypeInfo(StructTag, Subtypes subtypes)
             : m_type(Type::Struct) { std::construct_at(&m_subtypes, std::move(subtypes)); }
     // Named
-    explicit TypeInfo(NameId name, TypeInfo&& type_info);
+    explicit TypeInfo(NamedTag, SymbolPointer symptr) : m_type(Type::Named) { std::construct_at(&m_symptr, symptr); }
 
     TypeInfo(const TypeInfo& r)
-            : m_type(r.m_type), m_is_literal(r.m_is_literal), m_key(r.m_key)
+            : m_type(r.m_type), m_is_literal(r.m_is_literal), m_key(r.m_key), m_default_value(r.m_default_value)
     {
         assert(this != &r);
         construct_variant();
         copy_variant(r);
     }
     TypeInfo(TypeInfo&& r) noexcept
-            : m_type(r.m_type), m_is_literal(r.m_is_literal), m_key(r.m_key)
+            : m_type(r.m_type), m_is_literal(r.m_is_literal), m_refcount(r.m_refcount),
+              m_key(r.m_key), m_default_value(r.m_default_value)
     {
         assert(this != &r);
         construct_variant();
         move_variant(std::move(r));
         r.set_type(Type::Unknown);
-        r.m_var = {};
+        r.m_symptr = {};
         r.m_is_literal = true;
+        r.m_refcount = 0;
         r.m_key = {};
+        r.m_default_value = no_index;
     }
 
     TypeInfo& operator =(const TypeInfo& r);
@@ -157,8 +162,8 @@ public:
     }
 
     bool is_unknown() const { return type() == Type::Unknown; }
-    bool is_unspecified() const { return is_unknown() && !generic_var(); }  // == is_unknown() && !is_generic()
-    bool is_generic() const { return is_unknown() && bool(generic_var()); }
+    bool is_unspecified() const { return is_unknown() && !symptr(); }  // == is_unknown() && !is_generic()
+    bool is_generic() const { return is_unknown() && bool(symptr()); }
     bool is_named() const { return type() == Type::Named; }
     bool is_function() const { return type() == Type::Function; }
     bool is_callable() const { return underlying().is_function(); }
@@ -186,7 +191,7 @@ public:
 
     bool operator==(const TypeInfo& rhs) const;
 
-    explicit operator bool() const { return type() != Type::Unknown || generic_var(); }
+    explicit operator bool() const { return type() != Type::Unknown || symptr(); }
 
     // -------------------------------------------------------------------------
     // Additional info, subtypes
@@ -195,8 +200,12 @@ public:
     void set_key(NameId key) { m_key = key; }
     const TypeInfo* struct_item_by_key(NameId key) const;  // type = Struct
 
-    Var generic_var() const;  // type = Unknown
-    Var& generic_var();  // type = Unknown
+    bool has_default_value() const { return m_default_value != no_index; }
+    Index default_value() const { return m_default_value; }  // default value of struct item or function parameter
+    void set_default_value(Index idx) { m_default_value = idx; }  // use `no_index` to remove default value
+
+    SymbolPointer symptr() const;  // type = Unknown
+    SymbolPointer& symptr();  // type = Unknown
     const TypeInfo& elem_type() const;  // type = List (Subtypes[0])
     TypeInfo& elem_type() { return const_cast<TypeInfo&>( const_cast<const TypeInfo*>(this)->elem_type() ); }
     const Subtypes& subtypes() const;  // type = Tuple
@@ -205,14 +214,16 @@ public:
     SignaturePtr& signature_ptr() { return const_cast<SignaturePtr&>( const_cast<const TypeInfo*>(this)->signature_ptr() ); }
     const Signature& signature() const { return *signature_ptr(); }
     Signature& signature() { return *signature_ptr(); }
-    const NamedTypePtr& named_type_ptr() const;   // type = Named
-    const NamedType& named_type() const { return *named_type_ptr(); }
-    NamedType& named_type() { return *named_type_ptr(); }
-    NameId name() const;
+    NameId name() const;   // type = Named
+    const TypeInfo& named_type() const;
     const TypeInfo& underlying() const;  // transparently get type_info of NamedType
-    TypeInfo& underlying();
     const SignaturePtr& ul_signature_ptr() const { return underlying().signature_ptr(); }
     const Signature& ul_signature() const { return underlying().signature(); }
+
+    void set_refcount(uint16_t refcount) { m_refcount = refcount; }
+    uint16_t refcount() const { return m_refcount; }
+    uint16_t incref() { return ++m_refcount; }
+    uint16_t decref() { return --m_refcount; }
 
     // -------------------------------------------------------------------------
     // Serialization
@@ -230,15 +241,16 @@ private:
     /// Discriminated union.
     /// In comparison to std::variant, this saves 8 bytes + some unnecessary templating.
     union {
-        Var m_var;
+        SymbolPointer m_symptr;
         Subtypes m_subtypes;
         SignaturePtr m_signature_ptr;
-        NamedTypePtr m_named_type_ptr;
     };
     Type m_type { Type::Unknown };
 
     bool m_is_literal = true;  // literal = any expression that doesn't reference functions/variables
+    uint16_t m_refcount = 0;
     NameId m_key;
+    Index m_default_value = no_index;  // index of static value in Module that contains this TypeInfo
 };
 
 
@@ -251,10 +263,11 @@ void TypeInfo::save_schema(Archive& ar) const {
         ar(uint8_t(Type::List), "elem_type", TypeInfo{});
         ar(uint8_t(Type::Tuple), "subtypes", Subtypes{});
         ar(uint8_t(Type::Function), "signature", SignaturePtr{});
-        ar(uint8_t(Type::Named), "named_type", NamedTypePtr{});
+        ar(uint8_t(Type::Named), "named_type", SymbolPointer{});
         ar(uint8_t(Type::Struct), "subtypes", Subtypes{});
         ar.leave_union();
     }
+    ar("default", m_default_value);
 }
 
 
@@ -265,7 +278,7 @@ void TypeInfo::save(Archive& ar) const {
     ar("type", type());
     switch (type()) {
         case Type::Unknown:
-            ar("var", generic_var());
+            ar("var", symptr());
             break;
         case Type::Function:
             ar("signature", signature());
@@ -278,11 +291,12 @@ void TypeInfo::save(Archive& ar) const {
             ar("subtypes", subtypes());
             break;
         case Type::Named:
-            ar("named_type", named_type());
+            ar("named_type", symptr());
             break;
         default:
             break;
     }
+    ar("default", m_default_value);
 }
 
 
@@ -295,7 +309,7 @@ void TypeInfo::load(Archive& ar)
     set_type(t);
     switch (type()) {
         case Type::Unknown: {
-            ar(generic_var());
+            ar(symptr());
             break;
         }
         case Type::Function: {
@@ -315,12 +329,13 @@ void TypeInfo::load(Archive& ar)
             break;
         }
         case Type::Named: {
-            ar(named_type());
+            ar(symptr());
             break;
         }
         default:
             break;
     }
+    ar(m_default_value);
 }
 
 
@@ -354,19 +369,6 @@ struct Signature {
 };
 
 using SignaturePtr = std::shared_ptr<Signature>;
-
-
-struct NamedType {
-    NameId name;
-    TypeInfo type_info;
-
-    bool operator==(const NamedType& rhs) const = default;
-
-    template <class Archive>
-    void serialize(Archive& ar) {
-        ar ("name", name) ("type_info", type_info);
-    }
-};
 
 
 // -----------------------------------------------------------------------------

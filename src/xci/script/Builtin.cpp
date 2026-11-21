@@ -1,7 +1,7 @@
 // Builtin.cpp created on 2019-05-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Builtin.h"
@@ -176,60 +176,60 @@ void BuiltinModule::add_intrinsics()
 
 void BuiltinModule::add_types()
 {
-    add_symbol("Void", Symbol::TypeName, add_type(ti_void()));
-    add_symbol("Bool", Symbol::TypeName, add_type(ti_bool()));
-    add_symbol("Byte", Symbol::TypeName, add_type(ti_byte()));
-    add_symbol("Char", Symbol::TypeName, add_type(ti_char()));
+    add_type_alias("Void", ti_void());
+    add_type_alias("Bool", ti_bool());
+    add_type_alias("Byte", ti_byte());
+    add_type_alias("Char", ti_char());
 
-    add_symbol("UInt8", Symbol::TypeName, add_type(ti_uint8()));
-    add_symbol("UInt16", Symbol::TypeName, add_type(ti_uint16()));
-    add_symbol("UInt32", Symbol::TypeName, add_type(ti_uint32()));
-    add_symbol("UInt64", Symbol::TypeName, add_type(ti_uint64()));
-    add_symbol("UInt128", Symbol::TypeName, add_type(ti_uint128()));
-    add_symbol("UInt", Symbol::TypeName, add_type(ti_uint()));
+    add_type_alias("UInt8", ti_uint8());
+    add_type_alias("UInt16", ti_uint16());
+    add_type_alias("UInt32", ti_uint32());
+    add_type_alias("UInt64", ti_uint64());
+    add_type_alias("UInt128", ti_uint128());
+    add_type_alias("UInt", ti_uint());
 
-    add_symbol("Int8", Symbol::TypeName, add_type(ti_int8()));
-    add_symbol("Int16", Symbol::TypeName, add_type(ti_int16()));
-    add_symbol("Int32", Symbol::TypeName, add_type(ti_int32()));
-    add_symbol("Int64", Symbol::TypeName, add_type(ti_int64()));
-    add_symbol("Int128", Symbol::TypeName, add_type(ti_int128()));
-    add_symbol("Int", Symbol::TypeName, add_type(ti_int()));
+    add_type_alias("Int8", ti_int8());
+    add_type_alias("Int16", ti_int16());
+    add_type_alias("Int32", ti_int32());
+    add_type_alias("Int64", ti_int64());
+    add_type_alias("Int128", ti_int128());
+    add_type_alias("Int", ti_int());
 
-    add_symbol("Float32", Symbol::TypeName, add_type(ti_float32()));
-    add_symbol("Float64", Symbol::TypeName, add_type(ti_float64()));
-    add_symbol("Float128", Symbol::TypeName, add_type(ti_float128()));
-    add_symbol("Float", Symbol::TypeName, add_type(ti_float()));
+    add_type_alias("Float32", ti_float32());
+    add_type_alias("Float64", ti_float64());
+    add_type_alias("Float128", ti_float128());
+    add_type_alias("Float", ti_float());
 
-    add_symbol("String", Symbol::TypeName, add_type(ti_string()));
-    add_symbol("Bytes", Symbol::TypeName, add_type(ti_bytes()));
-    add_symbol("Module", Symbol::TypeName, add_type(ti_module()));
-    add_symbol("TypeIndex", Symbol::TypeName, add_type(ti_type_index()));
+    add_type_alias("String", ti_string());
+    add_type_alias("Bytes", ti_bytes());
+    add_type_alias("Module", ti_module());
+    add_type_alias("TypeIndex", ti_type_index());
 
     // -------------------------------------------------------------------------
     // Types for interfacing with C
 
     // These types also carry the C-like unsafe behavior, e.g. unchecked integer overflow.
-    [[maybe_unused]] Index cuint8 = add_named_type("CUInt8", ti_uint8());
-    [[maybe_unused]] Index cuint16 = add_named_type("CUInt16", ti_uint16());
-    [[maybe_unused]] Index cuint32 = add_named_type("CUInt32", ti_uint32());
-    [[maybe_unused]] Index cuint64 = add_named_type("CUInt64", ti_uint64());
-    [[maybe_unused]] Index cint8 = add_named_type("CInt8", ti_int8());
-    [[maybe_unused]] Index cint16 = add_named_type("CInt16", ti_int16());
-    [[maybe_unused]] Index cint32 = add_named_type("CInt32", ti_int32());
-    [[maybe_unused]] Index cint64 = add_named_type("CInt64", ti_int64());
+    [[maybe_unused]] Index cuint8 = add_type_name("CUInt8", ti_uint8());
+    [[maybe_unused]] Index cuint16 = add_type_name("CUInt16", ti_uint16());
+    [[maybe_unused]] Index cuint32 = add_type_name("CUInt32", ti_uint32());
+    [[maybe_unused]] Index cuint64 = add_type_name("CUInt64", ti_uint64());
+    [[maybe_unused]] Index cint8 = add_type_name("CInt8", ti_int8());
+    [[maybe_unused]] Index cint16 = add_type_name("CInt16", ti_int16());
+    [[maybe_unused]] Index cint32 = add_type_name("CInt32", ti_int32());
+    [[maybe_unused]] Index cint64 = add_type_name("CInt64", ti_int64());
 
     // Variably-sized type aliases
     static_assert(sizeof(int) == 4);
-    add_symbol("CInt", Symbol::TypeName, cint32);
-    add_symbol("CUInt", Symbol::TypeName, cuint32);
+    add_symbol("CInt", Symbol::TypeAlias, cint32);
+    add_symbol("CUInt", Symbol::TypeAlias, cuint32);
 #if UINTPTR_MAX == UINT64_MAX
     static_assert(sizeof(size_t) == 8);
-    add_symbol("COffset", Symbol::TypeName, cint64);
-    add_symbol("CSize", Symbol::TypeName, cuint64);
+    add_symbol("COffset", Symbol::TypeAlias, cint64);
+    add_symbol("CSize", Symbol::TypeAlias, cuint64);
 #else
     static_assert(sizeof(size_t) == 4);
-    add_symbol("COffset", Symbol::TypeName, cint32);
-    add_symbol("CSize", Symbol::TypeName, cuint32);
+    add_symbol("COffset", Symbol::TypeAlias, cint32);
+    add_symbol("CSize", Symbol::TypeAlias, cuint32);
 #endif
 }
 
@@ -459,7 +459,7 @@ void BuiltinModule::add_io_functions()
             ti_key("out", ti_stream()),
             ti_key("err", ti_stream())
     });
-    add_symbol("Streams", Symbol::TypeName, add_type(streams));
+    add_symbol("Streams", Symbol::TypeAlias, add_type(streams));
 
     // values
     add_symbol("stdin", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::default_stdin())}));

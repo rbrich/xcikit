@@ -13,6 +13,7 @@ target_sources(xci-script
         ast/fold_paren.cpp
         ast/fold_tuple.cpp
         ast/resolve_decl.cpp
+        ast/resolve_defaults.cpp
         ast/resolve_spec.cpp
         ast/resolve_nonlocals.cpp
         ast/resolve_symbols.cpp

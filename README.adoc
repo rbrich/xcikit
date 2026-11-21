@@ -159,7 +159,8 @@ Serialization and deserialization of structured data.
 
 Parse and dump config file. The format is custom:
 
-```
+[source]
+----
 bool_item false   // true/false
 int_item 1
 float_item 2.3
@@ -168,7 +169,7 @@ group {
   value 1
   subgroup { foo 42; bar "baz" }  // semicolon is used as a delimiter for multiple items on same line
 }
-```
+----
 
 === xci::math
 
@@ -450,26 +451,26 @@ Create a https://docs.conan.io/en/latest/integrations/cross_platform/emscripten.
 [settings]
 os=Emscripten
 arch=wasm
-compiler=clang
-compiler.version=14
-compiler.libcxx=libc++
+compiler=emcc
+compiler.version=3.1.69
 compiler.cppstd=20
 build_type=MinSizeRel
-[options]
-[build_requires]
+
 [conf]
-# Find actual path Emscripten installation (or check CMake command line, when called with emcmake)
-tools.cmake.cmaketoolchain:user_toolchain = [".../cmake/Modules/Platform/Emscripten.cmake"]
-[env]
-# Same as above, for older packages which do not use tools.cmake.CMakeToolchain
-CONAN_CMAKE_TOOLCHAIN_FILE = .../cmake/Modules/Platform/Emscripten.cmake
-CXXFLAGS=-flto=thin
-LDFLAGS=-flto=thin
+tools.cmake.cmaketoolchain:user_toolchain = ["/usr/share/emscripten/cmake/Modules/Platform/Emscripten.cmake"]
+
+[buildenv]
+CXXFLAGS=-flto
+LDFLAGS=-flto
+
+[platform_tool_requires]
+# Override cmake tool_requires from benchmark package (the version must match that package, not the system)
+cmake/4.5.0
 ----
 
 See a working example of such profile in the link:docker/conan/profiles/emscripten[docker/emscripten] directory.
 
-Run the build (only 'core' and 'script' components work at this time):
+Run the build (note that graphical components like 'graphics' and 'widgets' won't compile):
 
 [source,bash]
 ----

@@ -1,7 +1,7 @@
 // AST.cpp created on 2019-05-15 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "AST.h"
@@ -520,14 +520,6 @@ const char* Operator::to_cstr() const
         case Operator::Call:        return " ";
     }
     XCI_UNREACHABLE;
-}
-
-
-std::unique_ptr<Type> copy(const std::unique_ptr<Type>& v)
-{
-    if (v)
-        return v->make_copy();
-    return {};
 }
 
 

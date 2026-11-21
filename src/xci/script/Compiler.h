@@ -1,7 +1,7 @@
 // Compiler.h created on 2019-05-30 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_COMPILER_H
@@ -30,6 +30,7 @@ public:
         ResolveTypes        = 0x0040u,
         ResolveSpec         = 0x0080u,
         ResolveNonlocals    = 0x0100u,
+        ResolveDefaults     = 0x0200u,
         CompileFunctions    = 0x1000u,
         AssembleFunctions   = 0x2000u,
         FoldConstExpr       = 0x0001u << 16,
@@ -56,11 +57,12 @@ public:
         PPSymbols       = ResolveSymbols | PPDotCall | PPTuple | PPParen,
         PPDecl          = ResolveDecl | PPSymbols,
         PPTypes         = ResolveTypes | PPDecl,
+        PPDefaults      = ResolveDefaults | PPTypes,
         PPSpec          = ResolveSpec | PPTypes,
         PPNonlocals     = ResolveNonlocals | PPSpec,
 
         // Mandatory compilation passes
-        CPCompile       = CompileFunctions | PPNonlocals,
+        CPCompile       = CompileFunctions | PPDefaults | PPNonlocals,
         CPAssemble      = AssembleFunctions | CPCompile,
 
         // Optimization passes

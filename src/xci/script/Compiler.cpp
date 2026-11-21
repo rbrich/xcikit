@@ -1,7 +1,7 @@
 // Compiler.cpp created on 2019-05-30 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Compiler.h"
@@ -11,6 +11,7 @@
 #include "ast/resolve_types.h"
 #include "ast/resolve_spec.h"
 #include "ast/resolve_nonlocals.h"
+#include "ast/resolve_defaults.h"
 #include "ast/fold_const_expr.h"
 #include "ast/fold_dot_call.h"
 #include "ast/fold_tuple.h"
@@ -87,9 +88,17 @@ public:
             // Fill in the defaults.
             for (const auto& ti : reverse(v.ti.underlying().subtypes())) {
                 if (ti.is_void())
-                    return;  // Void value
-                // add to static values
-                auto idx = module().add_value(TypedValue(ti));
+                    continue;  // Void value
+                Index idx = ti.default_value();
+                if (idx == no_index) {
+                    // Default value not specified, use implicit zero value
+                    idx = module().add_value(TypedValue(ti));
+                } else if (v.ti.is_named() && v.ti.symptr().symtab()->module() != &module()) {
+                    // In case the default value is a static value from another module, copy it
+                    const TypedValue& val = v.ti.symptr().symtab()->module()->get_value(idx);
+                    val.incref();
+                    idx = module().add_value(TypedValue(val));
+                }
                 // LOAD_STATIC <static_idx>
                 code().add_L1(Opcode::LoadStatic, idx);
             }
@@ -121,9 +130,18 @@ public:
             if (it == v.items.end()) {
                 // not found - use the default
                 if (ti.is_void())
-                    return;  // Void value
-                // add to static values
-                auto idx = module().add_value(TypedValue(ti));
+                    continue;  // Void value
+                Index idx = ti.default_value();
+                if (idx == no_index) {
+                    // FIXME: remove this logic, make it an error if the default value is not set
+                    // add zero value to static values
+                    idx = module().add_value(TypedValue(ti));
+                } else if (v.ti.is_named() && v.ti.symptr().symtab()->module() != &module()) {
+                    // In case the default value is a static value from another module, copy it
+                    const TypedValue& val = v.ti.symptr().symtab()->module()->get_value(idx);
+                    val.incref();
+                    idx = module().add_value(TypedValue(val));
+                }
                 // LOAD_STATIC <static_idx>
                 code().add_L1(Opcode::LoadStatic, idx);
                 continue;
@@ -344,6 +362,7 @@ public:
                 assert(!"Instance cannot be called.");
                 break;
             case Symbol::TypeName:
+            case Symbol::TypeAlias:
             case Symbol::TypeVar:
                 break;
             case Symbol::StructItem: {
@@ -601,7 +620,6 @@ private:
         }
     }
 
-private:
     Compiler& m_compiler;
     Scope& m_scope;
 
@@ -639,6 +657,7 @@ void Compiler::compile(Scope& scope, ast::Module& ast)
     ast.body.symtab = &func.symtab();
 
     // Preprocess AST
+    // - simplify and transform some AST nodes (mandatory fold passes)
     // - resolve symbols (SymbolResolver)
     // - infer and check types (TypeResolver)
     // - apply optimizations - const fold etc. (Optimizer)
@@ -667,6 +686,9 @@ void Compiler::compile(Scope& scope, ast::Module& ast)
 
     if ((m_flags & Flags::ResolveNonlocals) == Flags::ResolveNonlocals)
         resolve_nonlocals(scope, ast.body);
+
+    if ((m_flags & Flags::ResolveDefaults) == Flags::ResolveDefaults)
+        resolve_defaults(scope, ast.body);
 
     if ((m_flags & Flags::CompileFunctions) == Flags::CompileFunctions)
         compile_all_functions(scope);

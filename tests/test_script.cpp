@@ -1,7 +1,7 @@
 // test_script.cpp created on 2019-05-27 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <catch2/catch_test_macros.hpp>
@@ -51,6 +51,14 @@ static Context& context()
 }
 
 
+template <typename T>
+static std::string dump_to_string(const T& value)
+{
+    std::ostringstream os;
+    os << value;
+    return os.str();
+}
+
 // Check parsing into AST and dumping back to code
 static std::string parse(const std::string& input, bool fold = false)
 {
@@ -64,9 +72,7 @@ static std::string parse(const std::string& input, bool fold = false)
         fold_dot_call(ast.body);
         fold_paren(ast.body);
     }
-    std::ostringstream os;
-    os << ast;
-    return os.str();
+    return dump_to_string(ast);
 }
 
 
@@ -112,9 +118,7 @@ static std::string optimize(const std::string& input)
     Compiler compiler(Compiler::Flags::O2);
     compiler.compile(module.get_main_scope(), ast);
 
-    std::ostringstream os;
-    os << ast;
-    return os.str();
+    return dump_to_string(ast);
 }
 
 
@@ -669,7 +673,7 @@ TEST_CASE( "Coercion", "[script][interpreter]" )
     // only literals may coerce, not functions/variables
     CHECK_THROWS_EC(interpret("t=(); a:(x:String,y:Int) = t"), FunctionNotFound);
     CHECK_THROWS_EC(interpret("f = fun a:(x:String,y:Int) {a.y}; t = (); f t"), FunctionNotFound);
-    // named type - literal of underlying type coerces
+    // named type - literal of underlying type coerces to the named type
     const std::string num_def = "type Num = Int; f = fun (a:Num, b:Num) -> Num { (a:Int + b:Int):Num };";
     CHECK(interpret_std(num_def + "f (11, 22)") == "33");
     CHECK_THROWS_EC(interpret_std(num_def + "a = 11; f (a, a)"), FunctionNotFound);
@@ -714,16 +718,35 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret(R"(Rec = (name: String, age: Int); a:Rec = (name="hello", age=42); a)") == R"((name="hello", age=42))");  // alias
     const std::string my_struct = "type MyStruct = (name:String, age:Int); ";  // named struct
     CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a)") == R"(MyStruct(name="hello", age=42))");
+    CHECK(interpret(my_struct + R"( a:MyStruct = ("hello", 42); a)") == R"(MyStruct(name="hello", age=42))");
     CHECK(interpret(my_struct + R"( a:MyStruct = "hello", 42; a)") == R"(MyStruct(name="hello", age=42))");
     CHECK(interpret_std(my_struct + R"( a = MyStruct(name="hello", age=42); a)") == R"(MyStruct(name="hello", age=42))");
     CHECK(interpret_std(my_struct + R"( a = MyStruct("hello", 42); a)") == R"(MyStruct(name="hello", age=42))");
-    // struct defaults (left out fields get default "zero" value)
+    // struct defaults (left-out fields get default "zero" value)
     CHECK_THROWS_EC(interpret("x:(Int,Int) = ()"), DefinitionTypeMismatch);  // tuple doesn't have defaults
     CHECK(interpret_std("x:FormatSpec = (fill='_',width=2); x") == R"(FormatSpec(fill='_', align='\x00', sign='\x00', width=2, precision=0, spec=""))");
     CHECK(interpret_std("x:FormatSpec = (width=2); x") == R"(FormatSpec(fill='\x00', align='\x00', sign='\x00', width=2, precision=0, spec=""))");
     CHECK(interpret_std("x:FormatSpec = (); x") == R"(FormatSpec(fill='\x00', align='\x00', sign='\x00', width=0, precision=0, spec=""))");  // empty tuple stands for empty StructInit
     CHECK_THROWS_EC(interpret_std("x:FormatSpec = ('_', '>')"), DefinitionTypeMismatch);  // when initializing with a tuple, all fields have to be specified (no defaults are filled in)
     CHECK(interpret_std("x:(field:Int) = 2; x") == "(field=2)");  // a single-item struct can be initialized with the field value (as there is no single-field tuple)
+    // explicit default values for struct fields
+    const std::string my_slice = "type MySlice = (start:Int=0, stop:Int=-1, step:Int=1); ";  // named struct
+    CHECK(interpret(my_slice + "a:MySlice = (start=1); a") == "MySlice(start=1, stop=-1, step=1)");
+    CHECK(interpret(my_slice + "a:MySlice = (start=10, step=-1); a") == "MySlice(start=10, stop=-1, step=-1)");
+    CHECK(interpret(my_slice + "a:MySlice = (start=1, stop=2, step=-1); a") == "MySlice(start=1, stop=2, step=-1)");
+    CHECK(interpret(my_slice + "a:MySlice = (); a") == "MySlice(start=0, stop=-1, step=1)");
+    CHECK_THROWS_EC(interpret(my_slice + "a:MySlice = (1, 2); a"), DefinitionTypeMismatch);  // when initializing with a tuple, all fields have to be specified (no defaults are filled in)
+    CHECK(interpret(my_slice + "a:MySlice = (1, 2, -1); a") == "MySlice(start=1, stop=2, step=-1)");
+    CHECK(interpret_std(my_slice + "(start=1):MySlice") == "MySlice(start=1, stop=-1, step=1)");
+    CHECK(interpret_std(my_slice + "(start=10, step=-1):MySlice") == "MySlice(start=10, stop=-1, step=-1)");
+    CHECK(interpret_std(my_slice + "(start=1, stop=2, step=-1):MySlice") == "MySlice(start=1, stop=2, step=-1)");
+    CHECK(interpret_std(my_slice + "MySlice(start=1)") == "MySlice(start=1, stop=-1, step=1)");
+    CHECK(interpret_std(my_slice + "MySlice(start=10, step=-1)") == "MySlice(start=10, stop=-1, step=-1)");
+    CHECK(interpret_std(my_slice + "MySlice(start=1, stop=2, step=-1)") == "MySlice(start=1, stop=2, step=-1)");
+    const std::string anon_struct = R"(a:(name:String="nobody", age:Int))";
+    CHECK(interpret(anon_struct + R"( = ("joe", 42); a)") == R"((name="joe", age=42))");
+    CHECK(interpret(anon_struct + " = (); a") == R"((name="nobody", age=0))");
+    CHECK(interpret(anon_struct + " = (age=42); a") == R"((name="nobody", age=42))");
     // cast from underlying type
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a)") == R"(MyStruct(name="hello", age=42))");
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a:(String, Int))") == R"(("hello", 42))");
@@ -758,6 +781,32 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
 
     // function
     CHECK(interpret_std("type F = Int -> Int -> Int; f: F = fun x { fun y { x+y } }; f 1 2") == "3");
+}
+
+
+TEST_CASE( "User-defined types: struct defaults across modules", "[script][interpreter]" )
+{
+    Context& ctx = context();
+    auto& module_manager = ctx.interpreter.module_manager();
+    const auto mod_types = module_manager.make_module("mod_types");
+    mod_types->import_module("builtin");
+
+    TypedValue result = ctx.interpreter.eval(mod_types,
+            "type MySlice = (start:Int=0, stop:Int=-1, step:Int=1)");
+    result.decref();
+
+    const auto mod_usage = module_manager.make_module("mod_usage");
+    mod_usage->add_imported_module(mod_types);
+
+    result = ctx.interpreter.eval(mod_usage, "a:MySlice = (); a");
+    CHECK(dump_to_string(result) == "MySlice(start=0, stop=-1, step=1)");
+    result.decref();
+
+    result = ctx.interpreter.eval(mod_usage, "b:MySlice = (start=10); b");
+    CHECK(dump_to_string(result) == "MySlice(start=10, stop=-1, step=1)");
+    result.decref();
+
+    module_manager.clear();
 }
 
 
@@ -1496,6 +1545,7 @@ TEST_CASE( "Native functions: free function", "[script][native]" )
     )");
     CHECK(result.type() == Type::Int64);
     CHECK(result.get<int64_t>() == 1);
+    result.decref();
     ctx.interpreter.module_manager().clear();
 }
 
@@ -1520,6 +1570,7 @@ TEST_CASE( "Native functions: lambda", "[script][native]" )
     )");
     CHECK(result.type() == Type::Int64);
     CHECK(result.get<int64_t>() == 24);
+    result.decref();
     ctx.interpreter.module_manager().clear();
 }
 

@@ -1,7 +1,7 @@
 // BytecodeTracer.cpp created on 2020-01-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2023 Radek Brich
+// Copyright 2020–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "BytecodeTracer.h"
@@ -18,20 +18,20 @@ using std::cout;
 
 void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
 {
-    bool prev_was_exit = false;  // previous cb called was exit
+    m_prev_was_exit = false;  // previous cb called was exit
     if (print_bytecode || trace_bytecode) {
-        m_machine.set_call_enter_cb([this, &prev_was_exit](const Function& f) {
+        m_machine.set_call_enter_cb([this](const Function& f) {
             const auto frame = m_machine.stack().n_frames() - 1;
-            if (prev_was_exit && m_lines_to_erase > 0) {
+            if (m_prev_was_exit && m_lines_to_erase > 0) {
                 // tail call (exit immediately followed by enter)
                 m_term.move_up(m_lines_to_erase + 1).write();
                 m_term.clear_screen_down().write();
-                prev_was_exit = false;
+                m_prev_was_exit = false;
             }
             print_code(frame, f);
         });
         if (trace_bytecode) {
-            m_machine.set_call_exit_cb([this, &prev_was_exit](const Function&) {
+            m_machine.set_call_exit_cb([this](const Function&) {
                 auto frame = m_machine.stack().n_frames() - 1;
                 if (frame == 0) {
                     m_term.clear_screen_down().write();
@@ -41,15 +41,15 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
                     const auto& f = m_machine.stack().frame(frame).function;
                     print_code(frame, f);
                 }
-                prev_was_exit = true;
+                m_prev_was_exit = true;
             });
         }
     }
 
     if (trace_bytecode) {
-        m_machine.set_bytecode_trace_cb([this, &prev_was_exit]
+        m_machine.set_bytecode_trace_cb([this]
                 (const Function& f, Code::const_iterator ipos) {
-            prev_was_exit = false;
+            m_prev_was_exit = false;
             auto& t = m_term;
             if (m_lines_to_erase > 0) {
                 t.move_up(m_lines_to_erase).write();
@@ -95,11 +95,8 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
 void BytecodeTracer::print_code(size_t frame, const Function& f)
 {
     m_lines_to_erase = 0;
-    fmt::print("[{}] {} {}\n", frame, f.name(), f.signature());
-    for (auto it = f.bytecode().begin(); it != f.bytecode().end();) {
-        ++ m_lines_to_erase;
-        cout << ' ' << DumpBytecode{f, it} << '\n';
-    }
+    fmt::print("[{}] {} {}", frame, f.name(), f);
+    m_lines_to_erase = f.bytecode().size();
 }
 
 

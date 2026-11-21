@@ -1,7 +1,7 @@
 // SymbolTable.cpp created on 2019-07-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "SymbolTable.h"
@@ -106,7 +106,7 @@ Function& SymbolPointer::get_function(const Scope& hier) const
 const TypeInfo& SymbolPointer::get_type() const
 {
     auto& sym = m_symtab->get(m_symidx);
-    assert(sym.type() == Symbol::TypeName);
+    assert(sym.type() == Symbol::TypeName || sym.type() == Symbol::TypeAlias);
     assert(m_symtab->module() != nullptr);
     return m_symtab->module()->get_type(sym.index());
 }

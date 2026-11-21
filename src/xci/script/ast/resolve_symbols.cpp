@@ -1,7 +1,7 @@
 // resolve_symbols.cpp created on 2019-06-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_symbols.h"
@@ -187,7 +187,7 @@ public:
         v.type->apply(*this);
 
         // add new type to symbol table
-        v.type_name.symbol = symtab().add({v.type_name.name, Symbol::TypeName, no_index});
+        v.type_name.symbol = symtab().add({v.type_name.name, Symbol::TypeAlias, no_index});
     }
 
     void visit(ast::Literal&) override {}
@@ -201,7 +201,7 @@ public:
     void visit(ast::List& v) override {
         if (v.items.empty()) {
             // Create implicit type var for empty list literal: `[]`
-            v.ti = ti_list(TypeInfo(create_implicit_type_var(intern("$L"))));
+            v.ti = ti_list(TypeInfo(TypeInfo::unknown, create_implicit_type_var(intern("$L"))));
         } else for (auto& item : v.items) {
             item->apply(*this);
         }
@@ -411,6 +411,8 @@ public:
                 st.type->apply(*this);
             }
             st.identifier.symbol = add_struct_item(name, no_index);
+            if (st.default_value)
+                st.default_value->apply(*this);
         }
     }
 
@@ -560,7 +562,6 @@ private:
         }
     }
 
-private:
     Scope& m_scope;
     SymbolTable* m_symtab = &function().symtab();
     ast::Class* m_class = nullptr;

@@ -1,7 +1,7 @@
 // resolve_types.cpp created on 2019-06-13 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2024 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_types.h"
@@ -192,7 +192,7 @@ public:
             case Symbol::TypeIndex: {
                 if (v.ti.is_unknown()) {
                     // try to resolve via known type args
-                    auto var = v.ti.generic_var();
+                    auto var = v.ti.symptr();
                     const auto& type_args = m_scope.type_args();
                     auto resolved = type_args.get(var);
                     if (resolved) {
@@ -282,8 +282,7 @@ public:
                     o_ftype << ' ' << m_call_sig.back().signature();
                 if (conflict)
                     throw function_conflict(o_ftype.str(), o_candidates.str(), v.source_loc);
-                else
-                    throw function_not_found(o_ftype.str(), o_candidates.str(), v.source_loc);
+                throw function_not_found(o_ftype.str(), o_candidates.str(), v.source_loc);
             }
             case Symbol::Module:
                 if (sym.index() == no_index) {
@@ -366,6 +365,7 @@ public:
                 }
                 break;
             case Symbol::TypeName:
+            case Symbol::TypeAlias:
             case Symbol::TypeVar:
                 assert(!"not implemented");
                 return;
@@ -542,7 +542,7 @@ public:
         // resolve the inner expression -> m_value_type
         // (the Expression might use the specified type from `m_cast_type`)
         resolve_generic_type(v.ti, m_scope);
-        m_cast_type = v.is_init ? TypeInfo{} : v.ti;
+        m_cast_type = v.ti;
         m_call_sig.clear();
         v.expression->apply(*this);
         m_cast_type = {};

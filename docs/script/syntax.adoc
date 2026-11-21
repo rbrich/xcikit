@@ -846,6 +846,7 @@ type MyVoid = ()     // empty tuple => Void
 type MyType = Int    // make new type by giving other type a new name
 type MyTuple = (String, Int)
 type MyStruct = (name:String, age:Int)    // struct (a tuple with named fields)
+type MyStructWithDefaults = (name:String, age:Int=0)    // struct fields may have default values
 type MyBool = false | true   // enum
 type MyUnion = Int | String | Void   // tagged union
 type MyVariant = int Int | string String | none   // tagged union with explicit names
@@ -879,15 +880,17 @@ In addition, a struct can be initialized with a tuple of same types.
 ----
 type MyStruct = (name:String, age:Int)
 // All of these initializations are valid:
-a: MyStruct = ("Luke", 10)
-a: MyStruct = (name="Luke", age=10)
+a:MyStruct = ("Luke", 10)
+a:MyStruct = (name="Luke", age=10)
 a = ("Luke", 10):MyStruct
 a = (name="Luke", age=10):MyStruct
+a = MyStruct("Luke", 10)  // calls init, can be customized
+a = MyStruct(name="Luke", age=10)
 // Variables and function return values need explicit cast
 a = ("Luke", 10)
-b: MyStruct = a   // Error: cannot assign (String, Int) to MyStruct
-b: MyStruct = a: MyStruct  // OK
-b = a: MyStruct  // same, type of `b` is inferred
+b:MyStruct = a   // Error: cannot assign (String, Int) to MyStruct
+b:MyStruct = a:MyStruct  // OK
+b = a:MyStruct  // same, type of `b` is inferred
 
 get_age = fun st:MyStruct -> Int { st.age }
 get_age a   // Error, variable does not coerce
@@ -899,6 +902,17 @@ a: (name: String, age: Int) = ("Luke", 10)
 // Alias - the type of `a` is still an anonymous struct
 Record = (name: String, age: Int)
 a: Record = ("Luke", 10)
+
+// Default values for struct fields
+type MySlice = (start:Int=0, stop:Int=-1, step:Int=1)
+a:MySlice = ()                  // -> MySlice(start=0, stop=-1, step=1)
+a:MySlice = (1,2)               // Error, can initialize only with same-size or empty tuple
+a:MySlice = (1,2,3)             // -> MySlice(start=1, stop=2, step=3)
+a:MySlice = (start=10)          // -> MySlice(start=10, stop=-1, step=1)
+a:MySlice = (start=10, step-1)  // -> MySlice(start=10, stop=-1, step=-1)
+a:(name:String="nobody", age:Int) = (); a  // -> (name="nobody", age=0)
+a:(name:String="nobody", age:Int) = (age=42); a  // -> (name="nobody", age=42)
+a:(name:String="nobody", age:Int) = ("joe", 42); a  // -> (name="joe", age=42)
 ----
 
 It's also possible to make an alias of a type:

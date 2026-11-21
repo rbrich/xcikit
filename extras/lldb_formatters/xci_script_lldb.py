@@ -184,11 +184,11 @@ def NameId_Summary(valobj, _dict, _options):
 def TypeInfo_Summary(valobj, _dict, _options):
     m_type = valobj.GetChildMemberWithName('m_type').value
     m_key = valobj.GetChildMemberWithName('m_key')
-    if m_type == 'Unknown':
-        var = valobj.GetChildMemberWithName("m_var")
-        symidx = var.GetChildMemberWithName('m_symidx').GetValueAsUnsigned()
+    if m_type == 'Unknown' or m_type == 'Named':
+        symptr = valobj.GetChildMemberWithName("m_symptr")
+        symidx = symptr.GetChildMemberWithName('m_symidx').GetValueAsUnsigned()
         if symidx != 0xffffffff:
-            value = var.summary
+            value = symptr.summary
         else:
             value = str(m_type)
     elif m_type == 'List':
@@ -200,9 +200,6 @@ def TypeInfo_Summary(valobj, _dict, _options):
     elif m_type == 'Function':
         signature = valobj.GetChildMemberWithName("m_signature_ptr").Dereference()
         value = signature.summary
-    elif m_type == 'Named':
-        named_type = valobj.GetChildMemberWithName('m_named_type_ptr').Dereference()
-        value = unquote(named_type.GetChildMemberWithName('name').summary)
     else:
         value = str(m_type)
     key = unquote(m_key.summary)

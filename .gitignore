@@ -8,6 +8,8 @@
 /share/fonts/Lora/
 /share/fonts/RobotoMono/
 /share/fonts/cmake.lock
+/extras/fire_script_js/archive
+/extras/fire_script_js/dist
 
 /.idea/
-/CMakeUserPresets.json
+CMakeUserPresets.json

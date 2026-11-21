@@ -1,11 +1,10 @@
 // Repl.cpp.c created on 2021-03-16 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2025 Radek Brich
+// Copyright 2021–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Repl.h"
-#include "BytecodeTracer.h"
 
 #include <xci/script/Error.h>
 #include <xci/script/Value.h>
@@ -139,8 +138,7 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
     if (mode == EvalMode::Preprocess || mode == EvalMode::Compile)
         return true;
 
-    BytecodeTracer tracer(machine, t);
-    tracer.setup(m_opts.print_bytecode, m_opts.trace_bytecode);
+    m_tracer.setup(m_opts.print_bytecode, m_opts.trace_bytecode);
 
     ResourceUsage rusage;
     try {

@@ -1,7 +1,7 @@
 // Builtin.h created on 2019-05-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_BUILTIN_H
@@ -166,11 +166,18 @@ private:
     void add_io_functions();
     void add_introspections();
 
-    Index add_named_type(const char* name, TypeInfo&& ti) {
-        const auto id = intern(name);
-        const auto index = add_type(TypeInfo{id, std::move(ti)});
-        symtab().add({id, Symbol::TypeName, index});
-        return index;
+    Index add_type_name(const char* name, TypeInfo&& ti) {
+        return add_type_symbol(name, Symbol::TypeName, std::move(ti));
+    }
+
+    Index add_type_alias(const char* name, TypeInfo&& ti) {
+        return add_type_symbol(name, Symbol::TypeAlias, std::move(ti));
+    }
+
+    Index add_type_symbol(const char* name, Symbol::Type symbol_type, TypeInfo&& ti) {
+        const auto type_idx = add_type(std::move(ti));
+        add_symbol(name, symbol_type, type_idx);
+        return type_idx;
     }
 
     void add_symbol(const char* name, Symbol::Type type, Index idx = no_index) {

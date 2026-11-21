@@ -1,7 +1,7 @@
 // ReplCommand.h created on 2020-01-11 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2023 Radek Brich
+// Copyright 2020–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_TOOL_REPL_COMMAND_H
@@ -38,8 +38,8 @@ private:
 
     void cmd_quit();
 
-    const Module* module_by_idx(Index mod_idx);
-    const Module* module_by_name(std::string_view mod_name);
+    Module* module_by_idx(Index mod_idx);
+    Module* module_by_name(std::string_view mod_name);
 
     void dump_module(Index mod_idx);
     void cmd_dump_module();
