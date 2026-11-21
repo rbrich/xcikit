@@ -969,6 +969,43 @@ TEST_CASE( "Function parameters", "[script][interpreter]" )
     CHECK(interpret("a=1; f=fun () { a }; f") == "1");
     CHECK(interpret("a=1; f=fun() { a }; f") == "1");
     CHECK(interpret("a=1; f=fun(Void){a}; f") == "1");
+
+    // Function parameters with defaults
+    const std::string f_defs = R"(f = fun (a:Int=1, b:Int=2) -> Int { a+b };)";
+    CHECK(interpret_std(f_defs + " f()") == "3");
+    CHECK(interpret_std(f_defs + " f(a=10)") == "12");
+    CHECK(interpret_std(f_defs + " f(b=10)") == "11");
+    CHECK(interpret_std(f_defs + " f(11,12)") == "23");
+    CHECK(interpret_std(f_defs + " f(b=12,a=11)") == "23");
+    // ERROR: won't fill defaults when passed single arg or partial tuple
+    CHECK_THROWS_EC(interpret_std(f_defs + " f(1)"), FunctionNotFound);
+    CHECK_THROWS_EC(interpret_std(f_defs + " f 1"), FunctionNotFound);
+    CHECK_THROWS_EC(interpret("f = fun (a:Int=1, b:Int=2, c:Int=3) -> Int { c }; f(1,2)"), FunctionNotFound);
+}
+
+
+TEST_CASE( "Function parameters: propagate defaults across modules", "[script][interpreter]" )
+{
+    Context& ctx = context();
+    auto& module_manager = ctx.interpreter.module_manager();
+    const auto mod_func = module_manager.make_module("mod_func");
+    mod_func->import_module("builtin");
+
+    TypedValue result = ctx.interpreter.eval(mod_func, "f = fun (a:Int=1, b:Int=2) -> Int { __add 0x99 }");
+    result.decref();
+
+    const auto mod_usage = module_manager.make_module("mod_usage");
+    mod_usage->add_imported_module(mod_func);
+
+    result = ctx.interpreter.eval(mod_usage, "f()");
+    CHECK(dump_to_string(result) == "3");
+    result.decref();
+
+    result = ctx.interpreter.eval(mod_usage, "f(a=10)");
+    CHECK(dump_to_string(result) == "12");
+    result.decref();
+
+    module_manager.clear();
 }
 
 
