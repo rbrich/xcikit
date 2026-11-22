@@ -62,8 +62,13 @@ public:
     }
 
     void visit(ast::Tuple& v) override {
-        if (v.ti.is_struct() && m_type_info.is_struct()) {
-            v.ti = m_type_info;
+        if (v.ti.is_struct_or_tuple() && m_type_info.is_struct()) {
+            v.ti = std::move(m_type_info);
+            for (auto&& [i, item] : v.items | enumerate) {
+                m_type_info = v.ti.subtypes()[i];
+                item->apply(*this);
+                m_type_info = {};
+            }
         }
     }
 
@@ -71,7 +76,12 @@ public:
 
     void visit(ast::StructInit& v) override {
         if (v.ti.is_struct() && m_type_info.is_struct()) {
-            v.ti = m_type_info;
+            v.ti = std::move(m_type_info);
+            for (auto&& [i, item] : v.items | enumerate) {
+                m_type_info = v.ti.subtypes()[i];
+                item.second->apply(*this);
+                m_type_info = {};
+            }
         }
     }
 
@@ -144,7 +154,7 @@ public:
 
     void visit(ast::Function& v) override {
         Scope& scope = module().get_scope(v.scope_index);
-        Function& fn = scope.function();
+        const Function& fn = scope.function();
         if (fn.has_nonvoid_parameter()) {
             m_type_info = TypeInfo(fn.signature_ptr());
             v.type.apply(*this);
@@ -160,10 +170,12 @@ public:
 
     void visit(ast::FunctionType& t) override {
         if (t.param.type) {
-            Signature& sig = m_type_info.signature();
+            TypeInfo fn_ti = std::move(m_type_info);
+            Signature& sig = fn_ti.signature();
             m_type_info = std::move(sig.param_type);
             t.param.type->apply(*this);
             sig.param_type = std::move(m_type_info);
+            m_type_info = std::move(fn_ti);
         }
     }
 
@@ -172,6 +184,16 @@ public:
 
     void visit(ast::StructType& t) override {
         for (auto&& [i, st] : t.subtypes | enumerate) {
+            // Evaluate the item type, in case it is also a StructType
+            if (st.type) {
+                auto struct_ti = m_type_info;
+                m_type_info = struct_ti.subtypes()[i];
+                st.type->apply(*this);
+                struct_ti.subtypes()[i] = std::move(m_type_info);
+                m_type_info = std::move(struct_ti);
+            }
+
+            // Evaluate default value, update it in m_type_info.subtypes()
             if (st.default_value) {
                 m_value = {};
                 st.default_value->apply(*this);

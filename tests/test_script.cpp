@@ -977,6 +977,13 @@ TEST_CASE( "Function parameters", "[script][interpreter]" )
     CHECK(interpret_std(f_defs + " f(b=10)") == "11");
     CHECK(interpret_std(f_defs + " f(11,12)") == "23");
     CHECK(interpret_std(f_defs + " f(b=12,a=11)") == "23");
+    const std::string f_nested = R"(f = fun (a:(a1:Int=1, a2:Int=2), b:Int=3) -> Int { (a.a1 + a.a2) * b };)";
+    CHECK(interpret_std(f_nested + " f((2,3),4)") == "20");
+    CHECK(interpret_std(f_nested + " f((),4)") == "12");
+    CHECK(interpret_std(f_nested + " f()") == "9");
+    CHECK(interpret_std(f_nested + " f(b=4)") == "12");
+    CHECK(interpret_std(f_nested + " f(a=())") == "9");
+    CHECK(interpret_std(f_nested + " f(a=(a1=10))") == "36");
     // ERROR: won't fill defaults when passed single arg or partial tuple
     CHECK_THROWS_EC(interpret_std(f_defs + " f(1)"), FunctionNotFound);
     CHECK_THROWS_EC(interpret_std(f_defs + " f 1"), FunctionNotFound);
