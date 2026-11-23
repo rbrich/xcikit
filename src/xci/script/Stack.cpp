@@ -1,7 +1,7 @@
 // Stack.cpp created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Stack.h"
@@ -22,7 +22,7 @@ using std::endl;
 
 void Stack::push(const Value& v)
 {
-    auto size = v.size_on_stack();
+    const auto size = v.size_on_stack();
     if (size == 0)
         return;
     if (m_stack_pointer < size) {

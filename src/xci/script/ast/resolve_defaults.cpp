@@ -103,15 +103,7 @@ public:
                 if (v.module != &module()) {
                     // calling function from different module - copy defaults (if any)
                     auto& param = m_type_info.signature().param_type;
-                    if (param.is_struct()) {
-                        for (auto& item : param.subtypes()) {
-                            auto idx = item.default_value();
-                            const TypedValue& val = v.module->get_value(idx);
-                            val.incref();
-                            idx = module().add_value(TypedValue(val));
-                            item.set_default_value(idx);
-                        }
-                    }
+                    copy_defaults_from_module(param, *v.module);
                 }
                 break;
             }
@@ -213,6 +205,23 @@ public:
 
 private:
     Module& module() { return m_scope.module(); }
+
+    // Recursively copy default values of `ti` that originates in module `mod` to current module
+    void copy_defaults_from_module(TypeInfo& ti, const Module& mod) {
+        if (ti.is_struct()) {
+            for (auto& item : ti.subtypes()) {
+                auto idx = item.default_value();
+                if (idx != no_index) {
+                    const TypedValue& val = mod.get_value(idx);
+                    val.incref();
+                    idx = module().add_value(TypedValue(val));
+                    item.set_default_value(idx);
+                }
+                // The item may itself be a struct with default values
+                copy_defaults_from_module(item, mod);
+            }
+        }
+    }
 
     Scope& m_scope;
 

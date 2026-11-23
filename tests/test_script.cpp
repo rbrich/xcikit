@@ -997,8 +997,11 @@ TEST_CASE( "Function parameters: propagate defaults across modules", "[script][i
     auto& module_manager = ctx.interpreter.module_manager();
     const auto mod_func = module_manager.make_module("mod_func");
     mod_func->import_module("builtin");
+    mod_func->import_module("std");
 
-    TypedValue result = ctx.interpreter.eval(mod_func, "f = fun (a:Int=1, b:Int=2) -> Int { __add 0x99 }");
+    TypedValue result = ctx.interpreter.eval(mod_func,
+        "f = fun (a:Int=1, b:Int=2) -> Int { a+b }\n"
+        "f2 = fun (a:(a1:Int=1, a2:Int=2), b:Int=3) -> Int { (a.a1 + a.a2) * b };");
     result.decref();
 
     const auto mod_usage = module_manager.make_module("mod_usage");
@@ -1010,6 +1013,10 @@ TEST_CASE( "Function parameters: propagate defaults across modules", "[script][i
 
     result = ctx.interpreter.eval(mod_usage, "f(a=10)");
     CHECK(dump_to_string(result) == "12");
+    result.decref();
+
+    result = ctx.interpreter.eval(mod_usage, "f2()");
+    CHECK(dump_to_string(result) == "9");
     result.decref();
 
     module_manager.clear();
