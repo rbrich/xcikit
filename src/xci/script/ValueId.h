@@ -19,14 +19,17 @@ class Value;
 class ValueId {
 public:
     ValueId() = default;
-    ValueId(Index idx) : m_id(idx) {}
+    explicit ValueId(Index idx) : m_id(idx) {}
 
     // Thread-local pool of values (mainly default values in TypeInfo)
     // Note that the compiler is single-thread, so each compiler has its own instance of the pool.
     static std::deque<Value>& value_pool();
 
+    // Decref all values in pool and empty it (call before exit to avoid ASAN leak reports)
+    static void clear_pool();
+
     // This is costly operation, keep it explicit - don't add it to a constructor
-    static ValueId add(Value value);
+    static ValueId add(Value&& value);
 
     friend bool operator==(ValueId a, ValueId b) { return a.m_id == b.m_id; }
     friend bool operator<(ValueId a, ValueId b) { return a.m_id < b.m_id; }

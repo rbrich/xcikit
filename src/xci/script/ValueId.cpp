@@ -21,16 +21,24 @@ std::deque<Value>& ValueId::value_pool()
     return tl_value_pool;
 }
 
+void ValueId::clear_pool()
+{
+    for (auto& val : tl_value_pool) {
+        val.decref();
+    }
+    tl_value_pool.clear();
+}
 
-ValueId ValueId::add(Value value)
+
+ValueId ValueId::add(Value&& value)
 {
     const auto it = std::ranges::find(value_pool(), value);
-    if (it == value_pool().end()) {
-        value.incref();
-        value_pool().emplace_back(std::move(value));
-        return ValueId(value_pool().size() - 1);
+    if (it != value_pool().end()) {
+        value.decref();  // we don't save the new value -> release it (note that newly created values have refcount=1)
+        return ValueId(it - value_pool().begin());
     }
-    return it - value_pool().begin();
+    value_pool().emplace_back(std::move(value));
+    return ValueId(value_pool().size() - 1);
 }
 
 const Value& ValueId::get() const

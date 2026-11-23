@@ -63,6 +63,7 @@ enum ErrorCode {
     StructUnknownKey,
     StructDuplicateKey,
     StructKeyTypeMismatch,
+    StructDefaultMissing,
     StructDefaultNotConstant,
     IntrinsicsFunctionError,
     UnresolvedSymbol,
@@ -282,6 +283,13 @@ inline ScriptError struct_duplicate_key(NameId key, const SourceLocation& loc) {
 }
 ScriptError struct_key_type_mismatch(const TypeInfo& struct_type, const TypeInfo& spec,
                                      const TypeInfo& got, const SourceLocation& loc);
+
+
+inline ScriptError struct_default_missing(NameId key, const SourceLocation& loc) {
+    return ScriptError(ErrorCode::StructDefaultMissing,
+                       fmt::format("default value for key \"{}\" is not specified", key), loc);
+}
+
 
 inline ScriptError struct_default_not_constant(NameId key, const SourceLocation& loc) {
     return ScriptError(ErrorCode::StructDefaultNotConstant,

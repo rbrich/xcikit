@@ -190,7 +190,8 @@ public:
                 // Update the TypeInfo stored in the module via m_type_info - see TypeDef, Definition, FunctionType
                 auto& ti = m_type_info.subtypes()[i];
                 assert(ti == m_value.type_info());
-                ti.set_default_value(ValueId::add(m_value.value()));
+                m_value.incref();
+                ti.set_default_value(ValueId::add(std::move(m_value.value())));
                 m_value = {};
             }
         }

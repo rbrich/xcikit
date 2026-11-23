@@ -6,6 +6,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers.hpp>
+#include <catch2/reporters/catch_reporter_event_listener.hpp>
+#include <catch2/reporters/catch_reporter_registrars.hpp>
 
 #include <xci/script/Parser.h>
 #include <xci/script/Interpreter.h>
@@ -41,6 +43,15 @@ struct Context {
         vfs.mount(XCI_SHARE);
         interpreter.configure(Compiler::Flags::Mandatory);
     }
+
+    void clear() {
+        interpreter.module_manager().clear();
+    }
+
+    void teardown() {
+        interpreter.module_manager().clear(false);
+        ValueId::clear_pool();
+    }
 };
 
 
@@ -49,6 +60,19 @@ static Context& context()
     static Context context;
     return context;
 }
+
+
+// Global teardown
+class testRunListener : public Catch::EventListenerBase {
+public:
+    using Catch::EventListenerBase::EventListenerBase;
+
+    void testRunEnded(Catch::TestRunStats const&) override {
+        context().teardown();
+    }
+};
+
+CATCH_REGISTER_LISTENER(testRunListener)
 
 
 template <typename T>
@@ -175,7 +199,7 @@ static std::string interpret(const std::string& input, bool import_std=false)
         assert(ctx.interpreter.machine().stack().n_frames() == 0);
         throw;
     }
-    ctx.interpreter.module_manager().clear();
+    ctx.clear();
     return os.str();
 }
 
@@ -806,7 +830,7 @@ TEST_CASE( "User-defined types: struct defaults across modules", "[script][inter
     CHECK(dump_to_string(result) == "MySlice(start=10, stop=-1, step=1)");
     result.decref();
 
-    module_manager.clear();
+    ctx.clear();
 }
 
 
@@ -1019,7 +1043,7 @@ TEST_CASE( "Function parameters: propagate defaults across modules", "[script][i
     CHECK(dump_to_string(result) == "9");
     result.decref();
 
-    module_manager.clear();
+    ctx.clear();
 }
 
 
@@ -1597,7 +1621,7 @@ TEST_CASE( "Native functions: free function", "[script][native]" )
     CHECK(result.type() == Type::Int64);
     CHECK(result.get<int64_t>() == 1);
     result.decref();
-    ctx.interpreter.module_manager().clear();
+    ctx.clear();
 }
 
 
@@ -1622,7 +1646,7 @@ TEST_CASE( "Native functions: lambda", "[script][native]" )
     CHECK(result.type() == Type::Int64);
     CHECK(result.get<int64_t>() == 24);
     result.decref();
-    ctx.interpreter.module_manager().clear();
+    ctx.clear();
 }
 
 

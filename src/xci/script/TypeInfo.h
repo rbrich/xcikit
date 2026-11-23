@@ -135,7 +135,7 @@ public:
         r.m_is_literal = true;
         r.m_refcount = 0;
         r.m_key = {};
-        r.m_default_value = no_index;
+        r.m_default_value = ValueId{};
     }
 
     TypeInfo& operator =(const TypeInfo& r);
@@ -322,8 +322,9 @@ inline TypeInfo ti_tuple(Args&&... args) { return TypeInfo(TypeInfo::tuple_of, {
 // Each item should have key
 inline TypeInfo ti_struct(std::initializer_list<TypeInfo> items)
 { return TypeInfo(TypeInfo::struct_of, std::forward<std::initializer_list<TypeInfo>>(items)); }
-inline TypeInfo ti_key(std::string_view key, TypeInfo&& ti) {
+inline TypeInfo ti_key(std::string_view key, TypeInfo&& ti, ValueId default_value = ValueId()) {
     ti.set_key(intern(key));
+    ti.set_default_value(default_value);
     return std::move(ti);
 }
 

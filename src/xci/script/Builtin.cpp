@@ -454,10 +454,11 @@ static void output_stream_leave3(Stack& stack, void*, void*)
 void BuiltinModule::add_io_functions()
 {
     // types
+    const ValueId undef_stream = ValueId::add(value::Stream());
     auto streams = ti_struct({
-            ti_key("in", ti_stream()),
-            ti_key("out", ti_stream()),
-            ti_key("err", ti_stream())
+            ti_key("in", ti_stream(), undef_stream),
+            ti_key("out", ti_stream(), undef_stream),
+            ti_key("err", ti_stream(), undef_stream),
     });
     add_symbol("Streams", Symbol::TypeAlias, add_type(streams));
 

@@ -126,9 +126,8 @@ public:
                         load_defaults(item_ti);
                         continue;
                     }
-                    // FIXME: remove this logic, make it an error if the default value is not set
-                    // Default value not specified, use implicit zero value
-                    default_idx = module().add_value(TypedValue(item_ti));
+                    // Default value not specified
+                    throw struct_default_missing(item_ti.key(), v.source_loc);
                 }
 
                 // LOAD_STATIC <static_idx>

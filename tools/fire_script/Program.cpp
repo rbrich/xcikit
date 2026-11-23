@@ -1,7 +1,7 @@
 // Program.cpp.cc created on 2021-03-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2024 Radek Brich
+// Copyright 2021–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Program.h"
@@ -29,8 +29,14 @@ Program::Program(bool log_debug)
     ctx.vfs.mount(XCI_SHARE);
 }
 
+Program::~Program()
+{
+    // This is mainly for ASAN leak detector, frees explicitly allocated memory (via `new`)
+    ValueId::clear_pool();
+}
 
-void Program::process_args(char* argv[])
+
+int Program::process_args(char* argv[])
 {
     opts.parse(argv);
 
@@ -41,14 +47,15 @@ void Program::process_args(char* argv[])
     if (!opts.prog_opts.schema_file.empty()) {
         Module dummy_module(ctx.interpreter.module_manager());
         if (!dummy_module.write_schema_to_file(opts.prog_opts.schema_file))
-            exit(1);
+            return -1;
     }
 
     if (opts.prog_opts.expr) {
         if (!repl.evaluate("<input>", opts.prog_opts.expr,
                     opts.prog_opts.compile ? EvalMode::Compile : EvalMode::SingleInput))
-            exit(1);
-        exit(0);
+            return -1;
+        ValueId::clear_pool();
+        return 0;  // done
     }
 
     if (!opts.prog_opts.input_files.empty()) {
@@ -60,7 +67,7 @@ void Program::process_args(char* argv[])
                 auto module = std::make_shared<Module>(ctx.interpreter.module_manager(), module_name);
                 if (!module->load_from_file(input_file)) {
                     std::cerr << "error loading module file: " << input_file << std::endl;
-                    exit(1);
+                    return -1;
                 }
 
                 repl.evaluate_module(*module,
@@ -71,11 +78,11 @@ void Program::process_args(char* argv[])
             auto content = read_text_file(input_file);
             if (!content) {
                 std::cerr << "cannot read file: " << input_file << std::endl;
-                exit(1);
+                return -1;
             }
             if (!repl.evaluate(module_name, *content,
                     opts.prog_opts.compile ? EvalMode::Compile : EvalMode::SingleInput))
-                exit(1);
+                return -1;
             if (opts.prog_opts.compile && !ctx.input_modules.empty()) {
                 std::string out_path = opts.prog_opts.output_file;
                 if (out_path.empty()) {
@@ -88,16 +95,18 @@ void Program::process_args(char* argv[])
                 if (opts.prog_opts.verbose)
                     std::clog << "Writing module: " << out_path << std::endl;
                 if (!ctx.input_modules.back()->save_to_file(out_path))
-                    exit(1);
+                    return -1;
             }
         }
-        exit(0);
+        return 0;  // done
     }
 
     if (opts.prog_opts.compile) {
         std::cerr << "--compile: no input files" << std::endl;
-        exit(1);
+        return -1;
     }
+
+    return 1;  // continue to REPL
 }
 
 

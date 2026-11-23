@@ -1,7 +1,7 @@
 // Stream.h created on 2021-04-12 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021 Radek Brich
+// Copyright 2021–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_STREAM_H
@@ -27,10 +27,10 @@ concept ByteSpanT = requires(const T& v) {
 
 class Stream {
 public:
-    // undefined - no value
+    // Undefined - no value (no change in `with` statement)
     using Undef = std::monostate;
 
-    // null stream (/dev/null)
+    // Discarding stream (/dev/null)
     struct Null {
         bool operator ==(const Null& rhs) const { return true; }
     };

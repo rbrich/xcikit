@@ -1,7 +1,7 @@
 // NameId.h created on 2023-09-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_NAME_ID_H
@@ -22,14 +22,14 @@ public:
     static constexpr Id empty_string = core::StringPool::empty_string;
 
     NameId() = default;
-    NameId(Id id) : m_id(id) {}
+    explicit NameId(Id id) : m_id(id) {}
 
     // Thread-local string pool for interned strings (names, symbols)
     // Note that the compiler is single-thread, so each compiler has its own instance of StringPool.
     static core::StringPool& string_pool();
 
     // This is costly operation, keep it explicit - don't add it to a constructor
-    static NameId intern(std::string_view name) { return string_pool().add(name); }
+    static NameId intern(std::string_view name) { return NameId(string_pool().add(name)); }
 
     friend bool operator==(NameId a, NameId b) { return a.m_id == b.m_id; }
     friend bool operator<(NameId a, NameId b) { return a.m_id < b.m_id; }
