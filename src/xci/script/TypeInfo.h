@@ -7,6 +7,7 @@
 #ifndef XCI_SCRIPT_TYPEINFO_H
 #define XCI_SCRIPT_TYPEINFO_H
 
+#include "ValueId.h"
 #include "SymbolTable.h"
 #include <xci/core/container/StaticVec.h>
 
@@ -200,9 +201,8 @@ public:
     void set_key(NameId key) { m_key = key; }
     const TypeInfo* struct_item_by_key(NameId key) const;  // type = Struct
 
-    bool has_default_value() const { return m_default_value != no_index; }
-    Index default_value() const { return m_default_value; }  // default value of struct item or function parameter
-    void set_default_value(Index idx) { m_default_value = idx; }  // use `no_index` to remove default value
+    ValueId default_value() const { return m_default_value; }  // default value of struct item or function parameter
+    void set_default_value(ValueId val) { m_default_value = val; }
 
     SymbolPointer symptr() const;  // type = Unknown
     SymbolPointer& symptr();  // type = Unknown
@@ -225,13 +225,6 @@ public:
     uint16_t incref() { return ++m_refcount; }
     uint16_t decref() { return --m_refcount; }
 
-    // -------------------------------------------------------------------------
-    // Serialization
-
-    template <class Archive> void save_schema(Archive& ar) const;
-    template <class Archive> void save(Archive& ar) const;
-    template <class Archive> void load(Archive& ar);
-
 private:
     void construct_variant();
     void destroy_variant();
@@ -250,93 +243,8 @@ private:
     bool m_is_literal = true;  // literal = any expression that doesn't reference functions/variables
     uint16_t m_refcount = 0;
     NameId m_key;
-    Index m_default_value = no_index;  // index of static value in Module that contains this TypeInfo
+    ValueId m_default_value;
 };
-
-
-template <class Archive>
-void TypeInfo::save_schema(Archive& ar) const {
-    ar("key", m_key);
-    ar("type", type());
-    if (ar.enter_union("info", "type", typeid(TypeInfo))) {
-        ar(uint8_t(Type::Unknown), "var", SymbolPointer{});
-        ar(uint8_t(Type::List), "elem_type", TypeInfo{});
-        ar(uint8_t(Type::Tuple), "subtypes", Subtypes{});
-        ar(uint8_t(Type::Function), "signature", SignaturePtr{});
-        ar(uint8_t(Type::Named), "named_type", SymbolPointer{});
-        ar(uint8_t(Type::Struct), "subtypes", Subtypes{});
-        ar.leave_union();
-    }
-    ar("default", m_default_value);
-}
-
-
-template <class Archive>
-void TypeInfo::save(Archive& ar) const {
-    if (m_key)
-        ar("key", m_key);
-    ar("type", type());
-    switch (type()) {
-        case Type::Unknown:
-            ar("var", symptr());
-            break;
-        case Type::Function:
-            ar("signature", signature());
-            break;
-        case Type::List:
-            ar("elem_type", elem_type());
-            break;
-        case Type::Tuple:
-        case Type::Struct:
-            ar("subtypes", subtypes());
-            break;
-        case Type::Named:
-            ar("named_type", symptr());
-            break;
-        default:
-            break;
-    }
-    ar("default", m_default_value);
-}
-
-
-template <class Archive>
-void TypeInfo::load(Archive& ar)
-{
-    ar(m_key);
-    Type t;
-    ar(t);
-    set_type(t);
-    switch (type()) {
-        case Type::Unknown: {
-            ar(symptr());
-            break;
-        }
-        case Type::Function: {
-            ar(*signature_ptr());
-            break;
-        }
-        case Type::List: {
-            subtypes().reset(1);
-            ar(subtypes().front());
-            break;
-        }
-        case Type::Tuple:
-        case Type::Struct: {
-            std::vector<TypeInfo> v;
-            ar(v);
-            subtypes() = Subtypes(core::to_span(v));
-            break;
-        }
-        case Type::Named: {
-            ar(symptr());
-            break;
-        }
-        default:
-            break;
-    }
-    ar(m_default_value);
-}
 
 
 struct Signature {

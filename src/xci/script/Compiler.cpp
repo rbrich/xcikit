@@ -76,7 +76,7 @@ public:
             return;  // Void value
         // add to static values
         v.value.incref();
-        auto idx = module().add_value(TypedValue(v.value));
+        const auto idx = module().add_value(TypedValue(v.value));
         // LOAD_STATIC <static_idx>
         code().add_L1(Opcode::LoadStatic, idx);
     }
@@ -84,7 +84,7 @@ public:
     void visit(ast::Tuple& v) override {
         // build tuple on stack
         if (v.ti.underlying().is_struct() && v.items.empty()) {
-            // A struct can be initialized with empty tuple "()".
+            // A struct can be initialized with empty tuple `()`
             load_defaults(v.ti);
             return;
         }
@@ -115,8 +115,13 @@ public:
                 // not found - use the default
                 if (item_ti.is_void())
                     continue;  // Empty value, no LOAD instruction
-                Index default_idx = item_ti.default_value();
-                if (default_idx == no_index) {
+                const ValueId default_value = item_ti.default_value();
+                Index default_idx;
+                if (default_value) {
+                    TypedValue val(default_value.get(), item_ti);
+                    val.incref();
+                    default_idx = module().add_value(std::move(val));
+                } else {
                     if (item_ti.underlying().is_struct()) {
                         load_defaults(item_ti);
                         continue;
@@ -124,12 +129,8 @@ public:
                     // FIXME: remove this logic, make it an error if the default value is not set
                     // Default value not specified, use implicit zero value
                     default_idx = module().add_value(TypedValue(item_ti));
-                } else if (v.ti.is_named() && v.ti.symptr().symtab()->module() != &module()) {
-                    // In case the default value is a static value from another module, copy it
-                    const TypedValue& val = v.ti.symptr().symtab()->module()->get_value(default_idx);
-                    val.incref();
-                    default_idx = module().add_value(TypedValue(val));
                 }
+
                 // LOAD_STATIC <static_idx>
                 code().add_L1(Opcode::LoadStatic, default_idx);
                 continue;
@@ -612,20 +613,21 @@ private:
         for (const auto& item_ti : reverse(struct_ti.underlying().subtypes())) {
             if (item_ti.is_void())
                 continue;  // Empty value, no LOAD instruction
-            Index default_idx = item_ti.default_value();
-            if (default_idx == no_index) {
+            const ValueId default_value = item_ti.default_value();
+            Index default_idx;
+            if (default_value) {
+                TypedValue val(default_value.get(), item_ti);
+                val.incref();
+                default_idx = module().add_value(std::move(val));
+            } else {
                 if (item_ti.underlying().is_struct()) {
                     load_defaults(item_ti);
                     continue;
                 }
                 // Default value not specified, use implicit zero value
                 default_idx = module().add_value(TypedValue(item_ti));
-            } else if (struct_ti.is_named() && struct_ti.symptr().symtab()->module() != &module()) {
-                // In case the default value is a static value from another module, copy it
-                const TypedValue& val = struct_ti.symptr().symtab()->module()->get_value(default_idx);
-                val.incref();
-                default_idx = module().add_value(TypedValue(val));
             }
+
             // LOAD_STATIC <static_idx>
             code().add_L1(Opcode::LoadStatic, default_idx);
         }

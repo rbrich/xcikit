@@ -34,7 +34,6 @@ struct StreamOptions {
     bool qualify_type_vars : 1 = false;
     unsigned level : 6 = 0;
     std::bitset<32> rules;
-    const Module* module = nullptr;
 };
 
 static StreamOptions& stream_options(std::ostream& os) {
@@ -50,21 +49,6 @@ static StreamOptions& stream_options(std::ostream& os) {
     }
     return *p;
 }
-
-namespace {
-    // Scope helper to set the current module for reading TypeInfo::default_value
-    class StreamSetModule : core::NonMovable, core::NonCopyable {
-    public:
-        StreamSetModule(std::ostream& os, const Module* m) : os(os) {
-            orig_module = stream_options(os).module;
-            stream_options(os).module = m;
-        }
-        ~StreamSetModule() { stream_options(os).module = orig_module; }
-    private:
-        std::ostream& os;
-        const Module* orig_module = nullptr;
-    };
-} // namespace
 
 std::ostream& dump_tree(std::ostream& os)
 {
@@ -455,12 +439,10 @@ std::ostream& operator<<(std::ostream& os, const Reference& v)
     if (stream_options(os).enable_tree) {
         os << "Reference(Expression)";
         if (v.ti) {
-            StreamSetModule m(os, v.module);
             os << " [type_info=" << v.ti << ']';
         }
         const auto symptr = v.identifier.symbol;
         if (symptr && symptr->type() == Symbol::Function && v.index != no_index) {
-            StreamSetModule m(os, v.module);
             os << " [Function #" << v.index << " @" << v.module->name() << ": "
                << v.module->get_scope(v.index).function().signature() << "]";
         }
@@ -779,7 +761,6 @@ std::ostream& operator<<(std::ostream& os, const TypeAlias& v)
 
 std::ostream& operator<<(std::ostream& os, const Block& v)
 {
-    StreamSetModule m(os, v.symtab ? v.symtab->module() : nullptr);
     DumpVisitor visitor(os);
     if (stream_options(os).enable_tree) {
         os << "Block";
@@ -824,7 +805,6 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
 
 std::ostream& operator<<(std::ostream& os, const Function& f)
 {
-    StreamSetModule m(os, &f.module());
     os << f.signature() << endl;
     switch (f.kind()) {
         case Function::Kind::Bytecode:
@@ -991,7 +971,6 @@ std::ostream& operator<<(std::ostream& os, DumpBytecode&& v)
 
 std::ostream& operator<<(std::ostream& os, const Module& v)
 {
-    StreamSetModule m(os, &v);
     const bool verbose = stream_options(os).module_verbose;
     const bool dump_tree = stream_options(os).enable_tree;
     os << "* " << v.num_imported_modules() << " imported modules\n" << more_indent;
@@ -1162,15 +1141,8 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
                 if (item.key())
                     os << item.key() << ": ";
                 os << item;
-                if (item.has_default_value()) {
-                    const Module* module = stream_options(os).module;
-                    if (module == nullptr) {
-                        os << " = @" << item.default_value();
-                    } else {
-                        assert(item.default_value() < module->num_values());
-                        os << " = " << module->get_value(item.default_value());
-                    }
-                }
+                if (item.default_value())
+                    os << " = " << item.default_value();
             }
             return os << ")";
         }
@@ -1240,7 +1212,6 @@ std::ostream& operator<<(std::ostream& os, const SymbolPointer& v)
     if (v.symtab() != nullptr) {
         fmt::print(os, " @{} ({:x})", v.symtab()->name(), intptr_t(v.symtab()));
         if (v->type() == Symbol::Function && v.symtab()->module() && v->index() != no_index) {
-            StreamSetModule m(os, v.symtab()->module());
             os << ": " << v.get_generic_scope().function().signature();
         }
     }

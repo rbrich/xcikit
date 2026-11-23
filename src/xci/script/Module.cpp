@@ -7,6 +7,7 @@
 #include "Module.h"
 #include "Function.h"
 #include "Error.h"
+#include "serialization.h"
 #include "ast/AST_serialization.h"
 
 #include <xci/data/BinaryWriter.h>
@@ -142,7 +143,7 @@ Index Module::find_value(const TypedValue& value) const
 Index Module::add_type(TypeInfo type_info)
 {
     // lookup previous type (deduplicate)
-    auto idx = find_type(type_info);
+    const auto idx = find_type(type_info);
     if (idx != no_index) {
         m_types[idx].incref();
         return idx;

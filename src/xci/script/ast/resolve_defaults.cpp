@@ -100,11 +100,6 @@ public:
                 break;
             case Symbol::Function: {
                 m_type_info = v.ti;
-                if (v.module != &module()) {
-                    // calling function from different module - copy defaults (if any)
-                    auto& param = m_type_info.signature().param_type;
-                    copy_defaults_from_module(param, *v.module);
-                }
                 break;
             }
             case Symbol::Class:
@@ -192,36 +187,17 @@ public:
                 if (m_value.is_unknown())
                     throw struct_default_not_constant(st.identifier.name, st.default_value->source_loc);
 
-                // Store the literal value as a static in the module
-                m_value.incref();
-                const Index static_idx = module().add_value(std::move(m_value));
-
                 // Update the TypeInfo stored in the module via m_type_info - see TypeDef, Definition, FunctionType
                 auto& ti = m_type_info.subtypes()[i];
-                ti.set_default_value(static_idx);
+                assert(ti == m_value.type_info());
+                ti.set_default_value(ValueId::add(m_value.value()));
+                m_value = {};
             }
         }
     }
 
 private:
     Module& module() { return m_scope.module(); }
-
-    // Recursively copy default values of `ti` that originates in module `mod` to current module
-    void copy_defaults_from_module(TypeInfo& ti, const Module& mod) {
-        if (ti.is_struct()) {
-            for (auto& item : ti.subtypes()) {
-                auto idx = item.default_value();
-                if (idx != no_index) {
-                    const TypedValue& val = mod.get_value(idx);
-                    val.incref();
-                    idx = module().add_value(TypedValue(val));
-                    item.set_default_value(idx);
-                }
-                // The item may itself be a struct with default values
-                copy_defaults_from_module(item, mod);
-            }
-        }
-    }
 
     Scope& m_scope;
 

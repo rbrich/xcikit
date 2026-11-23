@@ -1,7 +1,7 @@
 // Machine.cpp created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Machine.h"
@@ -452,7 +452,7 @@ void Machine::run(const InvokeCallback& cb)
             }
 
             case Opcode::LoadStatic: {
-                auto arg = leb128_decode<Index>(it);
+                const auto arg = leb128_decode<Index>(it);
                 const auto& o = function->module().get_value(arg);
                 m_stack.push(o);
                 o.incref();
