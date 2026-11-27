@@ -143,6 +143,7 @@ void BuiltinModule::add_intrinsics()
     add_symbol("__list_length", Symbol::Instruction, Index(Opcode::ListLength));
     add_symbol("__list_slice", Symbol::Instruction, Index(Opcode::ListSlice));
     add_symbol("__list_concat", Symbol::Instruction, Index(Opcode::ListConcat));
+    add_symbol("__list_reverse", Symbol::Instruction, Index(Opcode::ListReverse));
     add_symbol("__cast", Symbol::Instruction, Index(Opcode::Cast));
 
     // two args

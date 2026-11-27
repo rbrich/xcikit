@@ -1187,6 +1187,7 @@ TEST_CASE( "Lexical scope", "[script][interpreter]" )
     CHECK(interpret_std("f=fun x:Int->Int { x; if x <= 1 then 0 else f (x-1) }; f 5") == "5;4;3;2;1;0");      // yield intermediate steps
     CHECK(interpret_std("f=fun n:Int->Int { if n == 1 then 1 else n * f (n-1) }; f 7") == "5040");      // factorial
     CHECK(interpret_std("f=fun x:Int->Int { if x < 2 then x else f (x-1) + f (x-2) }; f 7") == "13");   // Fibonacci number
+    CHECK(interpret_std("slow_reverse = fun<T> a:[T] -> [T] { if a.is_empty then [] else [a.last] + a.initial.slow_reverse } ; slow_reverse [1,2,3,4,5]") == "[5, 4, 3, 2, 1]");
 
     // iteration (with tail-recursive functions)
     CHECK(interpret_std("fi=fun (prod:Int, cnt:Int, max:Int) -> Int { if cnt > max then prod else fi (cnt*prod, cnt+1, max) };\n"
@@ -1425,6 +1426,12 @@ TEST_CASE( "List operations", "[script][interpreter]" )
     CHECK(interpret_std(nums + "take 10 nums") == "[1, 2, 3, 4, 5]");
     CHECK(interpret_std(nums + "drop 3 nums") == "[4, 5]");
     CHECK(interpret_std(nums + "drop 10 nums") == "[]");
+    CHECK(interpret_std(nums + "reverse nums") == "[5, 4, 3, 2, 1]");
+    CHECK(interpret_std(R"(reverse ["a", "bb", "ccc"])") == R"(["ccc", "bb", "a"])");
+    CHECK(interpret_std(R"(xs = ["a", "bb", "ccc"]; (reverse xs, xs))")
+          == R"((["ccc", "bb", "a"], ["a", "bb", "ccc"]))");  // not in-place
+    CHECK(interpret_std("reverse ([]:[Int])") == "[]");
+    CHECK(interpret_std("reverse [1]") == "[1]");
 }
 
 

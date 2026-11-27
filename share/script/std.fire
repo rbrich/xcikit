@@ -809,6 +809,7 @@ is_empty = fun<T> l:[T] -> Bool { l.len == 0u }
 
 type Slice = (start:Int=0, stop:Int, step:Int=1)
 slice = fun<T> ([T], Slice) -> [T] { __list_slice __type_index<T> }
+reverse = fun<T> l:[T] -> [T] { __list_reverse __type_index<T> }
 
 head = fun<T> a:[T] -> T { a!0 }
 tail = fun<T> a:[T] -> [T] { a .slice (start=1, stop=max:Int) }
@@ -818,7 +819,7 @@ initial = fun<T> a:[T] -> [T] { a .slice (stop=-1) }
 take = fun<T> n:Int -> [T] -> [T] { fun a:[T] -> [T] { a .slice (stop=n) } }
 drop = fun<T> n:Int -> [T] -> [T] { fun a:[T] -> [T] { a .slice (start=n, stop=max:Int) } }
 
-map = fun<T,U> (f:(T->U), l:[T]) -> [U] { if l.is_empty then [] else [f (l!0)] + map (f, l.slice (start=1, stop=max:Int, step=1)) }
+map = fun<T,U> (f:(T->U), l:[T]) -> [U] { if l.is_empty then [] else [f (l!0)] + map (f, l.slice (start=1, stop=max:Int)) }
 //filter = fun<Ord T> fn [T] -> [T] { }
 //reduce = fun<Ord T> fn [T] -> T { }
 //sum = reduce add

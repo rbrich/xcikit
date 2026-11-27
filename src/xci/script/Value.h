@@ -126,6 +126,11 @@ struct ListV {
     /// Works in-place otherwise.
     void extend(const ListV& rhs, const TypeInfo& elem_type);
 
+    /// Reverse the list.
+    /// Automatically copies the list on heap when it has more than 1 reference.
+    /// Works in-place otherwise.
+    void reverse(const TypeInfo& elem_type);
+
     HeapSlot slot;
 };
 

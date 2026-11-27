@@ -152,6 +152,7 @@ enum class Opcode: uint8_t {
     ListLength,             // operand = elem type (type index), get list length - pull the list, push length:UInt32
     ListSlice,              // operand = elem type, slice a list - pull the list, pull Slice(begin:Int, end:Int, step:Int), push sliced list
     ListConcat,             // operand = elem type, concat two lists - pull a, b lists from stack, push a + b
+    ListReverse,            // operand = elem type, reverse a list - pull the list from stack, push reversed list
 
     Invoke,                 // operand = type index in current module, pull value from stack, invoke it
 
