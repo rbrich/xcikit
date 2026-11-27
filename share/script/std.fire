@@ -1,7 +1,7 @@
 // std.fire created on 2019-10-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2023 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 
@@ -733,16 +733,16 @@ instance<T> Subscript [T] Int T {
 // Format and Parse
 
 type FormatSpec = (
-    fill: Char
-    align: Char  // < > ^
-    sign: Char   // + -
-    width: Int
-    precision: Int
-    spec: String
+    fill: Char = '\x00'
+    align: Char = '\x00'  // < > ^
+    sign: Char = '\x00'  // + -
+    width: Int = 0
+    precision: Int = 0
+    spec: String = ""
 )
 
 type ParseSpec = (
-    spec: String
+    spec: String = ""
 )
 
 class Format T {

@@ -6,6 +6,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers.hpp>
+#include <catch2/reporters/catch_reporter_event_listener.hpp>
+#include <catch2/reporters/catch_reporter_registrars.hpp>
 
 #include <xci/script/Parser.h>
 #include <xci/script/Interpreter.h>
@@ -41,6 +43,15 @@ struct Context {
         vfs.mount(XCI_SHARE);
         interpreter.configure(Compiler::Flags::Mandatory);
     }
+
+    void clear() {
+        interpreter.module_manager().clear();
+    }
+
+    void teardown() {
+        interpreter.module_manager().clear(false);
+        ValueId::clear_pool();
+    }
 };
 
 
@@ -49,6 +60,19 @@ static Context& context()
     static Context context;
     return context;
 }
+
+
+// Global teardown
+class testRunListener : public Catch::EventListenerBase {
+public:
+    using Catch::EventListenerBase::EventListenerBase;
+
+    void testRunEnded(Catch::TestRunStats const&) override {
+        context().teardown();
+    }
+};
+
+CATCH_REGISTER_LISTENER(testRunListener)
 
 
 template <typename T>
@@ -175,7 +199,7 @@ static std::string interpret(const std::string& input, bool import_std=false)
         assert(ctx.interpreter.machine().stack().n_frames() == 0);
         throw;
     }
-    ctx.interpreter.module_manager().clear();
+    ctx.clear();
     return os.str();
 }
 
@@ -664,11 +688,15 @@ TEST_CASE( "Types", "[script][interpreter]" )
 
 TEST_CASE( "Coercion", "[script][interpreter]" )
 {
-    // coerce empty tuple (literal) to a struct
-    CHECK(interpret("a:(x:String,y:Int) = (); a") == "(x=\"\", y=0)");
-    CHECK(interpret("a:(x:String, y:(y1:Int, y2:Float)) = (); a.y.y1") == "0");
-    CHECK(interpret("f = fun a:(x:String,y:Int) {a.y}; f ()") == "0");
-    CHECK(interpret("f = fun (x:String,y:Int) {y}; f ()") == "0");
+    // coerce empty tuple (literal) to a struct (requires specified defaults)
+    CHECK_THROWS_EC(interpret(R"(a:(x:String,y:Int) = ())"), StructDefaultMissing);
+    CHECK(interpret(R"(a:(x:String="",y:Int=0) = (); a)") == R"((x="", y=0))");
+    CHECK_THROWS_EC(interpret(R"(a:(x:String="", y:(y1:Int, y2:Float=0.0)) = ())"), StructDefaultMissing);
+    CHECK(interpret(R"(a:(x:String="", y:(y1:Int=0, y2:Float=0.0)) = (); a.y.y1)") == "0");
+    CHECK_THROWS_EC(interpret("f = fun a:(x:String,y:Int) {a.y}; f ()"), StructDefaultMissing);
+    CHECK(interpret(R"(f = fun a:(x:String="",y:Int=42) {a.y}; f ())") == "42");
+    CHECK_THROWS_EC(interpret("f = fun (x:String,y:Int) {y}; f ()"), StructDefaultMissing);
+    CHECK(interpret(R"(f = fun (x:String="",y:Int=42) {y}; f ())") == "42");
     CHECK(interpret_std("format (true, ())") == "\"true\"");  // second arg is FormatSpec
     // only literals may coerce, not functions/variables
     CHECK_THROWS_EC(interpret("t=(); a:(x:String,y:Int) = t"), FunctionNotFound);
@@ -743,10 +771,16 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret_std(my_slice + "MySlice(start=1)") == "MySlice(start=1, stop=-1, step=1)");
     CHECK(interpret_std(my_slice + "MySlice(start=10, step=-1)") == "MySlice(start=10, stop=-1, step=-1)");
     CHECK(interpret_std(my_slice + "MySlice(start=1, stop=2, step=-1)") == "MySlice(start=1, stop=2, step=-1)");
-    const std::string anon_struct = R"(a:(name:String="nobody", age:Int))";
-    CHECK(interpret(anon_struct + R"( = ("joe", 42); a)") == R"((name="joe", age=42))");
+    const std::string anon_struct = R"(a:(name:String="nobody", age:Int=0))";
     CHECK(interpret(anon_struct + " = (); a") == R"((name="nobody", age=0))");
+    CHECK(interpret(anon_struct + R"( = ("joe", 42); a)") == R"((name="joe", age=42))");
     CHECK(interpret(anon_struct + " = (age=42); a") == R"((name="nobody", age=42))");
+    const std::string anon_struct2 = R"(a:(name:String="nobody", age:Int))";
+    CHECK_THROWS_EC(interpret(anon_struct2 + " = (); a"), StructDefaultMissing);  // age doesn't have default specified
+    CHECK_THROWS_EC(interpret(anon_struct2 + R"( = (name="x"); a)"), StructDefaultMissing);
+    CHECK(interpret(anon_struct2 + " = (age=42); a") == R"((name="nobody", age=42))");
+    const std::string anon_struct3 = R"(a:(x:String="none", y:(y1:Int=1, y2:Float=3.14)))";
+    CHECK(interpret(anon_struct3 + " = (); a") == R"((x="none", y=(y1=1, y2=3.14)))");
     // cast from underlying type
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a)") == R"(MyStruct(name="hello", age=42))");
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a:(String, Int))") == R"(("hello", 42))");
@@ -806,7 +840,7 @@ TEST_CASE( "User-defined types: struct defaults across modules", "[script][inter
     CHECK(dump_to_string(result) == "MySlice(start=10, stop=-1, step=1)");
     result.decref();
 
-    module_manager.clear();
+    ctx.clear();
 }
 
 
@@ -969,6 +1003,57 @@ TEST_CASE( "Function parameters", "[script][interpreter]" )
     CHECK(interpret("a=1; f=fun () { a }; f") == "1");
     CHECK(interpret("a=1; f=fun() { a }; f") == "1");
     CHECK(interpret("a=1; f=fun(Void){a}; f") == "1");
+
+    // Function parameters with defaults
+    const std::string f_defs = R"(f = fun (a:Int=1, b:Int=2) -> Int { a+b };)";
+    CHECK(interpret_std(f_defs + " f()") == "3");
+    CHECK(interpret_std(f_defs + " f(a=10)") == "12");
+    CHECK(interpret_std(f_defs + " f(b=10)") == "11");
+    CHECK(interpret_std(f_defs + " f(11,12)") == "23");
+    CHECK(interpret_std(f_defs + " f(b=12,a=11)") == "23");
+    const std::string f_nested = R"(f = fun (a:(a1:Int=1, a2:Int=2), b:Int=3) -> Int { (a.a1 + a.a2) * b };)";
+    CHECK(interpret_std(f_nested + " f((2,3),4)") == "20");
+    CHECK(interpret_std(f_nested + " f((),4)") == "12");
+    CHECK(interpret_std(f_nested + " f()") == "9");
+    CHECK(interpret_std(f_nested + " f(b=4)") == "12");
+    CHECK(interpret_std(f_nested + " f(a=())") == "9");
+    CHECK(interpret_std(f_nested + " f(a=(a1=10))") == "36");
+    // ERROR: won't fill defaults when passed single arg or partial tuple
+    CHECK_THROWS_EC(interpret_std(f_defs + " f(1)"), FunctionNotFound);
+    CHECK_THROWS_EC(interpret_std(f_defs + " f 1"), FunctionNotFound);
+    CHECK_THROWS_EC(interpret("f = fun (a:Int=1, b:Int=2, c:Int=3) -> Int { c }; f(1,2)"), FunctionNotFound);
+}
+
+
+TEST_CASE( "Function parameters: propagate defaults across modules", "[script][interpreter]" )
+{
+    Context& ctx = context();
+    auto& module_manager = ctx.interpreter.module_manager();
+    const auto mod_func = module_manager.make_module("mod_func");
+    mod_func->import_module("builtin");
+    mod_func->import_module("std");
+
+    TypedValue result = ctx.interpreter.eval(mod_func,
+        "f = fun (a:Int=1, b:Int=2) -> Int { a+b }\n"
+        "f2 = fun (a:(a1:Int=1, a2:Int=2), b:Int=3) -> Int { (a.a1 + a.a2) * b };");
+    result.decref();
+
+    const auto mod_usage = module_manager.make_module("mod_usage");
+    mod_usage->add_imported_module(mod_func);
+
+    result = ctx.interpreter.eval(mod_usage, "f()");
+    CHECK(dump_to_string(result) == "3");
+    result.decref();
+
+    result = ctx.interpreter.eval(mod_usage, "f(a=10)");
+    CHECK(dump_to_string(result) == "12");
+    result.decref();
+
+    result = ctx.interpreter.eval(mod_usage, "f2()");
+    CHECK(dump_to_string(result) == "9");
+    result.decref();
+
+    ctx.clear();
 }
 
 
@@ -1546,7 +1631,7 @@ TEST_CASE( "Native functions: free function", "[script][native]" )
     CHECK(result.type() == Type::Int64);
     CHECK(result.get<int64_t>() == 1);
     result.decref();
-    ctx.interpreter.module_manager().clear();
+    ctx.clear();
 }
 
 
@@ -1571,7 +1656,7 @@ TEST_CASE( "Native functions: lambda", "[script][native]" )
     CHECK(result.type() == Type::Int64);
     CHECK(result.get<int64_t>() == 24);
     result.decref();
-    ctx.interpreter.module_manager().clear();
+    ctx.clear();
 }
 
 

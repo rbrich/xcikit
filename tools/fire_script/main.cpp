@@ -1,7 +1,7 @@
 // main.cpp created on 2019-05-15 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Program.h"
@@ -85,7 +85,8 @@ EMSCRIPTEN_BINDINGS(fire_script) {
 int main(int argc, char* argv[])
 {
     Program prog;
-    prog.process_args(argv);
+    if (const int rc = prog.process_args(argv); rc != 1)
+        return -rc;  // translated to 0 (success) or 1 (failure)
     prog.repl_init();
     prog.repl_loop();
     return 0;

@@ -1,7 +1,7 @@
 // Value.h created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_VALUE_H
@@ -392,6 +392,7 @@ public:
     bool operator ==(const TypedValue& rhs) const { return m_value == rhs.m_value; }
 
     const Value& value() const { return m_value; }
+    Value& value() { return m_value; }
     const TypeInfo& type_info() const { return m_type_info; }
     Type type() const { return m_type_info.type(); }
 

@@ -686,13 +686,12 @@ private:
         if (conflict) {
             // ERROR found multiple matching functions
             throw function_conflict(o_ftype.str(), o_candidates.str(), identifier.source_loc);
-        } else {
-            // special case for StructItem, which is invisible in candidates - report as if the symbol wasn't resolved at all
-            if (sym_list.size() == 1 && sym_list.front()->type() == Symbol::StructItem)
-                throw undefined_name(identifier.name, identifier.source_loc);
-            // ERROR couldn't find matching function for `args`
-            throw function_not_found(o_ftype.str(), o_candidates.str(), identifier.source_loc);
         }
+        // special case for StructItem, which is invisible in candidates - report as if the symbol wasn't resolved at all
+        if (sym_list.size() == 1 && sym_list.front()->type() == Symbol::StructItem)
+            throw undefined_name(identifier.name, identifier.source_loc);
+        // ERROR couldn't find matching function for `args`
+        throw function_not_found(o_ftype.str(), o_candidates.str(), identifier.source_loc);
     }
 
     /// Resolve return type after applying m_call_sig

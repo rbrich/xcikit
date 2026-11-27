@@ -76,7 +76,7 @@ public:
             return;  // Void value
         // add to static values
         v.value.incref();
-        auto idx = module().add_value(TypedValue(v.value));
+        const auto idx = module().add_value(TypedValue(v.value));
         // LOAD_STATIC <static_idx>
         code().add_L1(Opcode::LoadStatic, idx);
     }
@@ -84,24 +84,9 @@ public:
     void visit(ast::Tuple& v) override {
         // build tuple on stack
         if (v.ti.underlying().is_struct() && v.items.empty()) {
-            // A struct can be initialized with empty tuple "()".
-            // Fill in the defaults.
-            for (const auto& ti : reverse(v.ti.underlying().subtypes())) {
-                if (ti.is_void())
-                    continue;  // Void value
-                Index idx = ti.default_value();
-                if (idx == no_index) {
-                    // Default value not specified, use implicit zero value
-                    idx = module().add_value(TypedValue(ti));
-                } else if (v.ti.is_named() && v.ti.symptr().symtab()->module() != &module()) {
-                    // In case the default value is a static value from another module, copy it
-                    const TypedValue& val = v.ti.symptr().symtab()->module()->get_value(idx);
-                    val.incref();
-                    idx = module().add_value(TypedValue(val));
-                }
-                // LOAD_STATIC <static_idx>
-                code().add_L1(Opcode::LoadStatic, idx);
-            }
+            // A struct can be initialized with empty tuple `()`
+            for (const auto& item_ti : reverse(v.ti.underlying().subtypes()))
+                load_defaults(item_ti, v.source_loc);
             return;
         }
         for (auto& item : reverse(v.items)) {
@@ -121,29 +106,15 @@ public:
 
     void visit(ast::StructInit& v) override {
         // build struct on stack according to struct_type, fill in defaults
-        for (const auto& ti : reverse(v.ti.underlying().subtypes())) {
+        for (const auto& item_ti : reverse(v.ti.underlying().subtypes())) {
             // lookup the name in StructInit
             const auto it = std::ranges::find_if(v.items,
-                [&ti](const ast::StructInit::Item& item) {
-                  return item.first.name == ti.key();
+                [&item_ti](const ast::StructInit::Item& item) {
+                  return item.first.name == item_ti.key();
                 });
             if (it == v.items.end()) {
                 // not found - use the default
-                if (ti.is_void())
-                    continue;  // Void value
-                Index idx = ti.default_value();
-                if (idx == no_index) {
-                    // FIXME: remove this logic, make it an error if the default value is not set
-                    // add zero value to static values
-                    idx = module().add_value(TypedValue(ti));
-                } else if (v.ti.is_named() && v.ti.symptr().symtab()->module() != &module()) {
-                    // In case the default value is a static value from another module, copy it
-                    const TypedValue& val = v.ti.symptr().symtab()->module()->get_value(idx);
-                    val.incref();
-                    idx = module().add_value(TypedValue(val));
-                }
-                // LOAD_STATIC <static_idx>
-                code().add_L1(Opcode::LoadStatic, idx);
+                load_defaults(item_ti, v.source_loc);
                 continue;
             }
             it->second->apply(*this);
@@ -618,6 +589,34 @@ private:
                     break;
             }
         }
+    }
+
+    void load_defaults(const TypeInfo& ti, const SourceLocation& source_loc, const std::vector<NameId>& parent_keys={}) {
+        if (ti.is_void())
+            return;  // Empty value, no LOAD instruction
+        const ValueId default_value = ti.default_value();
+        Index default_idx;
+        if (default_value) {
+            TypedValue val(default_value.get(), ti);
+            val.incref();
+            default_idx = module().add_value(std::move(val));
+        } else {
+            if (ti.underlying().is_struct()) {
+                for (const auto& item_ti : reverse(ti.underlying().subtypes())) {
+                    auto keys = parent_keys;
+                    keys.push_back(ti.key());
+                    load_defaults(item_ti, source_loc, keys);
+                }
+                return;
+            }
+            // Default value not specified, use implicit zero value
+            auto keys = parent_keys;
+            keys.push_back(ti.key());
+            throw struct_default_missing(keys, source_loc);
+        }
+
+        // LOAD_STATIC <static_idx>
+        code().add_L1(Opcode::LoadStatic, default_idx);
     }
 
     Compiler& m_compiler;

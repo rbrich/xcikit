@@ -9,12 +9,10 @@
 #include <xci/script/Module.h>
 
 #include <range/v3/view/enumerate.hpp>
-#include <range/v3/view/zip.hpp>
 
 namespace xci::script {
 
 using ranges::views::enumerate;
-using ranges::views::zip;
 
 
 class ResolveDefaultsVisitor final: public ast::Visitor {
@@ -39,7 +37,11 @@ public:
     }
 
     void visit(ast::Invocation& inv) override {}
-    void visit(ast::Return& ret) override {}
+
+    void visit(ast::Return& ret) override {
+        ret.expression->apply(*this);
+    }
+
     void visit(ast::Class& v) override {}
     void visit(ast::Instance& v) override {}
 
@@ -60,12 +62,12 @@ public:
     }
 
     void visit(ast::Tuple& v) override {
-        if (v.ti.is_struct() && m_type_info.is_struct()) {
-            auto& ti_subtypes = v.ti.subtypes();
-            for (auto&& [sub_ti, def_ti] : zip(ti_subtypes, m_type_info.subtypes())) {
-                if (def_ti.has_default_value()) {
-                    sub_ti.set_default_value(def_ti.default_value());
-                }
+        if (v.ti.is_struct_or_tuple() && m_type_info.is_struct()) {
+            v.ti = std::move(m_type_info);
+            for (auto&& [i, item] : v.items | enumerate) {
+                m_type_info = v.ti.subtypes()[i];
+                item->apply(*this);
+                m_type_info = {};
             }
         }
     }
@@ -74,42 +76,123 @@ public:
 
     void visit(ast::StructInit& v) override {
         if (v.ti.is_struct() && m_type_info.is_struct()) {
-            auto& ti_subtypes = v.ti.subtypes();
-            for (auto&& [sub_ti, def_ti] : zip(ti_subtypes, m_type_info.subtypes())) {
-                if (def_ti.has_default_value()) {
-                    sub_ti.set_default_value(def_ti.default_value());
-                }
+            v.ti = std::move(m_type_info);
+            for (auto&& [i, item] : v.items | enumerate) {
+                m_type_info = v.ti.subtypes()[i];
+                item.second->apply(*this);
+                m_type_info = {};
             }
         }
     }
 
-    void visit(ast::Reference& v) override {}
-    void visit(ast::Call& v) override {}
-    void visit(ast::OpCall& v) override {}
+    void visit(ast::Reference& v) override {
+        assert(v.identifier.symbol);
+        const auto& sym = *v.identifier.symbol;
+        switch (sym.type()) {
+            case Symbol::Instruction:
+            case Symbol::TypeIndex:
+            case Symbol::Module:
+            case Symbol::Nonlocal:
+            case Symbol::Value:
+            case Symbol::Parameter:
+            case Symbol::Method:
+                m_type_info = {};
+                break;
+            case Symbol::Function: {
+                m_type_info = v.ti;
+                break;
+            }
+            case Symbol::Class:
+                assert(!"Class cannot be called.");
+                break;
+            case Symbol::Instance:
+                assert(!"Instance cannot be called.");
+                break;
+            case Symbol::TypeName:
+            case Symbol::TypeAlias:
+            case Symbol::TypeVar:
+            case Symbol::StructItem:
+                m_type_info = {};
+                break;
+            case Symbol::Unresolved:
+                XCI_UNREACHABLE;
+        }
+    }
+
+    void visit(ast::Call& v) override {
+        v.callable->apply(*this);
+
+        if (m_type_info.is_callable()) {
+            const auto& param_type = m_type_info.ul_signature().param_type;
+            if (v.arg && param_type.is_struct()) {
+                // Propagate struct defaults from the function's parameter type to the arg
+                m_type_info = param_type;
+                v.arg->apply(*this);
+                m_type_info = {};
+            }
+        }
+    }
+
+    void visit(ast::OpCall& v) override {
+        visit(*static_cast<ast::Call*>(&v));
+    }
     void visit(ast::Condition& v) override {}
     void visit(ast::WithContext& v) override {}
-    void visit(ast::Function& v) override {}
+
+    void visit(ast::Function& v) override {
+        Scope& scope = module().get_scope(v.scope_index);
+        const Function& fn = scope.function();
+        if (fn.has_nonvoid_parameter()) {
+            m_type_info = TypeInfo(fn.signature_ptr());
+            v.type.apply(*this);
+            m_type_info = {};
+        }
+
+        // resolve body
+        resolve_defaults(scope, v.body);
+    }
+
     void visit(ast::Cast& v) override {}
     void visit(ast::TypeName& t) override {}
-    void visit(ast::FunctionType& t) override {}
+
+    void visit(ast::FunctionType& t) override {
+        if (t.param.type) {
+            TypeInfo fn_ti = std::move(m_type_info);
+            Signature& sig = fn_ti.signature();
+            m_type_info = std::move(sig.param_type);
+            t.param.type->apply(*this);
+            sig.param_type = std::move(m_type_info);
+            m_type_info = std::move(fn_ti);
+        }
+    }
+
     void visit(ast::ListType& t) override {}
     void visit(ast::TupleType& t) override {}
 
     void visit(ast::StructType& t) override {
         for (auto&& [i, st] : t.subtypes | enumerate) {
+            // Evaluate the item type, in case it is also a StructType
+            if (st.type) {
+                auto struct_ti = m_type_info;
+                m_type_info = struct_ti.subtypes()[i];
+                st.type->apply(*this);
+                struct_ti.subtypes()[i] = std::move(m_type_info);
+                m_type_info = std::move(struct_ti);
+            }
+
+            // Evaluate default value, update it in m_type_info.subtypes()
             if (st.default_value) {
                 m_value = {};
                 st.default_value->apply(*this);
                 if (m_value.is_unknown())
                     throw struct_default_not_constant(st.identifier.name, st.default_value->source_loc);
 
-                // Store the literal value as a static in the module
-                m_value.incref();
-                const Index static_idx = module().add_value(std::move(m_value));
-
-                // Update the TypeInfo stored in the module via m_type_info - see TypeDef, Definition
+                // Update the TypeInfo stored in the module via m_type_info - see TypeDef, Definition, FunctionType
                 auto& ti = m_type_info.subtypes()[i];
-                ti.set_default_value(static_idx);
+                assert(ti == m_value.type_info());
+                m_value.incref();
+                ti.set_default_value(ValueId::add(std::move(m_value.value())));
+                m_value = {};
             }
         }
     }

@@ -234,42 +234,45 @@ void ReplCommand::cmd_dump_function(Index fun_idx, Index mod_idx)
 
 
 static bool describe_in_module(Module& mod, NameId name_id, TermCtl& t) {
+    auto os = t.stream();
+
     if (mod.name() == name_id) {
-        t.print("Module {}: ", name_id.view());
-        t.stream() << mod.get_main_function().signature() << std::endl;
+        t.print("Module {}: ", name_id);
+        os << mod.get_main_function().signature() << std::endl;
         return true;
     }
+
     auto sym_ptr = mod.symtab().find_by_name(name_id);
     if (!sym_ptr)
         return false;
     switch (sym_ptr->type()) {
         case Symbol::Module: {
-            t.print("Module {} (imported from {}): ", name_id.view(), mod.name());
+            t.print("Module {} (imported from {}): ", name_id, mod.name());
             auto& imp_mod = mod.get_imported_module(sym_ptr->index());
-            t.stream() << imp_mod.get_main_function().signature() << std::endl;
+            os << imp_mod.get_main_function().signature() << std::endl;
             break;
         }
         case Symbol::Function: {
             const auto& function = sym_ptr.get_generic_scope().function();
-            t.print("Function {}: ", name_id.view());
-            t.stream() << function.signature() << std::endl;
+            t.print("Function {}: ", name_id);
+            os << function.signature() << std::endl;
             break;
         }
         case Symbol::TypeName: {
             const auto& ti = mod.get_type(sym_ptr->index());
-            t.print("Named type {} = ", name_id.view());
-            t.stream() << ti.underlying() << std::endl;
+            t.print("Named type {} = ", name_id);
+            os << ti.underlying() << std::endl;
             break;
         }
         case Symbol::TypeAlias: {
             const auto& ti = mod.get_type(sym_ptr->index());
-            t.print("Type alias {} = ", name_id.view());
-            t.stream() << ti << std::endl;
+            t.print("Type alias {} = ", name_id);
+            os << ti << std::endl;
             break;
         }
         default:
-            t.print("Symbol {} = ", name_id.view());
-            t.stream() << *sym_ptr << std::endl;
+            t.print("Symbol {} = ", name_id);
+            os << *sym_ptr << std::endl;
             break;
     }
     return true;

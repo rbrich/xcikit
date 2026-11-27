@@ -39,6 +39,7 @@ target_sources(xci-script
         ModuleManager.cpp
         NameId.cpp
         Value.cpp
+        ValueId.cpp
         Parser.cpp
         Source.cpp
         Stack.cpp

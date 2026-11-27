@@ -47,6 +47,7 @@ std::ostream& operator<<(std::ostream& os, ErrorCode v)
         case ErrorCode::StructUnknownKey:           return os << "StructUnknownKey";
         case ErrorCode::StructDuplicateKey:         return os << "StructDuplicateKey";
         case ErrorCode::StructKeyTypeMismatch:      return os << "StructKeyTypeMismatch";
+        case ErrorCode::StructDefaultMissing:       return os << "StructDefaultMissing";
         case ErrorCode::StructDefaultNotConstant:   return os << "StructDefaultNotConstant";
         case ErrorCode::IntrinsicsFunctionError:    return os << "IntrinsicsFunctionError";
         case ErrorCode::UnresolvedSymbol:           return os << "UnresolvedSymbol";

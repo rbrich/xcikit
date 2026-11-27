@@ -89,6 +89,7 @@ std::ostream& operator<<(std::ostream& os, const TypeArgs& v);
 
 // utility types
 inline std::ostream& operator<<(std::ostream& os, NameId v) { return os << v.view(); }
+inline std::ostream& operator<<(std::ostream& os, ValueId v) { return os << v.get(); }
 
 } // namespace xci::script
 
