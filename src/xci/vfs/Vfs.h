@@ -1,7 +1,7 @@
 // Vfs.h created on 2018-09-01 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2024 Radek Brich
+// Copyright 2018–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_VFS_H
@@ -70,7 +70,11 @@ class VfsDirectory: public std::enable_shared_from_this<VfsDirectory> {
 public:
     virtual ~VfsDirectory() = default;
 
+    // Get archive type, e.g. "DIR", "ZIP"
     virtual std::string type() const = 0;
+
+    // Get original archive path
+    virtual std::string path() const = 0;
 
     // Read file by name
     virtual VfsFile read_file(const std::string& path) const = 0;

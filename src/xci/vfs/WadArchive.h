@@ -1,7 +1,7 @@
 // WadArchive.h created on 2023-11-07 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2023 Radek Brich
+// Copyright 2023–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_VFS_WAD_ARCHIVE_H
@@ -36,6 +36,7 @@ public:
     ~WadArchive() override { close_archive(); }
 
     std::string type() const override;  // "IWAD" or "PWAD"
+    std::string path() const override { return m_path; }
     bool is_open() const { return bool(m_stream); }
 
     VfsFile read_file(const std::string& path) const override;

@@ -1,7 +1,7 @@
 // Vfs.cpp created on 2018-09-01 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Vfs.h"
@@ -162,7 +162,10 @@ VfsFile Vfs::read_file(std::string path) const
             lstrip(spath, '/');
         }
         // Open the path with loader
-        log::debug("Vfs: Trying {} mounted at /{}", path_loader.vfs_dir->type(), path_loader.path);
+        log::debug("Vfs: Trying {}({}) mounted at /{}",
+            path_loader.vfs_dir->type(),
+            escape_utf8(path_loader.vfs_dir->path()),
+            escape_utf8(path_loader.path));
         auto f = path_loader.vfs_dir->read_file(spath);
         if (f.is_open())
             return f;

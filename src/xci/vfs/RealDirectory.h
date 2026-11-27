@@ -1,7 +1,7 @@
 // RealDirectory.h created on 2023-11-07 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2023 Radek Brich
+// Copyright 2018–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_VFS_REAL_DIRECTORY_H
@@ -27,6 +27,7 @@ public:
     explicit RealDirectory(fs::path dir_path) : m_dir_path(std::move(dir_path)) {}
 
     std::string type() const override { return "DIR"; }
+    std::string path() const override { return m_dir_path.string(); }
 
     VfsFile read_file(const std::string& path) const override;
 
