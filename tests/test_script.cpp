@@ -1432,6 +1432,9 @@ TEST_CASE( "List operations", "[script][interpreter]" )
           == R"((["ccc", "bb", "a"], ["a", "bb", "ccc"]))");  // not in-place
     CHECK(interpret_std("reverse ([]:[Int])") == "[]");
     CHECK(interpret_std("reverse [1]") == "[1]");
+    CHECK(interpret_std("filter (fun x { x < 3 }, [1,5,2,4,3])") == "[1, 2]");
+    CHECK(interpret_std("filter (fun x { x >= 3 }, [1,5,2,4,3])") == "[5, 4, 3]");
+    CHECK(interpret_std("filter (fun x { x < 0 }, [1,5,2,4,3])") == "[]");
 }
 
 

@@ -820,7 +820,7 @@ take = fun<T> n:Int -> [T] -> [T] { fun a:[T] -> [T] { a .slice (stop=n) } }
 drop = fun<T> n:Int -> [T] -> [T] { fun a:[T] -> [T] { a .slice (start=n, stop=max:Int) } }
 
 map = fun<T,U> (f:(T->U), l:[T]) -> [U] { if l.is_empty then [] else [f (l!0)] + map (f, l.slice (start=1, stop=max:Int)) }
-//filter = fun<Ord T> fn [T] -> [T] { }
+filter = fun<T> (f:(T->Bool), l:[T]) -> [T] { if l.is_empty then [] else ((if f(l.head) then [l.head] else []:[T]) + filter(f, l.tail)) }
 //reduce = fun<Ord T> fn [T] -> T { }
 //sum = reduce add
 
