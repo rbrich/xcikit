@@ -805,15 +805,19 @@ smaller = fun<T> (x:T, y:T) -> T { if x < y then x else y }
 sign = fun x:Int -> Int { if x < 0 then -1  if x > 0 then +1  else 0 }
 
 len = fun<T> [T] -> UInt { __list_length __type_index<T> }
-empty = fun<T> l:[T] -> Bool { l.len == 0u }
+is_empty = fun<T> l:[T] -> Bool { l.len == 0u }
 
-type Slice = (start:Int, stop:Int, step:Int)
+type Slice = (start:Int=0, stop:Int, step:Int=1)
 slice = fun<T> ([T], Slice) -> [T] { __list_slice __type_index<T> }
 
 head = fun<T> a:[T] -> T { a!0 }
-tail = fun<T> a:[T] -> [T] { a .slice (start=1, stop=max:Int, step=1) }
+tail = fun<T> a:[T] -> [T] { a .slice (start=1, stop=max:Int) }
+last = fun<T> a:[T] -> T { a!-1 }
+initial = fun<T> a:[T] -> [T] { a .slice (stop=-1) }
 
-map = fun<T,U> (f:(T->U), l:[T]) -> [U] { if l.empty then [] else [f (l!0)] + map (f, l.slice (start=1, stop=max:Int, step=1)) }
+take = fun<T> n:Int -> [T] -> [T] { fun a:[T] -> [T] { a .slice (stop=n) } }
+
+map = fun<T,U> (f:(T->U), l:[T]) -> [U] { if l.is_empty then [] else [f (l!0)] + map (f, l.slice (start=1, stop=max:Int, step=1)) }
 //filter = fun<Ord T> fn [T] -> [T] { }
 //reduce = fun<Ord T> fn [T] -> T { }
 //sum = reduce add

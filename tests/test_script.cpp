@@ -546,6 +546,11 @@ TEST_CASE( "Literals", "[script][interpreter]" )
     CHECK(interpret("1.0q") == "1.0q");
     CHECK(interpret("1e15") == "1e+15");
     CHECK(interpret("1.1e9f") == "1.1e+09f");
+    CHECK(interpret("12f") == "12.0f");
+    CHECK(interpret("0b101101") == "45");
+    CHECK(interpret("0o765") == "501");
+    CHECK(interpret("0x123") == "291");
+    CHECK(interpret("0xBEEFED") == "12513261");
     // Underscores may be used for optical spacing
     CHECK(interpret("42_u16") == "42uh");
     CHECK(interpret("4_2_u16") == "42uh");
@@ -588,8 +593,8 @@ TEST_CASE( "Literals", "[script][interpreter]" )
     CHECK(interpret_std("[]:[Int]") == "[]");
     CHECK(interpret_std("[]:[Void].len") == "0u");
     CHECK(interpret_std("[1,2,3].len") == "3u");
-    CHECK(interpret_std("[]:[Int].empty") == "true");
-    CHECK(interpret_std("[1,2,3].empty") == "false");
+    CHECK(interpret_std("[]:[Int].is_empty") == "true");
+    CHECK(interpret_std("[1,2,3].is_empty") == "false");
     CHECK(interpret("[1,2,3]") == "[1, 2, 3]");
     CHECK(interpret_std("empty_list = fun<T> Void { []:[T] }; empty_list<Int>") == "[]");
     CHECK(interpret_std("empty_list = fun<T> Void -> [T] { [] }; empty_list<Int>") == "[]"); // equivalent
@@ -665,6 +670,8 @@ TEST_CASE( "Expressions", "[script][interpreter]" )
     CHECK(interpret_std("pred (neg (succ (14)))") == "-16");
     CHECK(interpret_std("14 .succ .neg .pred") == "-16");
     CHECK(interpret_std("(((14) .succ) .neg) .pred") == "-16");
+    CHECK(interpret_std("pred (neg (smaller (4, 5)))") == "-5");
+    CHECK(interpret_std("(4,5) .smaller .neg .pred") == "-5");
 }
 
 
@@ -1081,6 +1088,9 @@ TEST_CASE( "Partial function call", "[script][interpreter]" )
                         "   u=fun b2:Int {a / b2}; v=fun c2:Int {c2 - a}; "
                         "   fun (b1:Int, c1:Int) {a + u b1 + v c1} "
                         "}; f 4 (2, 3)") == "5");
+    const std::string& my_take = "my_take = fun<T> n:Int -> [T] -> [T] { fun a:[T] -> [T] { a .slice (stop=n) } }; ";
+    CHECK(interpret_std(my_take + "my_take 3 [1,2,3,4,5]") == "[1, 2, 3]");
+    CHECK(interpret_std(my_take + "nums=[1,2,3,4,5]; my_take 3 nums") == "[1, 2, 3]");
 }
 
 
@@ -1396,6 +1406,23 @@ TEST_CASE( "List map", "[script][interpreter]" )
 }
 
 
+TEST_CASE( "List operations", "[script][interpreter]" )
+{
+    const std::string nums = "nums = [1, 2, 3, 4, 5]; empty: [Int] = []; ";
+    CHECK(interpret_std(nums + "len nums") == "5u");
+    CHECK(interpret_std(nums + "is_empty nums") == "false");
+    CHECK(interpret_std(nums + "is_empty empty") == "true");
+    CHECK(interpret_std(nums + "head nums") == "1");
+    CHECK_THROWS_EC(interpret_std(nums + "head empty"), IndexOutOfBounds);
+    CHECK(interpret_std(nums + "tail nums") == "[2, 3, 4, 5]");
+    CHECK(interpret_std(nums + "tail empty") == "[]");
+    CHECK(interpret_std(nums + "last nums") == "5");
+    CHECK_THROWS_EC(interpret_std(nums + "last empty"), IndexOutOfBounds);
+    CHECK(interpret_std(nums + "initial nums") == "[1, 2, 3, 4]");
+    CHECK(interpret_std(nums + "initial empty") == "[]");
+}
+
+
 TEST_CASE( "Type classes", "[script][interpreter]" )
 {
     CHECK(interpret("class XEq T { xeq : (T, T) -> Bool }; "
@@ -1438,6 +1465,7 @@ TEST_CASE( "With expression, I/O streams", "[script][interpreter]" )
              "(in=<stream:stdin>, out=<stream:stdout>, err=<stream:stderr>)");
     CHECK(interpret("with (in=null) { __streams }") == "(in=<stream:null>, out=<stream:stdout>, err=<stream:stderr>)");
     CHECK(interpret("with (out=null) { __streams }") == "(in=<stream:stdin>, out=<stream:null>, err=<stream:stderr>)");
+    CHECK(interpret("with null { __streams }") == "(in=<stream:stdin>, out=<stream:null>, err=<stream:stderr>)");
     CHECK(interpret("with (in=null, out=null) { __streams }") == "(in=<stream:null>, out=<stream:null>, err=<stream:stderr>)");
     CHECK(interpret("with (in=stdin, out=stdout, err=stderr) { __streams }") == "(in=<stream:stdin>, out=<stream:stdout>, err=<stream:stderr>)");
     CHECK(interpret("with\n(in=stdin, out=stdout, err=stderr)\n{ 42 }") == "42");
