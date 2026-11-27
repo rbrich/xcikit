@@ -742,7 +742,7 @@ type FormatSpec = (
 )
 
 type ParseSpec = (
-    spec: String
+    spec: String = ""
 )
 
 class Format T {

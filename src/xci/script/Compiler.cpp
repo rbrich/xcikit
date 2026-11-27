@@ -85,7 +85,8 @@ public:
         // build tuple on stack
         if (v.ti.underlying().is_struct() && v.items.empty()) {
             // A struct can be initialized with empty tuple `()`
-            load_defaults(v.ti);
+            for (const auto& item_ti : reverse(v.ti.underlying().subtypes()))
+                load_defaults(item_ti, v.source_loc);
             return;
         }
         for (auto& item : reverse(v.items)) {
@@ -113,25 +114,7 @@ public:
                 });
             if (it == v.items.end()) {
                 // not found - use the default
-                if (item_ti.is_void())
-                    continue;  // Empty value, no LOAD instruction
-                const ValueId default_value = item_ti.default_value();
-                Index default_idx;
-                if (default_value) {
-                    TypedValue val(default_value.get(), item_ti);
-                    val.incref();
-                    default_idx = module().add_value(std::move(val));
-                } else {
-                    if (item_ti.underlying().is_struct()) {
-                        load_defaults(item_ti);
-                        continue;
-                    }
-                    // Default value not specified
-                    throw struct_default_missing(item_ti.key(), v.source_loc);
-                }
-
-                // LOAD_STATIC <static_idx>
-                code().add_L1(Opcode::LoadStatic, default_idx);
+                load_defaults(item_ti, v.source_loc);
                 continue;
             }
             it->second->apply(*this);
@@ -608,28 +591,32 @@ private:
         }
     }
 
-    void load_defaults(const TypeInfo& struct_ti) {
-        for (const auto& item_ti : reverse(struct_ti.underlying().subtypes())) {
-            if (item_ti.is_void())
-                continue;  // Empty value, no LOAD instruction
-            const ValueId default_value = item_ti.default_value();
-            Index default_idx;
-            if (default_value) {
-                TypedValue val(default_value.get(), item_ti);
-                val.incref();
-                default_idx = module().add_value(std::move(val));
-            } else {
-                if (item_ti.underlying().is_struct()) {
-                    load_defaults(item_ti);
-                    continue;
+    void load_defaults(const TypeInfo& ti, const SourceLocation& source_loc, const std::vector<NameId>& parent_keys={}) {
+        if (ti.is_void())
+            return;  // Empty value, no LOAD instruction
+        const ValueId default_value = ti.default_value();
+        Index default_idx;
+        if (default_value) {
+            TypedValue val(default_value.get(), ti);
+            val.incref();
+            default_idx = module().add_value(std::move(val));
+        } else {
+            if (ti.underlying().is_struct()) {
+                for (const auto& item_ti : reverse(ti.underlying().subtypes())) {
+                    auto keys = parent_keys;
+                    keys.push_back(ti.key());
+                    load_defaults(item_ti, source_loc, keys);
                 }
-                // Default value not specified, use implicit zero value
-                default_idx = module().add_value(TypedValue(item_ti));
+                return;
             }
-
-            // LOAD_STATIC <static_idx>
-            code().add_L1(Opcode::LoadStatic, default_idx);
+            // Default value not specified, use implicit zero value
+            auto keys = parent_keys;
+            keys.push_back(ti.key());
+            throw struct_default_missing(keys, source_loc);
         }
+
+        // LOAD_STATIC <static_idx>
+        code().add_L1(Opcode::LoadStatic, default_idx);
     }
 
     Compiler& m_compiler;

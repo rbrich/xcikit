@@ -688,11 +688,15 @@ TEST_CASE( "Types", "[script][interpreter]" )
 
 TEST_CASE( "Coercion", "[script][interpreter]" )
 {
-    // coerce empty tuple (literal) to a struct
-    CHECK(interpret("a:(x:String,y:Int) = (); a") == "(x=\"\", y=0)");
-    CHECK(interpret("a:(x:String, y:(y1:Int, y2:Float)) = (); a.y.y1") == "0");
-    CHECK(interpret("f = fun a:(x:String,y:Int) {a.y}; f ()") == "0");
-    CHECK(interpret("f = fun (x:String,y:Int) {y}; f ()") == "0");
+    // coerce empty tuple (literal) to a struct (requires specified defaults)
+    CHECK_THROWS_EC(interpret(R"(a:(x:String,y:Int) = ())"), StructDefaultMissing);
+    CHECK(interpret(R"(a:(x:String="",y:Int=0) = (); a)") == R"((x="", y=0))");
+    CHECK_THROWS_EC(interpret(R"(a:(x:String="", y:(y1:Int, y2:Float=0.0)) = ())"), StructDefaultMissing);
+    CHECK(interpret(R"(a:(x:String="", y:(y1:Int=0, y2:Float=0.0)) = (); a.y.y1)") == "0");
+    CHECK_THROWS_EC(interpret("f = fun a:(x:String,y:Int) {a.y}; f ()"), StructDefaultMissing);
+    CHECK(interpret(R"(f = fun a:(x:String="",y:Int=42) {a.y}; f ())") == "42");
+    CHECK_THROWS_EC(interpret("f = fun (x:String,y:Int) {y}; f ()"), StructDefaultMissing);
+    CHECK(interpret(R"(f = fun (x:String="",y:Int=42) {y}; f ())") == "42");
     CHECK(interpret_std("format (true, ())") == "\"true\"");  // second arg is FormatSpec
     // only literals may coerce, not functions/variables
     CHECK_THROWS_EC(interpret("t=(); a:(x:String,y:Int) = t"), FunctionNotFound);
@@ -767,10 +771,16 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret_std(my_slice + "MySlice(start=1)") == "MySlice(start=1, stop=-1, step=1)");
     CHECK(interpret_std(my_slice + "MySlice(start=10, step=-1)") == "MySlice(start=10, stop=-1, step=-1)");
     CHECK(interpret_std(my_slice + "MySlice(start=1, stop=2, step=-1)") == "MySlice(start=1, stop=2, step=-1)");
-    const std::string anon_struct = R"(a:(name:String="nobody", age:Int))";
-    CHECK(interpret(anon_struct + R"( = ("joe", 42); a)") == R"((name="joe", age=42))");
+    const std::string anon_struct = R"(a:(name:String="nobody", age:Int=0))";
     CHECK(interpret(anon_struct + " = (); a") == R"((name="nobody", age=0))");
+    CHECK(interpret(anon_struct + R"( = ("joe", 42); a)") == R"((name="joe", age=42))");
     CHECK(interpret(anon_struct + " = (age=42); a") == R"((name="nobody", age=42))");
+    const std::string anon_struct2 = R"(a:(name:String="nobody", age:Int))";
+    CHECK_THROWS_EC(interpret(anon_struct2 + " = (); a"), StructDefaultMissing);  // age doesn't have default specified
+    CHECK_THROWS_EC(interpret(anon_struct2 + R"( = (name="x"); a)"), StructDefaultMissing);
+    CHECK(interpret(anon_struct2 + " = (age=42); a") == R"((name="nobody", age=42))");
+    const std::string anon_struct3 = R"(a:(x:String="none", y:(y1:Int=1, y2:Float=3.14)))";
+    CHECK(interpret(anon_struct3 + " = (); a") == R"((x="none", y=(y1=1, y2=3.14)))");
     // cast from underlying type
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a)") == R"(MyStruct(name="hello", age=42))");
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a:(String, Int))") == R"(("hello", 42))");

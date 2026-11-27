@@ -15,6 +15,7 @@
 #include <fmt/ostream.h>
 
 #include <string_view>
+#include <fmt/ranges.h>
 
 
 namespace xci::script {
@@ -285,9 +286,9 @@ ScriptError struct_key_type_mismatch(const TypeInfo& struct_type, const TypeInfo
                                      const TypeInfo& got, const SourceLocation& loc);
 
 
-inline ScriptError struct_default_missing(NameId key, const SourceLocation& loc) {
+inline ScriptError struct_default_missing(const std::vector<NameId>& keys, const SourceLocation& loc) {
     return ScriptError(ErrorCode::StructDefaultMissing,
-                       fmt::format("default value for key \"{}\" is not specified", key), loc);
+                       fmt::format("default value for key \"{}\" is not specified", fmt::join(keys, ".")), loc);
 }
 
 
