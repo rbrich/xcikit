@@ -1,7 +1,7 @@
 // Function.cpp created on 2019-05-30 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2025 Radek Brich
+// Copyright 2019–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Function.h"
@@ -158,9 +158,8 @@ Index Scope::add_subscope(Index scope_idx)
 void Scope::copy_subscopes(const Scope& from)
 {
     for (const Index scope_idx : from.m_subscopes) {
-        auto& orig = module().get_scope(scope_idx);
-        Scope sub(orig.module(), orig.function_index(), this);
-        auto sub_idx = module().add_scope(std::move(sub));
+        auto& orig = from.module().get_scope(scope_idx);
+        auto sub_idx = module().add_scope(Scope(orig.module(), orig.function_index(), this));
         module().get_scope(sub_idx).copy_subscopes(orig);
         add_subscope(sub_idx);
     }

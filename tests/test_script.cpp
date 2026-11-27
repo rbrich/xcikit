@@ -1420,6 +1420,11 @@ TEST_CASE( "List operations", "[script][interpreter]" )
     CHECK_THROWS_EC(interpret_std(nums + "last empty"), IndexOutOfBounds);
     CHECK(interpret_std(nums + "initial nums") == "[1, 2, 3, 4]");
     CHECK(interpret_std(nums + "initial empty") == "[]");
+    CHECK(interpret_std(nums + "take 3 nums") == "[1, 2, 3]");
+    CHECK(interpret_std(nums + "take 3 nums") == "[1, 2, 3]");
+    CHECK(interpret_std(nums + "take 10 nums") == "[1, 2, 3, 4, 5]");
+    CHECK(interpret_std(nums + "drop 3 nums") == "[4, 5]");
+    CHECK(interpret_std(nums + "drop 10 nums") == "[]");
 }
 
 
