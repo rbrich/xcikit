@@ -414,6 +414,14 @@ void Machine::run(const InvokeCallback& cb)
                 break;
             }
 
+            case Opcode::ListReverse: {
+                const auto& elem_ti = read_type_arg();
+                auto list = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
+                list.get<ListV>().reverse(elem_ti);
+                m_stack.push(list);
+                break;
+            }
+
             case Opcode::Cast: {
                 // TODO: possible optimization when truncating integers
                 //       or extending unsigned integers: do not pull the value,

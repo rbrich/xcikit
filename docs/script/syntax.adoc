@@ -917,7 +917,7 @@ a:MySlice = ()                  // -> MySlice(start=0, stop=-1, step=1)
 a:MySlice = (1,2)               // Error, can initialize only with same-size or empty tuple
 a:MySlice = (1,2,3)             // -> MySlice(start=1, stop=2, step=3)
 a:MySlice = (start=10)          // -> MySlice(start=10, stop=-1, step=1)
-a:MySlice = (start=10, step-1)  // -> MySlice(start=10, stop=-1, step=-1)
+a:MySlice = (start=10, step=-1) // -> MySlice(start=10, stop=-1, step=-1)
 a:(name:String="nobody", age:Int) = (); a  // -> (name="nobody", age=0)
 a:(name:String="nobody", age:Int) = (age=42); a  // -> (name="nobody", age=42)
 a:(name:String="nobody", age:Int) = ("joe", 42); a  // -> (name="joe", age=42)
@@ -1092,12 +1092,12 @@ Basic operations:
 [source,fire]
 ----
 len nums == 5
-empty nums == false
+is_empty nums == false
 
 head nums == 1
 tail nums == [2, 3, 4, 5]
 last nums == 5
-init nums == [1, 2, 3, 4]
+initial nums == [1, 2, 3, 4]
 
 take 3 nums == [1, 2, 3]
 take 10 nums == [1, 2, 3, 4, 5]
@@ -1157,7 +1157,7 @@ The functions are usually generic, instantiated with type arguments, and taking 
 type_name = fun<T> Void -> String { /* compiler intrinsics */ }
 // Used as:
 type_name<String>   // -> "String"
-type_name<[Int]>   // -> "[Int32]]"
+type_name<[Int]>   // -> "[Int64]"
 String.type_name    // equivalent to type_name<String>
 [Int].type_name     // ParseError - this notation works only on named types
 ----

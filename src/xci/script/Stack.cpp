@@ -120,15 +120,15 @@ void Stack::drop(StackRel first, size_t size)
     size_t top_bytes = 0;
     auto end_type = m_stack_types.end();
     while (top_bytes < first) {
-        end_type --;
+        --end_type;
         top_bytes += type_size_on_stack(*end_type);
     }
     assert(top_bytes == first);
     size_t erase_bytes = size;
     auto begin_type = end_type;
     while (erase_bytes > 0) {
-        begin_type --;
-        auto type_size = type_size_on_stack(*begin_type);
+        --begin_type;
+        const auto type_size = type_size_on_stack(*begin_type);
         assert(erase_bytes >= type_size);
         erase_bytes -= type_size;
     }
@@ -288,6 +288,12 @@ const ModuleManager& Stack::module_manager() const
 StackTrace Stack::make_trace()
 {
     // unwind all variables on stack
+    StackRel pos = 0;
+    for (const auto type : reverse(m_stack_types)) {
+        get(pos, type).decref();
+        pos += type_size_on_stack(type);
+    }
+    assert(pos == size());
     drop(0, size());
     // make trace from stack frames and clear them too
     StackTrace trace;

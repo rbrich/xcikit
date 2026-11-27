@@ -637,6 +637,48 @@ void ListV::extend(const ListV& rhs, const TypeInfo& elem_type)
 }
 
 
+void ListV::reverse(const TypeInfo& elem_type)
+{
+    const auto* data = slot.data();
+    const auto length = bit_read<uint32_t>(data);
+    const auto offsets_size = bit_read<uint16_t>(data);
+    const auto offsets = list_deleter_read_offsets(data, offsets_size);
+    const auto elem_size = elem_type.size();
+    if (length < 2 || elem_size == 0)
+        return;
+
+    auto* elements = slot.data() + 6 + offsets_size;
+    if (slot.refcount() == 1) {
+        std::vector<std::byte> temp(elem_size);
+        for (size_t i = 0; i < length / 2; ++i) {
+            auto* left = elements + i * elem_size;
+            auto* right = elements + (length - i - 1) * elem_size;
+            std::memcpy(temp.data(), left, elem_size);
+            std::memcpy(left, right, elem_size);
+            std::memcpy(right, temp.data(), elem_size);
+        }
+        return;
+    }
+
+    HeapSlot new_slot(6 + offsets_size + length * elem_size, list_deleter);
+    auto* new_data = new_slot.data();
+    std::memcpy(new_data, slot.data(), 6 + offsets_size);
+    auto* new_elements = new_data + 6 + offsets_size;
+    for (size_t i = 0; i < length; ++i) {
+        std::memcpy(new_elements + i * elem_size,
+                    elements + (length - i - 1) * elem_size, elem_size);
+    }
+
+    if (!offsets.empty()) {
+        list_deleter_foreach_heap_slot(new_elements, length, offsets,
+                [](HeapSlot&& heap_slot){ heap_slot.incref(); });
+    }
+
+    slot.decref();
+    slot = std::move(new_slot);
+}
+
+
 TupleV::TupleV(const TupleV& other)
         : values(std::make_unique<Value[]>(other.length() + 1))
 {

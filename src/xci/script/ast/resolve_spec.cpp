@@ -723,6 +723,7 @@ private:
             auto clone_fn_idx = clone_function(scope);
             auto& clone_fn = module().get_function(clone_fn_idx);
             clone_fn.ensure_ast_copy();
+            scope.set_module(module());
             scope.set_function_index(clone_fn_idx);
         }
         return parent_is_specialized;

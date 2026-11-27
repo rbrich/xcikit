@@ -1,7 +1,7 @@
 // DarArchive.h created on 2023-11-07 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2024 Radek Brich
+// Copyright 2018–2026 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_VFS_DAR_ARCHIVE_H
@@ -32,6 +32,7 @@ public:
     ~DarArchive() override { close_archive(); }
 
     std::string type() const override { return "DAR"; }
+    std::string path() const override { return m_path; }
 
     bool is_open() const { return bool(m_stream); }
 
